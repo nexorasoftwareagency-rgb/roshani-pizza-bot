@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Prasant Pizza Admin</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        // Simple Auth Check
+        if (localStorage.getItem("adminAuth") !== "true") {
+            window.location.href = "login.html";
+        }
+    </script>
+</head>
+
+<body>
+
+    <!-- 🔊 SOUND -->
+    <audio id="alertSound" src="sounds/alert.mp3"></audio>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <h2>🍕 Admin</h2>
+
+        <ul>
+            <li onclick="loadPage('dashboard')">🏠 Dashboard</li>
+            <li onclick="loadPage('orders')">🧾 Orders</li>
+            <li onclick="loadPage('menu')">🍕 Menu</li>
+            <li onclick="loadPage('add')">➕ Add Item</li>
+            <li onclick="loadPage('stock')">📦 Stock</li>
+            <li onclick="loadPage('employees')">👨‍🍳 Employees</li>
+            <li onclick="loadPage('reports')">📊 Reports</li>
+            <li onclick="loadPage('settings')">⚙️ Settings</li>
+        </ul>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <h1>Prasant Pizza ERP</h1>
+            <button onclick="toggleShop()" id="shopBtn">🟢 Open</button>
+        </div>
+
+        <!-- CONTENT -->
+        <div id="content">
+
+            <h2>📊 Dashboard</h2>
+
+            <!-- CARDS -->
+            <div class="cards-row">
+
+                <div class="card" onclick="openReport('all')">
+                    📦 Orders<br>
+                    <span id="ordersCount">0</span>
+                </div>
+
+                <div class="card" onclick="openReport('revenue')">
+                    💰 Revenue<br>
+                    ₹<span id="revenue">0</span>
+                </div>
+
+                <div class="card" onclick="openReport('pending')">
+                    🟡 Pending<br>
+                    <span id="pending">0</span>
+                </div>
+
+                <div class="card" onclick="openReport('delivery')">
+                    🚚 Delivery<br>
+                    <span id="delivery">0</span>
+                </div>
+
+            </div>
+
+            <!-- LIVE ORDERS -->
+            <div class="live-section">
+                <h3>🔔 Live Pending Orders</h3>
+                <div id="liveOrders"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- SCRIPT -->
+    <script src="app.js"></script>
+
+</body>
+
+</html>

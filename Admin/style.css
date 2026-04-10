@@ -1,0 +1,182 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+    background: #f5f5f5;
+}
+
+/* SIDEBAR */
+.sidebar {
+    width: 220px;
+    background: #1f1f1f;
+    color: white;
+    height: 100vh;
+    padding: 20px;
+    position: fixed;
+}
+
+.sidebar h2 {
+    color: #ff6b00;
+    margin-bottom: 20px;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar li {
+    padding: 12px;
+    cursor: pointer;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    transition: 0.2s;
+}
+
+.sidebar li:hover {
+    background: #333;
+}
+
+/* MAIN */
+.main {
+    margin-left: 240px;
+    flex: 1;
+}
+
+/* TOPBAR */
+.topbar {
+    background: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.topbar h1 {
+    margin: 0;
+}
+
+#shopBtn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #ff6b00;
+    color: white;
+}
+
+/* DASHBOARD */
+.cards-row {
+    display: flex;
+    gap: 15px;
+    padding: 20px;
+}
+
+.card {
+    flex: 1;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.card:hover {
+    transform: scale(1.05);
+}
+
+/* LIVE SECTION */
+.live-section {
+    margin: 20px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.live-section h3 {
+    margin-top: 0;
+}
+
+/* ORDER CARD */
+.order-card {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+/* NEW ORDER FLASH */
+.new-order {
+    border: 2px solid red;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0% {
+        background: #fff;
+    }
+
+    50% {
+        background: #ffe5e5;
+    }
+
+    100% {
+        background: #fff;
+    }
+}
+
+/* BUTTON */
+button {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #ff6b00;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #e65c00;
+}
+
+/* TABLE */
+table {
+    background: white;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 10px;
+    text-align: left;
+}
+
+th {
+    background: #ff6b00;
+    color: white;
+}
+
+/* INPUT */
+input {
+    padding: 8px;
+    margin-right: 10px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 180px;
+    }
+
+    .main {
+        margin-left: 200px;
+    }
+
+    .cards-row {
+        flex-direction: column;
+    }
+}
