@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rider Panel</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+
+<body>
+
+    <!-- LOGIN SECTION -->
+    <div id="loginBox">
+        <h2>Rider Login</h2>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+    </div>
+
+    <!-- DASHBOARD SECTION -->
+    <div id="dashboard" style="display: none;">
+        <div class="header">
+            <h2>Rider Dashboard</h2>
+            <button onclick="logout()">Logout</button>
+        </div>
+
+        <div id="stats"></div>
+
+        <div class="section">
+            <div id="pizzaOrders"></div>
+        </div>
+
+        <div class="section">
+            <div id="cakeOrders"></div>
+        </div>
+    </div>
+
+    <!-- OTP PANEL -->
+    <div id="otpPanel">
+        <h3>Delivery Verification</h3>
+        <input type="number" id="otpInput" placeholder="Enter OTP">
+        <button onclick="sendOTP()">Send OTP (WhatsApp)</button>
+        <button onclick="verifyOTP()">Verify & Deliver</button>
+        <button onclick="closeOTPPanel()">Close</button>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="firebase.js"></script>
+    <script src="app.js"></script>
+
+</body>
+
+</html>

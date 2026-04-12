@@ -1,0 +1,183 @@
+/* GLOBAL */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f5f6fa;
+}
+
+/* LOGIN */
+#loginBox {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 260px;
+    margin: 100px auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#loginBox h2 {
+    text-align: center;
+}
+
+#loginBox input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+#loginBox button {
+    padding: 10px;
+    border: none;
+    background: #ff4757;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* HEADER */
+.header {
+    background: #ff4757;
+    color: white;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header h2 {
+    margin: 0;
+}
+
+.header button {
+    background: white;
+    color: #ff4757;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 5px;
+}
+
+/* STATS */
+#stats {
+    display: flex;
+    gap: 10px;
+    padding: 15px;
+}
+
+#stats div {
+    flex: 1;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* SECTIONS */
+.section {
+    padding: 15px;
+}
+
+.section h2 {
+    margin-bottom: 10px;
+}
+
+/* ORDER CARD */
+.order-card {
+    background: white;
+    padding: 15px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.order-card h4 {
+    margin: 0 0 5px 0;
+}
+
+.order-card p {
+    margin: 3px 0;
+    font-size: 14px;
+}
+
+/* BUTTONS */
+.order-card button {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border: none;
+    background: #ff4757;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* OTP PANEL */
+#otpPanel {
+    display: none;
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 20px;
+    width: 320px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+#otpPanel h3 {
+    margin-top: 0;
+}
+
+#otpPanel input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+#otpPanel button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* BUTTON COLORS */
+#otpPanel button:nth-child(3) {
+    background: #2ed573;
+    color: white;
+}
+
+#otpPanel button:nth-child(4) {
+    background: #ff4757;
+    color: white;
+}
+
+#otpPanel button:nth-child(5) {
+    background: #ced6e0;
+}
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 600px) {
+
+    #stats {
+        flex-direction: column;
+    }
+
+    .header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    #otpPanel {
+        width: 90%;
+    }
+}
