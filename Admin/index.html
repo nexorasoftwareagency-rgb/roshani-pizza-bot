@@ -1,96 +1,100 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>Prasant Pizza Admin</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
 
     <link rel="stylesheet" href="style.css">
 
-    <!-- Chart -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-    <script>
-        // Simple Auth Check
-        if (localStorage.getItem("adminAuth") !== "true") {
-            window.location.href = "login.html";
-        }
-    </script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 </head>
 
 <body>
 
-    <!-- 🔊 SOUND -->
-    <audio id="alertSound" src="sounds/alert.mp3"></audio>
-
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-        <h2>🍕 Admin</h2>
-
-        <ul>
-            <li onclick="loadPage('dashboard')">🏠 Dashboard</li>
-            <li onclick="loadPage('orders')">🧾 Orders</li>
-            <li onclick="loadPage('menu')">🍕 Menu</li>
-            <li onclick="loadPage('add')">➕ Add Item</li>
-            <li onclick="loadPage('stock')">📦 Stock</li>
-            <li onclick="loadPage('employees')">👨‍🍳 Employees</li>
-            <li onclick="loadPage('reports')">📊 Reports</li>
-            <li onclick="loadPage('settings')">⚙️ Settings</li>
-        </ul>
+    <!-- LOGIN -->
+    <div id="authOverlay">
+        <h2>Admin Login</h2>
+        <input id="adminEmail" placeholder="Email">
+        <input id="adminPassword" type="password" placeholder="Password">
+        <button id="loginBtn">Login</button>
+        <p id="authError"></p>
     </div>
 
-    <!-- MAIN -->
-    <div class="main">
+    <!-- DASHBOARD -->
+    <div id="dashboard">
 
-        <!-- TOPBAR -->
         <div class="topbar">
-            <h1>Prasant Pizza ERP</h1>
-            <button onclick="toggleShop()" id="shopBtn">🟢 Open</button>
+            <span id="userEmailDisplay"></span>
+            <button id="logoutBtn">Logout</button>
         </div>
 
-        <!-- CONTENT -->
-        <div id="content">
+        <div class="stats">
+            <div>Orders: <span id="stat-orders">0</span></div>
+            <div>Revenue: <span id="stat-revenue">0</span></div>
+            <div>Dishes: <span id="stat-dishes">0</span></div>
+        </div>
 
-            <h2>📊 Dashboard</h2>
+        <!-- NAV -->
+        <div class="nav">
+            <button class="nav-item active" data-target="orders">Orders</button>
+            <button class="nav-item" data-target="dishes">Dishes</button>
+            <button class="nav-item" data-target="categories">Categories</button>
+        </div>
 
-            <!-- CARDS -->
-            <div class="cards-row">
+        <!-- ORDERS -->
+        <div id="orders" class="section active">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Customer</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody"></tbody>
+            </table>
+        </div>
 
-                <div class="card" onclick="openReport('all')">
-                    📦 Orders<br>
-                    <span id="ordersCount">0</span>
-                </div>
+        <!-- DISHES -->
+        <div id="dishes" class="section">
+            <h3>Add Dish</h3>
+            <input id="dishName" placeholder="Name">
+            <input id="dishPrice" placeholder="Price">
+            <input id="dishImage" placeholder="Image URL">
+            <input id="dishCategory" placeholder="Category ID">
+            <button id="saveDishBtn">Add Dish</button>
 
-                <div class="card" onclick="openReport('revenue')">
-                    💰 Revenue<br>
-                    ₹<span id="revenue">0</span>
-                </div>
+            <div id="dishesGrid"></div>
+        </div>
 
-                <div class="card" onclick="openReport('pending')">
-                    🟡 Pending<br>
-                    <span id="pending">0</span>
-                </div>
+        <!-- CATEGORIES -->
+        <div id="categories" class="section">
+            <h3>Add Category</h3>
+            <input id="categoryName" placeholder="Name">
+            <input id="categoryImage" placeholder="Image URL">
+            <button id="saveCategoryBtn">Add Category</button>
 
-                <div class="card" onclick="openReport('delivery')">
-                    🚚 Delivery<br>
-                    <span id="delivery">0</span>
-                </div>
-
-            </div>
-
-            <!-- LIVE ORDERS -->
-            <div class="live-section">
-                <h3>🔔 Live Pending Orders</h3>
-                <div id="liveOrders"></div>
-            </div>
-
+            <div id="categoryList"></div>
         </div>
 
     </div>
 
-    <!-- SCRIPT -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+        };
+
+        firebase.initializeApp(firebaseConfig);
+    </script>
+
     <script src="app.js"></script>
 
 </body>

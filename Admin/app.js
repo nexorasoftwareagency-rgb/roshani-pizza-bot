@@ -1,501 +1,292 @@
-const FIREBASE_URL = "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com";
+// =============================
+// GLOBAL STATE
+// =============================
+let currentOutlet = null;
 
-let lastOrderCount = 0;
-let currentReportData = [];
+const db = firebase.database();
+const auth = firebase.auth();
 
-// ---------- FETCH ----------
-async function getOrders() {
-    const res = await fetch(`${FIREBASE_URL}/orders.json`);
-    const data = await res.json();
-    if (!data) return [];
-    return Object.values(data);
-}
+const $ = (id) => document.getElementById(id);
 
-// ---------- DASHBOARD ----------
-async function loadDashboard() {
-    const orders = await getOrders();
+// =============================
+// AUTH + OUTLET DETECTION
+// =============================
+auth.onAuthStateChanged(async (user) => {
 
-    // 🔊 SOUND
-    if (orders.length > lastOrderCount) {
-        document.getElementById("alertSound").play();
+  if (!user) {
+    document.getElementById('authOverlay').style.display = 'flex';
+    return;
+  }
+
+  document.getElementById('authOverlay').style.display = 'none';
+  document.getElementById('userEmailDisplay').textContent = user.email;
+
+  // =============================
+  // GET ADMIN OUTLET
+  // =============================
+  const snap = await db.ref('admins').once('value');
+
+  let found = false;
+
+  snap.forEach(child => {
+    const admin = child.val();
+
+    if (admin.email === user.email) {
+      window.currentOutlet = admin.outlet;
+      found = true;
     }
-    lastOrderCount = orders.length;
+  });
 
-    // COUNTS
-    document.getElementById("ordersCount").innerText = orders.length;
+  if (!found) {
+    alert("No outlet assigned to this admin");
+    return;
+  }
 
-    const pendingOrders = orders.filter(o => o.status === "Pending");
-    document.getElementById("pending").innerText = pendingOrders.length;
+  console.log("Logged into outlet:", currentOutlet);
 
-    const deliveryOrders = orders.filter(o => o.status === "Out for delivery");
-    document.getElementById("delivery").innerText = deliveryOrders.length;
+  // =============================
+  // LOAD DATA
+  // =============================
+  initData();
+});
 
-    const revenue = orders
-        .filter(o => o.status === "Delivered")
-        .reduce((sum, o) => sum + (o.total || 0), 0);
+// =============================
+// LOGIN / LOGOUT
+// =============================
+$('loginBtn').onclick = () => {
+  auth.signInWithEmailAndPassword(
+    $('adminEmail').value,
+    $('adminPassword').value
+  ).catch(e => $('authError').textContent = e.message);
+};
 
-    document.getElementById("revenue").innerText = revenue;
+$('logoutBtn').onclick = () => auth.signOut();
 
-    // LIVE PENDING
-    const container = document.getElementById("liveOrders");
-    container.innerHTML = "";
+// =============================
+// INIT
+// =============================
+function initData() {
+  loadOrders();
+  loadCategories();
+  loadDishes();
+}
 
-    pendingOrders.forEach(o => {
-        container.innerHTML += `
-      <div class="order-card new-order">
-        <b>🧾 ${o.orderId}</b><br>
-        👤 ${o.name}<br>
-        💰 ₹${o.total}<br>
+// =============================
+// ORDERS
+// =============================
+function loadOrders() {
+  db.ref('orders')
+    .orderByChild('outlet')
+    .equalTo(currentOutlet)
+    .on('value', snap => {
 
-        <button onclick="updateStatus('${o.orderId}','Preparing')">
-          Start Preparing
-        </button>
-      </div>
-    `;
+      const container = $('ordersTableBody');
+      container.innerHTML = '';
+
+      let revenue = 0;
+      let count = 0;
+
+      const orders = [];
+
+      snap.forEach(child => {
+        orders.push({ id: child.key, ...child.val() });
+      });
+
+      orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      orders.forEach(order => {
+        revenue += parseFloat(order.total || 0);
+        count++;
+
+        const items = order.cart
+          ? order.cart.map(i => `${i.quantity}x ${i.name}`).join(', ')
+          : '';
+
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+                    <td>#${order.orderId}</td>
+                    <td>${order.customerName}<br>${order.phone}</td>
+                    <td>${items}</td>
+                    <td>₹${order.total}</td>
+                    <td>
+                        <select onchange="updateOrderStatus('${order.id}', this.value)">
+                            ${statusOptions(order.status)}
+                        </select>
+                    </td>
+                `;
+
+        container.appendChild(tr);
+      });
+
+      $('stat-revenue').textContent = '₹' + revenue;
+      $('stat-orders').textContent = count;
     });
 }
 
-// AUTO REFRESH
-setInterval(loadDashboard, 3000);
+function statusOptions(current) {
+  const list = [
+    "Placed",
+    "Confirmed",
+    "Preparing",
+    "Cooked",
+    "Out for Delivery",
+    "Delivered"
+  ];
 
-// ---------- STATUS UPDATE ----------
-async function updateStatus(id, status) {
-    await fetch(`${FIREBASE_URL}/orders/${id}.json`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status })
+  return list.map(s =>
+    `<option ${s === current ? 'selected' : ''}>${s}</option>`
+  ).join('');
+}
+
+window.updateOrderStatus = (id, status) => {
+  db.ref('orders/' + id).update({ status });
+};
+
+// =============================
+// CATEGORIES
+// =============================
+function loadCategories() {
+  db.ref(`categories/${currentOutlet}`).on('value', snap => {
+
+    const container = $('categoryList');
+    container.innerHTML = '';
+
+    snap.forEach(child => {
+      const c = child.val();
+
+      container.innerHTML += `
+                <div class="admin-card">
+                    <button onclick="deleteItem('categories','${child.key}')">X</button>
+                    <img src="${c.image}">
+                    <h4>${c.name}</h4>
+                </div>
+            `;
+    });
+  });
+}
+
+$('saveCategoryBtn').onclick = () => {
+  const name = $('categoryName').value;
+  const image = $('categoryImage').value;
+
+  if (!name) return alert("Enter category");
+
+  db.ref(`categories/${currentOutlet}`).push({ name, image });
+
+  $('categoryName').value = '';
+  $('categoryImage').value = '';
+};
+
+// =============================
+// DISHES
+// =============================
+function loadDishes() {
+  db.ref(`dishes/${currentOutlet}`).on('value', snap => {
+
+    const grid = $('dishesGrid');
+    grid.innerHTML = '';
+
+    snap.forEach(child => {
+      const d = child.val();
+
+      grid.innerHTML += `
+                <div class="admin-card">
+                    <button onclick="deleteItem('dishes','${child.key}')">X</button>
+                    <img src="${d.imageUrl}">
+                    <h4>${d.name}</h4>
+                    <p>₹${d.price || '-'}</p>
+
+                    <button onclick="openSize('${child.key}')">Sizes</button>
+                    <button onclick="openAddon('${child.key}')">Addons</button>
+                </div>
+            `;
+    });
+  });
+}
+
+$('saveDishBtn').onclick = () => {
+  const name = $('dishName').value;
+  const price = $('dishPrice').value;
+  const imageUrl = $('dishImage').value;
+  const categoryId = $('dishCategory').value;
+
+  if (!name || !categoryId) return alert("Fill all");
+
+  db.ref(`dishes/${currentOutlet}`).push({
+    name,
+    price,
+    imageUrl,
+    categoryId
+  });
+
+  $('dishName').value = '';
+  $('dishPrice').value = '';
+  $('dishImage').value = '';
+};
+
+// =============================
+// SIZES SYSTEM
+// =============================
+window.openSize = (dishId) => {
+  const size = prompt("Enter sizes JSON\nExample:\n{\"Small\":250,\"Medium\":300}");
+
+  if (!size) return;
+
+  try {
+    const parsed = JSON.parse(size);
+
+    db.ref(`sizes/${currentOutlet}/${dishId}`).set(parsed);
+    alert("Saved");
+  } catch {
+    alert("Invalid JSON");
+  }
+};
+
+// =============================
+// ADDONS SYSTEM
+// =============================
+window.openAddon = (dishId) => {
+  const name = prompt("Addon Name (Extra Cheese)");
+
+  if (!name) return;
+
+  const price = prompt("Enter price JSON\nExample:\n{\"Small\":30,\"Medium\":40}");
+
+  if (!price) return;
+
+  try {
+    const parsed = JSON.parse(price);
+
+    db.ref(`addons/${currentOutlet}/${dishId}`).push({
+      name,
+      ...parsed
     });
 
-    loadDashboard();
-}
-
-// ---------- NAVIGATION ----------
-function loadPage(page) {
-    const content = document.getElementById("content");
-    content.innerHTML = `<h2><span id="loading">⌛ Loading ${page}...</span></h2>`;
-
-    if (page === "dashboard") {
-        location.reload();
-        return;
-    }
-
-    if (page === "reports") {
-        showReportPage();
-        return;
-    }
-
-    if (page === "menu") {
-        showMenuPage();
-        return;
-    }
-
-    if (page === "add") {
-        showAddPage();
-        return;
-    }
-
-    if (page === "stock") {
-        showStockPage();
-        return;
-    }
-
-    if (page === "settings") {
-        showSettingsPage();
-        return;
-    }
-
-    content.innerHTML = `<h2>${page}</h2><p>Module coming soon...</p>`;
-}
-
-// ---------- MENU PAGE ----------
-async function showMenuPage() {
-    const dishes = await fetch(`${FIREBASE_URL}/dishes.json`).then(res => res.json());
-    const content = document.getElementById("content");
-    
-    let html = `<h2>🍕 Menu Management</h2>
-    <table border="1" width="100%">
-        <thead>
-            <tr>
-                <th>Image</th>
-                <th>Name</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>`;
-
-    for (let id in dishes) {
-        const d = dishes[id];
-        html += `
-            <tr>
-                <td><img src="${d.imageUrl}" width="50"></td>
-                <td>${d.name}</td>
-                <td>₹${d.price}</td>
-                <td>${d.isAvailable ? '🟢 Active' : '🔴 Hidden'}</td>
-                <td>
-                    <button onclick="editItem('${id}')">Edit</button>
-                    <button onclick="toggleItem('${id}', ${!d.isAvailable})" style="background:${d.isAvailable ? '#ff4444' : '#44bb44'}">
-                        ${d.isAvailable ? 'Disable' : 'Enable'}
-                    </button>
-                </td>
-            </tr>
-        `;
-    }
-    html += `</tbody></table>`;
-    content.innerHTML = html;
-}
-
-// ---------- ADD ITEM PAGE ----------
-async function showAddPage() {
-    const cats = await fetch(`${FIREBASE_URL}/categories.json`).then(res => res.json());
-    
-    let catOptions = "";
-    for (let id in cats) {
-        catOptions += `<option value="${id}">${cats[id].name}</option>`;
-    }
-
-    document.getElementById("content").innerHTML = `
-        <h2>➕ Add New Dish</h2>
-        <div style="background:white; padding:20px; border-radius:10px; max-width:500px">
-            <label>Name:</label><br><input type="text" id="newName" style="width:100%"><br><br>
-            <label>Category:</label><br><select id="newCat" style="width:100%">${catOptions}</select><br><br>
-            <label>Price:</label><br><input type="number" id="newPrice" style="width:100%"><br><br>
-            <label>Image URL:</label><br><input type="text" id="newImg" style="width:100%"><br><br>
-            <label>Description:</label><br><textarea id="newDesc" style="width:100%"></textarea><br><br>
-            <button onclick="saveNewItem()" style="width:100%">Add to Menu</button>
-        </div>
-    `;
-}
-
-async function saveNewItem() {
-    const id = "dish_" + Date.now();
-    const item = {
-        id,
-        name: document.getElementById("newName").value,
-        categoryId: document.getElementById("newCat").value,
-        price: parseInt(document.getElementById("newPrice").value),
-        imageUrl: document.getElementById("newImg").value,
-        description: document.getElementById("newDesc").value,
-        isAvailable: true,
-        priority: 10
-    };
-
-    await fetch(`${FIREBASE_URL}/dishes/${id}.json`, {
-        method: "PUT",
-        body: JSON.stringify(item)
-    });
-
-    alert("Item Added!");
-    loadPage('menu');
-}
-
-// ---------- STOCK PAGE ----------
-async function showStockPage() {
-    const dishes = await fetch(`${FIREBASE_URL}/dishes.json`).then(res => res.json());
-    const content = document.getElementById("content");
-
-    let html = `<h2>📦 Stock Management</h2>
-    <table border="1" width="100%">
-        <thead>
-            <tr>
-                <th>Item</th>
-                <th>Current Stock</th>
-                <th>New Stock</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>`;
-
-    for (let id in dishes) {
-        const d = dishes[id];
-        html += `
-            <tr>
-                <td>${d.name}</td>
-                <td><b>${d.stock || 0}</b></td>
-                <td><input type="number" id="stock_${id}" value="${d.stock || 0}" style="width:60px"></td>
-                <td><button onclick="updateStock('${id}')">Update</button></td>
-            </tr>
-        `;
-    }
-    html += `</tbody></table>`;
-    content.innerHTML = html;
-}
-
-async function updateStock(id) {
-    const stock = parseInt(document.getElementById(`stock_${id}`).value);
-    await fetch(`${FIREBASE_URL}/dishes/${id}.json`, {
-        method: "PATCH",
-        body: JSON.stringify({ stock })
-    });
-    alert("Stock Updated!");
-    showStockPage();
-}
-
-// ---------- SETTINGS PAGE ----------
-async function showSettingsPage() {
-    const config = await fetch(`${FIREBASE_URL}/appConfig.json`).then(res => res.json());
-
-    document.getElementById("content").innerHTML = `
-        <h2>⚙️ Shop Settings</h2>
-        <div style="background:white; padding:20px; border-radius:10px; max-width:500px">
-            <label>Shop Name:</label><br><input type="text" id="setName" value="${config.shopName}" style="width:100%"><br><br>
-            <label>Shop Address:</label><br><input type="text" id="setAddr" value="${config.address}" style="width:100%"><br><br>
-            <label>Shop Mobile:</label><br><input type="text" id="setPh" value="${config.phone}" style="width:100%"><br><br>
-            <label>Delivery Fee (₹):</label><br><input type="number" id="setFee" value="${config.deliveryFee}" style="width:100%"><br><br>
-            <button onclick="saveSettings()" style="width:100%">Save Settings</button>
-        </div>
-    `;
-}
-
-async function saveSettings() {
-    const config = {
-        shopName: document.getElementById("setName").value,
-        address: document.getElementById("setAddr").value,
-        phone: document.getElementById("setPh").value,
-        deliveryFee: parseInt(document.getElementById("setFee").value)
-    };
-
-    await fetch(`${FIREBASE_URL}/appConfig.json`, {
-        method: "PATCH",
-        body: JSON.stringify(config)
-    });
-
-    alert("Settings Saved!");
-}
-
-async function toggleItem(id, isAvailable) {
-    await fetch(`${FIREBASE_URL}/dishes/${id}.json`, {
-        method: "PATCH",
-        body: JSON.stringify({ isAvailable })
-    });
-    showMenuPage();
-}
-
-// ---------- SHOP TOGGLE ----------
-async function toggleShop() {
-    const btn = document.getElementById("shopBtn");
-    const isOpen = btn.innerText.includes("Open");
-    const newStatus = !isOpen;
-
-    await fetch(`${FIREBASE_URL}/appConfig.json`, {
-        method: "PATCH",
-        body: JSON.stringify({ shopOpen: newStatus })
-    });
-
-    btn.innerText = newStatus ? "🟢 Open" : "🔴 Closed";
-    btn.style.background = newStatus ? "#44bb44" : "#ff4444";
-}
-
-// Update toggleShop on init
-async function initShopStatus() {
-    const config = await fetch(`${FIREBASE_URL}/appConfig.json`).then(res => res.json());
-    const btn = document.getElementById("shopBtn");
-    btn.innerText = config.shopOpen ? "🟢 Open" : "🔴 Closed";
-    btn.style.background = config.shopOpen ? "#44bb44" : "#ff4444";
-}
-
-// ---------- OPEN REPORT ----------
-function openReport(type) {
-    showReportPage();
-
-    setTimeout(() => {
-        loadReportData(type);
-    }, 200);
-}
-
-// ---------- REPORT UI ----------
-function showReportPage() {
-    document.getElementById("content").innerHTML = `
-    <h2>📊 Reports</h2>
-
-    <input type="date" id="fromDate">
-    <input type="date" id="toDate">
-    <button onclick="applyFilter()">Filter</button>
-    <button onclick="downloadPDF()">Download PDF</button>
-
-    <canvas id="revenueChart" height="100"></canvas>
-
-    <h3>🍕 Top Selling Items</h3>
-    <div id="topItems"></div>
-
-    <h3>⏰ Peak Hours</h3>
-    <div id="peakHours"></div>
-
-    <table border="1" width="100%" style="margin-top:20px">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Name</th>
-          <th>Total</th>
-          <th>Status</th>
-          <th>Date</th>
-        </tr>
-      </thead>
-      <tbody id="reportTable"></tbody>
-    </table>
-  `;
-}
-
-// ---------- LOAD REPORT ----------
-async function loadReportData(type) {
-    const orders = await getOrders();
-
-    let filtered = [];
-
-    if (type === "all") filtered = orders;
-
-    if (type === "pending")
-        filtered = orders.filter(o => o.status === "Pending");
-
-    if (type === "delivery")
-        filtered = orders.filter(o => o.status === "Out for delivery");
-
-    if (type === "revenue")
-        filtered = orders.filter(o => o.status === "Delivered");
-
-    renderTable(filtered);
-}
-
-// ---------- RENDER TABLE ----------
-function renderTable(data) {
-    currentReportData = data;
-
-    const table = document.getElementById("reportTable");
-    table.innerHTML = "";
-
-    data.forEach(o => {
-        table.innerHTML += `
-      <tr>
-        <td>${o.orderId}</td>
-        <td>${o.name}</td>
-        <td>₹${o.total}</td>
-        <td>${o.status}</td>
-        <td>${new Date(o.createdAt).toLocaleString()}</td>
-      </tr>
-    `;
-    });
-
-    // ANALYTICS
-    const analytics = analyzeData(data);
-    renderChart(analytics.revenueByDay);
-    renderTopItems(analytics.itemCount);
-    renderPeak(analytics.hourCount);
-}
-
-// ---------- FILTER ----------
-async function applyFilter() {
-    const from = new Date(document.getElementById("fromDate").value);
-    const to = new Date(document.getElementById("toDate").value);
-
-    const orders = await getOrders();
-
-    const filtered = orders.filter(o => {
-        const d = new Date(o.createdAt);
-        return d >= from && d <= to;
-    });
-
-    renderTable(filtered);
-}
-
-// ---------- ANALYTICS ----------
-function analyzeData(data) {
-    const revenueByDay = {};
-    const itemCount = {};
-    const hourCount = {};
-
-    data.forEach(o => {
-        const date = new Date(o.createdAt);
-
-        const day = date.toISOString().split("T")[0];
-        revenueByDay[day] = (revenueByDay[day] || 0) + (o.total || 0);
-
-        o.items?.forEach(i => {
-            const name = i.item.name;
-            itemCount[name] = (itemCount[name] || 0) + 1;
-        });
-
-        const hour = date.getHours();
-        hourCount[hour] = (hourCount[hour] || 0) + 1;
-    });
-
-    return { revenueByDay, itemCount, hourCount };
-}
-
-// ---------- CHART ----------
-let chartInstance;
-
-function renderChart(data) {
-    const ctx = document.getElementById("revenueChart");
-
-    if (chartInstance) chartInstance.destroy();
-
-    chartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: Object.keys(data),
-            datasets: [{
-                label: 'Revenue',
-                data: Object.values(data)
-            }]
-        }
-    });
-}
-
-// ---------- TOP ITEMS ----------
-function renderTopItems(itemCount) {
-    const sorted = Object.entries(itemCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5);
-
-    let html = "";
-
-    sorted.forEach(i => {
-        html += `🍕 ${i[0]} - ${i[1]} orders<br>`;
-    });
-
-    document.getElementById("topItems").innerHTML = html;
-}
-
-// ---------- PEAK HOURS ----------
-function renderPeak(hourCount) {
-    let html = "";
-
-    Object.entries(hourCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .forEach(h => {
-            html += `⏰ ${h[0]}:00 - ${h[1]} orders<br>`;
-        });
-
-    document.getElementById("peakHours").innerHTML = html;
-}
-
-// ---------- PDF ----------
-async function downloadPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    doc.setFontSize(16);
-    doc.text("Prasant Pizza Report", 20, 20);
-
-    let y = 40;
-
-    currentReportData.forEach((o, i) => {
-        doc.text(`${i + 1}. ${o.orderId}`, 10, y); y += 6;
-        doc.text(`Name: ${o.name}`, 10, y); y += 6;
-        doc.text(`Total: ₹${o.total}`, 10, y); y += 6;
-        doc.text(`Status: ${o.status}`, 10, y); y += 10;
-
-        if (y > 280) {
-            doc.addPage();
-            y = 20;
-        }
-    });
-
-    doc.save("report.pdf");
-}
-
-// ---------- INIT ----------
-loadDashboard();
-initShopStatus();
+    alert("Addon Added");
+  } catch {
+    alert("Invalid format");
+  }
+};
+
+// =============================
+// DELETE
+// =============================
+window.deleteItem = (type, id) => {
+  if (!confirm("Delete?")) return;
+
+  db.ref(`${type}/${currentOutlet}/${id}`).remove();
+};
+
+// =============================
+// NAVIGATION
+// =============================
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(item.dataset.target).classList.add('active');
+  });
+});
