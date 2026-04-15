@@ -1,21 +1,15 @@
-// =============================
-// FIREBASE CONFIG
-// =============================
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY", // Please replace with your actual API Key
-    authDomain: "prashant-pizza-e86e4.firebaseapp.com",
-    databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
-    projectId: "prashant-pizza-e86e4",
-    storageBucket: "prashant-pizza-e86e4.appspot.com",
-    messagingSenderId: "XXXX",
-    appId: "XXXX"
+  apiKey: "AIzaSyAAHuSGwulRO3QhrOD4zK3ZRISivBi7jOM",
+  authDomain: "prashant-pizza-e86e4.firebaseapp.com",
+  databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
+  projectId: "prashant-pizza-e86e4",
+  storageBucket: "prashant-pizza-e86e4.firebasestorage.app",
+  messagingSenderId: "857471482885",
+  appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c"
 };
 
-// =============================
-// INITIALIZE FIREBASE
-// =============================
 if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+  firebase.initializeApp(firebaseConfig);
 }
 
 const db = firebase.database();
