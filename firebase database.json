@@ -1,14 +1,4 @@
 {
-    "addons": {
-        "dish_1": {
-            "extra_cheese": {
-                "large": 60,
-                "medium": 40,
-                "name": "Extra Cheese",
-                "small": 35
-            }
-        }
-    },
     "appConfig": {
         "address": "Daroga Ray Chauk , Parsa...",
         "currency": "INR",
@@ -17,137 +7,6 @@
         "shopName": "ROSHANI AHA PIZZA",
         "shopOpen": true
     },
-    "categories": {
-        "cat_1": {
-            "image": "https://example.com/pizza.jpg",
-            "isActive": true,
-            "name": "Pizza",
-            "priority": 1
-        }
-    },
-    "customers": {
-        "16956681908265@lid": {
-            "address": "anjani bazar, apex public school, parsa saran",
-            "lastOrder": "order_1775686168524",
-            "name": "nilesh kumar"
-        },
-        "919876543210": {
-            "address": "Parsa",
-            "createdAt": "2026-04-09T10:00:00Z",
-            "lastOrderId": "order_123",
-            "name": "Amit",
-            "totalOrders": 5,
-            "totalSpent": 1200
-        }
-    },
-    "dishes": {
-        "dish_1": {
-            "categoryId": "cat_1",
-            "description": "Loaded cheese pizza",
-            "imageUrl": "https://example.com/cheese.jpg",
-            "isAvailable": true,
-            "lowStockAlert": 3,
-            "name": "Cheese Pizza",
-            "price": 280,
-            "priority": 1,
-            "stock": 8,
-            "trackStock": true
-        }
-    },
-    "employees": {
-        "emp_1": {
-            "isActive": true,
-            "name": "Ravi",
-            "panelLink": "https://yourdomain.com/cook?emp=emp_1",
-            "phone": "919999999999",
-            "role": "cook"
-        },
-        "emp_2": {
-            "isActive": true,
-            "name": "Suresh",
-            "panelLink": "https://yourdomain.com/rider?emp=emp_2",
-            "phone": "918888888888",
-            "role": "rider"
-        }
-    },
-    "orders": {
-        "order_123": {
-            "address": "Parsa",
-            "customerName": "Amit",
-            "items": [
-                {
-                    "addons": [
-                        "extra_cheese"
-                    ],
-                    "id": "dish_1",
-                    "name": "Cheese Pizza",
-                    "price": 320,
-                    "size": "medium"
-                }
-            ],
-            "note": "No onions",
-            "orderId": "order_123",
-            "paymentMethod": "COD",
-            "paymentStatus": "Pending",
-            "phone": "919876543210",
-            "status": "Pending",
-            "timestamps": {
-                "created": "2026-04-09T10:00:00Z"
-            },
-            "total": 320
-        },
-        "order_1775686168524": {
-            "address": "anjani bazar, apex public school, parsa saran",
-            "createdAt": "2026-04-08T22:09:28.524Z",
-            "customerName": "nilesh kumar",
-            "items": [
-                {
-                    "id": "dish_1",
-                    "name": "Cheese Pizza",
-                    "price": 280
-                }
-            ],
-            "note": "garam leke aana bhai",
-            "orderId": "order_1775686168524",
-            "phone": "16956681908265@lid",
-            "status": "Pending",
-            "total": 280
-        },
-        "order_1775688787575": {
-            "addons": [
-                "extra_cheese"
-            ],
-            "address": "anjani bazar, near sbi anjani branch",
-            "createdAt": "2026-04-08T22:53:07.575Z",
-            "item": "Cheese Pizza",
-            "name": "anjani bazar",
-            "orderId": "order_1775688787575",
-            "size": "medium",
-            "status": "Pending",
-            "total": 320
-        }
-    },
-    "reports": {
-        "daily": {
-            "2026-04-09": {
-                "totalOrders": 20,
-                "totalSales": 5000
-            }
-        },
-        "monthly": {
-            "2026-04": {
-                "totalOrders": 450,
-                "totalSales": 120000
-            }
-        }
-    },
-    "sizes": {
-        "dish_1": {
-            "large": 350,
-            "medium": 280,
-            "small": 250
-        }
-    },
     "uiConfig": {
         "welcomeImage": "https://images.unsplash.com/photo-1594007654729-407eedc4be65",
         "menuImage": "https://images.unsplash.com/photo-1513104890138-7c749659a591",
@@ -155,5 +14,74 @@
         "contactImage": "https://images.unsplash.com/photo-1556740749-887f6717d7e4",
         "summaryImage": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c",
         "confirmImage": "https://images.unsplash.com/photo-1600891964092-4316c288032e"
+    },
+    "admins": {
+        "admin_pizza": {
+            "email": "roshanipizza@gmail.com",
+            "outlet": "pizza",
+            "phone": "919852151856"
+        },
+        "admin_cake": {
+            "email": "roshanicakes@gmail.com",
+            "outlet": "cake",
+            "phone": "919852151856"
+        }
+    },
+    "riders": {
+        "rider_1": {
+            "name": "Ravi",
+            "email": "ravi@pizza.com",
+            "phone": "919999999999",
+            "outlet": "pizza",
+            "status": "Online"
+        },
+        "rider_2": {
+            "name": "Suresh",
+            "email": "suresh@pizza.com",
+            "phone": "918888888888",
+            "outlet": "pizza",
+            "status": "Online"
+        }
+    },
+    "categories": {
+        "pizza": {
+            "cat_1": { "name": "Pizza", "isActive": true }
+        },
+        "cake": {
+            "cat_2": { "name": "Cakes", "isActive": true }
+        }
+    },
+    "dishes": {
+        "pizza": {
+            "dish_1": {
+                "name": "Cheese Pizza",
+                "category": "Pizza",
+                "price": 280,
+                "stock": true,
+                "image": "https://example.com/cheese.jpg"
+            }
+        },
+        "cake": {
+            "cake_1": {
+                "name": "Chocolate Cake",
+                "category": "Cakes",
+                "price": 450,
+                "stock": true,
+                "image": "https://example.com/cake.jpg"
+            }
+        }
+    },
+    "addons": {
+        "pizza": {
+            "dish_1": {
+                "extra_cheese": { "name": "Extra Cheese", "small": 35, "medium": 40, "large": 60 }
+            }
+        }
+    },
+    "customers": {},
+    "orders": {},
+    "reports": {
+        "daily": {},
+        "monthly": {}
     }
 }

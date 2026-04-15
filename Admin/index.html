@@ -4,96 +4,489 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
+    <title>ROSHANI PIZZA | Admin Dashboard</title>
 
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+
+    <!-- Excel & PDF Reports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 </head>
 
 <body>
+    <div id="alertContainer"></div>
 
     <!-- LOGIN -->
     <div id="authOverlay">
-        <h2>Admin Login</h2>
-        <input id="adminEmail" placeholder="Email">
-        <input id="adminPassword" type="password" placeholder="Password">
-        <button id="loginBtn">Login</button>
-        <p id="authError"></p>
+        <div class="login-box">
+            <h2>ERP LOGIN</h2>
+            <input id="adminEmail" placeholder="Email Address">
+            <input id="adminPassword" type="password" placeholder="Password">
+            <button id="loginBtn" class="btn-primary w-full flex-center">Sign In</button>
+            <p id="authError" class="login-error"></p>
+        </div>
     </div>
 
-    <!-- DASHBOARD -->
-    <div id="dashboard">
+    <div class="layout">
 
-        <div class="topbar">
-            <span id="userEmailDisplay"></span>
-            <button id="logoutBtn">Logout</button>
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="sidebar-header">ROSHANI ERP</div>
+            <ul>
+                <li id="menu-dashboard" class="active" onclick="switchTab('dashboard')"><span>📊</span> Dashboard</li>
+                <li id="menu-orders" onclick="switchTab('orders')"><span>📦</span> Orders</li>
+                <li id="menu-live" onclick="switchTab('live')"><span>🔥</span> Live Orders <span id="badge-live" class="counter-badge hidden">0</span></li>
+                <li class="has-submenu" id="menu-group-parent">
+                    <div onclick="toggleSubmenu('menu-group-parent')"><span>🍴</span> Menu <span class="arrow">▼</span></div>
+                    <ul id="menu-group" class="submenu">
+                        <li onclick="switchTab('categories')">📂 Categories</li>
+                        <li onclick="switchTab('menu')">🍕 Dishes</li>
+                    </ul>
+                </li>
+                <li id="menu-riders" onclick="switchTab('riders')"><span>🏍️</span> Riders</li>
+                <li id="menu-customers" onclick="switchTab('customers')"><span>👥</span> Customers</li>
+                <li id="menu-payments" onclick="switchTab('payments')"><span>💳</span> Payments</li>
+                <li id="menu-reports" onclick="switchTab('reports')"><span>📉</span> Reports</li>
+                <li id="menu-settings" onclick="switchTab('settings')"><span>⚙️</span> Settings</li>
+                <li onclick="userLogout()" class="logout-item"><span>🚪</span> Logout</li>
+            </ul>
         </div>
 
-        <div class="stats">
-            <div>Orders: <span id="stat-orders">0</span></div>
-            <div>Revenue: <span id="stat-revenue">0</span></div>
-            <div>Dishes: <span id="stat-dishes">0</span></div>
+        <!-- MAIN -->
+        <div class="main">
+
+            <!-- TOPBAR -->
+            <div class="topbar">
+                <div>
+                    <h2 id="currentTabTitle">Dashboard Overview</h2>
+                    <span id="outletBadge" class="outlet-badge">LOADING...</span>
+                </div>
+                <div class="user-display">
+                    <span id="userEmailDisplay" class="user-email"></span>
+                    <button id="logoutBtn" class="btn-secondary btn-small">Logout</button>
+                </div>
+            </div>
+
+            <!-- DASHBOARD TAB -->
+            <div id="tab-dashboard" class="tab-content">
+                <div class="kpi-row">
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box green"><i data-lucide="shopping-bag"></i></div>
+                        <div class="kpi-info">
+                            <span class="val" id="statOrders">0</span>
+                            <span class="lbl">New Orders</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box orange"><i data-lucide="clock"></i></div>
+                        <div class="kpi-info">
+                            <span class="val" id="statPending">0</span>
+                            <span class="lbl">In Progress</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box blue"><i data-lucide="indian-rupee"></i></div>
+                        <div class="kpi-info">
+                            <span class="val" id="statRevenue">₹0</span>
+                            <span class="lbl">Total Revenue</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box green"><i data-lucide="bike"></i></div>
+                        <div class="kpi-info">
+                            <span class="val" id="statRidersActive">0</span>
+                            <span class="lbl">Riders Online</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- MAIN: Recent Orders -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">Recent Order Management</h3>
+                            <button class="btn-primary btn-small" onclick="switchTab('orders')">View All</button>
+                        </div>
+                        <div class="scroll-x">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Address</th>
+                                        <th>Total</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordersTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- SIDE: Top Items & Riders -->
+                    <div class="dashboard-sidebar">
+                        <div class="panel">
+                            <div class="panel-header"><h3 class="panel-title">⭐ Top Spenders</h3></div>
+                            <div id="topCustomersList">
+                                <p class="text-muted-small">Calculating customer data...</p>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <div class="panel-header"><h3 class="panel-title">🍕 Top Selling Items</h3></div>
+                            <div id="topItemsList">
+                                <p class="text-muted-small">Processing sales data...</p>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h3 class="panel-title">Active Riders</h3>
+                                <span id="onlineRiderCount" class="badge badge-ready">0 ON</span>
+                            </div>
+                            <div id="riderStatusList">
+                                <!-- Dynamic -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ORDERS TAB -->
+            <div id="tab-orders" class="tab-content hidden">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3>Order History</h3>
+                        <input type="text" id="orderSearch" placeholder="Search Order ID or Name..." class="search-input-group">
+                    </div>
+                    <div class="scroll-x">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Customer</th>
+                                    <th>Address</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableFull"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LIVE ORDERS TAB -->
+            <div id="tab-live" class="tab-content hidden">
+                <div class="panel">
+                    <h3>🔥 Live Operations</h3>
+                    <p class="panel-subtitle">Tracking active kitchen and delivery work</p>
+                    <div class="scroll-x">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Customer</th>
+                                    <th>Items</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Assign Rider</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="liveOrdersTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MENU TAB -->
+            <div id="tab-menu" class="tab-content hidden">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3>Menu Management</h3>
+                        <button onclick="showDishModal()" class="btn-primary btn-small">+ Add Dish</button>
+                    </div>
+                    <div id="menuGrid" class="menu-grid"></div>
+                </div>
+            </div>
+
+            <!-- CATEGORIES TAB -->
+            <div id="tab-categories" class="tab-content hidden">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3>Category Management</h3>
+                        <div class="flex-row flex-gap-10 flex-center">
+                        <div class="flex-row flex-gap-10 flex-center p-15 glass-card category-upload-box">
+                                <img id="catPreview" src="../assets/images/category_icon.png" class="category-preview-img" alt="Category Preview">
+                                <input type="file" id="catFile" accept="image/*" class="hidden" onchange="previewImage(this, 'catPreview')" title="Select category photo">
+                                <button onclick="document.getElementById('catFile').click()" class="btn-secondary small-photo-btn">Photo</button>
+                            </div>
+                            <input id="newCatName" placeholder="Category Name" class="form-input mb-0 w-150" title="Category Name">
+                            <button onclick="addCategory()" class="btn-primary report-gen-btn">Add</button>
+                        </div>
+                    </div>
+                    <div id="categoryList" class="category-grid"></div>
+                </div>
+            </div>
+
+            <!-- RIDERS TAB -->
+            <div id="tab-riders" class="tab-content hidden">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3>Rider Management</h3>
+                        <button onclick="showRiderModal()" class="btn-primary btn-small">+ Add New Rider</button>
+                    </div>
+                    <div class="scroll-x">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Rider Name</th>
+                                    <th>Credentials</th>
+                                    <th>Status</th>
+                                    <th>Portal</th>
+                                    <th>Stats</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ridersTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CUSTOMERS TAB -->
+            <div id="tab-customers" class="tab-content hidden">
+                <div class="panel">
+                    <h3>Customer Database</h3>
+                    <div class="scroll-x">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>WhatsApp</th>
+                                    <th>Last Address</th>
+                                    <th>Last Order</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customersTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REPORTS TAB -->
+            <div id="tab-reports" class="tab-content hidden">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3>Sales Reports</h3>
+                        <div class="flex-row flex-gap-10 flex-center">
+                            <input type="date" id="reportFrom" class="form-input report-date-input" title="From Date">
+                            <span class="text-muted-small">to</span>
+                            <input type="date" id="reportTo" class="form-input report-date-input" title="To Date">
+                            <button onclick="generateCustomReport()" class="btn-primary report-gen-btn">Generate</button>
+                        </div>
+                    </div>
+                    <div class="kpi-row">
+                        <div class="kpi-card">
+                            <div class="kpi-info">
+                                <span class="val" id="reportRevenue">₹0</span>
+                                <span class="lbl">Revenue</span>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-info">
+                                <span class="val" id="reportOrders">0</span>
+                                <span class="lbl">Orders</span>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-info">
+                                <span class="val" id="reportAvg">₹0</span>
+                                <span class="lbl">Av. Ticket</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="panel-header mt-20">
+                        <h4 class="panel-title">Detailed Sales Data</h4>
+                        <div class="flex-row flex-gap-10">
+                            <button onclick="downloadExcel()" class="btn-secondary btn-small excel-btn">📥 Excel</button>
+                            <button onclick="downloadPDF()" class="btn-secondary btn-small pdf-btn">📥 PDF</button>
+                        </div>
+                    </div>
+
+                    <div class="scroll-x glass-card report-table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Customer</th>
+                                    <th>Total (₹)</th>
+                                    <th>Method</th>
+                                    <th>Items</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="reportsContainer" class="hidden"></div>
+                </div>
+            </div>
+
+            <!-- PAYMENTS TAB -->
+            <div id="tab-payments" class="tab-content hidden">
+                <div class="panel">
+                    <h3>💳 Payment Tracking</h3>
+                    <div class="scroll-x">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Customer</th>
+                                    <th>Method</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="paymentsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SETTINGS TAB -->
+            <div id="tab-settings" class="tab-content hidden">
+                <div id="settingsContainer">
+                    <div class="panel flex-center p-50 center-text">
+                        <p>Loading premium settings panel...</p>
+                    </div>
+                </div>
+            </div>
+
         </div>
-
-        <!-- NAV -->
-        <div class="nav">
-            <button class="nav-item active" data-target="orders">Orders</button>
-            <button class="nav-item" data-target="dishes">Dishes</button>
-            <button class="nav-item" data-target="categories">Categories</button>
-        </div>
-
-        <!-- ORDERS -->
-        <div id="orders" class="section active">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Customer</th>
-                        <th>Items</th>
-                        <th>Total</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="ordersTableBody"></tbody>
-            </table>
-        </div>
-
-        <!-- DISHES -->
-        <div id="dishes" class="section">
-            <h3>Add Dish</h3>
-            <input id="dishName" placeholder="Name">
-            <input id="dishPrice" placeholder="Price">
-            <input id="dishImage" placeholder="Image URL">
-            <input id="dishCategory" placeholder="Category ID">
-            <button id="saveDishBtn">Add Dish</button>
-
-            <div id="dishesGrid"></div>
-        </div>
-
-        <!-- CATEGORIES -->
-        <div id="categories" class="section">
-            <h3>Add Category</h3>
-            <input id="categoryName" placeholder="Name">
-            <input id="categoryImage" placeholder="Image URL">
-            <button id="saveCategoryBtn">Add Category</button>
-
-            <div id="categoryList"></div>
-        </div>
-
     </div>
 
     <script>
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
+            apiKey: "AIzaSyAAHuSGwulRO3QhrOD4zK3ZRISivBi7jOM",
             authDomain: "prashant-pizza-e86e4.firebaseapp.com",
             databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
+            projectId: "prashant-pizza-e86e4",
+            storageBucket: "prashant-pizza-e86e4.appspot.com"
         };
-
         firebase.initializeApp(firebaseConfig);
+
+        window.previewImage = (input, previewId) => {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById(previewId).src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
     </script>
+
+    <!-- DISH MODAL -->
+    <div id="dishModal" class="modal">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h2 id="modalTitle" class="modal-title">Add New Dish</h2>
+                <button onclick="hideDishModal()" class="close-btn">&times;</button>
+            </div>
+            
+            <div class="modal-grid-2col">
+                <!-- Left: Media -->
+                <div>
+                    <div class="modal-media-upload">
+                        <img id="dishPreview" src="../assets/images/pizza_placeholder.png" class="modal-img-preview" alt="Dish Preview">
+                        <div class="modal-img-overlay">
+                            <input type="file" id="dishFile" accept="image/*" class="hidden" onchange="previewImage(this, 'dishPreview')" title="Upload dish photo">
+                            <button onclick="document.getElementById('dishFile').click()" class="btn-secondary update-photo-btn">Update Photo</button>
+                        </div>
+                    </div>
+                    <input id="dishImage" type="hidden">
+                    <small id="uploadStatus" class="hidden upload-status-text">Uploading...</small>
+                </div>
+
+                <!-- Right: Details -->
+                <div class="modal-details-scroll">
+                    <div class="step-box">
+                        <label class="form-label step-label">STEP 1: SELECT CATEGORY</label>
+                        <select id="dishCategory" class="form-input category-select" title="Choose Category">
+                            <option value="">Choose Category...</option>
+                        </select>
+                    </div>
+
+                    <label class="form-label">Dish Name</label>
+                    <input id="dishName" placeholder="e.g. Farmhouse Pizza" class="form-input w-full mb-20">
+
+                    <label class="form-label">Base Price (₹)</label>
+                    <input id="dishPriceBase" type="number" placeholder="499" class="form-input w-full mb-20">
+
+                    <div class="divider-top">
+                        <div class="variation-label-row">
+                            <label class="form-label">Sizes & Variations</label>
+                            <button onclick="addSizeField()" class="add-variation-btn">+ Add Size</button>
+                        </div>
+                        <div id="sizesContainer" class="mt-10"></div>
+                    </div>
+
+                    <div class="divider-top">
+                        <div class="variation-label-row">
+                            <label class="form-label">Add-ons (Toppings/Extras)</label>
+                            <button onclick="addNewAddonField()" class="add-variation-btn">+ Add Addon</button>
+                        </div>
+                        <div id="addonsContainer" class="mt-10"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button id="saveDishBtn" class="btn-primary save-dish-btn">💾 Save Dish Information</button>
+                <button onclick="hideDishModal()" class="btn-secondary cancel-dish-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIDER MODAL -->
+    <div id="riderModal" class="modal">
+        <div class="modal-content glass-card rider-modal-box">
+            <h3 id="riderModalTitle" class="rider-modal-title">Add New Rider</h3>
+            <p class="text-muted-small mb-20">Manage rider login credentials</p>
+            
+            <label class="form-label form-label-small">Full Name</label>
+            <input id="riderName" placeholder="e.g. Rahul Sharma" class="form-input" title="Rider Full Name">
+            
+            <label class="form-label form-label-small">Email (Login ID)</label>
+            <input id="riderEmail" placeholder="rider@roshani.com" class="form-input" title="Rider Email (Login ID)">
+            
+            <label id="riderPassLabel" class="form-label form-label-small">Password</label>
+            <input id="riderPass" type="password" placeholder="Min 6 characters" class="form-input" title="Rider Password">
+            <small id="riderPassHint" class="hidden pass-hint">Leave blank to keep current password</small>
+            
+            <label class="form-label form-label-small">WhatsApp Number</label>
+            <input id="riderPhone" placeholder="+919999999999" class="form-input" title="Rider WhatsApp Number">
+
+            <div class="modal-footer rider-modal-footer">
+                <button id="saveRiderBtn" onclick="saveRiderAccount()" class="btn-primary flex-2">Create Account</button>
+                <button onclick="hideRiderModal()" class="btn-secondary flex-1">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>graphify - graphify-out/graph.html</title>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f0f1a; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: #1a1a2e; border-left: 1px solid #2a2a4e; display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid #2a2a4e; }
+  #search { width: 100%; background: #0f0f1a; border: 1px solid #3a3a5e; color: #e0e0e0; padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid #2a2a4e; display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: #2a2a4e; }
+  #info-panel { padding: 14px; border-bottom: 1px solid #2a2a4e; min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: #aaa; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: #ccc; line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: #e0e0e0; }
+  #info-content .empty { color: #555; font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid #333; }
+  .neighbor-link:hover { background: #2a2a4e; }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: #aaa; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: #2a2a4e; padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: #666; font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid #2a2a4e; font-size: 11px; color: #555; }
+</style>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Search nodes..." autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Node Info</h3>
+    <div id="info-content"><span class="empty">Click a node to inspect it</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Communities</h3>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">55 nodes &middot; 55 edges &middot; 15 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "admin_app_js", "label": "app.js", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "app.js", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 24}, {"id": "app_uploadimage", "label": "uploadImage()", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "uploadImage()", "community": 7, "community_name": "Category Management", "source_file": "Admin\\app.js", "file_type": "code", "degree": 2}, {"id": "app_deleteimage", "label": "deleteImage()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "deleteImage()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_initsecondaryauth", "label": "initSecondaryAuth()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "initSecondaryAuth()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_updateactivedishmodalcategories", "label": "updateActiveDishModalCategories()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "updateActiveDishModalCategories()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_previewimage", "label": "previewImage()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "previewImage()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_formatdate", "label": "formatDate()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "formatDate()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_initrealtimelisteners", "label": "initRealtimeListeners()", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "initRealtimeListeners()", "community": 2, "community_name": "Rider Dashboard Logic", "source_file": "rider\\app.js", "file_type": "code", "degree": 2}, {"id": "app_playsound", "label": "playSound()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "playSound()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_showalert", "label": "showAlert()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "showAlert()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_highlightorder", "label": "highlightOrder()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "highlightOrder()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_escapehtml", "label": "escapeHtml()", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.8, "font": {"size": 0, "color": "#ffffff"}, "title": "escapeHtml()", "community": 2, "community_name": "Rider Dashboard Logic", "source_file": "rider\\app.js", "file_type": "code", "degree": 3}, {"id": "app_validateurl", "label": "validateUrl()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "validateUrl()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_renderorders", "label": "renderOrders()", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 13.8, "font": {"size": 0, "color": "#ffffff"}, "title": "renderOrders()", "community": 5, "community_name": "Sales/Metrics Reporting", "source_file": "Admin\\app.js", "file_type": "code", "degree": 3}, {"id": "app_calculatetopspenders", "label": "calculateTopSpenders()", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "calculateTopSpenders()", "community": 5, "community_name": "Sales/Metrics Reporting", "source_file": "Admin\\app.js", "file_type": "code", "degree": 2}, {"id": "app_rendertopitems", "label": "renderTopItems()", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "renderTopItems()", "community": 5, "community_name": "Sales/Metrics Reporting", "source_file": "Admin\\app.js", "file_type": "code", "degree": 2}, {"id": "app_loadcategories", "label": "loadCategories()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "loadCategories()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_addcategory", "label": "addCategory()", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "addCategory()", "community": 7, "community_name": "Category Management", "source_file": "Admin\\app.js", "file_type": "code", "degree": 2}, {"id": "app_loadmenu", "label": "loadMenu()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "loadMenu()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_loadriders", "label": "loadRiders()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "loadRiders()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_renderriders", "label": "renderRiders()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "renderRiders()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_loadreports", "label": "loadReports()", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "loadReports()", "community": 6, "community_name": "Report Generation logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 2}, {"id": "app_generatecustomreport", "label": "generateCustomReport()", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "generateCustomReport()", "community": 6, "community_name": "Report Generation logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 2}, {"id": "app_loadcustomers", "label": "loadCustomers()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "loadCustomers()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "app_loadsettings", "label": "loadSettings()", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "loadSettings()", "community": 0, "community_name": "Admin Dashboard Logic", "source_file": "Admin\\app.js", "file_type": "code", "degree": 1}, {"id": "bot_firebase_js", "label": "firebase.js", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "firebase.js", "community": 1, "community_name": "Firebase Data Utilities", "source_file": "bot\\firebase.js", "file_type": "code", "degree": 4}, {"id": "firebase_getdata", "label": "getData()", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "getData()", "community": 1, "community_name": "Firebase Data Utilities", "source_file": "rider\\firebase.js", "file_type": "code", "degree": 2}, {"id": "firebase_setdata", "label": "setData()", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "setData()", "community": 1, "community_name": "Firebase Data Utilities", "source_file": "rider\\firebase.js", "file_type": "code", "degree": 2}, {"id": "firebase_updatedata", "label": "updateData()", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "updateData()", "community": 1, "community_name": "Firebase Data Utilities", "source_file": "rider\\firebase.js", "file_type": "code", "degree": 2}, {"id": "firebase_deletedata", "label": "deleteData()", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "deleteData()", "community": 1, "community_name": "Firebase Data Utilities", "source_file": "rider\\firebase.js", "file_type": "code", "degree": 2}, {"id": "bot_index_js", "label": "index.js", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 15.0, "font": {"size": 12, "color": "#ffffff"}, "title": "index.js", "community": 3, "community_name": "WhatsApp Bot Core", "source_file": "bot\\index.js", "file_type": "code", "degree": 4}, {"id": "index_sendimage", "label": "sendImage()", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 13.8, "font": {"size": 0, "color": "#ffffff"}, "title": "sendImage()", "community": 3, "community_name": "WhatsApp Bot Core", "source_file": "bot\\index.js", "file_type": "code", "degree": 3}, {"id": "index_sendgreeting", "label": "sendGreeting()", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "sendGreeting()", "community": 3, "community_name": "WhatsApp Bot Core", "source_file": "bot\\index.js", "file_type": "code", "degree": 2}, {"id": "index_sendcategories", "label": "sendCategories()", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "sendCategories()", "community": 3, "community_name": "WhatsApp Bot Core", "source_file": "bot\\index.js", "file_type": "code", "degree": 2}, {"id": "index_startbot", "label": "startBot()", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "startBot()", "community": 3, "community_name": "WhatsApp Bot Core", "source_file": "bot\\index.js", "file_type": "code", "degree": 1}, {"id": "rider_app_js", "label": "app.js", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 16.2, "font": {"size": 12, "color": "#ffffff"}, "title": "app.js", "community": 2, "community_name": "Rider Dashboard Logic", "source_file": "rider\\app.js", "file_type": "code", "degree": 5}, {"id": "app_showerror", "label": "showError()", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "showError()", "community": 2, "community_name": "Rider Dashboard Logic", "source_file": "rider\\app.js", "file_type": "code", "degree": 1}, {"id": "app_updatestatusui", "label": "updateStatusUI()", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "updateStatusUI()", "community": 2, "community_name": "Rider Dashboard Logic", "source_file": "rider\\app.js", "file_type": "code", "degree": 1}, {"id": "app_createordercard", "label": "createOrderCard()", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "createOrderCard()", "community": 2, "community_name": "Rider Dashboard Logic", "source_file": "rider\\app.js", "file_type": "code", "degree": 2}, {"id": "rider_firebase_js", "label": "firebase.js", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 16.2, "font": {"size": 12, "color": "#ffffff"}, "title": "firebase.js", "community": 1, "community_name": "Firebase Data Utilities", "source_file": "rider\\firebase.js", "file_type": "code", "degree": 5}, {"id": "firebase_onvalue", "label": "onValue()", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "onValue()", "community": 1, "community_name": "Firebase Data Utilities", "source_file": "rider\\firebase.js", "file_type": "code", "degree": 1}, {"id": "scratch_register_users_js", "label": "register_users.js", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "register_users.js", "community": 8, "community_name": "Registration Seed Scripts", "source_file": "scratch\\register_users.js", "file_type": "code", "degree": 1}, {"id": "register_users_registerusers", "label": "registerUsers()", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "registerUsers()", "community": 8, "community_name": "Registration Seed Scripts", "source_file": "scratch\\register_users.js", "file_type": "code", "degree": 1}, {"id": "scratch_reset_admins_js", "label": "reset_admins.js", "color": {"background": "#BAB0AC", "border": "#BAB0AC", "highlight": {"background": "#ffffff", "border": "#BAB0AC"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "reset_admins.js", "community": 9, "community_name": "Admin Management Scripts", "source_file": "scratch\\reset_admins.js", "file_type": "code", "degree": 1}, {"id": "reset_admins_resetadmins", "label": "resetAdmins()", "color": {"background": "#BAB0AC", "border": "#BAB0AC", "highlight": {"background": "#ffffff", "border": "#BAB0AC"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "resetAdmins()", "community": 9, "community_name": "Admin Management Scripts", "source_file": "scratch\\reset_admins.js", "file_type": "code", "degree": 1}, {"id": "scratch_seed_admins_js", "label": "seed_admins.js", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "seed_admins.js", "community": 10, "community_name": "Seed Admin Data", "source_file": "scratch\\seed_admins.js", "file_type": "code", "degree": 0}, {"id": "scratch_seed_riders_js", "label": "seed_riders.js", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "seed_riders.js", "community": 11, "community_name": "Seed Rider Data", "source_file": "scratch\\seed_riders.js", "file_type": "code", "degree": 0}, {"id": "category_icon", "label": "Pizza Category Icon", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "Pizza Category Icon", "community": 4, "community_name": "Menu & Product Assets", "source_file": "assets/images/category_icon.png", "file_type": "image", "degree": 1}, {"id": "cheese_pizza_photo", "label": "Cheese Pizza Dish Photo", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "Cheese Pizza Dish Photo", "community": 4, "community_name": "Menu & Product Assets", "source_file": "assets/images/Cheese Pizza.jpg", "file_type": "image", "degree": 1}, {"id": "prashant_pizza_menu_photo", "label": "Prashant Pizza Printed Menu", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 13.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Prashant Pizza Printed Menu", "community": 4, "community_name": "Menu & Product Assets", "source_file": "assets/images/Menu.jpeg", "file_type": "image", "degree": 3}, {"id": "pizza_placeholder_photo", "label": "Pepperoni Pizza Placeholder", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Pepperoni Pizza Placeholder", "community": 12, "community_name": "Product Placeholders", "source_file": "assets/images/pizza_placeholder.png", "file_type": "image", "degree": 0}, {"id": "menu_category_veg_tropia", "label": "Veg Tropia Category", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 12.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Veg Tropia Category", "community": 4, "community_name": "Menu & Product Assets", "source_file": "assets/images/Menu.jpeg", "file_type": "document", "degree": 2}, {"id": "menu_category_veg_exotica", "label": "Veg Exotica Category", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 11.2, "font": {"size": 0, "color": "#ffffff"}, "title": "Veg Exotica Category", "community": 4, "community_name": "Menu & Product Assets", "source_file": "assets/images/Menu.jpeg", "file_type": "document", "degree": 1}, {"id": "menu_category_pizza_mania", "label": "Pizza Mania Veg Category", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Pizza Mania Veg Category", "community": 13, "community_name": "Pizza Mania Categories", "source_file": "assets/images/Menu.jpeg", "file_type": "document", "degree": 0}, {"id": "menu_category_non_veg", "label": "Core Pizza Non-Veg Category", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Core Pizza Non-Veg Category", "community": 14, "community_name": "Non-Veg Categories", "source_file": "assets/images/Menu.jpeg", "file_type": "document", "degree": 0}];
+const RAW_EDGES = [{"from": "admin_app_js", "to": "app_uploadimage", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_deleteimage", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_initsecondaryauth", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_updateactivedishmodalcategories", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_previewimage", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_formatdate", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_initrealtimelisteners", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_playsound", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_showalert", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_highlightorder", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_escapehtml", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_validateurl", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_renderorders", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_calculatetopspenders", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_rendertopitems", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_loadcategories", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_addcategory", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_loadmenu", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_loadriders", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_renderriders", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_loadreports", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_generatecustomreport", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_loadcustomers", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "admin_app_js", "to": "app_loadsettings", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "app_uploadimage", "to": "app_addcategory", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "app_initrealtimelisteners", "to": "rider_app_js", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "app_escapehtml", "to": "rider_app_js", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "app_escapehtml", "to": "app_createordercard", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "app_renderorders", "to": "app_rendertopitems", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "app_renderorders", "to": "app_calculatetopspenders", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "app_loadreports", "to": "app_generatecustomreport", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "bot_firebase_js", "to": "firebase_getdata", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "bot_firebase_js", "to": "firebase_setdata", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "bot_firebase_js", "to": "firebase_updatedata", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "bot_firebase_js", "to": "firebase_deletedata", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "firebase_getdata", "to": "rider_firebase_js", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "firebase_setdata", "to": "rider_firebase_js", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "firebase_updatedata", "to": "rider_firebase_js", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "firebase_deletedata", "to": "rider_firebase_js", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "bot_index_js", "to": "index_sendimage", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "bot_index_js", "to": "index_sendgreeting", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "bot_index_js", "to": "index_sendcategories", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "bot_index_js", "to": "index_startbot", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "index_sendimage", "to": "index_sendgreeting", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "index_sendimage", "to": "index_sendcategories", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "rider_app_js", "to": "app_showerror", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "rider_app_js", "to": "app_updatestatusui", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "rider_app_js", "to": "app_createordercard", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "rider_firebase_js", "to": "firebase_onvalue", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "scratch_register_users_js", "to": "register_users_registerusers", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "scratch_reset_admins_js", "to": "reset_admins_resetadmins", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "category_icon", "to": "prashant_pizza_menu_photo", "label": "conceptually_related_to", "title": "conceptually_related_to [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "cheese_pizza_photo", "to": "menu_category_veg_tropia", "label": "conceptually_related_to", "title": "conceptually_related_to [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "prashant_pizza_menu_photo", "to": "menu_category_veg_tropia", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "prashant_pizza_menu_photo", "to": "menu_category_veg_exotica", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "Admin Dashboard Logic", "count": 16}, {"cid": 1, "color": "#F28E2B", "label": "Firebase Data Utilities", "count": 7}, {"cid": 2, "color": "#E15759", "label": "Rider Dashboard Logic", "count": 6}, {"cid": 3, "color": "#76B7B2", "label": "WhatsApp Bot Core", "count": 5}, {"cid": 4, "color": "#59A14F", "label": "Menu &amp; Product Assets", "count": 5}, {"cid": 5, "color": "#EDC948", "label": "Sales/Metrics Reporting", "count": 3}, {"cid": 6, "color": "#B07AA1", "label": "Report Generation logic", "count": 2}, {"cid": 7, "color": "#FF9DA7", "label": "Category Management", "count": 2}, {"cid": 8, "color": "#9C755F", "label": "Registration Seed Scripts", "count": 2}, {"cid": 9, "color": "#BAB0AC", "label": "Admin Management Scripts", "count": 2}, {"cid": 10, "color": "#4E79A7", "label": "Seed Admin Data", "count": 1}, {"cid": 11, "color": "#F28E2B", "label": "Seed Rider Data", "count": 1}, {"cid": 12, "color": "#E15759", "label": "Product Placeholders", "count": 1}, {"cid": 13, "color": "#76B7B2", "label": "Pizza Mania Categories", "count": 1}, {"cid": 14, "color": "#59A14F", "label": "Non-Veg Categories", "count": 1}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map(n => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  _community: n.community, _community_name: n.community_name,
+  _source_file: n.source_file, _file_type: n.file_type, _degree: n.degree,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: true,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" onclick="focusNode(${JSON.stringify(nid)})">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  document.getElementById('info-content').innerHTML = `
+    <div class="field"><b>${esc(n.label)}</b></div>
+    <div class="field">Type: ${esc(n._file_type || 'unknown')}</div>
+    <div class="field">Community: ${esc(n._community_name)}</div>
+    <div class="field">Source: ${esc(n._source_file || '-')}</div>
+    <div class="field">Degree: ${n._degree}</div>
+    ${neighborIds.length ? `<div class="field" style="margin-top:8px;color:#aaa;font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>` : ''}
+  `;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Click a node to inspect it</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.onclick = () => {
+    if (hiddenCommunities.has(c.cid)) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: hiddenCommunities.has(c.cid) }));
+    nodesDS.update(updates);
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        const positions = h.nodes
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const expanded = positions.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>
