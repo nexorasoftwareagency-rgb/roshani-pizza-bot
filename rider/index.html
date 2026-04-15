@@ -1,60 +1,214 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rider Panel</title>
-
+    <title>Rider Portal | Pizza Service</title>
     <link rel="stylesheet" href="style.css">
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Firebase SDK (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
-
 <body>
 
-    <!-- LOGIN SECTION -->
+    <!-- Auth View -->
     <div id="loginBox">
-        <h2>Rider Login</h2>
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Password">
-        <button onclick="login()">Login</button>
+        <div class="login-card">
+            <div class="brand">
+                <i data-lucide="zap"></i>
+                <h2>RIDER AUTH</h2>
+                <p class="login-subtitle">Enter credentials to begin shift</p>
+            </div>
+            
+            <div class="input-group">
+                <label>Rider Email</label>
+                <input type="email" id="email" placeholder="email@example.com">
+            </div>
+            
+            <div class="input-group">
+                <label>Secret Code</label>
+                <div class="pass-wrapper">
+                    <input type="password" id="password" placeholder="••••••••" class="pass-input">
+                    <button type="button" onclick="togglePass()" class="toggle-pass-btn" aria-label="Toggle password visibility">
+                        <i data-lucide="eye" id="eyeIcon"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <button class="btn-primary btn-full" onclick="login()">
+                AUTHENTICATE & START <i data-lucide="chevron-right"></i>
+            </button>
+            <p id="loginError" class="error-msg"></p>
+        </div>
     </div>
 
-    <!-- DASHBOARD SECTION -->
-    <div id="dashboard" style="display: none;">
-        <div class="header">
-            <h2>Rider Dashboard</h2>
-            <button onclick="logout()">Logout</button>
+    <!-- Dashboard View -->
+    <div id="dashboard">
+        <!-- Side Navigation (Desktop) -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <h3 class="sidebar-title">RIDER PORTAL</h3>
+            </div>
+            <ul class="nav-links">
+                <li class="active" onclick="showSection('home')" data-section="home">
+                    <i data-lucide="layout-dashboard"></i> <span>Home</span>
+                </li>
+                <li onclick="showSection('available')" data-section="available">
+                    <i data-lucide="shopping-bag"></i> <span>Pickup Orders</span>
+                </li>
+                <li onclick="showSection('active')" data-section="active">
+                    <i data-lucide="map-pin"></i> <span>Live Delivery</span>
+                </li>
+                <li onclick="showSection('completed')" data-section="completed">
+                    <i data-lucide="history"></i> <span>My History</span>
+                </li>
+                <li onclick="showSection('earnings')" data-section="earnings">
+                    <i data-lucide="wallet"></i> <span>My Wallet</span>
+                </li>
+                <li onclick="showSection('profile')" data-section="profile">
+                    <i data-lucide="settings-2"></i> <span>Settings</span>
+                </li>
+                <li onclick="logout()" class="logout-link">
+                    <i data-lucide="power"></i> <span>Exit System</span>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Bottom Navigation (Mobile) -->
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="showSection('home')" data-section="home">
+                <i data-lucide="layout-dashboard"></i> <span>HOME</span>
+            </div>
+            <div class="nav-item" onclick="showSection('available')" data-section="available">
+                <i data-lucide="shopping-bag"></i> <span>PICKUP</span>
+            </div>
+            <div class="nav-item" onclick="showSection('active')" data-section="active">
+                <i data-lucide="map-pin"></i> <span>LIVE</span>
+            </div>
+            <div class="nav-item" onclick="showSection('profile')" data-section="profile">
+                <i data-lucide="user"></i> <span>PROFILE</span>
+            </div>
         </div>
 
-        <div id="stats"></div>
+        <div class="main-content">
+            <header class="top-nav">
+                <span class="section-title-lbl" id="sectionTitle">DASHBOARD</span>
+                <div class="status-toggle-container">
+                    <span id="statusBadge" class="status Online">Online</span>
+                </div>
+            </header>
 
-        <div class="section">
-            <div id="pizzaOrders"></div>
-        </div>
+            <!-- SECTION: HOME -->
+            <section id="sec-home" class="view-section active">
+                <div class="view-header">
+                    <h1 class="welcome-text">Welcome, <span id="r-name">Rider</span>!</h1>
+                    <p class="welcome-subtext">Ready for your next delivery?</p>
+                </div>
 
-        <div class="section">
-            <div id="cakeOrders"></div>
+                <div class="overview-grid">
+                    <div class="overview-card">
+                        <span class="val" id="statsTodayDelivered">0</span>
+                        <span class="lbl">Deliveries Today</span>
+                    </div>
+                    <div class="overview-card">
+                        <span class="val" id="statsTodayEarnings">₹0</span>
+                        <span class="lbl">Today's Pay</span>
+                    </div>
+                </div>
+
+                <div class="active-status-box" id="activeStatusBanner">
+                    <!-- Dynamic -->
+                </div>
+            </section>
+
+            <!-- SECTION: AVAILABLE ORDERS -->
+            <section id="sec-available" class="view-section">
+                <div class="section-header-flex">
+                    <h2 class="section-heading">Available Pickup</h2>
+                    <span class="count-badge" id="pickupCount">0 Orders</span>
+                </div>
+                <div id="unassignedOrdersList" class="order-list"></div>
+            </section>
+
+            <!-- SECTION: ACTIVE DELIVERY -->
+            <section id="sec-active" class="view-section">
+                <h2 class="section-heading">Live Trip Details</h2>
+                <div id="activeOrderView">
+                    <div class="empty-state">No active trip currently.</div>
+                </div>
+            </section>
+
+            <!-- SECTION: COMPLETED ORDERS -->
+            <section id="sec-completed" class="view-section">
+                <h2 class="section-heading">Trip History</h2>
+                <div id="completedOrdersList" class="order-list"></div>
+            </section>
+
+            <!-- SECTION: EARNINGS -->
+            <section id="sec-earnings" class="view-section">
+                <h2 class="section-heading">Wallet Summary</h2>
+                <div class="earnings-grid">
+                    <div class="overview-card card-left">
+                        <span class="lbl">Total Earnings</span>
+                        <span class="val earning-val" id="e-total">₹0</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: PROFILE -->
+            <section id="sec-profile" class="view-section">
+                <div class="glass-panel profile-card-glass">
+                    <div class="profile-icon-bg">
+                        <i data-lucide="user" size="40" class="icon-black"></i>
+                    </div>
+                    <h3 id="profileName" class="profile-name">Loading...</h3>
+                    <p id="profilePhone" class="profile-phone">---</p>
+                    
+                    <div class="profile-actions">
+                        <button id="statusToggleBtn" onclick="toggleRiderStatus()" class="btn-primary">
+                            SET STATUS: ONLINE
+                        </button>
+                        <button onclick="logout()" class="btn-outline-danger">
+                            LOGOUT
+                        </button>
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
 
-    <!-- OTP PANEL -->
-    <div id="otpPanel">
-        <h3>Delivery Verification</h3>
-        <input type="number" id="otpInput" placeholder="Enter OTP">
-        <button onclick="sendOTP()">Send OTP (WhatsApp)</button>
-        <button onclick="verifyOTP()">Verify & Deliver</button>
-        <button onclick="closeOTPPanel()">Close</button>
+    <!-- OTP Overlay -->
+    <div id="otpPanel" class="modal-overlay">
+        <div class="modal-card">
+            <h3 class="modal-title">TRIP COMPLETE</h3>
+            <p class="modal-sub">Enter verification code from customer</p>
+            <input type="number" id="otpInput" placeholder="0000" maxlength="4">
+            <div class="modal-actions">
+                <button class="btn-primary no-shadow" onclick="verifyOTP()">CONFIRM</button>
+                <button onclick="closeOTPPanel()" class="btn-ghost">LATER</button>
+            </div>
+        </div>
     </div>
 
-    <!-- SCRIPTS -->
     <script src="firebase.js"></script>
     <script src="app.js"></script>
-
+    <script>
+        lucide.createIcons();
+        function togglePass() {
+            const p = document.getElementById('password');
+            const icon = document.getElementById('eyeIcon');
+            if (p.type === 'password') {
+                p.type = 'text';
+                icon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                p.type = 'password';
+                icon.setAttribute('data-lucide', 'eye');
+            }
+            lucide.createIcons();
+        }
+    </script>
 </body>
-
 </html>

@@ -11,6 +11,25 @@ const { getData, setData, updateData } = require('./firebase');
 const sessions = {};
 const processedStatus = {};
 
+const SESSION_TTL = 30 * 60 * 1000;
+const STATUS_TTL = 24 * 60 * 60 * 1000;
+
+// Session cleanup - prevent memory leaks
+setInterval(() => {
+    const now = Date.now();
+    for (const sender in sessions) {
+        const user = sessions[sender];
+        if (user.lastActivity && now - user.lastActivity > SESSION_TTL) {
+            delete sessions[sender];
+        }
+    }
+    for (const id in processedStatus) {
+        if (now - (processedStatus[id]?.timestamp || 0) > STATUS_TTL) {
+            delete processedStatus[id];
+        }
+    }
+}, 5 * 60 * 1000);
+
 // =============================
 // HELPERS
 // =============================
@@ -48,17 +67,23 @@ async function sendGreeting(sock, sender, user) {
 // =============================
 async function sendCategories(sock, sender, user) {
     const data = await getData(`categories/${user.outlet}`);
+    if (!data) {
+        user.categoryList = [];
+        user.step = "CATEGORY";
+        return sock.sendMessage(sender, { text: "❌ No categories available. Try again later." });
+    }
 
     user.categoryList = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+    if (user.categoryList.length === 0) {
+        user.step = "CATEGORY";
+        return sock.sendMessage(sender, { text: "❌ No categories available. Try again later." });
+    }
 
     let msg = `📂 *SELECT CATEGORY*\n\n`;
-
     user.categoryList.forEach((c, i) => {
         msg += `${i + 1}️⃣ ${c.name}\n`;
     });
-
     msg += `\n0️⃣ Back`;
-
     user.step = "CATEGORY";
 
     await sendImage(sock, sender, user.categoryList[0]?.image, msg);
@@ -81,7 +106,16 @@ async function startBot() {
 
     sock.ev.on('connection.update', (u) => {
         if (u.qr) qrcode.generate(u.qr, { small: true });
-        if (u.connection === 'open') console.log("BOT READY");
+        if (u.connection === 'open') console.log("✅ WHATSAPP BOT ONLINE");
+        if (u.connection === 'close') {
+            const code = u.lastDisconnect?.error?.output?.statusCode;
+            console.log("🔌 Disconnected:", code);
+            if (code === 401) {
+                console.log("🚫 Session invalid. Reconnecting...");
+                setTimeout(() => startBot(), 5000);
+            }
+        }
+        if (u.connection === 'connecting') console.log("🔄 Connecting...");
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -90,24 +124,28 @@ async function startBot() {
     // REALTIME STATUS LISTENER
     // =============================
     setInterval(async () => {
+        try {
+            const orders = await getData("orders");
+            if (!orders) return;
 
-        const orders = await getData("orders");
-        if (!orders) return;
+            for (const id in orders) {
 
-        for (const id in orders) {
+                const order = orders[id];
+                if (!order) continue;
 
-            const order = orders[id];
+                const phone = order.whatsappNumber || order.phone;
+                if (!phone) continue;
 
-            if (!processedStatus[id]) {
-                processedStatus[id] = order.status;
-                continue;
-            }
+                if (!processedStatus[id]) {
+                    processedStatus[id] = { status: order.status, timestamp: Date.now() };
+                    continue;
+                }
 
-            if (processedStatus[id] !== order.status) {
+                if (processedStatus[id].status !== order.status) {
 
-                processedStatus[id] = order.status;
+                    processedStatus[id] = { status: order.status, timestamp: Date.now() };
 
-                const number = order.phone + "@s.whatsapp.net";
+                    const number = phone + "@s.whatsapp.net";
 
                 let msg = "";
 
@@ -136,6 +174,9 @@ async function startBot() {
                 }
             }
 
+        }
+        } catch (err) {
+            console.error("Order listener error:", err);
         }
 
     }, 3000);
@@ -191,20 +232,23 @@ async function startBot() {
         const sender = msg.key.remoteJid;
         const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
 
-        if (!sessions[sender]) {
+if (!sessions[sender]) {
             sessions[sender] = { step: "START", current: {} };
         }
-
+        sessions[sender].lastActivity = Date.now();
         const user = sessions[sender];
 
-        // GLOBAL
-        if (["hi", "hello", "menu"].includes(text.toLowerCase())) {
+        // GLOBAL - word boundary match to prevent false positives
+        const lower = text.toLowerCase();
+        const words = lower.split(/\s+/);
+        const greetings = ["hi", "hello", "menu", "start", "pizza", "cake"];
+        if (words.some(w => greetings.includes(w))) {
             return sendGreeting(sock, sender, user);
         }
 
         if (text.toLowerCase() === "cancel") {
-            delete sessions[sender];
-            return sock.sendMessage(sender, { text: "❌ Cancelled" });
+            sessions[sender] = { step: "START", current: {} };
+            return sock.sendMessage(sender, { text: "❌ Cancelled. Reply 'hi' to start fresh." });
         }
 
         // OUTLET
@@ -223,11 +267,15 @@ async function startBot() {
             const cat = user.categoryList[parseInt(text) - 1];
             if (!cat) return;
 
-            const dishes = await getData(`dishes/${user.outlet}`);
+            const dishes = await getData(`dishes/${user.outlet}`) || {};
 
             user.dishList = Object.entries(dishes)
                 .filter(([id, d]) => d.categoryId === cat.id)
                 .map(([id, d]) => ({ id, ...d }));
+
+            if (user.dishList.length === 0) {
+                return sock.sendMessage(sender, { text: "❌ No dishes available in this category." });
+            }
 
             let msgText = `🍽️ ${cat.name}\n\n`;
 
@@ -248,8 +296,12 @@ async function startBot() {
 
             user.current.dish = dish;
 
-            const sizes = await getData(`sizes/${user.outlet}/${dish.id}`);
+            const sizes = await getData(`sizes/${user.outlet}/${dish.id}`) || {};
             user.sizeList = Object.entries(sizes);
+
+            if (user.sizeList.length === 0) {
+                return sock.sendMessage(sender, { text: "❌ No sizes available for this dish." });
+            }
 
             let msgText = `📏 Select Size\n\n`;
 
@@ -282,38 +334,57 @@ async function startBot() {
             return sock.sendMessage(sender, { text: "Enter Mobile Number:" });
         }
 
-        // PHONE
+        // PHONE - validate and normalize
         if (user.step === "PHONE") {
-            user.phone = text;
-            user.step = "ADDRESS";
-            return sock.sendMessage(sender, { text: "Enter Address:" });
+            const cleaned = text.replace(/\D/g, '').slice(-10);
+            if (cleaned.length < 10) {
+                return sock.sendMessage(sender, { text: "⚠️ Please enter a valid 10-digit mobile number.\nExample: 9876543210" });
+            }
+            user.phone = "+91" + cleaned;
+            user.step = "ADDRESS_TEXT";
+            return sock.sendMessage(sender, { text: "🏠 Please type your *full delivery address*:\n\nExample: House no, street, landmark" });
         }
 
-        // ADDRESS
-        if (user.step === "ADDRESS") {
+        // ADDRESS_TEXT
+        if (user.step === "ADDRESS_TEXT") {
+            if (!text || text.length < 5) {
+                return sock.sendMessage(sender, { text: "⚠️ Please enter a valid address (at least 5 characters)." });
+            }
             user.address = text;
+            user.step = "LOCATION";
+            return sock.sendMessage(sender, { text: "📍 Now send your *LIVE LOCATION*\n\nTap 📎 → Location → Send Current Location" });
+        }
 
+        // LOCATION
+        if (user.step === "LOCATION") {
+            const location = msg.message?.locationMessage || msg.message?.liveLocationMessage;
+            if (!location) {
+                return sock.sendMessage(sender, { text: "📍 Please send your *LIVE LOCATION* only.\n\nTap 📎 → Location → Send Current Location" });
+            }
+            const lat = location.degreesLatitude;
+            const lng = location.degreesLongitude;
+            user.location = { lat, lng };
+            user.locationLink = `https://www.google.com/maps?q=${lat},${lng}`;
+            user.step = "CONFIRM";
+            
             let summary = `🧾 Summary\n\n`;
             summary += `${user.current.dish.name}\n`;
             summary += `${user.current.size}\n`;
             summary += `₹${user.current.total}\n\n`;
-            summary += `${user.name}\n${user.phone}\n${user.address}\n\n`;
+            summary += `${user.name}\n${user.phone}\n${user.address}\n`;
+            summary += `${user.locationLink}\n\n`;
             summary += `1 Confirm\n2 Cancel`;
-
-            user.step = "CONFIRM";
-
             return sock.sendMessage(sender, { text: summary });
         }
 
         // CONFIRM
         if (user.step === "CONFIRM") {
-
             if (text !== "1") {
-                delete sessions[sender];
-                return sock.sendMessage(sender, { text: "Cancelled" });
+                sessions[sender] = { step: "START", current: {} };
+                return sock.sendMessage(sender, { text: "❌ Cancelled. Reply 'hi' to start fresh." });
             }
 
-            const orderId = Date.now();
+            const orderId = "ORD" + Date.now().toString(36).toUpperCase();
 
             await setData(`orders/${orderId}`, {
                 orderId,
@@ -322,9 +393,15 @@ async function startBot() {
                 whatsappNumber: sender.split('@')[0],
                 phone: user.phone,
                 address: user.address,
+                locationLink: user.locationLink || null,
                 total: user.current.total,
                 status: "Placed",
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                items: [{
+                    name: user.current.dish?.name || user.current.dish,
+                    size: user.current.size,
+                    quantity: user.current.quantity || 1
+                }]
             });
 
             await sock.sendMessage(sender, {
