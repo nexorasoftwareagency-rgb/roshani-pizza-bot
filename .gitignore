@@ -2,4 +2,6 @@ node_modules/
 session/
 session_data/
 bot/session_data/
+bot/service-account.json
 .env
+.firebase/

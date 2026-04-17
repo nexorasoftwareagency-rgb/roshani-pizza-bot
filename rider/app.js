@@ -2,6 +2,43 @@
 // PIZZA ERP | RIDER PORTAL v3.0 (LIGHT)
 // ==========================================
 
+// ==========================================
+// PWA & CONFIGURATION
+// ==========================================
+let deferredPrompt;
+
+// PWA Install Logic
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const downloadBtn = document.getElementById('menu-downloadapp');
+    if (downloadBtn) downloadBtn.style.display = 'block';
+});
+
+window.installPWA = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+        const downloadBtn = document.getElementById('menu-downloadapp');
+        if (downloadBtn) downloadBtn.style.display = 'none';
+    }
+    deferredPrompt = null;
+};
+
+window.addEventListener('appinstalled', () => {
+    const downloadBtn = document.getElementById('menu-downloadapp');
+    if (downloadBtn) downloadBtn.style.display = 'none';
+    deferredPrompt = null;
+});
+
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed', err));
+    });
+}
+
 let currentUser = null;
 let currentOrderId = null;
 window.activeOrders = {};
@@ -145,7 +182,13 @@ auth.onAuthStateChanged(async user => {
             adminsSnap.forEach(snap => {
                 const admin = snap.val();
                 if (admin && admin.email && admin.email.toLowerCase() === normalizedEmail && admin.isSuper) {
-                    riderProfile = { id: snap.key, name: "Super User", outlet: "all", status: "Online" };
+                    riderProfile = { 
+                        id: `admin_${snap.key}`, // Sentinel ID to prevent writing to riders/ node
+                        name: "Super User", 
+                        outlet: "all", 
+                        status: "Online",
+                        isAdmin: true
+                    };
                     isSuper = true;
                 }
             });
@@ -207,6 +250,10 @@ window.switchOutlet = (val) => {
 };
 
 window.toggleRiderStatus = async () => {
+    if (currentUser.profile.isAdmin) {
+        alert("Status toggle is disabled for Admin users.");
+        return;
+    }
     const newStatus = currentUser.profile.status === "Online" ? "Offline" : "Online";
     try {
         await db.ref(`riders/${currentUser.profile.id}`).update({ status: newStatus });
@@ -384,7 +431,12 @@ function initRealtimeListeners() {
             // Filter by outlet if not set to "all"
             if (window.currentOutlet !== "all" && outlet !== window.currentOutlet.toLowerCase()) return;
 
-            const orderDate = o.timestamp ? new Date(o.timestamp).toDateString() : '';
+            const rawDate = o.createdAt || o.timestamp;
+            let orderDate = '';
+            if (rawDate) {
+                const d = new Date(rawDate);
+                if (!isNaN(d.getTime())) orderDate = d.toDateString();
+            }
             const isToday = orderDate === today;
 
             if (o.status === "Delivered" && o.assignedRider && o.assignedRider.toLowerCase() === myEmail) {
