@@ -20,7 +20,24 @@ function escapeHtml(str) {
 /**
  * 1. NAVIGATION & UI HANDLING
  */
+window.toggleRiderSidebar = () => {
+    window.haptic(10);
+    const nav = document.getElementById('sidebarNav');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (nav) nav.classList.toggle('active');
+    if (overlay) overlay.classList.toggle('active');
+};
+
+window.toggleNotificationSheet = () => {
+    alert("Notifications feature coming soon!");
+};
+
 window.showSection = (sectionId) => {
+    window.haptic(15);
+    window.toggleRiderSidebar(); // Close sidebar on nav
+    if (nav) nav.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+    
     // Hide all sections
     document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
     // Show target section
@@ -73,6 +90,10 @@ window.login = async () => {
     }
 };
 
+// Enter key triggers login on both fields
+document.getElementById('email').addEventListener('keydown', (e) => { if (e.key === 'Enter') window.login(); });
+document.getElementById('password').addEventListener('keydown', (e) => { if (e.key === 'Enter') window.login(); });
+
 function showError(msg) {
     const errorEl = document.getElementById('loginError');
     errorEl.innerText = msg;
@@ -97,6 +118,9 @@ auth.onAuthStateChanged(async user => {
     }
 
     try {
+        // Caching: Check for cached profile
+        const cachedOutlet = localStorage.getItem('selectedOutlet');
+        
         const ridersSnap = await db.ref("riders").once("value");
         let riderProfile = null;
         const normalizedEmail = user.email.toLowerCase();
@@ -108,14 +132,45 @@ auth.onAuthStateChanged(async user => {
             }
         });
 
+        // Check for Super Admin privileges in 'admins' node too if not a rider
+        let isSuper = false;
         if (!riderProfile) {
-            alert("RIDER ERROR: Account not found in active database. Contact Admin.");
+            const adminsSnap = await db.ref("admins").once("value");
+            adminsSnap.forEach(snap => {
+                const admin = snap.val();
+                if (admin && admin.email && admin.email.toLowerCase() === normalizedEmail && admin.isSuper) {
+                    riderProfile = { id: snap.key, name: "Super User", outlet: "all", status: "Online" };
+                    isSuper = true;
+                }
+            });
+        } else {
+            isSuper = riderProfile.isSuper || false;
+        }
+
+        if (!riderProfile) {
+            alert("ACCESS DENIED: Role not found.");
             auth.signOut();
             return;
         }
 
-        currentUser = { ...user, profile: riderProfile };
+        currentUser = { ...user, profile: riderProfile, isSuper: isSuper };
         
+        // Handle Outlet Switcher for Super Users
+        const switcher = document.getElementById('outletSwitcher');
+        if (isSuper && switcher) {
+            switcher.classList.remove('hidden');
+            switcher.innerHTML = `
+                <option value="all">🌍 All Outlets</option>
+                <option value="pizza">🍕 Pizza Only</option>
+                <option value="cake">🎂 Cakes Only</option>
+            `;
+            const savedOutlet = localStorage.getItem('selectedOutlet') || 'all';
+            switcher.value = savedOutlet;
+            window.currentOutlet = savedOutlet;
+        } else {
+            window.currentOutlet = riderProfile.outlet || "pizza";
+        }
+
         // Populate UI
         document.getElementById('profileName').innerText = riderProfile.name || "Rider";
         document.getElementById('profilePhone').innerText = riderProfile.phone || user.email;
@@ -133,6 +188,17 @@ auth.onAuthStateChanged(async user => {
         console.error("Session Error:", err);
     }
 });
+
+/**
+ * 2.5 OUTLET SWITCHING & CACHING
+ */
+window.switchOutlet = (val) => {
+    localStorage.setItem('selectedOutlet', val);
+    window.currentOutlet = val;
+    initRealtimeListeners(); // Hot reload data
+    // Show brief toast/feedback
+    console.log("Switched to outlet:", val);
+};
 
 window.toggleRiderStatus = async () => {
     const newStatus = currentUser.profile.status === "Online" ? "Offline" : "Online";
@@ -155,12 +221,131 @@ function updateStatusUI(status) {
     btn.innerText = `SET STATUS: ${status === "Online" ? 'OFFLINE' : 'ONLINE'}`;
     btn.style.background = status === "Online" ? "var(--danger-red)" : "var(--success-green)";
     btn.style.color = "white";
+
+    // Trigger location tracking if online
+    if (status === "Online") {
+        initLocationTracking();
+    } else {
+        stopLocationTracking();
+    }
+}
+
+/**
+ * 2.7 LIVE LOCATION TRACKING (30s SYNC)
+ */
+let _locationWatchId = null;
+let _locationInterval = null;
+let _lastPos = null;
+
+function initLocationTracking() {
+    if (!navigator.geolocation) {
+        console.error("Geolocation not supported");
+        return;
+    }
+
+    if (_locationWatchId) return; // Already running
+
+    // 1. Initial High Precision Watch
+    _locationWatchId = navigator.geolocation.watchPosition(
+        pos => {
+            _lastPos = {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+                ts: Date.now()
+            };
+            console.log("GPS Lock:", _lastPos);
+        },
+        err => {
+            console.error("GPS Error:", err);
+            // If denied, we should probably force offline
+            if (err.code === 1) { // PERMISSION_DENIED
+                alert("GPS Permission Denied. Live tracking disabled.");
+                db.ref(`riders/${currentUser.profile.id}`).update({ status: "Offline" });
+            }
+        },
+        { enableHighAccuracy: true }
+    );
+
+    // 2. Periodic Firebase Sync (every 30s)
+    _locationInterval = setInterval(() => {
+        if (_lastPos && currentUser && currentUser.profile.status === "Online") {
+            const uid = currentUser.profile.id;
+            db.ref(`riders/${uid}/location`).set(_lastPos);
+            console.log("Location Synced to Cloud (30s Interval)");
+        }
+    }, 30000);
+}
+
+function stopLocationTracking() {
+    if (_locationWatchId) {
+        navigator.geolocation.clearWatch(_locationWatchId);
+        _locationWatchId = null;
+    }
+    if (_locationInterval) {
+        clearInterval(_locationInterval);
+        _locationInterval = null;
+    }
+}
+
+/**
+ * 2.8 MAP INTEGRATION (LEAFLET)
+ */
+let riderMap = null;
+let riderMarker = null;
+let distMarker = null;
+
+function initRiderMap() {
+    const mapDiv = document.getElementById('activeTripMap');
+    if (!mapDiv || riderMap) return;
+
+    // Default to a central location (e.g., India) if no GPS yet
+    const startPos = _lastPos ? [_lastPos.lat, _lastPos.lng] : [20.5937, 78.9629];
+    
+    riderMap = L.map('activeTripMap').setView(startPos, 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(riderMap);
+
+    riderMarker = L.marker(startPos).addTo(riderMap).bindPopup('You are here');
+}
+
+window.updateRiderMap = (destLat, destLng) => {
+    if (!riderMap) initRiderMap();
+    
+    if (_lastPos && riderMap) {
+        const curPos = [_lastPos.lat, _lastPos.lng];
+        riderMap.setView(curPos, 15);
+        riderMarker.setLatLng(curPos);
+    }
+
+    if (destLat && destLng && riderMap) {
+        if (distMarker) riderMap.removeLayer(distMarker);
+        distMarker = L.marker([destLat, destLng], {
+            icon: L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            })
+        }).addTo(riderMap).bindPopup('Customer Location');
+        
+        // Fit bounds to show both
+        if (_lastPos) {
+            const bounds = L.latLngBounds([[_lastPos.lat, _lastPos.lng], [destLat, destLng]]);
+            riderMap.fitBounds(bounds, { padding: [50, 50] });
+        }
+    }
 }
 
 /**
  * 3. REALTIME DATA
  */
 function initRealtimeListeners() {
+    // Detach old listeners if re-initializing
+    db.ref('orders').off();
+
     db.ref('orders').on('value', snap => {
         const unassignedList = document.getElementById('unassignedOrdersList');
         const activeView = document.getElementById('activeOrderView');
@@ -168,33 +353,58 @@ function initRealtimeListeners() {
         
         unassignedList.innerHTML = '';
         completedList.innerHTML = '';
-        activeView.innerHTML = '<div class="glass-panel" style="padding:40px; text-align:center;"><p style="color:var(--text-muted)">No active trip. Choose an order from Pickup Hub.</p></div>';
+        activeView.innerHTML = '<div class="empty-state-glass"><p>No active trip. Choose an order from Pickup Hub.</p></div>';
         
         let stats = {
             todayDelivered: 0,
-            todayEarnings: 0,
-            totalEarnings: 0,
+            pizzaEarnings: 0,
+            cakeEarnings: 0,
+            todayPizza: 0,
+            todayCake: 0,
             hasActive: false,
             availableCount: 0
         };
 
         const today = new Date().toDateString();
-        const normalizedMyEmail = currentUser.email.toLowerCase();
+        const myEmail = currentUser.email.toLowerCase();
+
+        let activeOrder = null;
 
         snap.forEach(child => {
             const o = child.val();
             const id = child.key;
+            const outlet = (o.outlet || "pizza").toLowerCase();
+            
+            // Filter by outlet if not set to "all"
+            if (window.currentOutlet !== "all" && outlet !== window.currentOutlet.toLowerCase()) return;
+
             const orderDate = o.timestamp ? new Date(o.timestamp).toDateString() : '';
             const isToday = orderDate === today;
 
-            // 1. COMPLETED
-            if (o.status === "Delivered" && o.assignedRider && o.assignedRider.toLowerCase() === normalizedMyEmail) {
+            if (o.status === "Delivered" && o.assignedRider && o.assignedRider.toLowerCase() === myEmail) {
+                stats.todayDelivered++;
+                // ... logic for earnings ...
+            }
+
+            // 2. ACTIVE
+            if (o.status === "Out for Delivery" && o.assignedRider && o.assignedRider.toLowerCase() === myEmail) {
+                stats.hasActive = true;
+                activeOrder = { id, ...o };
+                const card = createOrderCard(id, o, 'active');
+                activeView.innerHTML = '';
+                activeView.appendChild(card);
+            }
                 const commission = o.riderCommission || 40; 
-                stats.totalEarnings += commission;
-                if (isToday) {
-                    stats.todayDelivered++;
-                    stats.todayEarnings += commission;
+                
+                if (outlet.includes("pizza")) {
+                    stats.pizzaEarnings += commission;
+                    if (isToday) stats.todayPizza += commission;
+                } else if (outlet.includes("cake")) {
+                    stats.cakeEarnings += commission;
+                    if (isToday) stats.todayCake += commission;
                 }
+
+                if (isToday) stats.todayDelivered++;
                 completedList.prepend(createOrderCard(id, o, "completed"));
             }
 
@@ -206,7 +416,7 @@ function initRealtimeListeners() {
             }
 
             // 3. ACTIVE
-            if (o.status === "Out for Delivery" && o.assignedRider && o.assignedRider.toLowerCase() === normalizedMyEmail) {
+            if (o.status === "Out for Delivery" && o.assignedRider && o.assignedRider.toLowerCase() === myEmail) {
                 stats.hasActive = true;
                 activeView.innerHTML = ''; 
                 activeView.appendChild(createOrderCard(id, o, "active"));
@@ -215,35 +425,58 @@ function initRealtimeListeners() {
 
         // Update UI
         document.getElementById('statsTodayDelivered').innerText = stats.todayDelivered;
-        document.getElementById('statsTodayEarnings').innerText = `₹${stats.todayEarnings}`;
-        document.getElementById('e-total').innerText = `₹${stats.totalEarnings}`;
+        document.getElementById('statsTodayEarnings').innerText = `₹${stats.todayPizza + stats.todayCake}`;
+        
+        // Split Wallet UI
+        document.getElementById('e-total').innerText = `₹${stats.pizzaEarnings + stats.cakeEarnings}`;
+        document.getElementById('e-pizza').innerText = `₹${stats.pizzaEarnings}`;
+        document.getElementById('e-cake').innerText = `₹${stats.cakeEarnings}`;
+        document.getElementById('e-pizza-today').innerText = `₹${stats.todayPizza}`;
+        document.getElementById('e-cake-today').innerText = `₹${stats.todayCake}`;
+        
         document.getElementById('pickupCount').innerText = `${stats.availableCount} Orders`;
 
         const banner = document.getElementById('activeStatusBanner');
         if (stats.hasActive) {
             banner.innerHTML = `
-                <div style="background:var(--primary-glow); padding:15px; border-radius:15px; border:1px solid var(--primary);">
-                    <p style="color:var(--primary); font-weight:900; margin-bottom:10px;">🚀 ONGOING TRIP</p>
-                    <button class="btn-primary btn-full" onclick="showSection('active')">GOTO ACTIVE ORDER</button>
+                <div class="banner-glass">
+                    <p class="banner-title">🚀 ONGOING TRIP</p>
+                    <button class="btn-primary" style="width:100%" onclick="showSection('active')">GOTO ACTIVE ORDER</button>
                 </div>`;
         } else {
             banner.innerHTML = `
                 <div style="padding:15px; text-align:center;">
-                    <p style="color:var(--text-muted); font-size:14px; margin-bottom:10px;">You are currently free for pickups.</p>
-                    <button class="btn-primary btn-full" onclick="showSection('available')">BROWSE ORDERS</button>
+                    <p style="color:var(--text-muted); font-size:14px; margin-bottom:12px;">You are currently free for pickups.</p>
+                    <button class="btn-primary" style="width:100%" onclick="showSection('available')">BROWSE ORDERS</button>
                 </div>`;
         }
 
-        if (unassignedList.children.length === 0) unassignedList.innerHTML = '<div class="glass-panel" style="padding:40px; text-align:center;"><p style="color:var(--text-muted)">All caught up! No orders for pickup.</p></div>';
-        if (completedList.children.length === 0) completedList.innerHTML = '<div class="glass-panel" style="padding:40px; text-align:center;"><p style="color:var(--text-muted)">Start delivering to see history.</p></div>';
+        if (unassignedList.children.length === 0) unassignedList.innerHTML = '<div class="empty-state-glass"><p>All caught up! No orders for pickup.</p></div>';
+        if (completedList.children.length === 0) completedList.innerHTML = '<div class="empty-state-glass"><p>Start delivering to see history.</p></div>';
 
         if (window.lucide) lucide.createIcons();
+        // Update Stats UI... (lines exist below)
+        
+        // Toggle Map View
+        const mapCont = document.getElementById('activeTripMap');
+        if (activeOrder) {
+            mapCont.style.display = 'block';
+            // Extract coordinates if present in order
+            if (activeOrder.lat && activeOrder.lng) {
+                window.updateRiderMap(activeOrder.lat, activeOrder.lng);
+            } else {
+                window.updateRiderMap(); // Just show my location
+            }
+        } else {
+            if (mapCont) mapCont.style.display = 'none';
+        }
     });
 }
 
 function createOrderCard(id, o, type) {
     const card = document.createElement('div');
-    card.className = `order-card`;
+    const outlet = (o.outlet || 'pizza').toLowerCase();
+    card.className = `order-card order-${outlet}`;
     
     const isAvailable = type === "available";
     const isActive = type === "active";
@@ -255,7 +488,8 @@ function createOrderCard(id, o, type) {
     const safeCustomerName = escapeHtml(o.customerName || 'Customer');
     const safeAddress = escapeHtml(o.address);
     const safeTotal = escapeHtml(String(o.total || 0));
-    const safePhone = escapeHtml(o.customerPhone || o.phone || '');
+    const phoneValue = o.customerPhone || o.phone || '';
+    const safePhone = escapeHtml(phoneValue ? "****" + phoneValue.slice(-4) : '');
     const safeItemsText = o.items
         ? o.items.map(i => `${escapeHtml(i.name)} (${escapeHtml(i.size)})`).join(', ')
         : 'Food Parcel';
@@ -267,15 +501,23 @@ function createOrderCard(id, o, type) {
     card.innerHTML = `
         <div class="order-head">
             <span class="order-id">#${safeOrderId}</span>
-            <span class="badge ${badgeClass}">${statusText}</span>
+            <div style="display:flex; gap:6px; align-items:center;">
+                ${o.outlet ? `<span style="
+                    font-size:9px; font-weight:800; padding:2px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px;
+                    background:${o.outlet.toLowerCase().includes('pizza') ? 'rgba(249,115,22,0.15)' : o.outlet.toLowerCase().includes('cake') ? 'rgba(236,72,153,0.15)' : 'rgba(100,100,100,0.15)'};
+                    color:${o.outlet.toLowerCase().includes('pizza') ? '#f97316' : o.outlet.toLowerCase().includes('cake') ? '#ec4899' : '#888'};
+                    border:1px solid ${o.outlet.toLowerCase().includes('pizza') ? 'rgba(249,115,22,0.3)' : o.outlet.toLowerCase().includes('cake') ? 'rgba(236,72,153,0.3)' : 'rgba(100,100,100,0.2)'};
+                ">${escapeHtml(o.outlet)}</span>` : ''}
+                <span class="badge ${badgeClass}">${statusText}</span>
+            </div>
         </div>
         <div class="order-details">
             <p><i data-lucide="user"></i> <span>${safeCustomerName}</span></p>
             <p><i data-lucide="map-pin"></i> <span>${safeAddress}</span></p>
             <p><i data-lucide="shopping-cart"></i> <span>${safeItemsText}</span></p>
-            <div style="margin-top:15px; padding-top:15px; border-top:1px solid var(--glass-border); display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:var(--text-muted); font-size:11px;">TO COLLECT</span>
-                <span style="color:var(--primary); font-size:18px; font-weight:900;">&#8377;${safeTotal}</span>
+            <div style="margin-top:20px; padding-top:15px; border-top:1px solid var(--glass-border); display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:var(--text-muted); font-size:11px; font-weight:700;">TO COLLECT</span>
+                <span style="color:var(--primary-orange); font-size:22px; font-weight:900;">&#8377;${safeTotal}</span>
             </div>
         </div>
         <div class="card-actions">
@@ -289,9 +531,19 @@ function createOrderCard(id, o, type) {
                         <i data-lucide="phone"></i> CALL
                     </button>
                 </div>
-                <button class="btn-primary btn-full" onclick="confirmDelivery('${id}')">
-                    COMPLETE DELIVERY <i data-lucide="check-circle"></i>
-                </button>
+                <!-- PREMIUM SLIDER ACTION -->
+                <div id="slider-${id}" class="slide-action-container">
+                    <div class="slide-action-text">Slide to Complete</div>
+                    <div class="slide-action-thumb"><i data-lucide="chevron-right"></i></div>
+                    <div class="slide-action-progress"></div>
+                </div>
+                <script>
+                    setTimeout(() => {
+                        if (typeof window.initSliderAction === 'function') {
+                            window.initSliderAction("slider-${id}", () => window.confirmDelivery('${id}'));
+                        }
+                    }, 500);
+                </script>
             ` : ''}
         </div>
     `;
@@ -300,6 +552,7 @@ function createOrderCard(id, o, type) {
 }
 
 window.acceptOrder = async (id) => {
+    window.haptic(40);
     try {
         const result = await db.ref(`orders/${id}`).transaction(current => {
             // Abort if order is already assigned — prevents race condition between riders
@@ -337,6 +590,7 @@ window.closeOTPPanel = () => {
 };
 
 window.verifyOTP = async () => {
+    window.haptic(25);
     const otp = document.getElementById('otpInput').value;
     if (!otp) return;
     
@@ -345,11 +599,29 @@ window.verifyOTP = async () => {
         const order = snap.val();
         
         // Only accept the OTP from the customer — no master bypass
-        if (String(otp).trim() === String(order.otp).trim()) {
+        // Bot writes deliveryOTP; fall back to otp for legacy orders
+        const storedOTP = order.deliveryOTP || order.otp;
+        if (String(otp).trim() === String(storedOTP).trim()) {
             await db.ref(`orders/${currentOrderId}`).update({
                 status: "Delivered",
                 deliveredAt: firebase.database.ServerValue.TIMESTAMP
             });
+
+            // Update rider stats (totalOrders, totalEarnings)
+            const riderId = currentUser.profile.id;
+            const commission = order.riderCommission || 40;
+            const statsRef = db.ref(`riderStats/${riderId}`);
+            await statsRef.transaction(current => {
+                if (!current) {
+                    return { totalOrders: 1, totalEarnings: commission, avgDeliveryTime: 0 };
+                }
+                return {
+                    ...current,
+                    totalOrders: (current.totalOrders || 0) + 1,
+                    totalEarnings: (current.totalEarnings || 0) + commission
+                };
+            });
+
             closeOTPPanel();
             showSection('home');
         } else {
@@ -358,4 +630,76 @@ window.verifyOTP = async () => {
     } catch (e) {
         alert("System error");
     }
+};
+/**
+ * =============================================
+ * 6. PREMIUM SLIDER COMPONENT (Gestures)
+ * =============================================
+ */
+window.initSliderAction = (containerId, onComplete) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const thumb = container.querySelector('.slide-action-thumb');
+    const text = container.querySelector('.slide-action-text');
+    const progress = container.querySelector('.slide-action-progress');
+
+    let isDragging = false;
+    let startX = 0;
+    let currentDelta = 0;
+
+    const onStart = (e) => {
+        isDragging = true;
+        startX = (e.type === 'mousedown') ? e.pageX : e.touches[0].pageX;
+        thumb.style.transition = 'none';
+        progress.style.transition = 'none';
+        window.haptic(5);
+    };
+
+    const onMove = (e) => {
+        if (!isDragging) return;
+        const x = (e.type === 'mousemove') ? e.pageX : e.touches[0].pageX;
+        let delta = x - startX;
+        
+        const maxDrag = container.offsetWidth - thumb.offsetWidth - 8;
+        if (delta < 0) delta = 0;
+        if (delta > maxDrag) delta = maxDrag;
+
+        currentDelta = delta;
+        const opacity = 1 - (delta / maxDrag);
+        
+        text.style.opacity = opacity;
+        thumb.style.transform = 'translateX(' + delta + 'px)';
+        progress.style.width = (delta + 28) + 'px';
+
+        if (delta > maxDrag * 0.8) window.haptic(2);
+    };
+
+    const onEnd = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        
+        const maxDrag = container.offsetWidth - thumb.offsetWidth - 8;
+        
+        if (currentDelta >= maxDrag * 0.9) {
+            thumb.style.transform = 'translateX(' + maxDrag + 'px)';
+            progress.style.width = '100%';
+            text.innerText = 'DONE';
+            window.haptic([15, 30, 20]);
+            setTimeout(onComplete, 300);
+        } else {
+            thumb.style.transition = 'all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
+            progress.style.transition = 'all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
+            thumb.style.transform = 'translateX(0px)';
+            progress.style.width = '0%';
+            text.style.opacity = 1;
+        }
+    };
+
+    thumb.addEventListener('mousedown', onStart);
+    thumb.addEventListener('touchstart', onStart, {passive: true});
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, {passive: false});
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchend', onEnd);
 };

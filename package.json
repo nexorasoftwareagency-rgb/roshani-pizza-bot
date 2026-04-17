@@ -1,0 +1,13 @@
+{
+  "name": "roshani-pizza-erp",
+  "version": "1.0.0",
+  "description": "Roshani Pizza ERP — WhatsApp Bot, Admin Dashboard, Rider Portal",
+  "private": true,
+  "scripts": {
+    "bot": "cd bot && node index.js",
+    "admin": "npx -y serve Admin -p 3000 -s",
+    "rider": "npx -y serve rider -p 3001 -s"
+  },
+  "keywords": ["pizza", "erp", "whatsapp-bot"],
+  "license": "ISC"
+}

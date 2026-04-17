@@ -19,12 +19,14 @@
         "admin_pizza": {
             "email": "roshanipizza@gmail.com",
             "outlet": "pizza",
-            "phone": "919852151856"
+            "phone": "919852151856",
+            "isSuper": true
         },
         "admin_cake": {
             "email": "roshanicakes@gmail.com",
             "outlet": "cake",
-            "phone": "919852151856"
+            "phone": "919852151856",
+            "isSuper": true
         }
     },
     "riders": {
