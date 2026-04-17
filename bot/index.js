@@ -266,7 +266,8 @@ async function startBot() {
         version,
         auth: state,
         printQRInTerminal: true,
-        logger: pino({ level: 'silent' })
+        logger: pino({ level: 'silent' }),
+        browser: ['Roshani Pizza ERP', 'Safari', '3.0'] 
     });
 
     // =============================
