@@ -1,0 +1,16 @@
+{
+  "name": "Roshani Pizza Admin",
+  "short_name": "Pizza Admin",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0a0a0b",
+  "theme_color": "#FF6B00",
+  "icons": [
+    {
+      "src": "icon-pizza.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

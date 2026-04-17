@@ -60,7 +60,7 @@ async function notifyDeveloper(sock, errorMsg) {
         if (!devPhone) return;
 
         const adminJid = devPhone.replace(/\D/g, '') + "@s.whatsapp.net";
-        
+
         // Sanitize & Truncate to prevent leaking user data or long stack traces
         const safeError = String(errorMsg)
             .replace(/file:\/\/\/[^"'\s]+/g, '[PATH]')
@@ -129,9 +129,13 @@ async function sendDailyReport(sock) {
         if (recipients.length === 0) return;
 
         // Fetch Today's Orders
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
         const orders = await getData("orders") || {};
-        const todayOrders = Object.values(orders).filter(o => o.createdAt?.startsWith(today));
+        const todayOrders = Object.values(orders).filter(o => {
+            const ts = o.createdAt ? new Date(o.createdAt).getTime() : 0;
+            return ts >= startOfDay;
+        });
 
         if (todayOrders.length === 0) {
             const emptyMsg = `📊 *DAILY SALES SUMMARY* 📊\n` +
@@ -140,6 +144,7 @@ async function sendDailyReport(sock) {
                 `🚫 No orders were placed today.\n` +
                 `━━━━━━━━━━━━━━━━━━━━━━━━━━`;
             for (const jid of recipients) await sock.sendMessage(jid, { text: emptyMsg });
+            await updateData('settings/Bot', { lastReportDate: now.toISOString().split('T')[0] });
             return;
         }
 
@@ -267,7 +272,7 @@ async function startBot() {
         auth: state,
         printQRInTerminal: true,
         logger: pino({ level: 'silent' }),
-        browser: ['Roshani Pizza ERP', 'Safari', '3.0'] 
+        browser: ['Roshani Pizza ERP', 'Safari', '3.0']
     });
 
     // =============================
@@ -292,11 +297,11 @@ async function startBot() {
             }
 
             // Heartbeat
-            updateData('bot/status', { 
+            updateData('bot/status', {
                 lastSeen: Date.now(),
-                status: 'Online' 
+                status: 'Online'
             }).catch(e => console.error("Heartbeat error:", e));
-            
+
         } catch (err) {
             console.error("Scheduler Error:", err);
         }
@@ -305,16 +310,16 @@ async function startBot() {
     sock.ev.on('connection.update', (u) => {
         const { connection, lastDisconnect, qr } = u;
         if (qr) qrcode.generate(qr, { small: true });
-        
+
         if (connection === 'connecting') console.log("🔄 Re-establishing connection...");
         if (connection === 'open') console.log("✅ WHATSAPP BOT ONLINE & READY");
-        
+
         if (connection === 'close') {
             const code = lastDisconnect?.error?.output?.statusCode || lastDisconnect?.error?.code;
             const shouldReconnect = code !== 401 && code !== 515; // Logged out codes
-            
+
             console.log(`🔌 Disconnected (Code: ${code}). Reconnecting: ${shouldReconnect}`);
-            
+
             if (shouldReconnect) {
                 setTimeout(() => startBot(), 5000);
             } else {
@@ -352,29 +357,29 @@ async function startBot() {
                     // Load Marketing & Feedback Info
                     const storeData = await getData("settings/Store");
                     const brands = storeData || {};
-                    
+
                     // 1. Send Premium Delivered & Promotion Message
                     let promoMsg = `🌟 *WE HOPE YOU ENJOYED YOUR MEAL!* 🌟\n`;
                     promoMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                     promoMsg += `Your order *#${id}* from *${(brands.storeName || "Roshani Pizza & Cake").toUpperCase()}* has been delivered! 🍕🎂\n\n`;
-                    
+
                     if (brands.config?.showSocial) {
                         promoMsg += `We'd love to stay connected with you:\n`;
                         if (brands.instagram) promoMsg += `📸 *Instagram:* ${brands.instagram}\n`;
                         if (brands.facebook) promoMsg += `👥 *Facebook:* ${brands.facebook}\n`;
                         if (brands.reviewUrl) promoMsg += `🏅 *Rate us on Google:* ${brands.reviewUrl}\n\n`;
                     }
-                    
+
                     promoMsg += `Thank you for choosing us! ✨`;
                     await sock.sendMessage(number, { text: promoMsg });
 
                     // 2. Clear previous session and start Feedback Flow
-                    sessions[number] = { 
-                        step: "FEEDBACK_RATING", 
-                        orderId: id, 
+                    sessions[number] = {
+                        step: "FEEDBACK_RATING",
+                        orderId: id,
                         customerName: order.customerName,
                         phone: phone,
-                        lastActivity: Date.now() 
+                        lastActivity: Date.now()
                     };
 
                     let feedbackMsg = `🙏 *A QUICK FAVOR...*\n`;
@@ -386,11 +391,11 @@ async function startBot() {
                     feedbackMsg += `3️⃣  ⭐⭐⭐ (Average)\n`;
                     feedbackMsg += `2️⃣  ⭐⭐ (Poor)\n`;
                     feedbackMsg += `1️⃣  ⭐ (Terrible)`;
-                    
+
                     setTimeout(async () => {
                         await sock.sendMessage(number, { text: feedbackMsg });
                     }, 2000);
-                    return; 
+                    return;
                 }
 
                 if (msg) await sock.sendMessage(number, { text: msg });
@@ -405,6 +410,12 @@ async function startBot() {
                 await sock.sendMessage(number, { text: otpMsg });
                 console.log("OTP sent to:", number);
             }
+
+            // Cleanup memory (Limit to 200 entries)
+            const keys = Object.keys(processedStatus);
+            if (keys.length > 200) delete processedStatus[keys[0]];
+            const otpKeys = Object.keys(processedOTP);
+            if (otpKeys.length > 200) delete processedOTP[otpKeys[0]];
         } catch (err) {
             console.error("Order update listener error:", err);
         }
@@ -456,8 +467,8 @@ async function startBot() {
             if (!isShopOpen(storeData.shopOpenTime, storeData.shopCloseTime)) {
                 // Allow feedback even if shop is closed
                 if (!user.step?.startsWith("FEEDBACK")) {
-                    return sock.sendMessage(sender, { 
-                        text: `🌙 *WE ARE CURRENTLY CLOSED*\n\nThank you for reaching out! Our shop is currently closed. We look forward to serving you during our opening hours:\n\n☀️ *Opening Time:* ${storeData.shopOpenTime || '10:00'}\n\nSee you soon! 🍕🎂` 
+                    return sock.sendMessage(sender, {
+                        text: `🌙 *WE ARE CURRENTLY CLOSED*\n\nThank you for reaching out! Our shop is currently closed. We look forward to serving you during our opening hours:\n\n☀️ *Opening Time:* ${storeData.shopOpenTime || '10:00'}\n\nSee you soon! 🍕🎂`
                     });
                 }
             }
@@ -468,10 +479,10 @@ async function startBot() {
                 if (isNaN(rating) || rating < 1 || rating > 5) {
                     return sock.sendMessage(sender, { text: "❌ *Invalid Rating.* Please reply with a number between 1 and 5." });
                 }
-                
+
                 user.feedback = { rating };
                 const storeData = await getData("settings/Store") || {};
-                
+
                 let msg = `✨ *THANK YOU FOR YOUR RATING!* ✨\n`;
                 msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                 msg += `What did you enjoy the most about your experience?\n\n`;
@@ -480,7 +491,7 @@ async function startBot() {
                 msg += `3️⃣  ${storeData.feedbackReason3 || 'Premium Packaging'}\n`;
                 msg += `4️⃣  *Other (Tell us more)*\n\n`;
                 msg += `_Reply with a number_`;
-                
+
                 user.step = "FEEDBACK_REASON";
                 return sock.sendMessage(sender, { text: msg });
             }
@@ -790,7 +801,7 @@ async function startBot() {
                 const lng = locationMsg.degreesLongitude;
                 user.location = { lat, lng };
                 user.locationLink = `https://www.google.com/maps?q=${lat},${lng}`;
-                
+
                 // Calculate Distance & Delivery Charge
                 const settings = await getData("settings/Delivery");
                 const outletCoords = settings?.coords || { lat: 25.887444, lng: 85.026889 };
@@ -811,7 +822,7 @@ async function startBot() {
                 const grandTotal = subtotal + deliveryFee;
 
                 user.step = "CONFIRM";
-                
+
                 let summary = `🧾 *ORDER SUMMARY*\n`;
                 summary += `━━━━━━━━━━━━━━━━━━━━\n\n`;
                 summary += `📦 *YOUR ITEMS:*\n`;
@@ -829,7 +840,7 @@ async function startBot() {
                 summary += `1️⃣  *Confirm & Place Order* ✅\n`;
                 summary += `2️⃣  *Cancel Order* ❌\n\n`;
                 summary += `_Reply with number to finalize_`;
-                
+
                 return sock.sendMessage(sender, { text: summary });
             }
 
@@ -854,9 +865,13 @@ async function startBot() {
                     lineTotal: item.total * item.quantity
                 }));
 
-                // Determine primary outlet (use first item's outlet, or mixed)
-                const outlets = [...new Set(user.cart.map(i => i.outlet))];
-                const primaryOutlet = outlets.length === 1 ? outlets[0] : outlets.join('+');
+                // Determine primary outlet based on majority items
+                const outletCounts = {};
+                user.cart.forEach(i => {
+                    const o = i.outlet || 'pizza';
+                    outletCounts[o] = (outletCounts[o] || 0) + 1;
+                });
+                const primaryOutlet = Object.entries(outletCounts).sort((a,b) => b[1] - a[1])[0][0];
 
                 await setData(`orders/${orderId}`, {
                     orderId,

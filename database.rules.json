@@ -1,9 +1,11 @@
 {
   "rules": {
     "orders": {
-      ".read": "auth != null",
-      ".write": "auth != null && (data.child('ownerId').val() == auth.uid || auth.token.admin === true || !data.exists())",
+      // Admin can see everything. Riders can only see orders assigned to them or unassigned.
+      ".read": "(auth != null && auth.token.admin === true) || (auth != null && query.orderByChild == 'assignedRider')",
       "$orderId": {
+        ".read": "auth != null && (auth.token.admin === true || data.child('assignedRider').val() == auth.token.email || data.child('whatsappNumber').val() == auth.token.whatsapp)",
+        ".write": "auth != null && (auth.token.admin === true || !data.exists())",
         ".validate": "newData.hasChildren(['total', 'items', 'status'])"
       }
     },
@@ -18,20 +20,23 @@
       }
     },
     "riders": {
-      ".read": "auth != null",
+      // Only admins should see the list of all riders. Riders can only see their own profile.
+      ".read": "auth != null && auth.token.admin === true",
       "$riderId": {
+        ".read": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
         ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
         ".validate": "newData.hasChildren(['name', 'email', 'outlet'])"
       }
     },
     "feedbacks": {
-      ".read": "auth != null",
+      ".read": "auth != null && auth.token.admin === true",
       "$feedbackId": {
         ".write": "auth != null && !data.exists()"
       }
     },
     "customers": {
-      ".read": "auth != null",
+      // Customers node is PII, only admins read/write
+      ".read": "auth != null && auth.token.admin === true",
       ".write": "auth.token.admin === true"
     },
     "appConfig": {
@@ -47,10 +52,8 @@
         ".write": "auth.token.admin === true"
     },
     "admins": {
-        ".read": "auth != null",
+        ".read": "auth != null && auth.token.admin === true",
         ".write": "auth.token.admin === true"
-    },
-    ".read": false,
-    ".write": false
+    }
   }
 }
