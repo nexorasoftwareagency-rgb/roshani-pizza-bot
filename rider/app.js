@@ -34,6 +34,8 @@ window.toggleNotificationSheet = () => {
 
 window.showSection = (sectionId) => {
     window.haptic(15);
+    const nav = document.getElementById('sidebarNav');
+    const overlay = document.getElementById('sidebarOverlay');
     window.toggleRiderSidebar(); // Close sidebar on nav
     if (nav) nav.classList.remove('active');
     if (overlay) overlay.classList.remove('active');
@@ -90,9 +92,13 @@ window.login = async () => {
     }
 };
 
-// Enter key triggers login on both fields
-document.getElementById('email').addEventListener('keydown', (e) => { if (e.key === 'Enter') window.login(); });
-document.getElementById('password').addEventListener('keydown', (e) => { if (e.key === 'Enter') window.login(); });
+// Enter key triggers login on both fields (Wrapped in DOMContentLoaded for safety)
+document.addEventListener('DOMContentLoaded', () => {
+    const emailField = document.getElementById('email');
+    const passField = document.getElementById('password');
+    if (emailField) emailField.addEventListener('keydown', (e) => { if (e.key === 'Enter') window.login(); });
+    if (passField) passField.addEventListener('keydown', (e) => { if (e.key === 'Enter') window.login(); });
+});
 
 function showError(msg) {
     const errorEl = document.getElementById('loginError');
@@ -382,18 +388,6 @@ function initRealtimeListeners() {
             const isToday = orderDate === today;
 
             if (o.status === "Delivered" && o.assignedRider && o.assignedRider.toLowerCase() === myEmail) {
-                stats.todayDelivered++;
-                // ... logic for earnings ...
-            }
-
-            // 2. ACTIVE
-            if (o.status === "Out for Delivery" && o.assignedRider && o.assignedRider.toLowerCase() === myEmail) {
-                stats.hasActive = true;
-                activeOrder = { id, ...o };
-                const card = createOrderCard(id, o, 'active');
-                activeView.innerHTML = '';
-                activeView.appendChild(card);
-            }
                 const commission = o.riderCommission || 40; 
                 
                 if (outlet.includes("pizza")) {
@@ -470,6 +464,13 @@ function initRealtimeListeners() {
         } else {
             if (mapCont) mapCont.style.display = 'none';
         }
+
+        // Initialize any sliders that were just rendered
+        document.querySelectorAll('.slide-action-container:not(.initialized)').forEach(slider => {
+            const orderId = slider.id.replace('slider-', '');
+            window.initSliderAction(slider.id, () => window.confirmDelivery(orderId));
+            slider.classList.add('initialized');
+        });
     });
 }
 
@@ -537,13 +538,6 @@ function createOrderCard(id, o, type) {
                     <div class="slide-action-thumb"><i data-lucide="chevron-right"></i></div>
                     <div class="slide-action-progress"></div>
                 </div>
-                <script>
-                    setTimeout(() => {
-                        if (typeof window.initSliderAction === 'function') {
-                            window.initSliderAction("slider-${id}", () => window.confirmDelivery('${id}'));
-                        }
-                    }, 500);
-                </script>
             ` : ''}
         </div>
     `;
@@ -633,12 +627,10 @@ window.verifyOTP = async () => {
 };
 /**
  * =============================================
- * 6. PREMIUM SLIDER COMPONENT (Gestures)
- * =============================================
  */
 window.initSliderAction = (containerId, onComplete) => {
     const container = document.getElementById(containerId);
-    if (!container) return;
+    if (!container || container.classList.contains('initialized')) return;
 
     const thumb = container.querySelector('.slide-action-thumb');
     const text = container.querySelector('.slide-action-text');
@@ -654,6 +646,12 @@ window.initSliderAction = (containerId, onComplete) => {
         thumb.style.transition = 'none';
         progress.style.transition = 'none';
         window.haptic(5);
+
+        // Attach window listeners only when dragging starts
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('touchmove', onMove, {passive: false});
+        window.addEventListener('mouseup', onEnd);
+        window.addEventListener('touchend', onEnd);
     };
 
     const onMove = (e) => {
@@ -678,6 +676,12 @@ window.initSliderAction = (containerId, onComplete) => {
     const onEnd = () => {
         if (!isDragging) return;
         isDragging = false;
+
+        // Cleanup window listeners when dragging ends
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('touchmove', onMove);
+        window.removeEventListener('mouseup', onEnd);
+        window.removeEventListener('touchend', onEnd);
         
         const maxDrag = container.offsetWidth - thumb.offsetWidth - 8;
         
@@ -698,8 +702,5 @@ window.initSliderAction = (containerId, onComplete) => {
 
     thumb.addEventListener('mousedown', onStart);
     thumb.addEventListener('touchstart', onStart, {passive: true});
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('touchmove', onMove, {passive: false});
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchend', onEnd);
 };
+
