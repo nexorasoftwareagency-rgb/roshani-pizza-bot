@@ -235,7 +235,8 @@ body {
 .kpi-card {
     align-items: center;
     background: var(--glass-bg);
-    -webkit-backdrop-filter: blur(10px);
+    
+     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
     border-radius: 20px;
@@ -289,8 +290,8 @@ body {
 /* PANEL BLOCKS */
 .panel {
     background: var(--glass-bg);
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    backdrop-filter: blur(var(--glass-blur));
+    
+     backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
     border-radius: 20px;
     box-shadow: var(--shadow-medium);
@@ -502,15 +503,16 @@ tr:hover td {
 .glass-card {
     background: var(--glass-bg);
     background-image: linear-gradient(135deg, var(--glass-edge) 0%, transparent 100%);
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    backdrop-filter: blur(var(--glass-blur));
+    
+     backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
 }
 
 .modal {
     align-items: center;
-    -webkit-backdrop-filter: blur(12px);
+    
+     -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
     background: rgba(0, 0, 0, 0.6);
     display: none;
@@ -641,6 +643,34 @@ tr:hover td {
 .mb-0 { margin-bottom: 0; }
 .w-auto { width: auto; }
 .w-150 { width: 150px; }
+
+/* UTILITY CLASSES FOR LINT CLEANUP */
+.flex-grow-1 { flex: 1; }
+.h-60 { height: 60px; }
+.h-600 { height: 600px; }
+.grid-full { grid-column: 1 / -1; }
+.text-upper { text-transform: uppercase; }
+.ls-sm { letter-spacing: 0.5px; }
+.text-muted-small { font-size: 11px; color: var(--text-muted); }
+.form-label-small { font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 6px; display: block; }
+
+.badge-live-tracking-pill { background: var(--primary); font-size: 8px; padding: 2px 4px; border-radius: 4px; margin-left: 5px; color: white; }
+.badge-sidebar-notif-pill { background: #f97316; font-size: 8px; padding: 2px 4px; border-radius: 4px; margin-left: 5px; color: white; display: none; }
+.notif-item-full { margin-bottom: 12px; border-radius: 16px; border: 1px solid rgba(0,0,0,0.05); }
+.notif-title-premium { font-weight: 700; }
+.notif-sub-premium { font-size: 12px; color: var(--text-muted); }
+.notif-time-badge-premium { font-size: 10px; font-weight: 800; color: var(--primary); opacity: 0.7; }
+
+/* FINAL DECOUPLING UTILITIES */
+.h-300 { height: 300px; }
+.border-dashed { border-style: dashed !important; }
+.w-100 { width: 100px; }
+.h-100 { height: 100px; }
+.bg-white { background: white !important; }
+.border-ghost-light { border: 1px solid rgba(255,255,255,0.1); }
+.p-0-10 { padding: 0 10px; }
+.table-empty-message { text-align: center; padding: 40px; color: var(--text-muted); }
+
 .fs-10 { font-size: 10px; }
 .p-4-8 { padding: 4px 8px; }
 .p-8-15 { padding: 8px 15px; }
@@ -662,7 +692,8 @@ tr:hover td {
 .modal-grid-2col { display: grid; grid-template-columns: 200px 1fr; gap: 30px; flex: 1; min-height: 0; overflow-y: auto; }
 .modal-media-upload { background: rgba(0, 0, 0, 0.02); border: 2px dashed rgba(0, 0, 0, 0.1); border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; position: relative; width: 100%; aspect-ratio: 1; }
 .modal-img-preview { height: 100%; object-fit: cover; width: 100%; }
-.modal-img-overlay { background: rgba(0, 0, 0, 0.5); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); bottom: 0; left: 0; padding: 10px; position: absolute; right: 0; text-align: center; }
+.modal-img-overlay { background: rgba(0, 0, 0, 0.5);   -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px); bottom: 0; left: 0; padding: 10px; position: absolute; right: 0; text-align: center; }
 .update-photo-btn { font-size: 10px; padding: 4px 10px; }
 .upload-status-text { color: var(--action-green); font-weight: bold; margin-top: 10px; text-align: center; }
 .modal-details-scroll { overflow-y: visible; padding-right: 15px; }
@@ -1021,8 +1052,9 @@ html, body {
         width: 100%;
         height: 56px;
         background: rgba(255, 255, 255, 0.9);
-        -webkit-backdrop-filter: blur(20px);
-        backdrop-filter: blur(20px);
+        
+         -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
         z-index: 1000;
         align-items: center;
         justify-content: space-between;
@@ -1105,8 +1137,9 @@ html, body {
         position: fixed;
         inset: 0;
         background: rgba(0,0,0,0.4);
-        -webkit-backdrop-filter: blur(4px);
-        backdrop-filter: blur(4px);
+        
+         -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
         z-index: 2900;
         opacity: 0;
         transition: opacity 0.3s;
@@ -1157,8 +1190,9 @@ html, body {
         width: 100%;
         height: 64px;
         background: rgba(255, 255, 255, 0.95);
-        -webkit-backdrop-filter: blur(25px);
-        backdrop-filter: blur(25px);
+        
+         -webkit-backdrop-filter: blur(25px);
+    backdrop-filter: blur(25px);
         border-top: 1px solid rgba(0,0,0,0.06);
         z-index: 1100;
         justify-content: space-around;
@@ -1251,8 +1285,9 @@ html, body {
         background: rgba(0,0,0,0.4);
         display: none;
         z-index: 2050;
-        -webkit-backdrop-filter: blur(4px);
-        backdrop-filter: blur(4px);
+        
+         -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
     }
 
     .sheet-overlay.active {
@@ -1384,8 +1419,9 @@ html, body {
         position: fixed;
         inset: 0;
         background: rgba(0,0,0,0.4);
-        -webkit-backdrop-filter: blur(4px);
-        backdrop-filter: blur(4px);
+        
+         -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
         z-index: 2150;
     }
 
