@@ -1,0 +1,16 @@
+{
+  "name": "Roshani Cake Boutique",
+  "short_name": "Cake Admin",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0a0a0b",
+  "theme_color": "#fbcfe8",
+  "icons": [
+    {
+      "src": "icon-cake.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

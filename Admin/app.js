@@ -1,3 +1,40 @@
+// ==========================================
+// 1. PWA & CONFIGURATION
+// ==========================================
+let deferredPrompt;
+
+// PWA Install Logic
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const downloadBtn = document.getElementById('menu-downloadapp');
+    if (downloadBtn) downloadBtn.style.display = 'block';
+});
+
+window.installPWA = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+        const downloadBtn = document.getElementById('menu-downloadapp');
+        if (downloadBtn) downloadBtn.style.display = 'none';
+    }
+    deferredPrompt = null;
+};
+
+window.addEventListener('appinstalled', () => {
+    const downloadBtn = document.getElementById('menu-downloadapp');
+    if (downloadBtn) downloadBtn.style.display = 'none';
+    deferredPrompt = null;
+});
+
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed', err));
+    });
+}
+
 const db = firebase.database();
 const auth = firebase.auth();
 
@@ -305,8 +342,7 @@ auth.onAuthStateChanged(async user => {
         // Detach persistent listeners
         if (_ordersChildCb) { db.ref("orders").off("child_added", _ordersChildCb); _ordersChildCb = null; }
         if (_ordersValueCb) { db.ref("orders").off("value", _ordersValueCb); _ordersValueCb = null; }
-        db.ref("riderStats").off();
-        db.ref("riders").off();
+        if (_ordersChangedCb) { db.ref("orders").off("child_changed", _ordersChangedCb); _ordersChangedCb = null; }
         if (window.currentOutlet) db.ref(`dishes/${window.currentOutlet}`).off();
         
         authOverlay.style.display = "flex";
@@ -367,7 +403,8 @@ function updateBranding() {
     const badge = document.getElementById('outletBadge');
     const mobBadge = document.getElementById('mobileOutletBadge');
     const sidebarBrand = document.getElementById('sidebarBrandText');
-    const isPizza = window.currentOutlet === 'pizza';
+    const brand = window.currentOutlet === 'cake' ? 'cake' : 'pizza';
+    const isPizza = brand === 'pizza';
 
     const label = isPizza ? 'PIZZA OUTLET' : 'CAKES OUTLET';
     const bgColor = isPizza ? 'var(--primary-orange)' : '#EC4899';
@@ -385,7 +422,16 @@ function updateBranding() {
     }
     document.title = (isPizza ? 'Roshani Pizza' : 'Roshani Cakes') + ' | Admin Dashboard';
 
-    // Riders tab: only Pizza outlet admin can manage riders (unless Super)
+    // Synchronize PWA Manifest & Icons (from branding.js)
+    if (typeof window.switchBrand === 'function' && brand !== localStorage.getItem('admin_brand')) {
+        localStorage.setItem('admin_brand', brand);
+        console.log("[Branding] Outlet changed brand to:", brand);
+        // We don't force reload here to avoid interrupting the user, 
+        // but the NEXT visit or a manual reload will finalize the PWA icon.
+        // We trigger the DOM update immediately though.
+        location.reload(); 
+    }
+
     const ridersMenu = document.getElementById("menu-riders");
     if (ridersMenu) {
         ridersMenu.style.display = (isPizza || (adminData && adminData.isSuper)) ? "" : "none";
@@ -519,13 +565,18 @@ function updateNotificationUI() {
 }
 
 function renderNotifItem(n, isFull = false) {
+    const safeTitle = escapeHtml(n.title);
+    const safeSub = escapeHtml(n.sub);
+    const safeTime = escapeHtml(n.time);
+    const safeType = escapeHtml(n.type);
+
     return `
-        <div class="notification-item ${n.type}" ${isFull ? 'style="margin-bottom:12px; border-radius:16px; border:1px solid rgba(0,0,0,0.05);"' : ''}>
+        <div class="notification-item ${safeType}" ${isFull ? 'style="margin-bottom:12px; border-radius:16px; border:1px solid rgba(0,0,0,0.05);"' : ''}>
             <div style="flex:1">
-                <div class="notif-title" style="font-weight:700;">${n.title}</div>
-                <div class="notif-sub" style="font-size:12px; color:var(--text-muted);">${n.sub}</div>
+                <div class="notif-title" style="font-weight:700;">${safeTitle}</div>
+                <div class="notif-sub" style="font-size:12px; color:var(--text-muted);">${safeSub}</div>
             </div>
-            <div class="notif-time-badge" style="font-size:10px; font-weight:800; color:var(--primary); opacity:0.7;">${n.time}</div>
+            <div class="notif-time-badge" style="font-size:10px; font-weight:800; color:var(--primary); opacity:0.7;">${safeTime}</div>
         </div>
     `;
 }
@@ -749,35 +800,43 @@ function playSound() {
     });
 }
 
-function showAlert(order) {
+function showAlert(data, type = 'info') {
     const container = document.getElementById('alertContainer');
     if (!container) return;
     const div = document.createElement('div');
-    div.className = 'alert-box';
+    div.className = `alert-box ${type}`;
     
-    // Store order in map for safe retrieval
-    const orderKey = order.orderId || order.id;
-    ordersMap.set(orderKey, order);
+    if (typeof data === 'string') {
+        div.innerHTML = `
+            <div class="alert-content">
+                <div class="alert-title">${type === 'success' ? '✅' : 'ℹ️'} Message</div>
+                <div class="alert-sub">${escapeHtml(data)}</div>
+            </div>
+        `;
+    } else {
+        const order = data;
+        const orderKey = order.orderId || order.id;
+        ordersMap.set(orderKey, order);
 
-    div.innerHTML = `
-        <div class="alert-content">
-            <div class="alert-title">🔔 New Order #${order.orderId || order.id.slice(-5)}</div>
-            <div class="alert-sub">₹${order.total} • ${order.items?.length || 1} item(s)</div>
-        </div>
-        <button class="alert-print-btn" data-order-id="${orderKey}">🖨️ Print</button>
-    `;
+        div.innerHTML = `
+            <div class="alert-content">
+                <div class="alert-title">🔔 New Order #${escapeHtml((order.orderId || order.id).slice(-5))}</div>
+                <div class="alert-sub">₹${escapeHtml(order.total)} • ${(order.items || []).length} item(s)</div>
+            </div>
+            <button class="alert-print-btn" data-order-id="${escapeHtml(orderKey)}">🖨️ Print</button>
+        `;
 
-    // Safe event listener instead of inline onclick
-    const printBtn = div.querySelector('.alert-print-btn');
-    printBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const id = e.target.getAttribute('data-order-id');
-        const foundOrder = ordersMap.get(id);
-        if (foundOrder) printOrderReceipt(foundOrder);
-    });
+        const printBtn = div.querySelector('.alert-print-btn');
+        printBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = e.target.getAttribute('data-order-id');
+            const foundOrder = ordersMap.get(id);
+            if (foundOrder) printOrderReceipt(foundOrder);
+        });
+    }
 
     div.onclick = () => {
-        switchTab('orders');
+        if (typeof data !== 'string') switchTab('orders');
         div.remove();
     };
 
@@ -1711,8 +1770,64 @@ window.generateCustomReport = () => {
                 </td>
             </tr>
         `).join('') || "<tr><td colspan='5' style='text-align:center; padding:30px; color:var(--text-muted)'>No orders found for this range</td></tr>";
+
+        // Render visual chart
+        renderRevenueChart(salesData);
     });
 };
+
+let revenueChart; // Global chart instance
+function renderRevenueChart(data) {
+    const ctx = document.getElementById('revenueChart');
+    if (!ctx) return;
+
+    // Aggregate by date
+    const dailyData = {};
+    data.forEach(o => {
+        dailyData[o.dateStr] = (dailyData[o.dateStr] || 0) + Number(o.total || 0);
+    });
+
+    const labels = Object.keys(dailyData).sort();
+    const values = labels.map(l => dailyData[l]);
+
+    if (revenueChart) revenueChart.destroy();
+
+    revenueChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Daily Revenue',
+                data: values,
+                borderColor: '#FF6B00',
+                backgroundColor: 'rgba(255, 107, 0, 0.1)',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#FF6B00',
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+}
 
 // SETTINGS
 function loadSettings() {

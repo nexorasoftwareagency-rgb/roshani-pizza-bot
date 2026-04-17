@@ -12,10 +12,12 @@ try {
     const serviceAccountPath = path.join(__dirname, 'service-account.json');
     if (fs.existsSync(serviceAccountPath)) {
         const serviceAccount = require(serviceAccountPath);
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-            databaseURL: FIREBASE_URL
-        });
+        if (!admin.apps.length) {
+            admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount),
+                databaseURL: FIREBASE_URL
+            });
+        }
     } else {
         // No service account file - use default
         if (!admin.apps.length) {

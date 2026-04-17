@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Roshani Pizza | Rider Portal</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#FF6B00">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     
@@ -107,6 +111,9 @@
                 </li>
                 <li onclick="showSection('profile')" data-section="profile">
                     <i data-lucide="settings-2"></i> <span>Settings</span>
+                </li>
+                <li id="menu-downloadapp" onclick="window.installPWA()" class="pwa-download-item" style="display:none;" title="Download Rider App">
+                    <i data-lucide="download-cloud"></i> <span>Download App</span>
                 </li>
                 <li onclick="logout()" class="logout-link">
                     <i data-lucide="power"></i> <span>Exit System</span>
