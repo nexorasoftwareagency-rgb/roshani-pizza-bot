@@ -1,0 +1,12 @@
+{
+  "a1": {
+    "email": "roshanipizza@gmail.com",
+    "isSuper": true,
+    "outlet": "pizza"
+  },
+  "a2": {
+    "email": "roshanicakes@gmail.com",
+    "isSuper": true,
+    "outlet": "cake"
+  }
+}

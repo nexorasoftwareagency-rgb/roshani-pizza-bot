@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ROSHANI PIZZA | Admin Dashboard</title>
+    <title>Roshani Pizza | Admin Dashboard</title>
 
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -13,21 +13,30 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
 
-    <!-- Excel & PDF Reports -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- Leaflet Mapping -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 
 <body>
     <div id="alertContainer"></div>
 
+    <!-- Haptic Interaction Helper -->
+    <script>
+        window.haptic = (pattern = 10) => {
+            if (navigator.vibrate) navigator.vibrate(pattern);
+        };
+    </script>
+
     <!-- LOGIN -->
     <div id="authOverlay">
         <div class="login-box">
-            <h2>ERP LOGIN</h2>
+            <h2>ROSHANI PIZZA LOGIN</h2>
             <input id="adminEmail" placeholder="Email Address">
             <input id="adminPassword" type="password" placeholder="Password">
             <button id="loginBtn" class="btn-primary w-full flex-center">Sign In</button>
@@ -37,22 +46,21 @@
 
     <div class="layout">
 
+        <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
+
         <!-- SIDEBAR -->
-        <div class="sidebar">
-            <div class="sidebar-header">ROSHANI ERP</div>
+        <div class="sidebar desktop-only" id="sidebarNav">
+            <div class="sidebar-header"><span id="sidebarBrandText">ROSHANI PIZZA</span></div>
             <ul>
                 <li id="menu-dashboard" class="active" onclick="switchTab('dashboard')"><span>📊</span> Dashboard</li>
-                <li id="menu-orders" onclick="switchTab('orders')"><span>📦</span> Orders</li>
+                <li id="menu-walkin" onclick="switchTab('walkin')"><span>🛒</span> Record Sale</li>
                 <li id="menu-live" onclick="switchTab('live')"><span>🔥</span> Live Orders <span id="badge-live" class="counter-badge hidden">0</span></li>
-                <li class="has-submenu" id="menu-group-parent">
-                    <div onclick="toggleSubmenu('menu-group-parent')"><span>🍴</span> Menu <span class="arrow">▼</span></div>
-                    <ul id="menu-group" class="submenu">
-                        <li onclick="switchTab('categories')">📂 Categories</li>
-                        <li onclick="switchTab('menu')">🍕 Dishes</li>
-                    </ul>
-                </li>
+                <li id="menu-orders" onclick="switchTab('orders')"><span>📋</span> Order History</li>
                 <li id="menu-riders" onclick="switchTab('riders')"><span>🏍️</span> Riders</li>
+                <li id="menu-liveTracker" onclick="switchTab('liveTracker')"><span>📍</span> Live Tracking <span class="badge-new" style="background:var(--primary); font-size:8px; padding:2px 4px; border-radius:4px; margin-left:5px; color:white;">LIVE</span></li>
+                <li id="menu-notifications" onclick="switchTab('notifications')"><span>🔔</span> Notifications <span id="sidebar-notif-count" class="badge-new" style="background:#f97316; font-size:8px; padding:2px 4px; border-radius:4px; margin-left:5px; color:white; display:none;">0</span></li>
                 <li id="menu-customers" onclick="switchTab('customers')"><span>👥</span> Customers</li>
+                <li id="menu-inventory" onclick="switchTab('inventory')"><span>📦</span> Inventory</li>
                 <li id="menu-payments" onclick="switchTab('payments')"><span>💳</span> Payments</li>
                 <li id="menu-reports" onclick="switchTab('reports')"><span>📉</span> Reports</li>
                 <li id="menu-settings" onclick="switchTab('settings')"><span>⚙️</span> Settings</li>
@@ -63,15 +71,36 @@
         <!-- MAIN -->
         <div class="main">
 
-            <!-- TOPBAR -->
-            <div class="topbar">
-                <div>
-                    <h2 id="currentTabTitle">Dashboard Overview</h2>
-                    <span id="outletBadge" class="outlet-badge">LOADING...</span>
+            <!-- MOBILE APP HEADER -->
+            <div id="mobileAppHeader" class="mobile-header">
+                <div class="mobile-header-left" onclick="toggleNotificationSheet()">
+                    <div class="notif-bell-container">
+                        <i data-lucide="bell"></i>
+                        <span id="notifBadge" class="notif-badge hidden"></span>
+                    </div>
+                </div>
+                <div class="mobile-header-center">
+                    <h2 id="mobileTabTitle">Dashboard</h2>
+                </div>
+                <div class="mobile-header-right">
+                    <span id="mobileOutletBadge" class="outlet-badge">...</span>
+                </div>
+            </div>
+
+            <!-- DESKTOP TOPBAR -->
+            <div class="topbar desktop-topbar desktop-only">
+                <div style="display:flex; align-items:center; gap:20px;">
+                    <div>
+                        <h2 id="currentTabTitle">Dashboard Overview</h2>
+                        <span id="outletBadge" class="outlet-badge">LOADING...</span>
+                    </div>
+                    <select id="outletSwitcher" class="outlet-switcher-admin hidden" onchange="switchOutlet(this.value)">
+                        <!-- Populated via JS for Super Admins -->
+                    </select>
                 </div>
                 <div class="user-display">
                     <span id="userEmailDisplay" class="user-email"></span>
-                    <button id="logoutBtn" class="btn-secondary btn-small">Logout</button>
+                    <button id="logoutBtn" onclick="userLogout()" class="btn-secondary btn-small">Logout</button>
                 </div>
             </div>
 
@@ -189,7 +218,7 @@
             <!-- LIVE ORDERS TAB -->
             <div id="tab-live" class="tab-content hidden">
                 <div class="panel">
-                    <h3>🔥 Live Operations</h3>
+                    <h3 class="desktop-only">🔥 Live Operations</h3>
                     <p class="panel-subtitle">Tracking active kitchen and delivery work</p>
                     <div class="scroll-x">
                         <table>
@@ -214,7 +243,7 @@
             <div id="tab-menu" class="tab-content hidden">
                 <div class="panel">
                     <div class="panel-header">
-                        <h3>Menu Management</h3>
+                        <h3 class="desktop-only">Menu Management</h3>
                         <button onclick="showDishModal()" class="btn-primary btn-small">+ Add Dish</button>
                     </div>
                     <div id="menuGrid" class="menu-grid"></div>
@@ -225,7 +254,7 @@
             <div id="tab-categories" class="tab-content hidden">
                 <div class="panel">
                     <div class="panel-header">
-                        <h3>Category Management</h3>
+                        <h3 class="desktop-only">Category Management</h3>
                         <div class="flex-row flex-gap-10 flex-center">
                         <div class="flex-row flex-gap-10 flex-center p-15 glass-card category-upload-box">
                                 <img id="catPreview" src="../assets/images/category_icon.png" class="category-preview-img" alt="Category Preview">
@@ -244,7 +273,7 @@
             <div id="tab-riders" class="tab-content hidden">
                 <div class="panel">
                     <div class="panel-header">
-                        <h3>Rider Management</h3>
+                        <h3 class="desktop-only">Rider Management</h3>
                         <button onclick="showRiderModal()" class="btn-primary btn-small">+ Add New Rider</button>
                     </div>
                     <div class="scroll-x">
@@ -265,6 +294,253 @@
                 </div>
             </div>
 
+            <section id="tab-notifications" class="tab-content" style="display:none">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">NOTIFICATION DASHBOARD</h2>
+                            <p class="panel-subtitle">History of all system alerts and updates</p>
+                        </div>
+                        <button class="btn-primary" style="font-size:12px; padding:8px 16px; background:#f4f4f4; color:#333; border:1px solid #ddd;" onclick="clearAllNotifications()">
+                            Clear All
+                        </button>
+                    </div>
+                    <div id="fullNotificationList" class="notification-dashboard-list">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: LIVE RIDER TRACKER -->
+            <section id="tab-liveTracker" class="tab-content" style="display:none">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">LIVE RIDER TRACKER</h2>
+                            <p class="panel-subtitle">Monitor all online riders in real-time</p>
+                        </div>
+                        <div id="trackerStats" style="font-size:12px; font-weight:700; color:var(--primary)">
+                            0 Riders Online
+                        </div>
+                    </div>
+                    <div id="adminLiveMap" class="admin-map-container" style="height:600px; border-radius:20px; border:1px solid var(--glass-border);"></div>
+                </div>
+            </section>
+
+            <!-- SECTION: SETTINGS -->
+            <div id="tab-settings" class="tab-content hidden">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3>⚙️ Delivery & Store Settings</h3>
+                        <button onclick="saveStoreSettings()" class="btn-primary">💾 Save Settings</button>
+                    </div>
+                    
+                    <div class="settings-grid">
+                        <!-- Receipt & Store Information -->
+                        <div class="glass-card p-20" style="grid-column: 1 / -1;">
+                            <div class="flex-between flex-center mb-14">
+                                <div>
+                                    <h4 class="mb-4">📄 Receipt & Store Information</h4>
+                                    <p class="text-muted-small">Legal details and branding for your professional bills</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex-row flex-gap-24">
+                                <div style="flex: 2;">
+                                    <div class="flex-row flex-gap-12 mb-14">
+                                        <div style="flex:1">
+                                            <label class="form-label-small">Legal Entity Name</label>
+                                            <input type="text" id="settingEntityName" class="form-input" placeholder="e.g. Avipriya Enterprises">
+                                        </div>
+                                        <div style="flex:1">
+                                            <label class="form-label-small">Store Name (Display)</label>
+                                            <input type="text" id="settingStoreName" class="form-input" placeholder="e.g. One Bite Chapra">
+                                        </div>
+                                    </div>
+                                    
+                                    <label class="form-label-small">Store Address</label>
+                                    <textarea id="settingStoreAddress" class="form-input mb-14" style="height: 60px; padding: 10px;" placeholder="Full address for the bill header..."></textarea>
+                                    
+                                    <div class="flex-row flex-gap-12 mb-14">
+                                        <div style="flex:1">
+                                            <label class="form-label-small">GSTIN Number</label>
+                                            <input type="text" id="settingGSTIN" class="form-input" placeholder="e.g. 10DYTPS7666L1ZG">
+                                        </div>
+                                        <div style="flex:1">
+                                            <label class="form-label-small">FSSAI Number</label>
+                                            <input type="text" id="settingFSSAI" class="form-input" placeholder="e.g. 10422250000150">
+                                        </div>
+                                    </div>
+
+                                    <div class="flex-row flex-gap-12 mb-14">
+                                        <div style="flex:1">
+                                            <label class="form-label-small">Header Tagline</label>
+                                            <input type="text" id="settingTagline" class="form-input" placeholder="e.g. JAI HIND">
+                                        </div>
+                                        <div style="flex:1">
+                                            <label class="form-label-small">Powered By Tagline</label>
+                                            <input type="text" id="settingPoweredBy" class="form-input" placeholder="Powered by Roshani ERP">
+                                        </div>
+                                    </div>
+
+                                    <div class="flex-row flex-gap-12 mb-14">
+                                        <div style="flex:1">
+                                            <label class="form-label-small">Developer Support (WhatsApp Number)</label>
+                                            <input type="text" id="settingDevPhone" class="form-input" placeholder="e.g. 919876543210">
+                                        </div>
+                                        <div style="flex:1">
+                                            <label class="form-label-small">Daily Report Mobile Number (Admin)</label>
+                                            <input type="text" id="settingReportPhone" class="form-input" placeholder="e.g. 918887776660">
+                                        </div>
+                                    </div>
+
+                                    <div class="flex-row flex-gap-12 mb-14">
+                                        <div style="flex:1">
+                                            <label class="form-label-small">Shop Opening Time</label>
+                                            <input type="time" id="settingOpenTime" class="form-input" value="10:00">
+                                        </div>
+                                        <div style="flex:1">
+                                            <label class="form-label-small">Shop Closing Time (Report Time)</label>
+                                            <input type="time" id="settingCloseTime" class="form-input" value="23:00">
+                                        </div>
+                                    </div>
+
+                                    <h5 class="mb-12 text-muted-small" style="text-transform: uppercase; letter-spacing: 0.5px;">Marketing & Connectivity</h5>
+                                    
+                                    <div class="flex-row flex-gap-12 mb-14">
+                                        <div style="flex:1">
+                                            <label class="form-label-small">WiFi Name (SSID)</label>
+                                            <input type="text" id="settingWifiName" class="form-input" placeholder="e.g. ROSHANI_GUEST_WIFI">
+                                        </div>
+                                        <div style="flex:1">
+                                            <label class="form-label-small">WiFi Password</label>
+                                            <div class="flex-row flex-gap-10">
+                                                <input type="password" id="settingWifiPass" class="form-input flex-1" placeholder="WiFi Password">
+                                                <button onclick="toggleWifiPass()" class="btn-secondary" style="padding: 0 10px;" title="Toggle Visibility">👁️</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex-row flex-gap-12 mb-14">
+                                        <div style="flex:1">
+                                            <label class="form-label-small">Instagram Handle</label>
+                                            <input type="text" id="settingInstagram" class="form-input" placeholder="e.g. @roshani_pizza">
+                                        </div>
+                                        <div style="flex:1">
+                                            <label class="form-label-small">Facebook Page URL</label>
+                                            <input type="text" id="settingFacebook" class="form-input" placeholder="Facebook Profile Link">
+                                        </div>
+                                    </div>
+
+                                    <div class="flex-row flex-gap-12 mb-14">
+                                        <div style="flex:1">
+                                            <label class="form-label-small">Google Review / Feedback URL</label>
+                                            <input type="text" id="settingReviewUrl" class="form-input" placeholder="Short URL to review page">
+                                        </div>
+                                    </div>
+
+                                    <h5 class="mb-12 text-muted-small" style="text-transform: uppercase; letter-spacing: 0.5px;">Feedback Bot Options (Post-Delivery)</h5>
+                                    <div class="flex-col flex-gap-10 mb-14">
+                                        <input type="text" id="settingFeedbackReason1" class="form-input" placeholder="Reason 1 (e.g. Delicious Taste)">
+                                        <input type="text" id="settingFeedbackReason2" class="form-input" placeholder="Reason 2 (e.g. Lightning Fast Delivery)">
+                                        <input type="text" id="settingFeedbackReason3" class="form-input" placeholder="Reason 3 (e.g. Premium Packaging)">
+                                    </div>
+                                </div>
+
+                                <div style="flex: 1; border-left: 1px solid rgba(255,255,255,0.05); padding-left: 24px;">
+                                    <h5 class="mb-12 text-muted-small" style="text-transform: uppercase; letter-spacing: 0.5px;">Visibility Controls</h5>
+                                    
+                                    <div class="flex-col flex-gap-12 mb-24">
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
+                                            <input type="checkbox" id="checkShowAddress" checked> <span>Show Address</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
+                                            <input type="checkbox" id="checkShowGSTIN"> <span>Show GSTIN</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
+                                            <input type="checkbox" id="checkShowFSSAI"> <span>Show FSSAI</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
+                                            <input type="checkbox" id="checkShowTagline" checked> <span>Show Tagline</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
+                                            <input type="checkbox" id="checkShowPoweredBy" checked> <span>Show 'Powered By'</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
+                                            <input type="checkbox" id="checkShowQR"> <span>Show Payment QR</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small" style="border-top:1px solid rgba(255,255,255,0.05); padding-top:8px; margin-top:4px;">
+                                            <input type="checkbox" id="checkShowWifiInfo"> <span>Show WiFi Info</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
+                                            <input type="checkbox" id="checkShowSocial"> <span>Show Social/Feedback</span>
+                                        </label>
+                                    </div>
+
+                                    <h5 class="mb-12 text-muted-small" style="text-transform: uppercase; letter-spacing: 0.5px;">Payment QR</h5>
+                                    <div class="qr-upload-box" style="text-align: center; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">
+                                        <img id="qrPreview" src="../assets/images/qr_placeholder.png" style="width:100px; height: 100px; border-radius: 8px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1); background: white;">
+                                        <input type="file" id="settingQRFile" accept="image/*" class="hidden" onchange="previewImage(this, 'qrPreview')">
+                                        <button onclick="document.getElementById('settingQRFile').click()" class="btn-secondary btn-small w-full">Change QR</button>
+                                        <input type="hidden" id="settingQRUrl">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Store Coordinates -->
+                        <div class="glass-card p-20">
+                            <h4 class="mb-14">📍 Store Location</h4>
+                            <p class="text-secondary-small mb-14">Used for distance-based delivery calculations</p>
+                            
+                            <label class="form-label-small">Latitude</label>
+                            <input type="text" id="settingLat" class="form-input mb-14" placeholder="e.g. 25.887444">
+                            
+                            <label class="form-label-small">Longitude</label>
+                            <input type="text" id="settingLng" class="form-input mb-14" placeholder="e.g. 85.026889">
+                            
+                            <div class="location-badge">
+                                <strong>Current:</strong> <span id="displayCoords">25.887444, 85.026889</span>
+                            </div>
+                        </div>
+
+                        <!-- Admin Notifications -->
+                        <div class="glass-card p-20">
+                            <h4 class="mb-14">📲 Order Notifications</h4>
+                            <p class="text-secondary-small mb-14">Configure where the bot sends New Order alerts</p>
+                            
+                            <label class="form-label-small">Notification WhatsApp Number</label>
+                            <input type="text" id="settingAdminPhone" class="form-input mb-14" placeholder="e.g. 919876543210 (with country code)">
+                            <p class="text-secondary-small note-small">* Orders will be forwarded to this number automatically.</p>
+                        </div>
+
+                        <!-- Delivery Fees -->
+                        <div class="glass-card p-20">
+                            <div class="flex-between flex-center mb-14">
+                                <h4>🚚 Delivery Fee Tiers</h4>
+                                <button onclick="addFeeSlab()" class="btn-secondary btn-small">+ Add Tier</button>
+                            </div>
+                            <p class="text-secondary-small mb-14">Define charges based on KM distance from store</p>
+                            
+                            <div class="scroll-x">
+                                <table class="settings-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Up to (KM)</th>
+                                            <th>Charge (₹)</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="feeSlabsTable">
+                                        <!-- Dynamic -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
             <!-- CUSTOMERS TAB -->
             <div id="tab-customers" class="tab-content hidden">
                 <div class="panel">
@@ -276,7 +552,8 @@
                                     <th>Name</th>
                                     <th>WhatsApp</th>
                                     <th>Last Address</th>
-                                    <th>Last Order</th>
+                                    <th>Orders</th>
+                                    <th>Lifetime Value</th>
                                 </tr>
                             </thead>
                             <tbody id="customersTable"></tbody>
@@ -344,6 +621,24 @@
                 </div>
             </div>
 
+            <!-- INVENTORY TAB (COMING SOON) -->
+            <div id="tab-inventory" class="tab-content hidden">
+                <div class="panel coming-soon-panel">
+                    <div class="glass-card coming-soon-card">
+                        <div class="coming-soon-icon">📦</div>
+                        <h2 class="coming-soon-title">Coming Soon!</h2>
+                        <h4 class="mb-20">Inventory & Stock Management</h4>
+                        <p class="mb-20 coming-soon-desc">
+                            Our next major update will include a complete inventory tracking system. 
+                            You'll be able to manage raw materials, set low-stock alerts, and track usage across all outlets.
+                        </p>
+                        <div class="coming-soon-box">
+                            🚀 Stay tuned for the next release!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- PAYMENTS TAB -->
             <div id="tab-payments" class="tab-content hidden">
                 <div class="panel">
@@ -366,11 +661,113 @@
                 </div>
             </div>
 
-            <!-- SETTINGS TAB -->
-            <div id="tab-settings" class="tab-content hidden">
-                <div id="settingsContainer">
-                    <div class="panel flex-center p-50 center-text">
-                        <p>Loading premium settings panel...</p>
+            <!-- FEEDBACK TAB -->
+            <div id="tab-feedback" class="tab-content hidden">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">⭐ Customer Feedback & Ratings</h3>
+                        <div class="text-muted-small">Real-time satisfaction monitor</div>
+                    </div>
+                    <div class="scroll-x glass-card report-table-wrapper" style="margin-top: 20px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Order ID</th>
+                                    <th>Customer</th>
+                                    <th>Rating</th>
+                                    <th>Feedback / Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody id="feedbackTableBody">
+                                <tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">Waiting for customer responses...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WALK-IN SALE TAB -->
+            <div id="tab-walkin" class="tab-content hidden">
+                <div class="walkin-layout">
+                    <!-- LEFT: Dish Picker -->
+                    <div class="walkin-picker">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h3 class="panel-title">🍽️ Select Items</h3>
+                                <input type="text" id="walkinDishSearch" placeholder="Search dishes..." class="search-input-group search-input-w200">
+                            </div>
+                            <!-- Category Tabs -->
+                            <div id="walkinCategoryTabs" class="category-tabs-container">
+                                <!-- Dynamic -->
+                            </div>
+                            <div id="walkinDishGrid" class="walkin-dish-grid">
+                                <p class="menu-loading-placeholder">Loading menu...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: Cart & Checkout -->
+                    <div class="walkin-cart">
+                        <div class="panel sticky-cart">
+                            <div class="flex-between flex-center mb-14">
+                                <h3 class="panel-title mb-0">🧾 Order Summary</h3>
+                                <button onclick="clearWalkinCart()" class="btn-text-danger small-btn">Clear All</button>
+                            </div>
+
+                            <!-- Cart Items -->
+                            <div id="walkinCartItems" class="mb-14 cart-items-container">
+                                <p id="walkinEmptyMsg" class="text-muted fs-13 center-text p-32">Tap dishes to add them here</p>
+                            </div>
+ 
+                            <!-- Totals -->
+                            <div class="divider-top mb-14">
+                                <div class="flex-between mb-8">
+                                    <span class="text-muted-small font-800">Subtotal</span>
+                                    <span id="walkinSubtotal" class="font-800">₹0</span>
+                                </div>
+                                <div class="flex-between flex-center mb-8">
+                                    <span class="text-muted-small font-800">Discount</span>
+                                    <div class="flex-row flex-center flex-gap-10">
+                                        <div class="discount-presets" id="discountPresets">
+                                            <button onclick="setDiscount(50)" class="chip">₹50</button>
+                                            <button onclick="setDiscount(100)" class="chip">₹100</button>
+                                            <button onclick="setDiscountPct(10)" class="chip">10%</button>
+                                        </div>
+                                        <div class="flex-row flex-center">
+                                            <span class="text-muted-small mr-4">₹</span>
+                                            <input type="number" id="walkinDiscount" value="0" min="0" class="form-input mb-0 input-discount" oninput="updateWalkinTotal()" title="Discount Amount">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex-between mt-20 checkout-total">
+                                    <span>Total</span>
+                                    <span id="walkinTotal">₹0</span>
+                                </div>
+                            </div>
+ 
+                            <!-- Customer Info -->
+                            <div class="divider-top mb-14">
+                                <label class="form-label-small text-muted mb-8 d-block">Customer (optional)</label>
+                                <input type="text" id="walkinCustName" placeholder="Customer Name" class="form-input mb-8" title="Customer Name">
+                                <input type="text" id="walkinCustPhone" placeholder="Phone Number" class="form-input mb-8" title="Customer Phone">
+                            </div>
+ 
+                            <!-- Payment Method -->
+                            <div class="mb-14">
+                                <label class="form-label-small text-muted mb-8 d-block">Payment Method</label>
+                                <div class="flex-row flex-gap-10">
+                                    <button class="walkin-pay-btn active" data-method="Cash" onclick="selectPayMethod(this)">💵 Cash</button>
+                                    <button class="walkin-pay-btn" data-method="UPI" onclick="selectPayMethod(this)">📱 UPI</button>
+                                    <button class="walkin-pay-btn" data-method="Card" onclick="selectPayMethod(this)">💳 Card</button>
+                                </div>
+                            </div>
+
+                            <!-- Submit -->
+                            <button id="walkinSubmitBtn" onclick="submitWalkinSale()" class="btn-primary w-full btn-checkout">
+                                ✅ Record Sale
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -488,8 +885,74 @@
         </div>
     </div>
 
+    <!-- BOTTOM NAVIGATION (MOBILE ONLY) -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('dashboard')">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Dash</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('orders')">
+            <i data-lucide="package"></i>
+            <span>Orders</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('live')">
+            <i data-lucide="flame"></i>
+            <span>Live</span>
+            <span id="badge-live-mobile" class="mobile-count-badge hidden">0</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('walkin')">
+            <i data-lucide="shopping-cart"></i>
+            <span>POS</span>
+        </div>
+        <div class="nav-item" onclick="toggleMobileSidebar()">
+            <i data-lucide="menu"></i>
+            <span>More</span>
+        </div>
+    </nav>
+
+    <!-- MOBILE NOTIFICATION SHEET -->
+    <div id="notificationOverlay" class="sheet-overlay" onclick="toggleNotificationSheet()"></div>
+    <div id="notificationSheet" class="bottom-sheet notification-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <h3>Recent Notifications</h3>
+            <button class="sheet-clear-btn" onclick="clearNotifications()">Clear All</button>
+        </div>
+        <div id="notificationList" class="sheet-content">
+            <div class="empty-notif">No new notifications</div>
+        </div>
+    </div>
+
+    <!-- MOBILE POS FLOATING SUMMARY -->
+    <div id="mobileCartSummary" class="mobile-cart-summary hidden" onclick="switchTab('walkin')">
+        <div class="flex-between flex-center h-full">
+            <div class="flex-row flex-center flex-gap-10">
+                <div class="summary-icon"><i data-lucide="shopping-bag"></i></div>
+                <div>
+                    <div id="mobileCartCount" class="summary-count">0 Items</div>
+                    <div id="mobileCartTotal" class="summary-total">₹0</div>
+                </div>
+            </div>
+            <button class="btn-checkout-mobile">View Cart <i data-lucide="chevron-right"></i></button>
+        </div>
+    </div>
+
+    <!-- PREMIUM ORDER DETAIL DRAWER (Bottom Sheet) -->
+    <div id="orderDrawerOverlay" class="drawer-overlay" onclick="closeOrderDrawer()"></div>
+    <div id="orderDrawer" class="drawer-content">
+        <div class="drawer-handle"></div>
+        <div id="orderDrawerBody">
+            <!-- Populated via JS -->
+            <div class="shimmer skeleton-title"></div>
+            <div class="shimmer skeleton-text"></div>
+            <div class="shimmer skeleton-text"></div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
-
+    <script>
+        // Ensure Lucide icons are rendered
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    </script>
 </body>
-
 </html>
