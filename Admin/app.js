@@ -170,16 +170,7 @@ function previewImage(input, previewId) {
     }
 }
 // Sidebar Helpers
-window.toggleMobileSidebar = () => {
-    const sidebar = document.getElementById('sidebarNav');
-    const overlay = document.getElementById('sidebarOverlay');
-    if (sidebar && overlay) {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-    }
-};
 
-};
 
 /**
  * =============================================
@@ -325,7 +316,7 @@ auth.onAuthStateChanged(async user => {
 
     try {
         const adminSnap = await db.ref("admins").once("value");
-        let adminData = null;
+        adminData = null;
         const normalizedEmail = user.email.toLowerCase();
 
         adminSnap.forEach(snap => {
@@ -842,6 +833,25 @@ function validateUrl(url) {
 // =============================
 // RENDER ORDERS
 // =============================
+// =============================
+// PRIVACY WRAPPERS (Global)
+// =============================
+window.chatOnWhatsapp = (orderId) => {
+    const order = ordersMap.get(orderId);
+    if (!order || !order.phone) return;
+    
+    // Only authorized users can see the full number or link
+    if (!adminData) return;
+    
+    const cleanPhone = order.phone.replace(/\D/g, '');
+    const msg = `Hi ${order.customerName || 'Customer'}, regarding your order #${order.orderId || orderId.slice(-5)}`;
+    const url = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+};
+
+// =============================
+// RENDER ORDERS
+// =============================
 function renderOrders(snap) {
     let ordersCount = 0, revenue = 0, pending = 0, today = 0, liveCount = 0;
     const todayStr = new Date().toISOString().split('T')[0];
@@ -930,21 +940,6 @@ function renderOrders(snap) {
             </td>
         `;
         
-        // =============================
-        // PRIVACY WRAPPERS
-        // =============================
-        window.chatOnWhatsapp = (orderId) => {
-            const order = ordersMap.get(orderId);
-            if (!order || !order.phone) return;
-            
-            // Only authorized users can see the full number or link
-            if (!adminData) return;
-            
-            const cleanPhone = order.phone.replace(/\D/g, '');
-            const msg = `Hi ${order.customerName || 'Customer'}, regarding your order #${order.orderId || orderId.slice(-5)}`;
-            const url = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`;
-            window.open(url, '_blank');
-        };
 
         // Populate Dashboard Table (Limit to 10)
         if (ordersCount < 10 && ordersTable) {
@@ -1944,7 +1939,7 @@ window.toggleWifiPass = () => {
     }
 };
 
-window.loadFeedbacks = () => {
+window.downloadExcel = () => {
     if (salesData.length === 0) {
         alert("No data available to export. Generate a report first.");
         return;
@@ -2751,8 +2746,8 @@ window.saveStoreSettings = async () => {
 
         // 4. Update Firebase
         await Promise.all([
-            db.ref("settings/Delivery").set({ coords: { lat, lng }, notifyPhone, slabs }),
-            db.ref("settings/Store").set(storeData)
+            db.ref("settings/Delivery").update({ coords: { lat, lng }, notifyPhone, slabs }),
+            db.ref("settings/Store").update(storeData)
         ]);
 
         document.getElementById('displayCoords').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
