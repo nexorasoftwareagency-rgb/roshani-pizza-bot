@@ -6,9 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Roshani Pizza | Admin Dashboard</title>
 
+    <!-- Dynamic Branding Engine -->
+    <script src="branding.js"></script>
+
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json"> <!-- Fallback, handled by branding.js -->
+    <link rel="apple-touch-icon" href="icon-512.png"> <!-- Fallback, handled by branding.js -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#FF6B00">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
@@ -52,18 +61,21 @@
         <div class="sidebar desktop-only" id="sidebarNav">
             <div class="sidebar-header"><span id="sidebarBrandText">ROSHANI PIZZA</span></div>
             <ul>
-                <li id="menu-dashboard" class="active" onclick="switchTab('dashboard')"><span>📊</span> Dashboard</li>
-                <li id="menu-walkin" onclick="switchTab('walkin')"><span>🛒</span> Record Sale</li>
-                <li id="menu-live" onclick="switchTab('live')"><span>🔥</span> Live Orders <span id="badge-live" class="counter-badge hidden">0</span></li>
-                <li id="menu-orders" onclick="switchTab('orders')"><span>📋</span> Order History</li>
-                <li id="menu-riders" onclick="switchTab('riders')"><span>🏍️</span> Riders</li>
+                <li id="menu-dashboard" class="active" onclick="switchTab('dashboard')"><span>🏠</span> Dashboard</li>
+                <li id="menu-orders" onclick="switchTab('orders')"><span>📦</span> Orders</li>
+                <li id="menu-live" onclick="switchTab('live')"><span>🔥</span> Live Ops <span id="badge-live" class="counter-badge hidden">0</span></li>
+                <li id="menu-walkin" onclick="switchTab('walkin')"><span>🖥️</span> POS Control</li>
+                <li id="menu-menu" onclick="switchTab('menu')"><span>🍽️</span> Menu</li>
+                <li id="menu-categories" onclick="switchTab('categories')"><span>📁</span> Categories</li>
+                <li id="menu-riders" onclick="switchTab('riders')"><span>🛵</span> Riders</li>
+                <li id="menu-customers" onclick="switchTab('customers')"><span>👥</span> Customers</li>
+                <li id="menu-reports" onclick="switchTab('reports')"><span>📊</span> Analytics</li>
+                <li id="menu-feedback" onclick="switchTab('feedback')"><span>⭐</span> Feedback</li>
                 <li id="menu-liveTracker" onclick="switchTab('liveTracker')"><span>📍</span> Live Tracking <span class="badge-new" style="background:var(--primary); font-size:8px; padding:2px 4px; border-radius:4px; margin-left:5px; color:white;">LIVE</span></li>
                 <li id="menu-notifications" onclick="switchTab('notifications')"><span>🔔</span> Notifications <span id="sidebar-notif-count" class="badge-new" style="background:#f97316; font-size:8px; padding:2px 4px; border-radius:4px; margin-left:5px; color:white; display:none;">0</span></li>
-                <li id="menu-customers" onclick="switchTab('customers')"><span>👥</span> Customers</li>
                 <li id="menu-inventory" onclick="switchTab('inventory')"><span>📦</span> Inventory</li>
-                <li id="menu-payments" onclick="switchTab('payments')"><span>💳</span> Payments</li>
-                <li id="menu-reports" onclick="switchTab('reports')"><span>📉</span> Reports</li>
                 <li id="menu-settings" onclick="switchTab('settings')"><span>⚙️</span> Settings</li>
+                <li id="menu-downloadapp" onclick="window.installPWA()" class="pwa-download-item hidden"><span>📲</span> Download App</li>
                 <li onclick="userLogout()" class="logout-item"><span>🚪</span> Logout</li>
             </ul>
         </div>
@@ -94,7 +106,7 @@
                         <h2 id="currentTabTitle">Dashboard Overview</h2>
                         <span id="outletBadge" class="outlet-badge">LOADING...</span>
                     </div>
-                    <select id="outletSwitcher" class="outlet-switcher-admin hidden" onchange="switchOutlet(this.value)">
+                    <select id="outletSwitcher" class="outlet-switcher-admin hidden" onchange="switchOutlet(this.value)" title="Switch Active Outlet">
                         <!-- Populated via JS for Super Admins -->
                     </select>
                 </div>
@@ -395,28 +407,28 @@
                                     </div>
 
                                     <div class="flex-row flex-gap-12 mb-14">
-                                        <div style="flex:1">
+                                        <div class="flex-1">
                                             <label class="form-label-small">Shop Opening Time</label>
-                                            <input type="time" id="settingOpenTime" class="form-input" value="10:00">
+                                            <input type="time" id="settingOpenTime" class="form-input" value="10:00" title="Opening Time">
                                         </div>
-                                        <div style="flex:1">
+                                        <div class="flex-1">
                                             <label class="form-label-small">Shop Closing Time (Report Time)</label>
-                                            <input type="time" id="settingCloseTime" class="form-input" value="23:00">
+                                            <input type="time" id="settingCloseTime" class="form-input" value="23:00" title="Closing Time">
                                         </div>
                                     </div>
 
-                                    <h5 class="mb-12 text-muted-small" style="text-transform: uppercase; letter-spacing: 0.5px;">Marketing & Connectivity</h5>
+                                    <h5 class="mb-12 text-muted-small text-upper ls-sm">Marketing & Connectivity</h5>
                                     
                                     <div class="flex-row flex-gap-12 mb-14">
-                                        <div style="flex:1">
+                                        <div class="flex-1">
                                             <label class="form-label-small">WiFi Name (SSID)</label>
-                                            <input type="text" id="settingWifiName" class="form-input" placeholder="e.g. ROSHANI_GUEST_WIFI">
+                                            <input type="text" id="settingWifiName" class="form-input" placeholder="e.g. ROSHANI_GUEST_WIFI" title="WiFi SSID">
                                         </div>
-                                        <div style="flex:1">
+                                        <div class="flex-1">
                                             <label class="form-label-small">WiFi Password</label>
                                             <div class="flex-row flex-gap-10">
-                                                <input type="password" id="settingWifiPass" class="form-input flex-1" placeholder="WiFi Password">
-                                                <button onclick="toggleWifiPass()" class="btn-secondary" style="padding: 0 10px;" title="Toggle Visibility">👁️</button>
+                                                <input type="password" id="settingWifiPass" class="form-input flex-1" placeholder="WiFi Password" title="WiFi Password">
+                                                <button onclick="toggleWifiPass()" class="btn-secondary flex-center" style="padding: 0 10px;" title="Toggle Visibility">👁️</button>
                                             </div>
                                             <div style="font-size: 10px; color: #f97316; margin-top: 6px; font-weight: 500;">
                                                 ⚠️ Note: This password will be printed on customer receipts for their convenience.
@@ -442,16 +454,16 @@
                                         </div>
                                     </div>
 
-                                    <h5 class="mb-12 text-muted-small" style="text-transform: uppercase; letter-spacing: 0.5px;">Feedback Bot Options (Post-Delivery)</h5>
+                                    <h5 class="mb-12 text-muted-small text-upper ls-sm">Feedback Bot Options (Post-Delivery)</h5>
                                     <div class="flex-col flex-gap-10 mb-14">
-                                        <input type="text" id="settingFeedbackReason1" class="form-input" placeholder="Reason 1 (e.g. Delicious Taste)">
-                                        <input type="text" id="settingFeedbackReason2" class="form-input" placeholder="Reason 2 (e.g. Lightning Fast Delivery)">
-                                        <input type="text" id="settingFeedbackReason3" class="form-input" placeholder="Reason 3 (e.g. Premium Packaging)">
+                                        <input type="text" id="settingFeedbackReason1" class="form-input" placeholder="Reason 1 (e.g. Delicious Taste)" title="Feedback Reason 1">
+                                        <input type="text" id="settingFeedbackReason2" class="form-input" placeholder="Reason 2 (e.g. Lightning Fast Delivery)" title="Feedback Reason 2">
+                                        <input type="text" id="settingFeedbackReason3" class="form-input" placeholder="Reason 3 (e.g. Premium Packaging)" title="Feedback Reason 3">
                                     </div>
                                 </div>
 
-                                <div style="flex: 1; border-left: 1px solid rgba(255,255,255,0.05); padding-left: 24px;">
-                                    <h5 class="mb-12 text-muted-small" style="text-transform: uppercase; letter-spacing: 0.5px;">Visibility Controls</h5>
+                                <div class="flex-1 border-l-ghost p-24">
+                                    <h5 class="mb-12 text-muted-small text-upper ls-sm">Visibility Controls</h5>
                                     
                                     <div class="flex-col flex-gap-12 mb-24">
                                         <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
@@ -480,10 +492,10 @@
                                         </label>
                                     </div>
 
-                                    <h5 class="mb-12 text-muted-small" style="text-transform: uppercase; letter-spacing: 0.5px;">Payment QR</h5>
-                                    <div class="qr-upload-box" style="text-align: center; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">
-                                        <img id="qrPreview" src="../assets/images/qr_placeholder.png" style="width:100px; height: 100px; border-radius: 8px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1); background: white;">
-                                        <input type="file" id="settingQRFile" accept="image/*" class="hidden" onchange="previewImage(this, 'qrPreview')">
+                                    <h5 class="mb-12 text-muted-small text-upper ls-sm">Payment QR</h5>
+                                    <div class="qr-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost" style="border-style: dashed;">
+                                        <img id="qrPreview" src="../assets/images/qr_placeholder.png" alt="Payment QR Preview" class="br-8 mb-12" style="width:100px; height: 100px; border: 1px solid rgba(255,255,255,0.1); background: white;">
+                                        <input type="file" id="settingQRFile" accept="image/*" class="hidden" onchange="previewImage(this, 'qrPreview')" title="Select QR Image">
                                         <button onclick="document.getElementById('settingQRFile').click()" class="btn-secondary btn-small w-full">Change QR</button>
                                         <input type="hidden" id="settingQRUrl">
                                     </div>
@@ -577,6 +589,16 @@
                             <button onclick="generateCustomReport()" class="btn-primary report-gen-btn">Generate</button>
                         </div>
                     </div>
+                    </div>
+                    
+                    <!-- Sales Trend Chart -->
+                    <div class="panel glass-card mb-20 p-20">
+                        <h4 class="panel-title mb-15">Revenue Trends</h4>
+                        <div class="w-full" style="height: 300px;">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+
                     <div class="kpi-row">
                         <div class="kpi-card">
                             <div class="kpi-info">
