@@ -3,23 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rider Portal | Pizza Service</title>
+    <title>Roshani Pizza | Rider Portal</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Haptic Interaction Helper -->
+    <script>
+        window.haptic = (pattern = 10) => {
+            if (navigator.vibrate) navigator.vibrate(pattern);
+        };
+    </script>
+
+    <!-- Leaflet Mapping -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <!-- Firebase SDK (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
+    <!-- Premium Background Layers -->
+    <div class="decorative-bg">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
 
     <!-- Auth View -->
     <div id="loginBox">
         <div class="login-card">
             <div class="brand">
                 <i data-lucide="zap"></i>
-                <h2>RIDER AUTH</h2>
+                <h2>ROSHANI RIDER</h2>
                 <p class="login-subtitle">Enter credentials to begin shift</p>
             </div>
             
@@ -47,10 +65,29 @@
 
     <!-- Dashboard View -->
     <div id="dashboard">
-        <!-- Side Navigation (Desktop) -->
-        <nav class="sidebar" id="sidebar">
+        <!-- Dashboard Overlay -->
+        <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleRiderSidebar()"></div>
+
+        <!-- Mobile Header -->
+        <header class="mobile-header">
+            <div class="mobile-header-left" onclick="toggleRiderSidebar()">
+                <i data-lucide="menu"></i>
+            </div>
+            <div class="mobile-header-center">
+                <h2 id="mobileTabTitle">DASHBOARD</h2>
+            </div>
+            <div class="mobile-header-right" onclick="toggleNotificationSheet()">
+                <div class="notif-bell-container">
+                    <i data-lucide="bell"></i>
+                    <div id="notifBadge" class="notif-badge hidden"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Side Navigation (Desktop/Mobile Drawer) -->
+        <nav class="sidebar" id="sidebarNav">
             <div class="sidebar-brand">
-                <h3 class="sidebar-title">RIDER PORTAL</h3>
+                <h3 class="sidebar-title">ROSHANI RIDER</h3>
             </div>
             <ul class="nav-links">
                 <li class="active" onclick="showSection('home')" data-section="home">
@@ -95,7 +132,12 @@
 
         <div class="main-content">
             <header class="top-nav">
-                <span class="section-title-lbl" id="sectionTitle">DASHBOARD</span>
+                <div>
+                    <span class="section-title-lbl" id="sectionTitle">DASHBOARD</span>
+                    <select id="outletSwitcher" class="outlet-switcher-select hidden" onchange="switchOutlet(this.value)">
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
                 <div class="status-toggle-container">
                     <span id="statusBadge" class="status Online">Online</span>
                 </div>
@@ -136,6 +178,7 @@
             <!-- SECTION: ACTIVE DELIVERY -->
             <section id="sec-active" class="view-section">
                 <h2 class="section-heading">Live Trip Details</h2>
+                <div id="activeTripMap" class="trip-map-container glass-panel"></div>
                 <div id="activeOrderView">
                     <div class="empty-state">No active trip currently.</div>
                 </div>
@@ -150,10 +193,22 @@
             <!-- SECTION: EARNINGS -->
             <section id="sec-earnings" class="view-section">
                 <h2 class="section-heading">Wallet Summary</h2>
-                <div class="earnings-grid">
-                    <div class="overview-card card-left">
-                        <span class="lbl">Total Earnings</span>
-                        <span class="val earning-val" id="e-total">₹0</span>
+                
+                <div class="overview-card" style="margin-bottom:20px;">
+                    <span class="lbl">Total Cash to Settle</span>
+                    <span class="val" id="e-total" style="color:var(--text-dark)">₹0</span>
+                </div>
+
+                <div class="earnings-grid-split">
+                    <div class="overview-card card-pizza">
+                        <span class="lbl">Pizza Outlet</span>
+                        <span class="val earning-val" id="e-pizza" style="color:var(--primary-orange)">₹0</span>
+                        <span class="lbl" style="font-size:10px; margin-top:10px;">Today: <span id="e-pizza-today">₹0</span></span>
+                    </div>
+                    <div class="overview-card card-cake">
+                        <span class="lbl">Cake Outlet</span>
+                        <span class="val earning-val" id="e-cake" style="color:var(--primary-cake)">₹0</span>
+                        <span class="lbl" style="font-size:10px; margin-top:10px;">Today: <span id="e-cake-today">₹0</span></span>
                     </div>
                 </div>
             </section>

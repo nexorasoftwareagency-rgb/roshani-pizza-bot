@@ -1,0 +1,52 @@
+{
+  "rules": {
+    "orders": {
+      ".read": "auth != null",
+      ".write": "auth != null && (data.child('ownerId').val() == auth.uid || auth.token.admin === true || !data.exists())",
+      "$orderId": {
+        ".validate": "newData.hasChildren(['total', 'items', 'status'])"
+      }
+    },
+    "dishes": {
+      ".read": "auth != null",
+      ".write": "auth.token.admin === true"
+    },
+    "riderStats": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "riders": {
+      ".read": "auth != null",
+      "$riderId": {
+        ".write": "auth != null && (auth.token.admin === true || $riderId == auth.uid)",
+        ".validate": "newData.hasChildren(['name', 'email', 'outlet'])"
+      }
+    },
+    "feedbacks": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "customers": {
+      ".read": "auth != null",
+      ".write": "auth.token.admin === true"
+    },
+    "appConfig": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+    },
+    "uiConfig": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+    },
+    "settings": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+    },
+    "admins": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+    },
+    ".read": false,
+    ".write": false
+  }
+}
