@@ -571,12 +571,12 @@ function renderNotifItem(n, isFull = false) {
     const safeType = escapeHtml(n.type);
 
     return `
-        <div class="notification-item ${safeType}" ${isFull ? 'style="margin-bottom:12px; border-radius:16px; border:1px solid rgba(0,0,0,0.05);"' : ''}>
-            <div style="flex:1">
-                <div class="notif-title" style="font-weight:700;">${safeTitle}</div>
-                <div class="notif-sub" style="font-size:12px; color:var(--text-muted);">${safeSub}</div>
+        <div class="notification-item ${safeType} ${isFull ? 'notif-item-full' : ''}">
+            <div class="flex-grow-1">
+                <div class="notif-title notif-title-premium">${safeTitle}</div>
+                <div class="notif-sub notif-sub-premium">${safeSub}</div>
             </div>
-            <div class="notif-time-badge" style="font-size:10px; font-weight:800; color:var(--primary); opacity:0.7;">${safeTime}</div>
+            <div class="notif-time-badge notif-time-badge-premium">${safeTime}</div>
         </div>
     `;
 }
