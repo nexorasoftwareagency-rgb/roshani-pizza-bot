@@ -13,18 +13,22 @@
     },
     "riderStats": {
       ".read": "auth != null",
-      ".write": "auth != null"
+      "$riderId": {
+        ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)"
+      }
     },
     "riders": {
       ".read": "auth != null",
       "$riderId": {
-        ".write": "auth != null && (auth.token.admin === true || $riderId == auth.uid)",
+        ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
         ".validate": "newData.hasChildren(['name', 'email', 'outlet'])"
       }
     },
     "feedbacks": {
       ".read": "auth != null",
-      ".write": "auth != null"
+      "$feedbackId": {
+        ".write": "auth != null && !data.exists()"
+      }
     },
     "customers": {
       ".read": "auth != null",
