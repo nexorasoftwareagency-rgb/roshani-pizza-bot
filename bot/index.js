@@ -30,6 +30,41 @@ function cleanupSessions() {
     }
 }
 
+// =============================
+// RIDER RESOLUTION HELPER
+// =============================
+async function getRiderByEmail(email) {
+    if (!email) return null;
+    try {
+        const riders = await getData("riders");
+        if (!riders) return null;
+        for (const uid in riders) {
+            if (riders[uid].email?.toLowerCase() === email.toLowerCase()) {
+                return { uid, ...riders[uid] };
+            }
+        }
+    } catch (err) {
+        console.error("Rider Lookup Error:", err);
+    }
+    return null;
+}
+
+async function addInAppNotification(uid, title, message) {
+    if (!uid) return;
+    try {
+        const notifId = "NOTIF" + Date.now();
+        await setData(`riders/${uid}/notifications/${notifId}`, {
+            id: notifId,
+            title,
+            message,
+            timestamp: Date.now(),
+            read: false
+        });
+    } catch (err) {
+        console.error("Failed to add in-app notification:", err);
+    }
+}
+
 // Graceful shutdown handling is now within startBot if needed, 
 // but for simplicity we'll just allow process exit.
 
@@ -348,6 +383,34 @@ async function startBot() {
                 processedStatus[id] = { status: order.status, timestamp: Date.now() };
             } else if (processedStatus[id].status !== order.status) {
                 processedStatus[id] = { status: order.status, timestamp: Date.now() };
+                
+                // RIDER NOTIFICATION LOGIC
+                if (order.assignedRider) {
+                    const rider = await getRiderByEmail(order.assignedRider);
+                    if (rider) {
+                        const riderJid = rider.phone.replace(/\D/g, '') + "@s.whatsapp.net";
+                        
+                        if (order.status === "Out for Delivery") {
+                            const rMsg = `🚚 *NEW ASSIGNMENT: OUT FOR DELIVERY*\n` +
+                                `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                                `📦 *Order:* #${id}\n` +
+                                `👤 *Customer:* ${order.customerName}\n` +
+                                `🏠 *Address:* ${order.address}\n\n` +
+                                `_Please proceed for delivery immediately. Use the Rider App for navigation._`;
+                            await sock.sendMessage(riderJid, { text: rMsg });
+                            await addInAppNotification(rider.uid, "🚀 Out for Delivery", `Order #${id} is now on your active trip.`);
+                        } else if (order.status === "Delivered") {
+                            const rMsg = `✅ *ORDER DELIVERED SUCCESSFULLY*\n` +
+                                `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                                `Great job! Order *#${id}* for *${order.customerName}* has been marked as delivered.\n\n` +
+                                `💰 *Estimated Earnings:* ₹${order.riderCommission || 40}\n` +
+                                `_Your wallet balance has been updated._`;
+                            await sock.sendMessage(riderJid, { text: rMsg });
+                            await addInAppNotification(rider.uid, "✅ Delivered", `Order #${id} completed successfully.`);
+                        }
+                    }
+                }
+
                 let msg = "";
                 if (order.status === "Confirmed") msg = `✅ *ORDER CONFIRMED*\n\nGreat news! Your order *#${id}* is accepted and will be prepared soon. 🍕`;
                 else if (order.status === "Preparing") msg = `👨‍🍳 *PREPARING ORDER*\n\nOur chef is currently crafting your delicious meal. Stay tuned!`;

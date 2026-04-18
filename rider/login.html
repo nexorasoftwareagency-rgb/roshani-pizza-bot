@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roshani Rider | Secure Authentication</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body class="login-page">
+    <div class="decorative-bg">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+
+    <div id="loginBox">
+        <div class="login-card glass-card">
+            <div class="brand">
+                <i data-lucide="zap" class="brand-icon"></i>
+                <h2>ROSHANI RIDER</h2>
+                <p class="login-subtitle">Secured Access Portal</p>
+            </div>
+            
+            <div class="input-group">
+                <label>Gmail ID</label>
+                <div class="input-wrapper">
+                    <i data-lucide="mail"></i>
+                    <input type="email" id="email" placeholder="rider@gmail.com">
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label>Secret Access Code</label>
+                <div class="input-wrapper">
+                    <i data-lucide="lock"></i>
+                    <input type="password" id="password" placeholder="••••••••">
+                </div>
+            </div>
+            
+            <button class="btn-primary btn-full mt-20" id="loginBtn" onclick="window.login()">
+                AUTHENTICATE & START <i data-lucide="chevron-right"></i>
+            </button>
+            <p id="loginError" class="error-msg"></p>
+            
+            <div class="login-footer mt-20">
+                <p class="text-muted-small text-center">Contact Admin if you forgot your code</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Specific login page logic to handle redirect after success
+        firebase.auth().onAuthStateChanged(user => {
+            if (user) {
+                // If already logged in, move to dashboard
+                window.location.href = 'index.html';
+            }
+        });
+
+        lucide.createIcons();
+    </script>
+</body>
+</html>
