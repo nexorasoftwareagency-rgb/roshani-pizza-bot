@@ -27,48 +27,30 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Haptic Interaction Helper -->
+    <script>
+        window.haptic = (pattern = 10) => {
+            if (navigator.vibrate) navigator.vibrate(pattern);
+        };
+    </script>
 </head>
 <body>
     <!-- Premium Background Layers -->
-    <div class="decorative-bg">
-        <div class="shape shape-1"></div>
-        <div class="shape shape-2"></div>
-        <div class="shape shape-3"></div>
     </div>
 
-    <!-- Auth View -->
-    <div id="loginBox">
-        <div class="login-card">
-            <div class="brand">
-                <i data-lucide="zap"></i>
-                <h2>ROSHANI RIDER</h2>
-                <p class="login-subtitle">Enter credentials to begin shift</p>
-            </div>
-            
-            <div class="input-group">
-                <label>Rider Email</label>
-                <input type="email" id="email" placeholder="email@example.com">
-            </div>
-            
-            <div class="input-group">
-                <label>Secret Code</label>
-                <div class="pass-wrapper">
-                    <input type="password" id="password" placeholder="••••••••" class="pass-input">
-                    <button type="button" onclick="togglePass()" class="toggle-pass-btn" aria-label="Toggle password visibility">
-                        <i data-lucide="eye" id="eyeIcon"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <button class="btn-primary btn-full" onclick="login()">
-                AUTHENTICATE & START <i data-lucide="chevron-right"></i>
-            </button>
-            <p id="loginError" class="error-msg"></p>
-        </div>
-    </div>
+    <!-- Auth Guard -->
+    <script>
+        // Check local storage or temporary session for direct speed
+        if (!localStorage.getItem('rider_authenticated')) {
+            // Quick local check before Firebase loads
+            // window.location.href = 'login.html';
+        }
+    </script>
 
-    <!-- Dashboard View -->
-    <div id="dashboard">
+
+
+    <!-- Dashboard View (Protected) -->
+    <div id="dashboard" style="display: none;">
         <!-- Dashboard Overlay -->
         <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleRiderSidebar()"></div>
 
@@ -139,6 +121,9 @@
 
         <div class="main-content">
             <header class="top-nav">
+                <div class="desktop-hamburger" onclick="toggleRiderSidebar()">
+                    <i data-lucide="menu"></i>
+                </div>
                 <div>
                     <span class="section-title-lbl" id="sectionTitle">DASHBOARD</span>
                     <select id="outletSwitcher" class="outlet-switcher-select hidden" onchange="switchOutlet(this.value)">
@@ -223,12 +208,46 @@
             <!-- SECTION: PROFILE -->
             <section id="sec-profile" class="view-section">
                 <div class="glass-panel profile-card-glass">
-                    <div class="profile-icon-bg">
-                        <i data-lucide="user" size="40" class="icon-black"></i>
+                    <div class="profile-photo-container">
+                        <img id="r-profile-img" src="https://via.placeholder.com/150" alt="Profile" class="rider-profile-photo">
                     </div>
                     <h3 id="profileName" class="profile-name">Loading...</h3>
                     <p id="profilePhone" class="profile-phone">---</p>
                     
+                    <div class="profile-details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Father's Name</span>
+                            <span class="detail-value" id="r-father-name">---</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Age</span>
+                            <span class="detail-value" id="r-age">---</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Aadhar Card</span>
+                            <span class="detail-value" id="r-aadhar-no">---</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Qualification</span>
+                            <span class="detail-value" id="r-qualification">---</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <span class="detail-label">Address</span>
+                            <span class="detail-value" id="r-address">---</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <span class="detail-label">Gmail ID</span>
+                            <span class="detail-value" id="r-email">---</span>
+                        </div>
+                    </div>
+
+                    <div class="aadhar-image-section mt-20">
+                        <span class="detail-label mb-8">Professional ID (Aadhar Card)</span>
+                        <div class="aadhar-img-container">
+                            <img id="r-aadhar-img" src="https://via.placeholder.com/300x180" alt="Aadhar Card" class="aadhar-card-display">
+                        </div>
+                    </div>
+
                     <div class="profile-actions">
                         <button id="statusToggleBtn" onclick="toggleRiderStatus()" class="btn-primary">
                             SET STATUS: ONLINE
@@ -251,6 +270,24 @@
             <div class="modal-actions">
                 <button class="btn-primary no-shadow" onclick="verifyOTP()">CONFIRM</button>
                 <button onclick="closeOTPPanel()" class="btn-ghost">LATER</button>
+            </div>
+            <button id="emergencyBtn" class="btn-ghost" style="display:none; color:#ef4444; border:1px solid #ef4444; margin:10px auto; width:90%; font-weight:800; font-size:11px;" onclick="emergencyOverride()">EMERGENCY OVERRIDE</button>
+        </div>
+    </div>
+
+    <!-- Notification Sheet -->
+    <div id="notificationSheet" class="notif-sheet">
+        <div class="notif-sheet-header">
+            <h3>Notifications</h3>
+            <button class="btn-clear-all" onclick="clearAllNotifications()">Clear All</button>
+            <button class="btn-close-sheet" onclick="toggleNotificationSheet()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div id="notifList" class="notif-list">
+            <div class="empty-notif">
+                <i data-lucide="bell-off"></i>
+                <p>No new notifications</p>
             </div>
         </div>
     </div>

@@ -57,28 +57,28 @@
 
     <div class="layout">
 
-        <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
+        <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
         <!-- SIDEBAR -->
-        <div class="sidebar desktop-only" id="sidebarNav">
+        <div class="sidebar" id="sidebarNav">
             <div class="sidebar-header"><span id="sidebarBrandText">ROSHANI PIZZA</span></div>
             <ul>
-                <li id="menu-dashboard" class="active" onclick="switchTab('dashboard')"><span>🏠</span> Dashboard</li>
-                <li id="menu-orders" onclick="switchTab('orders')"><span>📦</span> Orders</li>
-                <li id="menu-live" onclick="switchTab('live')"><span>🔥</span> Live Ops <span id="badge-live" class="counter-badge hidden">0</span></li>
-                <li id="menu-walkin" onclick="switchTab('walkin')"><span>🖥️</span> POS Control</li>
-                <li id="menu-menu" onclick="switchTab('menu')"><span>🍽️</span> Menu</li>
-                <li id="menu-categories" onclick="switchTab('categories')"><span>📁</span> Categories</li>
-                <li id="menu-riders" onclick="switchTab('riders')"><span>🛵</span> Riders</li>
-                <li id="menu-customers" onclick="switchTab('customers')"><span>👥</span> Customers</li>
-                <li id="menu-reports" onclick="switchTab('reports')"><span>📊</span> Analytics</li>
-                <li id="menu-feedback" onclick="switchTab('feedback')"><span>⭐</span> Feedback</li>
-                <li id="menu-liveTracker" onclick="switchTab('liveTracker')"><span>📍</span> Live Tracking <span class="badge-new badge-live-tracking-pill">LIVE</span></li>
-                <li id="menu-notifications" onclick="switchTab('notifications')"><span>🔔</span> Notifications <span id="sidebar-notif-count" class="badge-new badge-sidebar-notif-pill">0</span></li>
-                <li id="menu-inventory" onclick="switchTab('inventory')"><span>📦</span> Inventory</li>
-                <li id="menu-settings" onclick="switchTab('settings')"><span>⚙️</span> Settings</li>
-                <li id="menu-downloadapp" onclick="window.installPWA()" class="pwa-download-item hidden"><span>📲</span> Download App</li>
-                <li onclick="userLogout()" class="logout-item"><span>🚪</span> Logout</li>
+                <li id="menu-dashboard" class="active" onclick="switchTab('dashboard')"><i data-lucide="layout-dashboard"></i> Dashboard</li>
+                <li id="menu-orders" onclick="switchTab('orders')"><i data-lucide="shopping-cart"></i> Orders</li>
+                <li id="menu-live" onclick="switchTab('live')"><i data-lucide="activity"></i> Live Ops <span id="badge-live" class="counter-badge hidden">0</span></li>
+                <li id="menu-walkin" onclick="switchTab('walkin')"><i data-lucide="monitor"></i> POS Control</li>
+                <li id="menu-menu" onclick="switchTab('menu')"><i data-lucide="utensils"></i> Menu</li>
+                <li id="menu-categories" onclick="switchTab('categories')"><i data-lucide="folder-tree"></i> Categories</li>
+                <li id="menu-riders" onclick="switchTab('riders')"><i data-lucide="bike"></i> Riders</li>
+                <li id="menu-customers" onclick="switchTab('customers')"><i data-lucide="users"></i> Customers</li>
+                <li id="menu-reports" onclick="switchTab('reports')"><i data-lucide="bar-chart-3"></i> Analytics</li>
+                <li id="menu-feedback" onclick="switchTab('feedback')"><i data-lucide="star"></i> Feedback</li>
+                <li id="menu-liveTracker" onclick="switchTab('liveTracker')"><i data-lucide="map-pin"></i> Live Tracking <span class="badge-new badge-live-tracking-pill">LIVE</span></li>
+                <li id="menu-notifications" onclick="switchTab('notifications')"><i data-lucide="bell"></i> Notifications <span id="sidebar-notif-count" class="badge-new badge-sidebar-notif-pill">0</span></li>
+                <li id="menu-inventory" onclick="switchTab('inventory')" class="hidden"><i data-lucide="box"></i> Inventory</li>
+                <li id="menu-settings" onclick="switchTab('settings')"><i data-lucide="settings"></i> Settings</li>
+                <li id="menu-downloadapp" onclick="window.installPWA()" class="pwa-download-item hidden"><i data-lucide="download"></i> Download App</li>
+                <li onclick="userLogout()" class="logout-item"><i data-lucide="log-out"></i> Logout</li>
             </ul>
         </div>
 
@@ -86,23 +86,29 @@
         <div class="main">
 
             <!-- MOBILE APP HEADER -->
-            <div id="mobileAppHeader" class="mobile-header">
-                <div class="mobile-header-left" onclick="toggleNotificationSheet()">
-                    <div class="notif-bell-container">
-                        <i data-lucide="bell"></i>
-                        <span id="notifBadge" class="notif-badge hidden"></span>
-                    </div>
+            <div id="mobileAppHeader" class="mobile-header mobile-only">
+                <div class="mobile-header-left" onclick="toggleSidebar()">
+                    <i data-lucide="menu" class="hamburger-icon"></i>
                 </div>
                 <div class="mobile-header-center">
-                    <h2 id="mobileTabTitle">Dashboard</h2>
+                    <h2 id="mobileTabTitle" class="premium-font">Dashboard</h2>
                 </div>
                 <div class="mobile-header-right">
-                    <span id="mobileOutletBadge" class="outlet-badge">...</span>
+                    <div class="flex-row flex-center flex-gap-10">
+                        <div class="notif-bell-container" onclick="toggleNotificationSheet()">
+                            <i data-lucide="bell"></i>
+                            <span id="notifBadge" class="notif-badge hidden"></span>
+                        </div>
+                        <span id="mobileOutletBadge" class="outlet-badge">...</span>
+                    </div>
                 </div>
             </div>
 
             <!-- DESKTOP TOPBAR -->
             <div class="topbar desktop-topbar desktop-only">
+                <div class="desktop-hamburger" onclick="toggleSidebar()">
+                    <i data-lucide="menu"></i>
+                </div>
                 <div class="flex-row flex-center flex-gap-20">
                     <div>
                         <h2 id="currentTabTitle">Dashboard Overview</h2>
@@ -271,7 +277,7 @@
                         <h3 class="desktop-only">Category Management</h3>
                         <div class="flex-row flex-gap-10 flex-center">
                         <div class="flex-row flex-gap-10 flex-center p-15 glass-card category-upload-box">
-                                <img id="catPreview" src="../assets/images/category_icon.png" class="category-preview-img" alt="Category Preview">
+                                <img id="catPreview" src="assets/category_icon.png" class="category-preview-img" alt="Category Preview">
                                 <input type="file" id="catFile" accept="image/*" class="hidden" onchange="previewImage(this, 'catPreview')" title="Select category photo">
                                 <button onclick="document.getElementById('catFile').click()" class="btn-secondary small-photo-btn">Photo</button>
                             </div>
@@ -496,7 +502,7 @@
 
                                     <h5 class="mb-12 text-muted-small text-upper ls-sm">Payment QR</h5>
                                     <div class="qr-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
-                                        <img id="qrPreview" src="../assets/images/qr_placeholder.png" alt="Payment QR Preview" class="br-8 mb-12 w-100 h-100 border-ghost-light bg-white">
+                                        <img id="qrPreview" src="assets/qr_placeholder.png" alt="Payment QR Preview" class="br-8 mb-12 w-100 h-100 border-ghost-light bg-white">
                                         <input type="file" id="settingQRFile" accept="image/*" class="hidden" onchange="previewImage(this, 'qrPreview')" title="Select QR Image">
                                         <button onclick="document.getElementById('settingQRFile').click()" class="btn-secondary btn-small w-full">Change QR</button>
                                         <input type="hidden" id="settingQRUrl">
@@ -836,7 +842,7 @@
                 <!-- Left: Media -->
                 <div>
                     <div class="modal-media-upload">
-                        <img id="dishPreview" src="../assets/images/pizza_placeholder.png" class="modal-img-preview" alt="Dish Preview">
+                        <img id="dishPreview" src="assets/pizza_placeholder.png" class="modal-img-preview" alt="Dish Preview">
                         <div class="modal-img-overlay">
                             <input type="file" id="dishFile" accept="image/*" class="hidden" onchange="previewImage(this, 'dishPreview')" title="Upload dish photo">
                             <button onclick="document.getElementById('dishFile').click()" class="btn-secondary update-photo-btn">Update Photo</button>
@@ -888,32 +894,103 @@
 
     <!-- RIDER MODAL -->
     <div id="riderModal" class="modal">
-        <div class="modal-content glass-card rider-modal-box">
-            <h3 id="riderModalTitle" class="rider-modal-title">Add New Rider</h3>
-            <p class="text-muted-small mb-20">Manage rider login credentials</p>
+        <div class="modal-content glass-card rider-modal-box" style="max-width: 700px;">
+            <div class="modal-header">
+                <div>
+                    <h3 id="riderModalTitle" class="rider-modal-title">Rider Management</h3>
+                    <p class="text-muted-small m-0">9-Field Comprehensive Profile Engine</p>
+                </div>
+                <button onclick="hideRiderModal()" class="close-btn">&times;</button>
+            </div>
             
-            <label class="form-label form-label-small">Full Name</label>
-            <input id="riderName" placeholder="e.g. Rahul Sharma" class="form-input" title="Rider Full Name">
-            
-            <label class="form-label form-label-small">Email (Login ID)</label>
-            <input id="riderEmail" placeholder="rider@roshani.com" class="form-input" title="Rider Email (Login ID)">
-            
-            <label id="riderPassLabel" class="form-label form-label-small">Password</label>
-            <input id="riderPass" type="password" placeholder="Min 6 characters" class="form-input" title="Rider Password">
-            <small id="riderPassHint" class="hidden pass-hint">Leave blank to keep current password</small>
-            
-            <label class="form-label form-label-small">WhatsApp Number</label>
-            <input id="riderPhone" placeholder="+919999999999" class="form-input" title="Rider WhatsApp Number">
+            <div class="modal-body-scroll">
+                <div class="modal-grid-2col mb-20">
+                    <!-- Profile Photo Section -->
+                    <div class="center-text">
+                        <div class="profile-upload-preview mb-12">
+                            <img id="riderProfilePreview" src="https://via.placeholder.com/150" class="br-20 border-ghost shadow-sm profile-main-img">
+                            <input type="file" id="riderPhotoFile" accept="image/*" class="hidden" onchange="previewImage(this, 'riderProfilePreview')" title="Profile Photo">
+                        </div>
+                        <button onclick="document.getElementById('riderPhotoFile').click()" class="btn-secondary btn-small">Set Profile Photo</button>
+                        <input type="hidden" id="riderPhotoUrl">
+                    </div>
 
-            <div class="modal-footer rider-modal-footer">
-                <button id="saveRiderBtn" onclick="saveRiderAccount()" class="btn-primary flex-2">Create Account</button>
-                <button onclick="hideRiderModal()" class="btn-secondary flex-1">Cancel</button>
+                    <!-- Basic Info -->
+                    <div class="flex-col">
+                        <label class="form-label-small">1. Full Name</label>
+                        <input id="riderName" placeholder="e.g. Rahul Sharma" class="form-input mb-12">
+                        
+                        <label class="form-label-small">2. Gmail ID (Login)</label>
+                        <input id="riderEmail" type="email" placeholder="rider@gmail.com" class="form-input mb-12">
+                        
+                        <label class="form-label-small">3. Temporary Password</label>
+                        <input id="riderPass" type="password" placeholder="Min 6 characters" class="form-input mb-12">
+                    </div>
+                </div>
+
+                <div class="modal-grid-2col">
+                    <div class="flex-col">
+                        <label class="form-label-small">4. Father's Name</label>
+                        <input id="riderFatherName" placeholder="Father's Name" class="form-input mb-12">
+                        
+                        <label class="form-label-small">5. WhatsApp Mobile</label>
+                        <input id="riderPhone" placeholder="919999999999" class="form-input mb-12">
+                        
+                        <label class="form-label-small">6. Age</label>
+                        <input id="riderAge" type="number" placeholder="Enter Age" class="form-input mb-12">
+                    </div>
+                    <div class="flex-col">
+                        <label class="form-label-small">7. Aadhar Card Number</label>
+                        <input id="riderAadharNo" placeholder="12-digit Aadhar No" class="form-input mb-12">
+                        
+                        <label class="form-label-small">8. Qualification</label>
+                        <input id="riderQual" placeholder="e.g. Graduate" class="form-input mb-12">
+                        
+                        <label class="form-label-small">9. Permanent Address</label>
+                        <textarea id="riderAddress" placeholder="Full Address with Landmark" class="form-input mb-12" style="height:58px;"></textarea>
+                    </div>
+                </div>
+
+                <div class="divider-top pt-12 mt-10">
+                    <label class="form-label-small mb-8">Verification: Aadhar Card Photo</label>
+                    <div class="flex-row flex-center flex-gap-15 bg-ghost p-12 br-16">
+                        <img id="aadharPreview" src="https://via.placeholder.com/100x60" class="br-8 border-ghost aadhar-preview-img">
+                        <div class="flex-col">
+                            <input type="file" id="aadharFile" accept="image/*" class="hidden" onchange="previewImage(this, 'aadharPreview')" title="Aadhar Photo">
+                            <button onclick="document.getElementById('aadharFile').click()" class="btn-secondary btn-small mb-4">Upload Aadhar Image</button>
+                            <input type="hidden" id="aadharUrl">
+                            <span class="text-muted-small" style="font-size: 10px;">Max size 2MB (JPEG/PNG)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer mt-20">
+                <button id="saveRiderBtn" onclick="saveRiderAccount()" class="btn-primary w-full">🚀 Create & Authorize Rider Account</button>
+            </div>
+        </div>
+    </div>
+                        <input type="file" id="aadharFile" accept="image/*" class="hidden" onchange="previewImage(this, 'aadharPreview')" title="Aadhar Image">
+                        <button onclick="document.getElementById('aadharFile').click()" class="btn-secondary btn-small">Upload Aadhar Image</button>
+                        <input type="hidden" id="aadharUrl">
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider-top pt-12 mt-10 mb-20">
+                <label id="riderPassLabel" class="form-label-small">Secret Access Code (Password)</label>
+                <input id="riderPass" type="password" placeholder="Min 6 characters" class="form-input">
+                <small id="riderPassHint" class="hidden text-muted-small">Leave empty to keep current</small>
+            </div>
+
+            <div class="modal-footer pt-0">
+                <button id="saveRiderBtn" onclick="saveRiderAccount()" class="btn-primary w-full py-12 font-800">🚀 SAVE RIDER PROFILE</button>
             </div>
         </div>
     </div>
 
     <!-- BOTTOM NAVIGATION (MOBILE ONLY) -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav mobile-only">
         <div class="nav-item active" onclick="switchTab('dashboard')">
             <i data-lucide="layout-dashboard"></i>
             <span>Dash</span>
@@ -931,15 +1008,15 @@
             <i data-lucide="shopping-cart"></i>
             <span>POS</span>
         </div>
-        <div class="nav-item" onclick="toggleMobileSidebar()">
+        <div class="nav-item" onclick="toggleSidebar()">
             <i data-lucide="menu"></i>
             <span>More</span>
         </div>
     </nav>
 
     <!-- MOBILE NOTIFICATION SHEET -->
-    <div id="notificationOverlay" class="sheet-overlay" onclick="toggleNotificationSheet()"></div>
-    <div id="notificationSheet" class="bottom-sheet notification-sheet">
+    <div id="notificationOverlay" class="sheet-overlay mobile-only" onclick="toggleNotificationSheet()"></div>
+    <div id="notificationSheet" class="bottom-sheet notification-sheet mobile-only">
         <div class="sheet-handle"></div>
         <div class="sheet-header">
             <h3>Recent Notifications</h3>
@@ -951,7 +1028,7 @@
     </div>
 
     <!-- MOBILE POS FLOATING SUMMARY -->
-    <div id="mobileCartSummary" class="mobile-cart-summary hidden" onclick="switchTab('walkin')">
+    <div id="mobileCartSummary" class="mobile-cart-summary hidden mobile-only" onclick="switchTab('walkin')">
         <div class="flex-between flex-center h-full">
             <div class="flex-row flex-center flex-gap-10">
                 <div class="summary-icon"><i data-lucide="shopping-bag"></i></div>
@@ -965,8 +1042,8 @@
     </div>
 
     <!-- PREMIUM ORDER DETAIL DRAWER (Bottom Sheet) -->
-    <div id="orderDrawerOverlay" class="drawer-overlay" onclick="closeOrderDrawer()"></div>
-    <div id="orderDrawer" class="drawer-content">
+    <div id="orderDrawerOverlay" class="drawer-overlay mobile-only" onclick="closeOrderDrawer()"></div>
+    <div id="orderDrawer" class="drawer-content mobile-only">
         <div class="drawer-handle"></div>
         <div id="orderDrawerBody">
             <!-- Populated via JS -->
