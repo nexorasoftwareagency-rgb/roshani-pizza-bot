@@ -1,6 +1,11 @@
 // ==========================================
-// 1. PWA & CONFIGURATION
+// PIZZA ERP | ADMINISTRATION PANEL v3.0
 // ==========================================
+window.haptic = window.haptic || ((val) => { 
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(val);
+    }
+});
 let deferredPrompt;
 
 // PWA Install Logic
@@ -207,6 +212,72 @@ function previewImage(input, previewId) {
     }
 }
 // Sidebar Helpers
+window.toggleSidebar = () => {
+    const sidebar = document.getElementById('sidebarNav');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (!sidebar) return;
+
+    window.haptic(15);
+    
+    if (window.innerWidth > 1024) {
+        // Desktop: Toggle collapsed state
+        document.body.classList.toggle('sidebar-collapsed');
+    } else {
+        // Mobile: Toggle active overlay state
+        const isActive = sidebar.classList.toggle('active');
+        if (overlay) overlay.classList.toggle('active', isActive);
+    }
+};
+
+// Update switchTab to handle mobile sidebar auto-close
+const originalSwitchTab = window.switchTab;
+window.switchTab = (tabId) => {
+    // If mobile, close sidebar on nav
+    if (window.innerWidth <= 1024) {
+        const sidebar = document.getElementById('sidebarNav');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (sidebar) sidebar.classList.remove('active');
+        if (overlay) overlay.classList.remove('active');
+    }
+    
+    // Call the actual tab switching logic if it's already defined elsewhere, 
+    // or implement a standard one if it's missing.
+    // Assuming switchTab exists based on context.
+    if (typeof originalSwitchTab === 'function') {
+        originalSwitchTab(tabId);
+    } else {
+        // Fallback or initialization of switchTab logic
+        console.log("Switching to tab:", tabId);
+        document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
+        const target = document.getElementById('panel-' + tabId);
+        if (target) target.classList.remove('hidden');
+        
+        document.querySelectorAll('.sidebar li').forEach(li => li.classList.remove('active'));
+        const menuId = 'menu-' + tabId;
+        const menuItem = document.getElementById(menuId);
+        if (menuItem) menuItem.classList.add('active');
+        
+        // Update header titles for mobile
+        const tabNames = {
+            'dashboard': 'Dashboard',
+            'orders': 'Orders',
+            'live': 'Live Ops',
+            'walkin': 'POS Control',
+            'menu': 'Menu Management',
+            'categories': 'Categories',
+            'riders': 'Delivery Riders',
+            'customers': 'Customer List',
+            'reports': 'Analytics',
+            'settings': 'Settings',
+            'notifications': 'Alerts',
+            'liveTracker': 'Live Tracking'
+        };
+        const titleEl = document.getElementById('mobileTabTitle');
+        if (titleEl) titleEl.innerText = tabNames[tabId] || 'Panel';
+        
+        if (window.lucide) lucide.createIcons();
+    }
+};
 
 
 /**
@@ -451,20 +522,10 @@ window.switchOutlet = (val) => {
     console.log("Admin switched outlet to:", val);
 };
 
-// =============================
-// MOBILE SIDEBAR TOGGLE
-// =============================
-window.toggleMobileSidebar = () => {
+function closeSidebar() {
     const sidebar = document.getElementById('sidebarNav');
     const overlay = document.getElementById('sidebarOverlay');
-    sidebar.classList.toggle('mobile-open');
-    overlay.classList.toggle('active');
-};
-
-function closeMobileSidebar() {
-    const sidebar = document.getElementById('sidebarNav');
-    const overlay = document.getElementById('sidebarOverlay');
-    if (sidebar) sidebar.classList.remove('mobile-open');
+    if (sidebar) sidebar.classList.remove('active');
     if (overlay) overlay.classList.remove('active');
 }
 
@@ -587,8 +648,22 @@ window.clearAllNotifications = () => {
     updateNotificationUI();
 };
 
-window.toggleNotificationSheet = () => {
-    window.switchTab('notifications');
+window.toggleNotificationSheet = (show) => {
+    const sheet = document.getElementById('notificationSheet');
+    const overlay = document.getElementById('notificationOverlay');
+    
+    if (!sheet || !overlay) return;
+
+    if (show === false || sheet.classList.contains('active')) {
+        sheet.classList.remove('active');
+        overlay.classList.remove('active');
+    } else {
+        sheet.classList.add('active');
+        overlay.classList.add('active');
+        // Clear pending mark when opened
+        window.isNotificationPending = false;
+        updateNotificationUI();
+    }
 };
 
 window.clearNotifications = () => {
@@ -599,8 +674,9 @@ window.clearNotifications = () => {
 window.switchTab = (tabId) => {
     window.currentActiveTab = tabId;
     closeMobileSidebar(); // Auto-close sidebar on mobile
+    window.toggleNotificationSheet(false); // Close notification sheet if open
     
-    // Clear Notification State if switching to notifications
+    // Clear Notification State if switching to notifications (fallback or legacy)
     if (tabId === 'notifications') {
         window.isNotificationPending = false;
         updateNotificationUI();
@@ -930,7 +1006,8 @@ function renderOrders(snap) {
         if (o.outlet !== currentOutlet) return;
 
         revenue += Number(o.total || 0);
-        if (o.createdAt && o.createdAt.startsWith(todayStr)) today++;
+        const orderDateStr = o.createdAt ? (typeof o.createdAt === 'string' ? o.createdAt : new Date(o.createdAt).toISOString()).split('T')[0] : '';
+        if (orderDateStr === todayStr) today++;
 
         if (o.status === "Delivered") {
             // Collect Item Stats for Dashboard
@@ -958,7 +1035,7 @@ function renderOrders(snap) {
         const safeStatusClass = escapeHtml(o.status?.replace(/ /g, ''));
         const safeAssignedRider = escapeHtml(o.assignedRider);
 
-        const displayPhone = o.phone ? o.phone.slice(0, 2) + "****" + o.phone.slice(-4) : "Guest";
+        const displayPhone = o.phone ? o.phone : "Guest";
         const truncatedAddress = o.address ? (o.address.length > 30 ? o.address.substring(0, 30) + "..." : o.address) : "Counter Sale";
 
         // Store full phone in map for authorized actions
@@ -1108,7 +1185,7 @@ function calculateTopSpenders(snap) {
         <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:10px;">
             <div>
                 <div style="font-size:14px; font-weight:700; color:var(--text-main);">${escapeHtml(data.name)}</div>
-                <div style="font-size:11px; color:var(--text-muted)">${phone.slice(0, 2) + "****" + phone.slice(-4)}</div>
+                <div style="font-size:11px; color:var(--text-muted)">${phone}</div>
             </div>
             <div style="text-align:right">
                 <div style="font-size:14px; font-weight:800; color:var(--action-green)">₹${data.total.toLocaleString()}</div>
@@ -1549,6 +1626,20 @@ function renderRiders() {
 window.deleteRider = (id) => confirm("Remove this rider? This will NOT delete their login but will prevent them from accessing the shop.") && db.ref(`riders/${id}`).remove();
 
 // (Duplicate loadReports/generateCustomReport/download blocks removed — canonical versions below at ~L1207)
+// UTILITY: Image Preview to Base64
+window.previewImage = (input, previewId) => {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const preview = document.getElementById(previewId);
+            const hidden = document.getElementById(previewId.replace('Preview', 'Url'));
+            if (preview) preview.src = e.target.result;
+            if (hidden) hidden.value = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+};
+
 window.showRiderModal = () => {
     isEditRiderMode = false;
     currentEditingRiderId = null;
@@ -1556,12 +1647,24 @@ window.showRiderModal = () => {
     document.getElementById('saveRiderBtn').innerText = "Create Account";
     document.getElementById('riderEmail').disabled = false;
     document.getElementById('riderPassHint').style.display = "none";
+    document.getElementById('riderPassLabel').innerText = "Secret Access Code (Password)";
     
-    // Clear fields
+    // Clear all 10 PII fields
     document.getElementById('riderName').value = "";
     document.getElementById('riderEmail').value = "";
-    document.getElementById('riderPass').value = "";
     document.getElementById('riderPhone').value = "";
+    document.getElementById('riderFatherName').value = "";
+    document.getElementById('riderAge').value = "";
+    document.getElementById('riderAadharNo').value = "";
+    document.getElementById('riderQual').value = "";
+    document.getElementById('riderAddress').value = "";
+    document.getElementById('riderPass').value = "";
+    
+    // Reset Images
+    document.getElementById('riderProfilePreview').src = "https://via.placeholder.com/150";
+    document.getElementById('riderPhotoUrl').value = "";
+    document.getElementById('aadharPreview').src = "https://via.placeholder.com/100x60";
+    document.getElementById('aadharUrl').value = "";
     
     document.getElementById('riderModal').style.display = 'flex';
 };
@@ -1575,13 +1678,26 @@ window.editRider = (id) => {
     
     document.getElementById('riderModalTitle').innerText = "Edit Rider Details";
     document.getElementById('saveRiderBtn').innerText = "Update Rider";
-    document.getElementById('riderEmail').disabled = true; // Security: Email locked
+    document.getElementById('riderEmail').disabled = true;
     document.getElementById('riderPassHint').style.display = "block";
+    document.getElementById('riderPassLabel').innerText = "Update Password (Optional)";
 
+    // Populate all 10 PII fields
     document.getElementById('riderName').value = r.name || "";
     document.getElementById('riderEmail').value = r.email || "";
-    document.getElementById('riderPass').value = ""; // Empty for security
     document.getElementById('riderPhone').value = r.phone || "";
+    document.getElementById('riderFatherName').value = r.fatherName || "";
+    document.getElementById('riderAge').value = r.age || "";
+    document.getElementById('riderAadharNo').value = r.aadharNo || "";
+    document.getElementById('riderQual').value = r.qualification || "";
+    document.getElementById('riderAddress').value = r.address || "";
+    document.getElementById('riderPass').value = ""; 
+
+    // Populate Images
+    document.getElementById('riderProfilePreview').src = r.profilePhoto || "https://via.placeholder.com/150";
+    document.getElementById('riderPhotoUrl').value = r.profilePhoto || "";
+    document.getElementById('aadharPreview').src = r.aadharPhoto || "https://via.placeholder.com/100x60";
+    document.getElementById('aadharUrl').value = r.aadharPhoto || "";
 
     document.getElementById('riderModal').style.display = 'flex';
 };
@@ -1589,13 +1705,26 @@ window.editRider = (id) => {
 window.hideRiderModal = () => document.getElementById('riderModal').style.display = 'none';
 
 window.saveRiderAccount = async () => {
-    const name = document.getElementById('riderName').value;
-    const email = document.getElementById('riderEmail').value;
+    const name = document.getElementById('riderName').value.trim();
+    const email = document.getElementById('riderEmail').value.trim();
     const pass = document.getElementById('riderPass').value;
-    const phone = document.getElementById('riderPhone').value;
+    const phone = document.getElementById('riderPhone').value.trim();
+    const fatherName = document.getElementById('riderFatherName').value.trim();
+    const age = document.getElementById('riderAge').value;
+    const aadharNo = document.getElementById('riderAadharNo').value.trim();
+    const qualification = document.getElementById('riderQual').value.trim();
+    const address = document.getElementById('riderAddress').value.trim();
+    const profilePhoto = document.getElementById('riderPhotoUrl').value;
+    const aadharPhoto = document.getElementById('aadharUrl').value;
 
     if (!name || !email) {
         alert("Name and Email are required.");
+        return;
+    }
+
+    // Strict 12-digit Aadhar Validation
+    if (!/^\d{12}$/.test(aadharNo)) {
+        alert("Invalid Aadhar Number! It must be exactly 12 digits.");
         return;
     }
 
@@ -1610,11 +1739,6 @@ window.saveRiderAccount = async () => {
             }
             const cred = await secondaryAuth.createUserWithEmailAndPassword(email, pass);
             uid = cred.user.uid;
-        } else if (pass && pass.length >= 6) {
-            // Optional Password Update? 
-            // Note: browser secondaryAuth can't update other people's passwords easily.
-            // We use reset email for that. But we can update DB metadata.
-            alert("Note: To change password, please use the 🔑 (Reset) button in the table.");
         }
 
         // 2. Save/Update rider details to DB
@@ -1622,6 +1746,13 @@ window.saveRiderAccount = async () => {
             name,
             email,
             phone,
+            fatherName,
+            age,
+            aadharNo,
+            qualification,
+            address,
+            profilePhoto,
+            aadharPhoto,
             outlet: currentOutlet,
             updatedAt: firebase.database.ServerValue.TIMESTAMP
         };
@@ -1976,7 +2107,7 @@ window.saveSettings = async () => {
             }
         }
 
-        db.ref("appConfig").update({ 
+        await db.ref("appConfig").update({ 
             shopName, 
             deliveryFee: Number(fee), 
             minOrder: Number(minOrder),
@@ -1985,7 +2116,7 @@ window.saveSettings = async () => {
             status,
             masterOTP 
         });
-        db.ref("uiConfig").update({ welcomeImage: welcome, menuImage: menu });
+        await db.ref("uiConfig").update({ welcomeImage: welcome, menuImage: menu });
         
         // Update Header
         document.querySelector(".sidebar-header").innerText = shopName.split(" ")[0].toUpperCase() + " ERP";
@@ -2083,6 +2214,10 @@ window.downloadPDF = () => {
         return;
     }
 
+    if (!window.jspdf) {
+        alert("PDF export library not ready. Please refresh and try again.");
+        return;
+    }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
@@ -2119,17 +2254,7 @@ window.downloadPDF = () => {
 };
 
 // Utils
-function formatDate(ts) {
-    if (!ts) return "N/A";
-    const d = new Date(ts);
-    return d.toLocaleString('en-IN', { 
-        day: '2-digit', 
-        month: 'short', 
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
+// formatDate already defined at top of file
 
 // =============================
 // WALK-IN / COUNTER SALE (POS)

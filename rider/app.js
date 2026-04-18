@@ -1,6 +1,11 @@
 // ==========================================
 // PIZZA ERP | RIDER PORTAL v3.0 (LIGHT)
 // ==========================================
+window.haptic = window.haptic || ((val) => { 
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(val);
+    }
+});
 
 // ==========================================
 // PWA & CONFIGURATION
@@ -61,21 +66,186 @@ window.toggleRiderSidebar = () => {
     window.haptic(10);
     const nav = document.getElementById('sidebarNav');
     const overlay = document.getElementById('sidebarOverlay');
-    if (nav) nav.classList.toggle('active');
-    if (overlay) overlay.classList.toggle('active');
+    if (!nav) return;
+
+    if (window.innerWidth > 1024) {
+        // Desktop: Toggle collapsed state
+        document.body.classList.toggle('sidebar-collapsed');
+    } else {
+        // Mobile: Toggle active overlay state
+        const isActive = nav.classList.toggle('active');
+        if (overlay) overlay.classList.toggle('active', isActive);
+    }
 };
 
 window.toggleNotificationSheet = () => {
-    alert("Notifications feature coming soon!");
+    const sheet = document.getElementById('notificationSheet');
+    if (!sheet) return;
+    window.haptic(15);
+    sheet.classList.toggle('active');
+    
+    // Clear unread badge when opening
+    if (sheet.classList.contains('active')) {
+        const badge = document.getElementById('notifBadge');
+        if (badge) badge.classList.add('hidden');
+        
+        // Mark as read in DB if needed (optional optimization)
+    }
 };
+
+window.clearAllNotifications = async () => {
+    if (!currentUser || !currentUser.profile) return;
+    if (confirm("Delete all notifications?")) {
+        await db.ref(`riders/${currentUser.profile.id}/notifications`).remove();
+    }
+};
+
+function initNotificationListener() {
+    if (!currentUser || !currentUser.profile) return;
+    const uid = currentUser.profile.id;
+    
+    db.ref(`riders/${uid}/notifications`).on('value', snap => {
+        const list = document.getElementById('notifList');
+        const badge = document.getElementById('notifBadge');
+        if (!list) return;
+
+        list.innerHTML = '';
+        const data = snap.val();
+        
+        if (!data) {
+            list.innerHTML = `
+                <div class="empty-notif">
+                    <i data-lucide="bell-off"></i>
+                    <p>No new notifications</p>
+                </div>`;
+            if (badge) badge.classList.add('hidden');
+        } else {
+            const items = Object.values(data).sort((a,b) => b.timestamp - a.timestamp);
+            let unreadCount = 0;
+
+            items.forEach(n => {
+                if (!n.read) unreadCount++;
+                const div = document.createElement('div');
+                div.className = `notif-item ${!n.read ? 'unread' : ''}`;
+                
+                const date = new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                div.innerHTML = `
+                    <span class="notif-item-title">${escapeHtml(n.title)}</span>
+                    <span class="notif-item-msg">${escapeHtml(n.message)}</span>
+                    <span class="notif-item-time">${date}</span>
+                `;
+                list.appendChild(div);
+            });
+
+            if (badge) {
+                if (unreadCount > 0) {
+                    badge.innerText = unreadCount;
+                    badge.classList.remove('hidden');
+                    // Only vibrate if notification count increased
+                    if (window._lastNotifCount < unreadCount) window.haptic(30);
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+            window._lastNotifCount = unreadCount;
+        }
+        if (window.lucide) lucide.createIcons();
+    });
+}
+
+/**
+ * 3.5 NOTIFICATIONS
+ */
+function initNotificationListener() {
+    if (!currentUser || !currentUser.profile.id) return;
+    const uid = currentUser.profile.id;
+    
+    db.ref(`riders/${uid}/notifications`).orderByChild('timestamp').limitToLast(20).on('value', snap => {
+        const list = document.getElementById('notificationList');
+        const badge = document.getElementById('notifBadge');
+        if (!list) return;
+
+        list.innerHTML = '';
+        let unreadCount = 0;
+
+        const notifications = [];
+        snap.forEach(child => {
+            notifications.push({ id: child.key, ...child.val() });
+        });
+
+        // Show newest first
+        notifications.reverse().forEach(n => {
+            if (!n.read) unreadCount++;
+            
+            const div = document.createElement('div');
+            div.className = `notification-item ${n.read ? '' : 'unread'}`;
+            div.innerHTML = `
+                <div class="notif-icon ${n.type || 'info'}">
+                    <i data-lucide="${n.icon || 'bell'}"></i>
+                </div>
+                <div class="notif-content">
+                    <p class="notif-title">${n.title}</p>
+                    <p class="notif-body">${n.body}</p>
+                    <p class="notif-time">${new Date(n.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                </div>
+            `;
+            
+            // Mark as read on click
+            div.onclick = () => {
+                db.ref(`riders/${uid}/notifications/${n.id}`).update({ read: true });
+            };
+            
+            list.appendChild(div);
+        });
+
+        if (badge) {
+            badge.innerText = unreadCount;
+            badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+        }
+
+        if (unreadCount > 0 && window.haptic) {
+            window.haptic(30);
+        }
+
+        if (window.lucide) lucide.createIcons();
+        if (notifications.length === 0) {
+            list.innerHTML = `
+                <div class="empty-notifications">
+                    <i data-lucide="bell-off"></i>
+                    <p>No new notifications</p>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+        }
+    });
+}
+
+window.clearAllNotifications = () => {
+    if (!currentUser || !currentUser.profile.id) return;
+    if (confirm("Clear all notifications?")) {
+        db.ref(`riders/${currentUser.profile.id}/notifications`).remove();
+    }
+};
+
+window.toggleNotificationSheet = (show) => {
+    const sheet = document.getElementById('notificationSheet');
+    if (sheet) sheet.classList.toggle('active', show);
+    if (show && window.haptic) window.haptic(15);
+};
+
+function handleStatusChange(title, body) {
+    // Local UI notification if app is open
+    if (window.haptic) window.haptic(30);
+}
 
 window.showSection = (sectionId) => {
     window.haptic(15);
-    const nav = document.getElementById('sidebarNav');
-    const overlay = document.getElementById('sidebarOverlay');
-    window.toggleRiderSidebar(); // Close sidebar on nav
-    if (nav) nav.classList.remove('active');
-    if (overlay) overlay.classList.remove('active');
+    
+    // Only toggle (close) sidebar on mobile when switching sections
+    if (window.innerWidth <= 1024) {
+        window.toggleRiderSidebar();
+    }
     
     // Hide all sections
     document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
@@ -151,12 +321,18 @@ window.logout = () => {
 };
 
 auth.onAuthStateChanged(async user => {
-    const loginBox = document.getElementById('loginBox');
-    const dashboard = document.getElementById('dashboard');
+    const isLoginPage = window.location.pathname.includes('login.html');
 
     if (!user) {
-        loginBox.style.display = 'flex';
-        dashboard.style.display = 'none';
+        if (!isLoginPage) {
+            window.location.href = 'login.html';
+        }
+        return;
+    }
+
+    // If logged in and on login page, redirect to dashboard
+    if (isLoginPage) {
+        window.location.href = 'index.html';
         return;
     }
 
@@ -221,17 +397,59 @@ auth.onAuthStateChanged(async user => {
         }
 
         // Populate UI
-        document.getElementById('profileName').innerText = riderProfile.name || "Rider";
-        document.getElementById('profilePhone').innerText = riderProfile.phone || user.email;
-        document.getElementById('r-name').innerText = (riderProfile.name || "Rider").split(' ')[0];
+        const pName = riderProfile.name || "Rider";
+        const profileNameEl = document.getElementById('profileName');
+        if (profileNameEl) profileNameEl.innerText = pName;
         
+        const profilePhoneEl = document.getElementById('profilePhone');
+        if (profilePhoneEl) profilePhoneEl.innerText = riderProfile.phone || user.email;
+        
+        const rNameEl = document.getElementById('r-name');
+        if (rNameEl) rNameEl.innerText = pName;
+        
+        // PII Fields (Read-Only Display)
+        document.getElementById('r-father-name').innerText = riderProfile.fatherName || '---';
+        document.getElementById('r-age').innerText = riderProfile.age || '---';
+        document.getElementById('r-aadhar-no').innerText = riderProfile.aadharNo ? 'XXXXXXXX' + riderProfile.aadharNo.slice(-4) : '---'; // Partially masked for safety
+        document.getElementById('r-qualification').innerText = riderProfile.qualification || '---';
+        document.getElementById('r-address').innerText = riderProfile.address || '---';
+        document.getElementById('r-email').innerText = riderProfile.email || '---';
+        
+        // Photos
+        if (riderProfile.profilePhoto) {
+            document.getElementById('r-profile-img').src = riderProfile.profilePhoto;
+        } else if (riderProfile.photo) {
+            document.getElementById('r-profile-img').src = riderProfile.photo;
+        }
+
+        if (riderProfile.aadharPhoto && document.getElementById('r-aadhar-img')) {
+            document.getElementById('r-aadhar-img').src = riderProfile.aadharPhoto;
+        }
+
         updateStatusUI(riderProfile.status || "Online");
 
-        loginBox.style.display = 'none';
-        dashboard.style.display = 'block';
+        // Data Protection Initialization
+        // Code already exists inline below, keeping for consistency in structure
         
+        // 4. Initialize Listeners
         initRealtimeListeners();
-        showSection('home');
+        initNotificationListener(); // Start tracking alerts
+        
+        // Final UI Unlock
+        const dashboard = document.getElementById('dashboard');
+        if (dashboard) {
+            dashboard.style.display = 'block';
+            showSection('home');
+        }
+        
+        // DATA PROTECTION: Disable right-click and common download/copy shortcuts
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey && (e.key === 'c' || e.key === 'u' || e.key === 's' || e.key === 'p')) {
+                e.preventDefault();
+                alert("Security policy: Data downloading is restricted on the Rider portal.");
+            }
+        });
         
     } catch (err) {
         console.error("Session Error:", err);
@@ -403,10 +621,12 @@ function initRealtimeListeners() {
         const unassignedList = document.getElementById('unassignedOrdersList');
         const activeView = document.getElementById('activeOrderView');
         const completedList = document.getElementById('completedOrdersList');
+        const banner = document.getElementById('activeStatusBanner');
         
+        if (!unassignedList || !activeView || !completedList) return;
+
         unassignedList.innerHTML = '';
         completedList.innerHTML = '';
-        activeView.innerHTML = '<div class="empty-state-glass"><p>No active trip. Choose an order from Pickup Hub.</p></div>';
         
         let stats = {
             todayDelivered: 0,
@@ -420,8 +640,7 @@ function initRealtimeListeners() {
 
         const today = new Date().toDateString();
         const myEmail = currentUser.email.toLowerCase();
-
-        let activeOrder = null;
+        let activeOrderData = null;
 
         snap.forEach(child => {
             const o = child.val();
@@ -464,60 +683,70 @@ function initRealtimeListeners() {
             // 3. ACTIVE
             if (o.status === "Out for Delivery" && o.assignedRider && o.assignedRider.toLowerCase() === myEmail) {
                 stats.hasActive = true;
+                activeOrderData = o;
                 activeView.innerHTML = ''; 
                 activeView.appendChild(createOrderCard(id, o, "active"));
             }
         });
 
-        // Update UI
-        document.getElementById('statsTodayDelivered').innerText = stats.todayDelivered;
-        document.getElementById('statsTodayEarnings').innerText = `₹${stats.todayPizza + stats.todayCake}`;
+        // Update Dashboard Stats
+        const sDelivered = document.getElementById('statsTodayDelivered');
+        const sEarnings = document.getElementById('statsTodayEarnings');
+        if (sDelivered) sDelivered.innerText = stats.todayDelivered;
+        if (sEarnings) sEarnings.innerText = `₹${stats.todayPizza + stats.todayCake}`;
         
         // Split Wallet UI
-        document.getElementById('e-total').innerText = `₹${stats.pizzaEarnings + stats.cakeEarnings}`;
-        document.getElementById('e-pizza').innerText = `₹${stats.pizzaEarnings}`;
-        document.getElementById('e-cake').innerText = `₹${stats.cakeEarnings}`;
-        document.getElementById('e-pizza-today').innerText = `₹${stats.todayPizza}`;
-        document.getElementById('e-cake-today').innerText = `₹${stats.todayCake}`;
+        const eTotal = document.getElementById('e-total');
+        if (eTotal) {
+            eTotal.innerText = `₹${stats.pizzaEarnings + stats.cakeEarnings}`;
+            document.getElementById('e-pizza').innerText = `₹${stats.pizzaEarnings}`;
+            document.getElementById('e-cake').innerText = `₹${stats.cakeEarnings}`;
+            document.getElementById('e-pizza-today').innerText = `₹${stats.todayPizza}`;
+            document.getElementById('e-cake-today').innerText = `₹${stats.todayCake}`;
+        }
         
-        document.getElementById('pickupCount').innerText = `${stats.availableCount} Orders`;
+        const pCount = document.getElementById('pickupCount');
+        if (pCount) pCount.innerText = `${stats.availableCount} Orders`;
 
-        const banner = document.getElementById('activeStatusBanner');
-        if (stats.hasActive) {
-            banner.innerHTML = `
-                <div class="banner-glass">
-                    <p class="banner-title">🚀 ONGOING TRIP</p>
-                    <button class="btn-primary" style="width:100%" onclick="showSection('active')">GOTO ACTIVE ORDER</button>
-                </div>`;
-        } else {
-            banner.innerHTML = `
-                <div style="padding:15px; text-align:center;">
-                    <p style="color:var(--text-muted); font-size:14px; margin-bottom:12px;">You are currently free for pickups.</p>
-                    <button class="btn-primary" style="width:100%" onclick="showSection('available')">BROWSE ORDERS</button>
-                </div>`;
+        // Active Trip Banner
+        if (banner) {
+            if (stats.hasActive) {
+                banner.onclick = () => showSection('active');
+                banner.innerHTML = `
+                    <div class="banner-glass">
+                        <p class="banner-title"><span class="pulse-icon"></span> 🚀 ONGOING TRIP</p>
+                        <p class="banner-subtitle">Customer is waiting! Open Trip for details.</p>
+                    </div>`;
+                banner.style.display = 'block';
+            } else {
+                banner.onclick = null;
+                banner.innerHTML = '';
+                banner.style.display = 'none';
+                activeView.innerHTML = '<div class="empty-state-glass"><p>No active trip. Choose an order from Pickup Hub.</p></div>';
+            }
         }
 
         if (unassignedList.children.length === 0) unassignedList.innerHTML = '<div class="empty-state-glass"><p>All caught up! No orders for pickup.</p></div>';
         if (completedList.children.length === 0) completedList.innerHTML = '<div class="empty-state-glass"><p>Start delivering to see history.</p></div>';
 
         if (window.lucide) lucide.createIcons();
-        // Update Stats UI... (lines exist below)
-        
+
         // Toggle Map View
         const mapCont = document.getElementById('activeTripMap');
-        if (activeOrder) {
-            mapCont.style.display = 'block';
-            // Extract coordinates if present in order
-            if (activeOrder.lat && activeOrder.lng) {
-                window.updateRiderMap(activeOrder.lat, activeOrder.lng);
+        if (mapCont) {
+            if (activeOrderData) {
+                mapCont.style.display = 'block';
+                if (activeOrderData.lat && activeOrderData.lng) {
+                    window.updateRiderMap(activeOrderData.lat, activeOrderData.lng);
+                } else {
+                    window.updateRiderMap();
+                }
             } else {
-                window.updateRiderMap(); // Just show my location
+                mapCont.style.display = 'none';
             }
-        } else {
-            if (mapCont) mapCont.style.display = 'none';
         }
 
-        // Initialize any sliders that were just rendered
+        // Initialize Sliders
         document.querySelectorAll('.slide-action-container:not(.initialized)').forEach(slider => {
             const orderId = slider.id.replace('slider-', '');
             window.initSliderAction(slider.id, () => window.confirmDelivery(orderId));
@@ -542,7 +771,7 @@ function createOrderCard(id, o, type) {
     const safeAddress = escapeHtml(o.address);
     const safeTotal = escapeHtml(String(o.total || 0));
     const phoneValue = o.customerPhone || o.phone || '';
-    const safePhone = escapeHtml(phoneValue ? "****" + phoneValue.slice(-4) : '');
+    const safePhone = escapeHtml(phoneValue || '');
     const safeItemsText = o.items
         ? o.items.map(i => `${escapeHtml(i.name)} (${escapeHtml(i.size)})`).join(', ')
         : 'Food Parcel';
@@ -568,6 +797,7 @@ function createOrderCard(id, o, type) {
             <p><i data-lucide="user"></i> <span>${safeCustomerName}</span></p>
             <p><i data-lucide="map-pin"></i> <span>${safeAddress}</span></p>
             <p><i data-lucide="shopping-cart"></i> <span>${safeItemsText}</span></p>
+            <p><i data-lucide="phone"></i> <span>${safePhone}</span></p>
             <div style="margin-top:20px; padding-top:15px; border-top:1px solid var(--glass-border); display:flex; justify-content:space-between; align-items:center;">
                 <span style="color:var(--text-muted); font-size:11px; font-weight:700;">TO COLLECT</span>
                 <span style="color:var(--primary-orange); font-size:22px; font-weight:900;">&#8377;${safeTotal}</span>
@@ -576,12 +806,12 @@ function createOrderCard(id, o, type) {
         <div class="card-actions">
             ${isAvailable ? `<button class="btn-primary btn-full" onclick="acceptOrder('${id}')">START PICKUP</button>` : ''}
             ${isActive ? `
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom:10px;">
-                    <button class="btn-primary" style="background:#161616; border:1px solid var(--primary); color:var(--primary);" onclick="navigateToCustomer('${id}', ${addressJson})">
-                        <i data-lucide="navigation"></i> MAP
+                <div class="active-actions">
+                    <button class="btn-action btn-nav" onclick="navigateToCustomer('${id}', ${addressJson})">
+                        <i data-lucide="navigation"></i> NAVIGATE
                     </button>
-                    <button class="btn-primary" style="background:#161616; border:1px solid var(--secondary); color:var(--secondary);" onclick="window.location.href='tel:' + ${phoneJson}">
-                        <i data-lucide="phone"></i> CALL
+                    <button class="btn-action btn-wa" onclick="contactCustomer('${safePhone}')">
+                        <i data-lucide="message-circle"></i> WHATSAPP
                     </button>
                 </div>
                 <!-- PREMIUM SLIDER ACTION -->
@@ -621,7 +851,20 @@ window.acceptOrder = async (id) => {
 };
 
 window.navigateToCustomer = (id, address) => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+    window.haptic(20);
+    // Use Google Maps Intent for best experience
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}&travelmode=driving`;
+    window.open(url, '_system'); // Use _system for PWA to trigger external app
+};
+
+window.contactCustomer = (phone) => {
+    window.haptic(20);
+    if (!phone) {
+        alert("Customer phone number not available.");
+        return;
+    }
+    const cleanPhone = phone.replace(/\D/g, '');
+    const url = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent("Hello, I am your delivery partner from Roshani Pizza. I am on my way with your order! 🍕")}`;
     window.open(url, '_blank');
 };
 
@@ -629,6 +872,52 @@ window.confirmDelivery = (id) => {
     currentOrderId = id;
     document.getElementById('otpInput').value = '';
     document.getElementById('otpPanel').style.display = 'flex';
+    
+    // Admin Override Logic
+    const emergencyBtn = document.getElementById('emergencyBtn');
+    if (emergencyBtn) {
+        emergencyBtn.style.display = (currentUser && currentUser.profile && currentUser.profile.isAdmin) ? 'block' : 'none';
+    }
+};
+
+window.emergencyOverride = async () => {
+    if (!currentUser || !currentUser.profile || !currentUser.profile.isAdmin) {
+        alert("Unauthorized access attempt.");
+        return;
+    }
+    
+    if (confirm("FORCE COMPLETE: Bypass customer OTP?")) {
+        window.haptic([50, 50, 50]);
+        // Simulate OTP verification with actual logic but skip mismatch check
+        try {
+            await db.ref(`orders/${currentOrderId}`).update({
+                status: "Delivered",
+                deliveredAt: firebase.database.ServerValue.TIMESTAMP,
+                overrideBy: currentUser.email
+            });
+
+            // Update rider stats
+            const snap = await db.ref(`orders/${currentOrderId}`).once('value');
+            const order = snap.val();
+            const riderId = currentUser.profile.id;
+            const commission = order.riderCommission || 40;
+            const statsRef = db.ref(`riderStats/${riderId}`);
+            await statsRef.transaction(current => {
+                if (!current) return { totalOrders: 1, totalEarnings: commission };
+                return {
+                    ...current,
+                    totalOrders: (current.totalOrders || 0) + 1,
+                    totalEarnings: (current.totalEarnings || 0) + commission
+                };
+            });
+
+            closeOTPPanel();
+            showSection('home');
+            alert("Order delivered via administrative override.");
+        } catch (e) {
+            alert("System error during override");
+        }
+    }
 };
 
 window.closeOTPPanel = () => {
