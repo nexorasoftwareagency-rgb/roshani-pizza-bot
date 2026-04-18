@@ -1649,6 +1649,24 @@ html, body {
         min-width: var(--sidebar-collapsed-width) !important;
     }
 
+    .sidebar-collapsed .sidebar li span {
+        display: none !important;
+    }
+
+    .sidebar-collapsed .sidebar-header #sidebarBrandText {
+        display: none !important;
+    }
+
+    .sidebar-collapsed .sidebar li {
+        justify-content: center !important;
+        padding: 15px 0 !important;
+    }
+
+    .sidebar-collapsed .sidebar li i {
+        margin-right: 0 !important;
+        font-size: 20px !important;
+    }
+
     .main {
         flex: 1;
         margin-left: 0 !important;
