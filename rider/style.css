@@ -259,7 +259,8 @@
     --radius-lg: 16px;
     --radius-xl: 24px;
     
-    --sidebar-width: 280px;
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 80px;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -278,6 +279,61 @@
 /* MOBILE COMPONENTS - Hidden by default */
 .bottom-nav, .mobile-header, .sidebar-overlay {
     display: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/* DESKTOP REFINEMENT (1025px and above)                                     */
+/* -------------------------------------------------------------------------- */
+@media screen and (min-width: 1025px) {
+    .layout {
+        display: flex !important;
+        flex-direction: row !important;
+    }
+
+    .sidebar {
+        display: flex !important;
+        position: sticky !important;
+        left: 0 !important;
+        top: 0;
+        height: 100vh;
+        width: var(--sidebar-width) !important;
+        min-width: var(--sidebar-width) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1000;
+        flex-direction: column;
+        border-right: 1px solid var(--glass-border);
+    }
+
+    .sidebar-collapsed .sidebar {
+        width: var(--sidebar-collapsed-width) !important;
+        min-width: var(--sidebar-collapsed-width) !important;
+    }
+
+    .sidebar-collapsed .sidebar .nav-links li span {
+        display: none !important;
+    }
+
+    .sidebar-collapsed .sidebar .sidebar-brand {
+        display: none !important;
+    }
+
+    .sidebar-collapsed .sidebar li {
+        justify-content: center !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .sidebar-collapsed .sidebar li i {
+        margin: 0 !important;
+        font-size: 22px !important;
+    }
+
+    .main-content {
+        flex: 1;
+        margin-left: 0 !important;
+        min-width: 0;
+        transition: all 0.3s ease;
+    }
 }
 
 /* SHIMMER LOADERS */
