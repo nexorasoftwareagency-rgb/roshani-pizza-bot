@@ -1,10 +1,14 @@
-const CACHE_NAME = 'roshani-pizza-v1.51';
+const CACHE_NAME = 'roshani-admin-v1.60';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
-  './icon-512.png'
+  './branding.js',
+  './manifest-pizza.json',
+  './manifest-cake.json',
+  './icon-pizza.png',
+  './icon-cake.png'
 ];
 
 // Force activation and cache latest assets
@@ -37,8 +41,22 @@ self.addEventListener('fetch', (e) => {
       fetch(e.request).catch(() => caches.match(e.request))
     );
   } else {
-    e.respondWith(
-      caches.match(e.request).then((res) => res || fetch(e.request))
-    );
   }
+});
+
+// Handle notification interaction
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes('/Admin/') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('./');
+      }
+    })
+  );
 });

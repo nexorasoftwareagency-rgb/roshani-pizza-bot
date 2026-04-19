@@ -60,6 +60,11 @@ if ('serviceWorker' in navigator) {
             const downloadBtn = document.getElementById('menu-download');
             if (downloadBtn) downloadBtn.classList.add('hidden');
         }
+        
+        // Initialize Notification Permission UI
+        if (typeof updateNotificationSettingsUI === 'function') {
+            updateNotificationSettingsUI();
+        }
     });
 }
 
@@ -588,7 +593,9 @@ window.toggleSubmenu = (parentId) => {
 // =============================
 // ADAPTIVE UI & NOTIFICATIONS
 // =============================
-let notifications = [];
+// Premium Notification Sound (Base64 Chime)
+const NOTIFICATION_SOUND_BIP = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSxvT18AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+// Note: Using a slightly longer/better sound in implementation than the placeholder above.
 
 function addNotification(title, sub, type = 'info') {
     const notif = {
@@ -608,11 +615,92 @@ function addNotification(title, sub, type = 'info') {
 
     updateNotificationUI();
     
-    // Play sound for notification if it's new/delivered
+    // Play sound & Show OS Notification
     if (type === 'new' || type === 'delivered') {
         playSound();
+        showNativeNotification(title, sub);
     }
 }
+
+// 🔔 NATIVE NOTIFICATIONS ENGINE
+window.requestNotificationPermission = async () => {
+    if (!("Notification" in window)) {
+        showAlert({ total: "N/A", items: "Browser doesn't support notifications." }, 'error');
+        return;
+    }
+
+    const permission = await Notification.requestPermission();
+    updateNotificationSettingsUI();
+    
+    if (permission === "granted") {
+        new Notification("✅ Notifications Enabled", {
+            body: "You will now receive instant alerts for new orders.",
+            icon: window.currentOutlet === 'cake' ? 'icon-cake.png' : 'icon-pizza.png'
+        });
+        playSound();
+    }
+};
+
+function updateNotificationSettingsUI() {
+    const statusText = document.getElementById('notifPermissionText');
+    const btn = document.getElementById('btnEnableNotif');
+    if (!statusText || !btn) return;
+
+    if (!("Notification" in window)) {
+        statusText.innerText = "Unsupported Browser";
+        btn.disabled = true;
+        return;
+    }
+
+    if (Notification.permission === "granted") {
+        statusText.innerText = "Permission: Active ✅";
+        btn.innerHTML = '<i data-lucide="check-circle"></i> <span>Enabled</span>';
+        btn.classList.replace('btn-primary', 'btn-secondary');
+        btn.disabled = true;
+    } else if (Notification.permission === "denied") {
+        statusText.innerText = "Permission: Blocked ❌";
+        btn.innerText = "Blocked in Settings";
+        btn.disabled = true;
+    } else {
+        statusText.innerText = "Permission: Required 🔔";
+    }
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function showNativeNotification(title, body) {
+    if (Notification.permission !== "granted") return;
+
+    // Use current outlet branding
+    const brandPrefix = window.currentOutlet === 'cake' ? '🍰 CAKE: ' : '🍕 PIZZA: ';
+    const icon = window.currentOutlet === 'cake' ? 'icon-cake.png' : 'icon-pizza.png';
+
+    const options = {
+        body,
+        icon,
+        badge: icon,
+        vibrate: [200, 100, 200],
+        tag: `order-${Date.now()}`,
+        requireInteraction: true // Keep it on screen until user clicks
+    };
+
+    // Try service worker notification first (better for PWA)
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification(brandPrefix + title, options);
+        });
+    } else {
+        new Notification(brandPrefix + title, options);
+    }
+}
+
+window.testNotification = () => {
+    playSound();
+    if (Notification.permission !== "granted") {
+        requestNotificationPermission();
+    } else {
+        showNativeNotification("Test Alert Successful", "New orders will appear exactly like this!");
+    }
+};
 
 function updateNotificationUI() {
     const badge = document.getElementById('notifBadge');
@@ -733,6 +821,10 @@ window.switchTab = (tabId) => {
         if (typeof updateNotificationUI === 'function') updateNotificationUI();
     }
 
+    if (tabId === 'settings') {
+        if (typeof updateNotificationSettingsUI === 'function') updateNotificationSettingsUI();
+    }
+
     const body = document.body;
     const posTab = document.getElementById('tab-walkin');
 
@@ -840,21 +932,28 @@ window.switchTab = (tabId) => {
 function updateMobileCartSummaryState() {
     const cartSummary = document.getElementById('mobileCartSummary');
     const walkinTab = document.getElementById('tab-walkin');
+    const authOverlay = document.getElementById('authOverlay');
     
-    if (!cartSummary || !walkinTab) return;
+    // Hide if elements don't exist OR if user is on Login Screen
+    if (!cartSummary || !walkinTab || (authOverlay && !authOverlay.classList.contains('hidden'))) {
+        if (cartSummary) cartSummary.classList.add('hidden');
+        return;
+    }
     
     // Check both tab state and the data
     const cartItems = walkinCart ? Object.values(walkinCart) : [];
-    const hasItems = cartItems.length > 0;
+    const totalQty = cartItems.reduce((acc, item) => acc + item.qty, 0);
+    const hasItems = totalQty > 0;
     const isWalkinTab = !walkinTab.classList.contains('hidden');
 
-    if (hasItems && isWalkinTab && window.innerWidth < 768) {
+    // Show only on Walk-in tab with items on Mobile/Tablet (< 1025px)
+    if (hasItems && isWalkinTab && window.innerWidth <= 1024) {
         cartSummary.classList.remove('hidden');
         
         const countEl = document.getElementById('mobileCartCount');
         const totalEl = document.getElementById('mobileCartTotal');
         
-        if (countEl) countEl.innerText = `${cartItems.length} Items`;
+        if (countEl) countEl.innerText = `${totalQty} Items`;
         if (totalEl) {
             const total = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
             totalEl.innerText = `₹${total.toLocaleString()}`;
@@ -926,15 +1025,29 @@ function initRealtimeListeners() {
 let alertAudio;
 
 function playSound() {
-    if (!alertAudio) {
-        alertAudio = new Audio('../assets/sounds/mixkit-bell-of-promise-930.wav');
-        alertAudio.volume = 0.5;
+    try {
+        // High-frequency "Ping" chime (pleasant and loud)
+        const chime = new Audio("https://raw.githubusercontent.com/Prashant-Satyarthy/CDN/main/orders-alert.mp3");
+        chime.volume = 0.8;
+        chime.play().catch(e => {
+            console.warn("Audio Context Bloqued. User must interact first.");
+            // Fallback to simpler method if blocked
+            const osc = new (window.AudioContext || window.webkitAudioContext)();
+            const g = osc.createGain();
+            const o = osc.createOscillator();
+            o.connect(g);
+            g.connect(osc.destination);
+            o.type = "sine";
+            o.frequency.setValueAtTime(880, osc.currentTime);
+            g.gain.setValueAtTime(0, osc.currentTime);
+            g.gain.linearRampToValueAtTime(0.5, osc.currentTime + 0.1);
+            g.gain.exponentialRampToValueAtTime(0.01, osc.currentTime + 1);
+            o.start(osc.currentTime);
+            o.stop(osc.currentTime + 1);
+        });
+    } catch(err) {
+        console.error("Audio error:", err);
     }
-    alertAudio.currentTime = 0;
-    alertAudio.play().catch(e => {
-        // Fallback to alert.mp3 if premium file missing
-        new Audio("../assets/sounds/alert.mp3").play().catch(() => {});
-    });
 }
 
 function showAlert(data, type = 'info') {
@@ -1399,7 +1512,7 @@ document.getElementById('saveDishBtn').onclick = async () => {
 
     try {
         if (file) {
-            statusLabel.style.display = "block";
+            statusLabel.classList.remove('hidden');
             
             // If editing, get old image to delete later
             let oldImageUrl = null;
@@ -1416,7 +1529,7 @@ document.getElementById('saveDishBtn').onclick = async () => {
                 await deleteImage(oldImageUrl);
             }
             
-            statusLabel.style.display = "none";
+            statusLabel.classList.add('hidden');
         }
 
         // Collect Sizes
@@ -1775,8 +1888,8 @@ window.saveRiderAccount = async () => {
     const aadharNo = document.getElementById('riderAadharNo').value.trim();
     const qualification = document.getElementById('riderQual').value.trim();
     const address = document.getElementById('riderAddress').value.trim();
-    const profilePhoto = document.getElementById('riderPhotoUrl').value;
-    const aadharPhoto = document.getElementById('aadharUrl').value;
+    let profilePhoto = document.getElementById('riderPhotoUrl').value;
+    let aadharPhoto = document.getElementById('aadharUrl').value;
 
     if (!name || !email) {
         alert("Name and Email are required.");
@@ -1789,7 +1902,24 @@ window.saveRiderAccount = async () => {
         return;
     }
 
+    const profileFile = document.getElementById('riderPhotoInput').files[0];
+    const aadharFile = document.getElementById('aadharPhotoInput').files[0];
+    const statusLabel = document.getElementById('uploadStatusRider');
+
     try {
+        if (profileFile || aadharFile) {
+            statusLabel.classList.remove('hidden');
+        }
+
+        if (profileFile) {
+            profilePhoto = await uploadImage(profileFile, `riders/profile_${Date.now()}`);
+        }
+        if (aadharFile) {
+            aadharPhoto = await uploadImage(aadharFile, `riders/aadhar_${Date.now()}`);
+        }
+
+        statusLabel.classList.add('hidden');
+
         let uid = currentEditingRiderId;
 
         if (!isEditRiderMode) {
@@ -2156,6 +2286,13 @@ window.saveSettings = async () => {
     const welcomeFile = document.getElementById("welcomeFile").files[0];
     const menuFile = document.getElementById("menuFile").files[0];
 
+    const btn = document.querySelector("#settingsContainer .btn-primary");
+    const originalText = btn ? btn.innerText : "Save Settings";
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Processing...";
+    }
+
     try {
         if (welcomeFile) {
             const oldWelcome = welcome; // Snapshot before update
@@ -2184,12 +2321,20 @@ window.saveSettings = async () => {
         await db.ref("uiConfig").update({ welcomeImage: welcome, menuImage: menu });
         
         // Update Header
-        document.querySelector(".sidebar-header").innerText = shopName.split(" ")[0].toUpperCase() + " ERP";
+        const sidebarHeader = document.querySelector(".sidebar-header");
+        if (sidebarHeader) {
+            sidebarHeader.innerText = shopName.split(" ")[0].toUpperCase() + " ERP";
+        }
         
         alert("Settings updated successfully!");
         loadSettings(); // Refresh previews and hidden values
     } catch (e) {
         alert("Error saving settings: " + e.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
     }
 };
 
@@ -2583,18 +2728,8 @@ window.updateWalkinTotal = () => {
     if (subEl) subEl.textContent = '₹' + subtotal.toLocaleString();
     if (totalEl) totalEl.textContent = '₹' + total.toLocaleString();
 
-    // Mobile Summary Update
-    const mobileCountEl = document.getElementById('mobileCartCount');
-    const mobileTotalEl = document.getElementById('mobileCartTotal');
-    const mobileSummary = document.getElementById('mobileCartSummary');
-
-    if (mobileCountEl) mobileCountEl.textContent = itemCount;
-    if (mobileTotalEl) mobileTotalEl.textContent = '₹' + total.toLocaleString();
-    
-    if (mobileSummary) {
-        if (itemCount > 0) mobileSummary.classList.remove('hidden');
-        else mobileSummary.classList.add('hidden');
-    }
+    // Mobile Summary Update is handled by updateMobileCartSummaryState()
+    // which is called by renderWalkinCart() immediately after this.
 };
 
 window.toggleMobileCart = (show) => {
