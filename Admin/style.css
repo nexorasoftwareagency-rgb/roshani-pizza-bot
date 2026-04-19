@@ -1610,7 +1610,7 @@ html, body {
 
     #tab-walkin .walkin-layout {
         display: flex !important;
-        flex-direction: row-reverse !important; /* POS Panel (Cart) on Left, Menu on Right */
+        flex-direction: row !important; /* Menu on Left, POS Panel (Cart) on Right */
         gap: 0;
         height: 100vh;
         width: 100vw;
@@ -1623,16 +1623,21 @@ html, body {
     }
 
     #tab-walkin .walkin-picker {
-        flex: 0 0 35%; /* Fixed width for the Menu Strip (approx size 3) */
+        flex: 0 0 115px; /* Narrow Single Column Strip for Menu */
         height: 100vh;
         overflow-y: auto;
         padding: 0;
         background: var(--bg-primary);
-        border-left: 1px solid rgba(0,0,0,0.05);
+        border-right: 1px solid rgba(0,0,0,0.05);
+        scrollbar-width: none;
+    }
+
+    #tab-walkin .walkin-picker::-webkit-scrollbar {
+        display: none;
     }
 
     #tab-walkin .walkin-picker .panel {
-        padding: 8px !important;
+        padding: 6px !important;
         border: none;
         box-shadow: none;
         background: transparent;
@@ -1642,12 +1647,11 @@ html, body {
         display: flex !important;
         position: relative !important;
         inset: auto !important;
-        flex: 1; /* Remaining Space for POS Panel */
+        flex: 1; /* Remaining Space for POS Panel/Cart */
         height: 100vh;
         background: white;
         z-index: 10;
         animation: none !important;
-        border-right: 1px solid rgba(0,0,0,0.05);
     }
 
     #tab-walkin .walkin-cart .panel {
@@ -1655,25 +1659,39 @@ html, body {
         width: 100%;
         display: flex;
         flex-direction: column;
-        padding: 12px;
+        padding: 10px;
         margin: 0;
         border: none;
         border-radius: 0;
     }
 
     #tab-walkin .walkin-dish-grid {
-        grid-template-columns: 1fr 1fr !important; /* Two Column Strip */
+        grid-template-columns: 1fr !important; /* Single Column Strip */
         max-height: none !important;
-        gap: 8px;
+        gap: 6px;
     }
 
     #tab-walkin .walkin-dish-card {
-        padding: 10px;
+        padding: 8px 4px;
+        min-height: 80px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
     #tab-walkin .walkin-dish-card .dish-emoji {
-        font-size: 20px;
-        margin-bottom: 4px;
+        font-size: 16px; /* Smaller emoji to prioritize text */
+        margin-bottom: 2px;
+    }
+
+    #tab-walkin .walkin-dish-card h5 {
+        font-size: 10px;
+        line-height: 1.1;
+        margin-bottom: 2px;
+    }
+
+    #tab-walkin .walkin-dish-card .dish-price {
+        font-size: 10px;
     }
 
     #tab-walkin .walkin-cartItems {
@@ -1683,23 +1701,25 @@ html, body {
     }
 
     .mobile-cart-summary {
-        display: none !important; /* Hidden because cart is now side-by-side */
+        display: none !important;
     }
 
+    /* Back button positioning for small strip layout */
     .pos-back-btn {
         position: fixed;
-        bottom: 20px;
-        left: 20px;
+        bottom: 15px;
+        right: 15px; /* Moved to right to clear menu strip */
+        left: auto;
         z-index: 4000;
         background: #000;
         color: white;
-        padding: 10px 16px;
-        border-radius: 12px;
+        padding: 8px 12px;
+        border-radius: 10px;
         font-weight: 800;
-        font-size: 12px;
+        font-size: 11px;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         border: none;
     }
