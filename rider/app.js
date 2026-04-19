@@ -17,7 +17,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
     const downloadBtn = document.getElementById('menu-downloadapp');
-    if (downloadBtn) downloadBtn.style.display = 'block';
+    if (downloadBtn) downloadBtn.classList.remove('hidden');
 });
 
 window.installPWA = async () => {
@@ -26,14 +26,14 @@ window.installPWA = async () => {
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
         const downloadBtn = document.getElementById('menu-downloadapp');
-        if (downloadBtn) downloadBtn.style.display = 'none';
+        if (downloadBtn) downloadBtn.classList.add('hidden');
     }
     deferredPrompt = null;
 };
 
 window.addEventListener('appinstalled', () => {
     const downloadBtn = document.getElementById('menu-downloadapp');
-    if (downloadBtn) downloadBtn.style.display = 'none';
+    if (downloadBtn) downloadBtn.classList.add('hidden');
     deferredPrompt = null;
 });
 
@@ -78,81 +78,9 @@ window.toggleRiderSidebar = () => {
     }
 };
 
-window.toggleNotificationSheet = () => {
-    const sheet = document.getElementById('notificationSheet');
-    if (!sheet) return;
-    window.haptic(15);
-    sheet.classList.toggle('active');
-    
-    // Clear unread badge when opening
-    if (sheet.classList.contains('active')) {
-        const badge = document.getElementById('notifBadge');
-        if (badge) badge.classList.add('hidden');
-        
-        // Mark as read in DB if needed (optional optimization)
-    }
-};
+// Functions removed as they are defined again below with improvements
 
-window.clearAllNotifications = async () => {
-    if (!currentUser || !currentUser.profile) return;
-    if (confirm("Delete all notifications?")) {
-        await db.ref(`riders/${currentUser.profile.id}/notifications`).remove();
-    }
-};
-
-function initNotificationListener() {
-    if (!currentUser || !currentUser.profile) return;
-    const uid = currentUser.profile.id;
-    
-    db.ref(`riders/${uid}/notifications`).on('value', snap => {
-        const list = document.getElementById('notifList');
-        const badge = document.getElementById('notifBadge');
-        if (!list) return;
-
-        list.innerHTML = '';
-        const data = snap.val();
-        
-        if (!data) {
-            list.innerHTML = `
-                <div class="empty-notif">
-                    <i data-lucide="bell-off"></i>
-                    <p>No new notifications</p>
-                </div>`;
-            if (badge) badge.classList.add('hidden');
-        } else {
-            const items = Object.values(data).sort((a,b) => b.timestamp - a.timestamp);
-            let unreadCount = 0;
-
-            items.forEach(n => {
-                if (!n.read) unreadCount++;
-                const div = document.createElement('div');
-                div.className = `notif-item ${!n.read ? 'unread' : ''}`;
-                
-                const date = new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
-                div.innerHTML = `
-                    <span class="notif-item-title">${escapeHtml(n.title)}</span>
-                    <span class="notif-item-msg">${escapeHtml(n.message)}</span>
-                    <span class="notif-item-time">${date}</span>
-                `;
-                list.appendChild(div);
-            });
-
-            if (badge) {
-                if (unreadCount > 0) {
-                    badge.innerText = unreadCount;
-                    badge.classList.remove('hidden');
-                    // Only vibrate if notification count increased
-                    if (window._lastNotifCount < unreadCount) window.haptic(30);
-                } else {
-                    badge.classList.add('hidden');
-                }
-            }
-            window._lastNotifCount = unreadCount;
-        }
-        if (window.lucide) lucide.createIcons();
-    });
-}
+// Block consolidated in Section 3.5
 
 /**
  * 3.5 NOTIFICATIONS
@@ -201,7 +129,7 @@ function initNotificationListener() {
 
         if (badge) {
             badge.innerText = unreadCount;
-            badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+            badge.classList.toggle('hidden', unreadCount === 0);
         }
 
         if (unreadCount > 0 && window.haptic) {
@@ -309,9 +237,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function showError(msg) {
     const errorEl = document.getElementById('loginError');
+    if (!errorEl) return;
     errorEl.innerText = msg;
-    errorEl.style.display = 'block';
-    setTimeout(() => errorEl.style.display = 'none', 3000);
+    errorEl.classList.remove('hidden');
+    setTimeout(() => errorEl.classList.add('hidden'), 3000);
 }
 
 window.logout = () => {
@@ -438,7 +367,7 @@ auth.onAuthStateChanged(async user => {
         // Final UI Unlock
         const dashboard = document.getElementById('dashboard');
         if (dashboard) {
-            dashboard.style.display = 'block';
+            dashboard.classList.remove('hidden');
             showSection('home');
         }
         
@@ -490,8 +419,9 @@ function updateStatusUI(status) {
     badge.innerText = status;
     badge.className = `status ${status}`;
     btn.innerText = `SET STATUS: ${status === "Online" ? 'OFFLINE' : 'ONLINE'}`;
-    btn.style.background = status === "Online" ? "var(--danger-red)" : "var(--success-green)";
-    btn.style.color = "white";
+    btn.classList.toggle('btn-danger', status === "Online");
+    btn.classList.toggle('btn-success', status === "Offline");
+    btn.style.color = "white"; // Colors handled by classes now
 
     // Trigger location tracking if online
     if (status === "Online") {
@@ -717,11 +647,11 @@ function initRealtimeListeners() {
                         <p class="banner-title"><span class="pulse-icon"></span> 🚀 ONGOING TRIP</p>
                         <p class="banner-subtitle">Customer is waiting! Open Trip for details.</p>
                     </div>`;
-                banner.style.display = 'block';
+                banner.classList.remove('hidden');
             } else {
                 banner.onclick = null;
                 banner.innerHTML = '';
-                banner.style.display = 'none';
+                banner.classList.add('hidden');
                 activeView.innerHTML = '<div class="empty-state-glass"><p>No active trip. Choose an order from Pickup Hub.</p></div>';
             }
         }
@@ -735,14 +665,14 @@ function initRealtimeListeners() {
         const mapCont = document.getElementById('activeTripMap');
         if (mapCont) {
             if (activeOrderData) {
-                mapCont.style.display = 'block';
+                mapCont.classList.remove('hidden');
                 if (activeOrderData.lat && activeOrderData.lng) {
                     window.updateRiderMap(activeOrderData.lat, activeOrderData.lng);
                 } else {
                     window.updateRiderMap();
                 }
             } else {
-                mapCont.style.display = 'none';
+                mapCont.classList.add('hidden');
             }
         }
 
@@ -870,13 +800,15 @@ window.contactCustomer = (phone) => {
 
 window.confirmDelivery = (id) => {
     currentOrderId = id;
-    document.getElementById('otpInput').value = '';
-    document.getElementById('otpPanel').style.display = 'flex';
+    const otpInput = document.getElementById('otpInput');
+    const otpPanel = document.getElementById('otpPanel');
+    if (otpInput) otpInput.value = '';
+    if (otpPanel) otpPanel.classList.remove('hidden');
     
     // Admin Override Logic
     const emergencyBtn = document.getElementById('emergencyBtn');
     if (emergencyBtn) {
-        emergencyBtn.style.display = (currentUser && currentUser.profile && currentUser.profile.isAdmin) ? 'block' : 'none';
+        emergencyBtn.classList.toggle('hidden', !(currentUser && currentUser.profile && currentUser.profile.isAdmin));
     }
 };
 
@@ -921,7 +853,8 @@ window.emergencyOverride = async () => {
 };
 
 window.closeOTPPanel = () => {
-    document.getElementById('otpPanel').style.display = 'none';
+    const otpPanel = document.getElementById('otpPanel');
+    if (otpPanel) otpPanel.classList.add('hidden');
 };
 
 window.verifyOTP = async () => {
