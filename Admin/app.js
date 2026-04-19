@@ -89,26 +89,19 @@ auth = firebase.auth();
 // =============================
 // FILE UPLOAD UTILITY (Base64)
 // =============================
-async function uploadImage(file, path) {
-    if (!file) return null;
+async function uploadImage(fileOrBlob, path) {
+    if (!fileOrBlob) return null;
     
-    // Validation: Only allow JPEG, PNG, WebP
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-        alert("Invalid file type. Please upload JPEG, PNG, or WebP.");
-        return null;
-    }
-
     // Compression & Base64 Conversion
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(fileOrBlob);
         reader.onload = (event) => {
             const img = new Image();
             img.src = event.target.result;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 500; // Optimized for dashboard speed
+                const MAX_WIDTH = 500; // Optimized for dashboard speed & DB usage
                 let width = img.width;
                 let height = img.height;
 
@@ -122,7 +115,7 @@ async function uploadImage(file, path) {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
                 
-                // Return compressed DataURI
+                // Return compressed DataURI (0.6 quality for small footprint)
                 resolve(canvas.toDataURL('image/jpeg', 0.6));
             };
             img.onerror = (err) => reject(new Error("Image processing failed"));
@@ -3801,5 +3794,121 @@ function filterWalkinByCategory(catName, el) {
     } else {
         const filtered = allWalkinDishes.filter(d => d.category === catName);
         renderWalkinDishGrid(filtered);
+    }
+}
+// =============================
+// IMAGE STORAGE MIGRATION
+// =============================
+async function runImageMigration() {
+    if (!confirm("This will convert all Firebase Storage images to Base64 text in the database. This process might take a minute depending on the number of items. Proceed?")) return;
+
+    try {
+        console.log("🚀 Starting Image Migration...");
+        const updates = {};
+        
+        // Helper to download image and convert to Base64
+        async function convertUrlToDataUri(url) {
+            if (!url || !url.includes("firebasestorage.googleapis.com")) return url;
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                return await uploadImage(blob, "temp");
+            } catch (err) {
+                console.error("Failed to convert image:", url, err);
+                return url; // Keep original on failure
+            }
+        }
+
+        // 1. Dishes
+        const dishesSnap = await db.ref('dishes').once('value');
+        const dishesData = dishesSnap.val();
+        if (dishesData) {
+            for (const id in dishesData) {
+                if (dishesData[id].image && dishesData[id].image.includes("firebasestorage")) {
+                    console.log("Migrating Dish:", dishesData[id].name);
+                    const b64 = await convertUrlToDataUri(dishesData[id].image);
+                    updates[`dishes/${id}/image`] = b64;
+                }
+            }
+        }
+
+        // 2. Categories
+        const catsSnap = await db.ref('categories').once('value');
+        const catsData = catsSnap.val();
+        if (catsData) {
+            for (const id in catsData) {
+                if (catsData[id].imageUrl && catsData[id].imageUrl.includes("firebasestorage")) {
+                    console.log("Migrating Category:", catsData[id].name);
+                    const b64 = await convertUrlToDataUri(catsData[id].imageUrl);
+                    updates[`categories/${id}/imageUrl`] = b64;
+                }
+            }
+        }
+
+        // 3. Riders
+        const ridersSnap = await db.ref('riders').once('value');
+        const ridersData = ridersSnap.val();
+        if (ridersData) {
+            for (const id in ridersData) {
+                if (ridersData[id].profilePhoto && ridersData[id].profilePhoto.includes("firebasestorage")) {
+                    console.log("Migrating Rider Profile:", ridersData[id].name);
+                    const b64 = await convertUrlToDataUri(ridersData[id].profilePhoto);
+                    updates[`riders/${id}/profilePhoto`] = b64;
+                }
+                if (ridersData[id].aadharPhoto && ridersData[id].aadharPhoto.includes("firebasestorage")) {
+                    console.log("Migrating Rider Aadhar:", ridersData[id].name);
+                    const b64 = await convertUrlToDataUri(ridersData[id].aadharPhoto);
+                    updates[`riders/${id}/aadharPhoto`] = b64;
+                }
+            }
+        }
+
+        // 4. Bot Settings
+        const botSnap = await db.ref('settings/Bot').once('value');
+        const botData = botSnap.val();
+        if (botData) {
+            if (botData.imgDelivered && botData.imgDelivered.includes("firebasestorage")) {
+                console.log("Migrating Bot Delivered Image");
+                updates['settings/Bot/imgDelivered'] = await convertUrlToDataUri(botData.imgDelivered);
+            }
+            if (botData.imgFeedback && botData.imgFeedback.includes("firebasestorage")) {
+                console.log("Migrating Bot Feedback Image");
+                updates['settings/Bot/imgFeedback'] = await convertUrlToDataUri(botData.imgFeedback);
+            }
+            if (botData.statusImages) {
+                for (const key in botData.statusImages) {
+                    if (botData.statusImages[key].url && botData.statusImages[key].url.includes("firebasestorage")) {
+                        console.log("Migrating Bot Status Image:", key);
+                        updates[`settings/Bot/statusImages/${key}/url`] = await convertUrlToDataUri(botData.statusImages[key].url);
+                    }
+                }
+            }
+        }
+
+        // 5. Store Settings
+        const storeSnap = await db.ref('settings/Store').once('value');
+        const storeData = storeSnap.val();
+        if (storeData) {
+            if (storeData.bannerImage && storeData.bannerImage.includes("firebasestorage")) {
+                console.log("Migrating Banner Image");
+                updates['settings/Store/bannerImage'] = await convertUrlToDataUri(storeData.bannerImage);
+            }
+            if (storeData.paymentQR && storeData.paymentQR.includes("firebasestorage")) {
+                console.log("Migrating Payment QR");
+                updates['settings/Store/paymentQR'] = await convertUrlToDataUri(storeData.paymentQR);
+            }
+        }
+
+        if (Object.keys(updates).length > 0) {
+            await db.ref().update(updates);
+            console.log("✅ Image Migration Complete!", updates);
+            alert("Success: All images migrated to Base64 text!");
+            location.reload();
+        } else {
+            alert("No legacy images found to migrate.");
+        }
+    } catch (err) {
+        console.error("Migration Failed:", err);
+        alert("Critical Error: Migration failed. Check console for details.");
     }
 }
