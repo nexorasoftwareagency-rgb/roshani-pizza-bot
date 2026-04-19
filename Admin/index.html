@@ -218,9 +218,13 @@
                         </div>
 
                         <div class="panel">
-                            <div class="panel-header">
-                                <h3 class="panel-title">Active Riders</h3>
-                                <span id="onlineRiderCount" class="badge badge-ready">0 ON</span>
+                            <div class="card-header flex-row flex-between">
+                                <h3 class="card-title">All Categories</h3>
+                                <button onclick="migrateAddonsToCategories()" class="btn-text" style="font-size:12px; color:var(--primary);">
+                                    <i class="fas fa-sync"></i> Migrate Dish Add-ons
+                                </button>
+                            </div>
+                            <span id="onlineRiderCount" class="badge badge-ready">0 ON</span>
                             </div>
                             <div id="riderStatusList">
                                 <!-- Dynamic -->
@@ -293,19 +297,32 @@
             <!-- CATEGORIES TAB -->
             <div id="tab-categories" class="tab-content hidden">
                 <div class="panel">
-                    <div class="panel-header">
+                    <div class="panel-header" style="justify-content: space-between;">
                         <h3 class="desktop-only">Category Management</h3>
+                        <button onclick="migrateAddonsToCategories()" class="btn-secondary btn-small" style="font-size:10px; opacity:0.7;">
+                            <i class="fas fa-sync"></i> Migrate Dish Add-ons
+                        </button>
+                    </div>
                         <div class="flex-row flex-gap-10 flex-center">
                         <div class="flex-row flex-gap-10 flex-center p-15 glass-card category-upload-box">
                                 <img id="catPreview" src="assets/category_icon.png" class="category-preview-img" alt="Category Preview">
                                 <input type="file" id="catFile" accept="image/*" class="hidden" onchange="previewImage(this, 'catPreview')" title="Select category photo">
                                 <button onclick="document.getElementById('catFile').click()" class="btn-secondary small-photo-btn">Photo</button>
                             </div>
-                            <input id="newCatName" placeholder="Category Name" class="form-input mb-0 w-150" title="Category Name">
+                             <input id="newCatName" placeholder="Category Name" class="form-input mb-0 w-150" title="Category Name">
                             <button onclick="addCategory()" class="btn-primary report-gen-btn">Add</button>
                         </div>
                     </div>
-                    <div id="categoryList" class="category-grid"></div>
+                    <div id="categoryAddonsContainer" class="glass-card p-15 mt-10" style="max-width: 400px;">
+                        <div class="flex-between flex-center mb-10">
+                            <label class="form-label-small mb-0">Category Add-ons (Optional)</label>
+                            <button onclick="addNewCategoryAddonField()" class="btn-secondary btn-small">+ Add Addon</button>
+                        </div>
+                        <div id="categoryAddonsList">
+                            <!-- Rows added here -->
+                        </div>
+                    </div>
+                    <div id="categoryList" class="category-grid mt-20"></div>
                 </div>
             </div>
 
@@ -576,6 +593,84 @@
                                         <i data-lucide="play-circle"></i> <span>Test</span>
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- WhatsApp Bot Aesthetics & Promotions -->
+                        <div class="glass-card p-20">
+                            <h4 class="mb-14">🤖 WhatsApp Bot Aesthetics & Promotions</h4>
+                            <p class="text-secondary-small mb-14">Upload status-specific images and update your social footprints.</p>
+                            
+                            <div class="divider-dashed mb-20"></div>
+
+                            <h5 class="mb-12 text-muted-small text-upper ls-sm">Status-Specific Images</h5>
+                            <div class="grid grid-cols-2 grid-gap-12 mb-20">
+                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                    <label class="form-label-small mb-4">✅ Order Confirmed</label>
+                                    <img id="botImgConfirmedPreview" src="assets/banner_placeholder.png" alt="Confirmed" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgConfirmedFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgConfirmedPreview')">
+                                    <button onclick="document.getElementById('botImgConfirmedFile').click()" class="btn-secondary btn-small w-full">Upload</button>
+                                </div>
+                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                    <label class="form-label-small mb-4">👨‍🍳 Preparing</label>
+                                    <img id="botImgPreparingPreview" src="assets/banner_placeholder.png" alt="Preparing" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgPreparingFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgPreparingPreview')">
+                                    <button onclick="document.getElementById('botImgPreparingFile').click()" class="btn-secondary btn-small w-full">Upload</button>
+                                </div>
+                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                    <label class="form-label-small mb-4">🍕 Ready / Cooked</label>
+                                    <img id="botImgCookedPreview" src="assets/banner_placeholder.png" alt="Cooked" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgCookedFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgCookedPreview')">
+                                    <button onclick="document.getElementById('botImgCookedFile').click()" class="btn-secondary btn-small w-full">Upload</button>
+                                </div>
+                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                    <label class="form-label-small mb-4">🚚 Out for Delivery</label>
+                                    <img id="botImgOutPreview" src="assets/banner_placeholder.png" alt="Out for Delivery" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgOutFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgOutPreview')">
+                                    <button onclick="document.getElementById('botImgOutFile').click()" class="btn-secondary btn-small w-full">Upload</button>
+                                </div>
+                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                    <label class="form-label-small mb-4">🌟 Delivered (Thank You)</label>
+                                    <img id="botImgDeliveredPreview" src="assets/banner_placeholder.png" alt="Delivered" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgDeliveredFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgDeliveredPreview')">
+                                    <button onclick="document.getElementById('botImgDeliveredFile').click()" class="btn-secondary btn-small w-full">Upload</button>
+                                </div>
+                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                    <label class="form-label-small mb-4">⭐ Feedback / Rating</label>
+                                    <img id="botImgFeedbackPreview" src="assets/banner_placeholder.png" alt="Feedback" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgFeedbackFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgFeedbackPreview')">
+                                    <button onclick="document.getElementById('botImgFeedbackFile').click()" class="btn-secondary btn-small w-full">Upload</button>
+                                </div>
+                            </div>
+
+                            <div class="divider-dashed mb-20"></div>
+
+                            <h5 class="mb-12 text-muted-small text-upper ls-sm">Promotional Social Links</h5>
+                            <div class="flex-row flex-gap-12 mb-14">
+                                <div class="flex-1">
+                                    <label class="form-label-small">Instagram Profile URL</label>
+                                    <input type="text" id="botSocialInsta" class="form-input" placeholder="https://instagram.com/your-brand">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="form-label-small">Facebook Page URL</label>
+                                    <input type="text" id="botSocialFb" class="form-input" placeholder="https://facebook.com/your-page">
+                                </div>
+                            </div>
+                            <div class="flex-row flex-gap-12 mb-10">
+                                <div class="flex-1">
+                                    <label class="form-label-small">Google Review Link</label>
+                                    <input type="text" id="botSocialReview" class="form-input" placeholder="https://g.page/r/your-id/review">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="form-label-small">Website / Store Link</label>
+                                    <input type="text" id="botSocialWebsite" class="form-input" placeholder="https://yourwebsite.com">
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 20px; padding: 15px; border: 2px dashed var(--primary); border-radius: 12px; background: var(--sidebar-accent);">
+                                <h5 style="margin-bottom: 8px; color: var(--primary); font-size: 13px;">🛠️ POS Migration Utility</h5>
+                                <p style="font-size: 11px; margin-bottom: 12px; color: var(--text-muted);">Moves all add-ons from dishes to categories. Use this once to sync existing data.</p>
+                                <button class="btn-primary btn-small" onclick="migrateAddonsToCategories()">🚀 Run Migration</button>
                             </div>
                         </div>
 
@@ -1105,5 +1200,56 @@
         // Ensure Lucide icons are rendered
         if(typeof lucide !== 'undefined') lucide.createIcons();
     </script>
+    <!-- POS SELECTION MODAL -->
+    <div id="posSelectionModal" class="modal">
+        <div class="modal-content glass-card selection-modal" style="max-width: 500px; width: 95%;">
+            <div class="modal-header">
+                <div>
+                    <h2 id="posModalDishName" class="modal-title">Select Options</h2>
+                    <p id="posModalDishCategory" class="text-muted-small" style="margin-top: 4px;"></p>
+                </div>
+                <button onclick="hidePOSSelectionModal()" class="close-btn">&times;</button>
+            </div>
+            
+            <div class="modal-body p-20">
+                <!-- Size Selection -->
+                <div class="selection-section">
+                    <label class="form-label-small upper-label" style="font-weight: 800; color: var(--text-muted); font-size: 11px; letter-spacing: 1px;">CHOOSE SIZE</label>
+                    <div id="posSizeGrid" class="size-selection-grid mt-10">
+                        <!-- Dynamic Size Cards -->
+                    </div>
+                </div>
+
+                <!-- Add-ons Selection -->
+                <div id="posAddonsSection" class="selection-section mt-24">
+                    <label class="form-label-small upper-label" style="font-weight: 800; color: var(--text-muted); font-size: 11px; letter-spacing: 1px;">EXTRA ADD-ONS</label>
+                    <div id="posAddonsList" class="addons-checklist-grid mt-10">
+                        <!-- Dynamic Addons -->
+                    </div>
+                </div>
+
+                <!-- Quantity Selection -->
+                <div class="selection-section mt-24">
+                    <label class="form-label-small upper-label" style="font-weight: 800; color: var(--text-muted); font-size: 11px; letter-spacing: 1px;">QUANTITY</label>
+                    <div class="flex-row flex-center flex-gap-20 mt-10">
+                        <button onclick="adjustPOSModalQty(-1)" class="qty-btn-large">−</button>
+                        <span id="posModalQty" class="qty-val-large">1</span>
+                        <button onclick="adjustPOSModalQty(1)" class="qty-btn-large">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer selection-footer">
+                <div class="selection-total-info">
+                    <div class="text-muted-small">Total Price</div>
+                    <div id="posModalTotal" class="total-price-large">₹0</div>
+                </div>
+                <button id="posAddBtn" onclick="addToWalkinCartFromModal()" class="btn-primary btn-add-large">
+                    🛒 Add to Cart
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
