@@ -7,8 +7,12 @@
     const urlParams = new URLSearchParams(window.location.search);
     let brand = urlParams.get('brand');
     
+    // Circuit Breaker: Strip brand from URL to prevent loop if it conflicts with DB
     if (brand) {
         localStorage.setItem('admin_brand', brand);
+        const url = new URL(window.location.href);
+        url.searchParams.delete('brand');
+        window.history.replaceState({}, '', url.toString());
     } else {
         brand = localStorage.getItem('admin_brand') || 'pizza';
     }
