@@ -6,6 +6,7 @@
     <title>Roshani Pizza | Rider Portal</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-512.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#FF6B00">
@@ -50,19 +51,19 @@
 
 
     <!-- Dashboard View (Protected) -->
-    <div id="dashboard" style="display: none;">
+    <div id="dashboard" class="hidden">
         <!-- Dashboard Overlay -->
         <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleRiderSidebar()"></div>
 
         <!-- Mobile Header -->
         <header class="mobile-header">
-            <div class="mobile-header-left" onclick="toggleRiderSidebar()">
+            <div class="mobile-header-left" onclick="toggleRiderSidebar()" title="Open Navigation Drawer">
                 <i data-lucide="menu"></i>
             </div>
             <div class="mobile-header-center">
                 <h2 id="mobileTabTitle">DASHBOARD</h2>
             </div>
-            <div class="mobile-header-right" onclick="toggleNotificationSheet()">
+            <div class="mobile-header-right" onclick="toggleNotificationSheet()" title="View Recent Notifications">
                 <div class="notif-bell-container">
                     <i data-lucide="bell"></i>
                     <div id="notifBadge" class="notif-badge hidden"></div>
@@ -76,25 +77,25 @@
                 <h3 class="sidebar-title">ROSHANI RIDER</h3>
             </div>
             <ul class="nav-links">
-                <li class="active" onclick="showSection('home')" data-section="home">
+                <li class="active" onclick="showSection('home')" data-section="home" title="View Dashboard Home">
                     <i data-lucide="layout-dashboard"></i> <span>Home</span>
                 </li>
-                <li onclick="showSection('available')" data-section="available">
+                <li onclick="showSection('available')" data-section="available" title="View Available Pickup Orders">
                     <i data-lucide="shopping-bag"></i> <span>Pickup Orders</span>
                 </li>
-                <li onclick="showSection('active')" data-section="active">
+                <li onclick="showSection('active')" data-section="active" title="View Active Delivery Map">
                     <i data-lucide="map-pin"></i> <span>Live Delivery</span>
                 </li>
-                <li onclick="showSection('completed')" data-section="completed">
+                <li onclick="showSection('completed')" data-section="completed" title="View Trip History">
                     <i data-lucide="history"></i> <span>My History</span>
                 </li>
-                <li onclick="showSection('earnings')" data-section="earnings">
+                <li onclick="showSection('earnings')" data-section="earnings" title="View My Earnings and Wallet">
                     <i data-lucide="wallet"></i> <span>My Wallet</span>
                 </li>
-                <li onclick="showSection('profile')" data-section="profile">
+                <li onclick="showSection('profile')" data-section="profile" title="View Profile and Settings">
                     <i data-lucide="settings-2"></i> <span>Settings</span>
                 </li>
-                <li id="menu-downloadapp" onclick="window.installPWA()" class="pwa-download-item" style="display:none;" title="Download Rider App">
+                <li id="menu-downloadapp" onclick="window.installPWA()" class="pwa-download-item hidden" title="Download Rider App">
                     <i data-lucide="download-cloud"></i> <span>Download App</span>
                 </li>
                 <li onclick="logout()" class="logout-link">
@@ -105,28 +106,28 @@
 
         <!-- Bottom Navigation (Mobile) -->
         <div class="bottom-nav">
-            <div class="nav-item active" onclick="showSection('home')" data-section="home">
+            <div class="nav-item active" onclick="showSection('home')" data-section="home" title="Go to Dashboard Home">
                 <i data-lucide="layout-dashboard"></i> <span>HOME</span>
             </div>
-            <div class="nav-item" onclick="showSection('available')" data-section="available">
+            <div class="nav-item" onclick="showSection('available')" data-section="available" title="View Available Pickup Orders">
                 <i data-lucide="shopping-bag"></i> <span>PICKUP</span>
             </div>
-            <div class="nav-item" onclick="showSection('active')" data-section="active">
+            <div class="nav-item" onclick="showSection('active')" data-section="active" title="View Active Delivery Tracking">
                 <i data-lucide="map-pin"></i> <span>LIVE</span>
             </div>
-            <div class="nav-item" onclick="showSection('profile')" data-section="profile">
+            <div class="nav-item" onclick="showSection('profile')" data-section="profile" title="View Your Profile & Settings">
                 <i data-lucide="user"></i> <span>PROFILE</span>
             </div>
         </div>
 
         <div class="main-content">
             <header class="top-nav">
-                <div class="desktop-hamburger" onclick="toggleRiderSidebar()">
+                <div class="desktop-hamburger" onclick="toggleRiderSidebar()" title="Toggle Sidebar Navigation">
                     <i data-lucide="menu"></i>
                 </div>
                 <div>
                     <span class="section-title-lbl" id="sectionTitle">DASHBOARD</span>
-                    <select id="outletSwitcher" class="outlet-switcher-select hidden" onchange="switchOutlet(this.value)">
+                    <select id="outletSwitcher" class="outlet-switcher-select hidden" onchange="switchOutlet(this.value)" title="Switch Outlet Location">
                         <!-- Populated via JS -->
                     </select>
                 </div>
@@ -186,21 +187,21 @@
             <section id="sec-earnings" class="view-section">
                 <h2 class="section-heading">Wallet Summary</h2>
                 
-                <div class="overview-card" style="margin-bottom:20px;">
+                <div class="overview-card mb-20">
                     <span class="lbl">Total Cash to Settle</span>
-                    <span class="val" id="e-total" style="color:var(--text-dark)">₹0</span>
+                    <span class="val txt-dark" id="e-total">₹0</span>
                 </div>
 
                 <div class="earnings-grid-split">
                     <div class="overview-card card-pizza">
                         <span class="lbl">Pizza Outlet</span>
-                        <span class="val earning-val" id="e-pizza" style="color:var(--primary-orange)">₹0</span>
-                        <span class="lbl" style="font-size:10px; margin-top:10px;">Today: <span id="e-pizza-today">₹0</span></span>
+                        <span class="val earning-val txt-orange" id="e-pizza">₹0</span>
+                        <span class="lbl txt-xtra-small mt-10">Today: <span id="e-pizza-today">₹0</span></span>
                     </div>
                     <div class="overview-card card-cake">
                         <span class="lbl">Cake Outlet</span>
-                        <span class="val earning-val" id="e-cake" style="color:var(--primary-cake)">₹0</span>
-                        <span class="lbl" style="font-size:10px; margin-top:10px;">Today: <span id="e-cake-today">₹0</span></span>
+                        <span class="val earning-val txt-cake" id="e-cake">₹0</span>
+                        <span class="lbl txt-xtra-small mt-10">Today: <span id="e-cake-today">₹0</span></span>
                     </div>
                 </div>
             </section>
@@ -249,10 +250,10 @@
                     </div>
 
                     <div class="profile-actions">
-                        <button id="statusToggleBtn" onclick="toggleRiderStatus()" class="btn-primary">
+                        <button id="statusToggleBtn" onclick="toggleRiderStatus()" class="btn-primary" title="Toggle Duty Status">
                             SET STATUS: ONLINE
                         </button>
-                        <button onclick="logout()" class="btn-outline-danger">
+                        <button onclick="logout()" class="btn-outline-danger" title="Logout from Rider Portal">
                             LOGOUT
                         </button>
                     </div>
@@ -266,12 +267,12 @@
         <div class="modal-card">
             <h3 class="modal-title">TRIP COMPLETE</h3>
             <p class="modal-sub">Enter verification code from customer</p>
-            <input type="number" id="otpInput" placeholder="0000" maxlength="4">
+            <input type="number" id="otpInput" placeholder="0000" maxlength="4" title="Enter 4-digit verification code from customer">
             <div class="modal-actions">
                 <button class="btn-primary no-shadow" onclick="verifyOTP()">CONFIRM</button>
                 <button onclick="closeOTPPanel()" class="btn-ghost">LATER</button>
             </div>
-            <button id="emergencyBtn" class="btn-ghost" style="display:none; color:#ef4444; border:1px solid #ef4444; margin:10px auto; width:90%; font-weight:800; font-size:11px;" onclick="emergencyOverride()">EMERGENCY OVERRIDE</button>
+            <button id="emergencyBtn" class="btn-ghost btn-emergency hidden" onclick="emergencyOverride()">EMERGENCY OVERRIDE</button>
         </div>
     </div>
 
@@ -279,8 +280,8 @@
     <div id="notificationSheet" class="notif-sheet">
         <div class="notif-sheet-header">
             <h3>Notifications</h3>
-            <button class="btn-clear-all" onclick="clearAllNotifications()">Clear All</button>
-            <button class="btn-close-sheet" onclick="toggleNotificationSheet()">
+            <button class="btn-clear-all" onclick="clearAllNotifications()" title="Clear All Notifications">Clear All</button>
+            <button class="btn-close-sheet" onclick="toggleNotificationSheet()" title="Close Notification Sheet">
                 <i data-lucide="x"></i>
             </button>
         </div>

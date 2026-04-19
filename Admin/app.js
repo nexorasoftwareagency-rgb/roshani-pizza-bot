@@ -12,24 +12,27 @@ let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    const downloadBtn = document.getElementById('menu-downloadapp');
-    if (downloadBtn) downloadBtn.style.display = 'block';
+    const downloadBtn = document.getElementById('menu-download');
+    if (downloadBtn) downloadBtn.classList.remove('hidden');
 });
 
 window.installPWA = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+        alert("The app is already installed or your browser doesn't support PWA installation.");
+        return;
+    }
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
-        const downloadBtn = document.getElementById('menu-downloadapp');
-        if (downloadBtn) downloadBtn.style.display = 'none';
+        const downloadBtn = document.getElementById('menu-download');
+        if (downloadBtn) downloadBtn.classList.add('hidden');
     }
     deferredPrompt = null;
 };
 
 window.addEventListener('appinstalled', () => {
     const downloadBtn = document.getElementById('menu-downloadapp');
-    if (downloadBtn) downloadBtn.style.display = 'none';
+    if (downloadBtn) downloadBtn.classList.add('hidden');
     deferredPrompt = null;
 });
 
@@ -107,10 +110,15 @@ const ordersMap = new Map(); // For XSS-safe access to order objects in UI
 let secondaryAuth;
 function initSecondaryAuth() {
     try {
+        if (!window.firebaseConfig) {
+            console.error("Firebase Config not found! Secondary auth check skipped.");
+            secondaryAuth = firebase.auth();
+            return;
+        }
         if (firebase.apps.length > 1) {
             secondaryAuth = firebase.app("secondary").auth();
         } else {
-            const secondaryApp = firebase.initializeApp(firebaseConfig, "secondary");
+            const secondaryApp = firebase.initializeApp(window.firebaseConfig, "secondary");
             secondaryAuth = secondaryApp.auth();
         }
     } catch (e) {
@@ -128,7 +136,10 @@ let currentEditingRiderId = null;
 window.showDishModal = async (dishId = null) => {
     editingDishId = dishId;
     const modal = document.getElementById('dishModal');
-    if(modal) modal.style.display = 'flex';
+    if(modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
 
     // Always refresh category dropdown when modal opens
     if (categories.length === 0) loadCategories();
@@ -136,7 +147,7 @@ window.showDishModal = async (dishId = null) => {
 
     document.getElementById('modalTitle').innerText = dishId ? 'Edit Dish' : 'Add New Dish';
     const statusLabel = document.getElementById('uploadStatus');
-    if(statusLabel) statusLabel.style.display = 'none';
+    if(statusLabel) statusLabel.classList.add('hidden');
 
     if (!dishId) {
         document.getElementById('dishName').value = '';
@@ -213,71 +224,28 @@ function previewImage(input, previewId) {
 }
 // Sidebar Helpers
 window.toggleSidebar = () => {
+    console.log("Toggle Sidebar Clicked");
     const sidebar = document.getElementById('sidebarNav');
     const overlay = document.getElementById('sidebarOverlay');
-    if (!sidebar) return;
+    if (!sidebar) {
+        console.error("Sidebar Nav not found!");
+        return;
+    }
 
     window.haptic(15);
     
     if (window.innerWidth > 1024) {
-        // Desktop: Toggle collapsed state
+        console.log("Desktop Toggle");
         document.body.classList.toggle('sidebar-collapsed');
     } else {
-        // Mobile: Toggle active overlay state
         const isActive = sidebar.classList.toggle('active');
+        console.log("Mobile Toggle - Active:", isActive);
         if (overlay) overlay.classList.toggle('active', isActive);
     }
 };
 
 // Update switchTab to handle mobile sidebar auto-close
-const originalSwitchTab = window.switchTab;
-window.switchTab = (tabId) => {
-    // If mobile, close sidebar on nav
-    if (window.innerWidth <= 1024) {
-        const sidebar = document.getElementById('sidebarNav');
-        const overlay = document.getElementById('sidebarOverlay');
-        if (sidebar) sidebar.classList.remove('active');
-        if (overlay) overlay.classList.remove('active');
-    }
-    
-    // Call the actual tab switching logic if it's already defined elsewhere, 
-    // or implement a standard one if it's missing.
-    // Assuming switchTab exists based on context.
-    if (typeof originalSwitchTab === 'function') {
-        originalSwitchTab(tabId);
-    } else {
-        // Fallback or initialization of switchTab logic
-        console.log("Switching to tab:", tabId);
-        document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
-        const target = document.getElementById('panel-' + tabId);
-        if (target) target.classList.remove('hidden');
-        
-        document.querySelectorAll('.sidebar li').forEach(li => li.classList.remove('active'));
-        const menuId = 'menu-' + tabId;
-        const menuItem = document.getElementById(menuId);
-        if (menuItem) menuItem.classList.add('active');
-        
-        // Update header titles for mobile
-        const tabNames = {
-            'dashboard': 'Dashboard',
-            'orders': 'Orders',
-            'live': 'Live Ops',
-            'walkin': 'POS Control',
-            'menu': 'Menu Management',
-            'categories': 'Categories',
-            'riders': 'Delivery Riders',
-            'customers': 'Customer List',
-            'reports': 'Analytics',
-            'settings': 'Settings',
-            'notifications': 'Alerts',
-            'liveTracker': 'Live Tracking'
-        };
-        const titleEl = document.getElementById('mobileTabTitle');
-        if (titleEl) titleEl.innerText = tabNames[tabId] || 'Panel';
-        
-        if (window.lucide) lucide.createIcons();
-    }
-};
+// Updated switchTab logic consolidated below at line 686
 
 
 /**
@@ -302,12 +270,12 @@ window.openOrderDrawer = (id) => {
     const safeStatus = escapeHtml(o.status || 'Placed');
 
     const itemsHtml = (o.items || []).map(item => `
-        <div style="display:flex; justify-content:space-between; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid #f1f5f9;">
+        <div class="flex-row flex-between mb-12 p-8-15 border-b-ghost">
             <div>
-                <div style="font-weight:700; color:var(--text-main);">${escapeHtml(item.name)}</div>
-                <div style="font-size:11px; color:var(--text-muted);">${escapeHtml(item.size)} x ${item.qty || 1}</div>
+                <div class="font-bold text-main">${escapeHtml(item.name)}</div>
+                <div class="text-muted-small">${escapeHtml(item.size)} x ${item.qty || 1}</div>
             </div>
-            <div style="font-weight:800; color:var(--primary);">₹${item.price * (item.qty || 1)}</div>
+            <div class="font-black text-primary">₹${item.price * (item.qty || 1)}</div>
         </div>
     `).join('');
 
@@ -403,8 +371,9 @@ adminPassword.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogi
 
 window.userLogout = () => {
     // Force UI reset immediately (don't rely only on onAuthStateChanged)
-    authOverlay.style.display = "flex";
-    document.querySelector(".layout").style.display = "none";
+    if (authOverlay) authOverlay.classList.remove('hidden');
+    const layout = document.querySelector(".layout");
+    if (layout) layout.classList.add('hidden');
     auth.signOut();
 };
 
@@ -416,59 +385,69 @@ auth.onAuthStateChanged(async user => {
         if (_ordersChangedCb) { db.ref("orders").off("child_changed", _ordersChangedCb); _ordersChangedCb = null; }
         if (window.currentOutlet) db.ref(`dishes/${window.currentOutlet}`).off();
         
-        authOverlay.style.display = "flex";
-        document.querySelector(".layout").style.display = "none";
+        if (authOverlay) authOverlay.classList.remove('hidden');
+        const layout = document.querySelector(".layout");
+        if (layout) layout.classList.add('hidden');
         return;
     }
 
-    try {
-        const adminSnap = await db.ref("admins").once("value");
-        adminData = null;
-        const normalizedEmail = user.email.toLowerCase();
+        try {
+            const adminSnap = await db.ref("admins").once("value");
+            adminData = null;
+            const normalizedEmail = (user.email || "").toLowerCase();
 
-        adminSnap.forEach(snap => {
-            if (snap.val().email.toLowerCase() === normalizedEmail) {
-                adminData = snap.val();
-            }
-        });
-
-        if (!adminData) {
-            alert("ACCESS DENIED: Not recognized as an Admin.");
-            auth.signOut();
-            return;
+            adminSnap.forEach(snap => {
+                const val = snap.val();
+                if (val && val.email && val.email.toLowerCase() === normalizedEmail) {
+                    adminData = val;
+                }
+            });
+        } catch (authErr) {
+            console.error("Critical Permission Error on /admins check:", authErr);
         }
 
-        // Handle caching and switching for multi-outlet Support
-        const switcher = document.getElementById('outletSwitcher');
-        if (adminData.isSuper) {
-            if (switcher) {
-                switcher.classList.remove('hidden');
-                switcher.innerHTML = `
-                    <option value="pizza">🍕 Pizza ERP</option>
-                    <option value="cake">🎂 Cakes ERP</option>
-                `;
-                const savedOutlet = localStorage.getItem('adminSelectedOutlet') || adminData.outlet;
-                switcher.value = savedOutlet;
-                window.currentOutlet = savedOutlet;
+        try {
+            if (!adminData) {
+                alert("ACCESS DENIED: Not recognized as an Admin.");
+                auth.signOut();
+                return;
             }
-        } else {
-            window.currentOutlet = adminData.outlet;
-            if (switcher) switcher.classList.add('hidden');
+
+            // Handle caching and switching for multi-outlet Support
+            const switcher = document.getElementById('outletSwitcher');
+            if (adminData.isSuper) {
+                if (switcher) {
+                    switcher.classList.remove('hidden');
+                    switcher.innerHTML = `
+                        <option value="pizza">🍕 Pizza ERP</option>
+                        <option value="cake">🎂 Cakes ERP</option>
+                    `;
+                    const savedOutlet = localStorage.getItem('adminSelectedOutlet') || adminData.outlet;
+                    switcher.value = savedOutlet;
+                    window.currentOutlet = savedOutlet;
+                }
+            } else {
+                window.currentOutlet = adminData.outlet;
+                if (switcher) switcher.classList.add('hidden');
+            }
+
+            userEmailDisplay.innerText = user.email;
+            if (authOverlay) authOverlay.classList.add('hidden');
+            const layout = document.querySelector(".layout");
+            if (layout) {
+                layout.classList.remove('hidden');
+                layout.classList.add('flex');
+            }
+
+            updateBranding();
+            loadRiders(); 
+            initRealtimeListeners();
+            switchTab('dashboard');
+            
+        } catch (e) {
+            console.error("Auth Exception:", e);
         }
-
-        userEmailDisplay.innerText = user.email;
-        authOverlay.style.display = "none";
-        document.querySelector(".layout").style.display = "flex";
-
-        updateBranding();
-        loadRiders(); 
-        initRealtimeListeners();
-        switchTab('dashboard');
-        
-    } catch (e) {
-        console.error("Auth Exception:", e);
-    }
-});
+    });
 
 function updateBranding() {
     const badge = document.getElementById('outletBadge');
@@ -482,11 +461,13 @@ function updateBranding() {
 
     if (badge) {
         badge.innerText = label;
-        badge.style.background = bgColor;
+        badge.classList.remove('brand-pizza-bg', 'brand-cake-bg');
+        badge.classList.add(isPizza ? 'brand-pizza-bg' : 'brand-cake-bg');
     }
     if (mobBadge) {
         mobBadge.innerText = label;
-        mobBadge.style.background = bgColor;
+        mobBadge.classList.remove('brand-pizza-bg', 'brand-cake-bg');
+        mobBadge.classList.add(isPizza ? 'brand-pizza-bg' : 'brand-cake-bg');
     }
     if (sidebarBrand) {
         sidebarBrand.innerText = isPizza ? 'ROSHANI PIZZA' : 'ROSHANI CAKES';
@@ -505,7 +486,7 @@ function updateBranding() {
 
     const ridersMenu = document.getElementById("menu-riders");
     if (ridersMenu) {
-        ridersMenu.style.display = (isPizza || (adminData && adminData.isSuper)) ? "" : "none";
+        ridersMenu.classList.toggle('hidden', !(isPizza || (adminData && adminData.isSuper)));
     }
 }
 
@@ -528,6 +509,8 @@ function closeSidebar() {
     if (sidebar) sidebar.classList.remove('active');
     if (overlay) overlay.classList.remove('active');
 }
+window.closeSidebar = closeSidebar;
+window.closeMobileSidebar = closeSidebar; // Support for either call style
 
 // =============================
 // SIDEBAR & TAB MANAGEMENT
@@ -596,12 +579,13 @@ function updateNotificationUI() {
             }
         }
         if (sideBadge) {
-            sideBadge.style.display = window.isNotificationPending ? 'inline-block' : 'none';
+            sideBadge.classList.toggle('hidden', !window.isNotificationPending);
+            sideBadge.classList.toggle('block', window.isNotificationPending);
             sideBadge.innerText = notifications.length;
         }
     } else {
         if (badge) badge.classList.add('hidden');
-        if (sideBadge) sideBadge.style.display = 'none';
+        if (sideBadge) sideBadge.classList.add('hidden');
     }
 
     const emptyHtml = '<div class="empty-notif" style="padding:40px; text-align:center; color:#94a3b8; font-size:14px; font-weight:500;">No new notifications</div>';
@@ -671,26 +655,40 @@ window.clearNotifications = () => {
     updateNotificationUI();
 };
 
+
+
 window.switchTab = (tabId) => {
     window.currentActiveTab = tabId;
-    closeMobileSidebar(); // Auto-close sidebar on mobile
-    window.toggleNotificationSheet(false); // Close notification sheet if open
+    console.log(`[Navigation] Switching to: ${tabId}`);
+
+    // Unified Mobile Sidebar Close
+    if (typeof closeSidebar === 'function') {
+        closeSidebar();
+    } else {
+        const sidebar = document.getElementById('sidebarNav');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (sidebar) sidebar.classList.remove('active');
+        if (overlay) overlay.classList.remove('active');
+    }
+
+    if (typeof window.toggleNotificationSheet === 'function') {
+        window.toggleNotificationSheet(false);
+    }
     
-    // Clear Notification State if switching to notifications (fallback or legacy)
     if (tabId === 'notifications') {
         window.isNotificationPending = false;
-        updateNotificationUI();
+        if (typeof updateNotificationUI === 'function') updateNotificationUI();
     }
 
     const layout = document.querySelector('.layout');
     const posTab = document.getElementById('tab-walkin');
 
-    // Handle POS Immersion (Full Screen)
+    // Handle POS (Walk-in) Fullscreen on Mobile
     if (tabId === 'walkin' && window.innerWidth < 768) {
-        layout.classList.add('pos-immersion');
-        posTab.classList.add('pos-fullscreen');
-        // Add back button to POS if not exists
-        if (!document.getElementById('posExitBtn')) {
+        if (layout) layout.classList.add('pos-immersion');
+        if (posTab) posTab.classList.add('pos-fullscreen');
+        
+        if (!document.getElementById('posExitBtn') && posTab) {
             const backBtn = document.createElement('button');
             backBtn.id = 'posExitBtn';
             backBtn.className = 'pos-back-btn mobile-only';
@@ -700,19 +698,19 @@ window.switchTab = (tabId) => {
                 window.switchTab('dashboard');
             };
             posTab.prepend(backBtn);
-            if(typeof lucide !== 'undefined') lucide.createIcons();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     } else {
-        layout.classList.remove('pos-immersion');
-        posTab.classList.remove('pos-fullscreen');
+        if (layout) layout.classList.remove('pos-immersion');
+        if (posTab) posTab.classList.remove('pos-fullscreen');
     }
 
-    // Update Sidebar Active States
+    // Update Sidebar Navigation Active State
     document.querySelectorAll('.sidebar li').forEach(li => li.classList.remove('active'));
     const mainItem = document.getElementById(`menu-${tabId}`);
     if (mainItem) mainItem.classList.add('active');
 
-    // Update Bottom Nav Active States (Mobile)
+    // Update Mobile Bottom Nav (if exists)
     document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
         item.classList.remove('active');
         if (item.getAttribute('onclick')?.includes(`'${tabId}'`)) {
@@ -720,68 +718,60 @@ window.switchTab = (tabId) => {
         }
     });
     
-    // Update Content
+    // Switch Content Tabs
     document.querySelectorAll('.tab-content').forEach(div => {
-        div.style.display = 'none';
         div.classList.add('hidden');
     });
+
     const target = document.getElementById(`tab-${tabId}`);
     if (target) {
-        target.style.display = 'block';
         target.classList.remove('hidden');
         
-        // Initialize Live Map if switched to Tracker tab
-        if (tabId === 'liveTracker') {
+        // Tab-specific View Initializations
+        if (tabId === 'liveTracker' && typeof window.initLiveRiderTracker === 'function') {
             setTimeout(() => window.initLiveRiderTracker(), 100);
         }
-    }
-
-    // Toggle Mobile Cart Summary visibility
-    const cartSummary = document.getElementById('mobileCartSummary');
-    if (cartSummary) {
-        if (tabId === 'walkin' && window.innerWidth < 768) {
-            updateMobileCartSummaryState();
-        } else {
-            cartSummary.classList.add('hidden');
+        if (tabId === 'settings' && typeof window.loadStoreSettings === 'function') {
+            window.loadStoreSettings();
         }
     }
 
+    // Update Header Titles
     const titles = {
         'dashboard': 'Dashboard',
-        'orders': 'Orders',
-        'live': 'Live Ops',
+        'orders': 'Order Management',
+        'live': 'Live Operations',
         'walkin': 'POS Control',
-        'menu': 'Dishes',
+        'menu': 'Menu Management',
         'categories': 'Categories',
-        'riders': 'Riders',
-        'customers': 'Database',
-        'inventory': 'Inventory',
-        'payments': 'Payments',
-        'reports': 'Analytics',
-        'liveTracker': 'Fleet Tracking',
-        'notifications': 'Alert Dashboard',
-        'settings': 'Settings'
+        'riders': 'Delivery Fleet',
+        'customers': 'Customer Base',
+        'inventory': 'Inventory Tracking',
+        'payments': 'Finances',
+        'reports': 'Performance Analytics',
+        'liveTracker': 'Rider Tracker',
+        'notifications': 'Alerts',
+        'settings': 'System Settings'
     };
     
-    // Update both Adaptive Headers
-    const titleText = titles[tabId] || 'Admin';
+    const titleText = titles[tabId] || 'Admin Dashboard';
     const mainTitle = document.getElementById('currentTabTitle');
     const mobTitle = document.getElementById('mobileTabTitle');
-    if(mainTitle) mainTitle.innerText = titleText;
-    if(mobTitle) mobTitle.innerText = titleText;
-    document.title = titleText + ' | Roshani Admin';
+    if (mainTitle) mainTitle.innerText = titleText;
+    if (mobTitle) mobTitle.innerText = titleText;
+    document.title = `${titleText} | Roshani ERP`;
 
-    // Permission Guard Check
-    const canRead = currentOutlet || (adminData && adminData.isSuper);
+    // Data Loaders
+    const canRead = window.currentOutlet || (window.adminData && window.adminData.isSuper);
+    if (!canRead) return;
 
-    if (tabId === 'settings') window.loadStoreSettings();
-    if (tabId === 'walkin' && canRead) loadWalkinMenu();
-    if (tabId === 'menu' && canRead) loadMenu();
-    if (tabId === 'categories' && canRead) loadCategories();
-    if (tabId === 'riders') loadRiders();
-    if (tabId === 'customers' && canRead) loadCustomers();
-    if (tabId === 'feedback') loadFeedbacks();
-    if (tabId === 'reports') loadReports();
+    if (tabId === 'walkin' && typeof loadWalkinMenu === 'function') loadWalkinMenu();
+    if (tabId === 'menu' && typeof loadMenu === 'function') loadMenu();
+    if (tabId === 'categories' && typeof loadCategories === 'function') loadCategories();
+    if (tabId === 'riders' && typeof loadRiders === 'function') loadRiders();
+    if (tabId === 'customers' && typeof loadCustomers === 'function') loadCustomers();
+    if (tabId === 'feedback' && typeof loadFeedbacks === 'function') loadFeedbacks();
+    if (tabId === 'reports' && typeof loadReports === 'function') loadReports();
 };
 
 function updateMobileCartSummaryState() {
@@ -791,7 +781,7 @@ function updateMobileCartSummaryState() {
     // Check both tab state and the data
     const cartItems = window.walkinCartData ? Object.values(window.walkinCartData) : [];
     const hasItems = cartItems.length > 0;
-    const isWalkinTab = document.getElementById('tab-walkin').style.display !== 'none';
+    const isWalkinTab = !document.getElementById('tab-walkin').classList.contains('hidden');
 
     if (hasItems && isWalkinTab && window.innerWidth < 768) {
         cartSummary.classList.remove('hidden');
@@ -1440,7 +1430,7 @@ function loadMenu() {
             card.innerHTML = `
                 <div style="position:relative; width:100%; height:160px; border-radius:12px; overflow:hidden; margin-bottom:15px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
                     <img src="${d.image || 'https://via.placeholder.com/150'}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://via.placeholder.com/150'">
-                    <div style="position:absolute; top:10px; right:10px; background:${d.stock ? 'rgba(6,95,70,0.9)' : 'rgba(220,38,38,0.9)'}; color:white; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700; backdrop-filter:blur(4px);">
+                    <div style="position:absolute; top:10px; right:10px; background:${d.stock ? 'rgba(6,95,70,0.9)' : 'rgba(220,38,38,0.9)'}; color:white; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);">
                         ${d.stock ? 'AVAILABLE' : 'OUT OF STOCK'}
                     </div>
                 </div>
@@ -1478,7 +1468,7 @@ window.deleteDish = (dishId) => {
     overlay.id = 'deleteConfirmOverlay';
     overlay.style.cssText = [
         'position:fixed', 'inset:0', 'z-index:99999',
-        'background:rgba(0,0,0,0.7)', 'backdrop-filter:blur(4px)',
+        'background:rgba(0,0,0,0.7)', '-webkit-backdrop-filter:blur(4px)', 'backdrop-filter:blur(4px)',
         'display:flex', 'align-items:center', 'justify-content:center'
     ].join(';');
 
