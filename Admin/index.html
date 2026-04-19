@@ -727,7 +727,10 @@
                     <div class="walkin-picker">
                         <div class="panel">
                             <div class="panel-header">
-                                <h3 class="panel-title">🍽️ Select Items</h3>
+                                <div class="flex-row flex-center flex-gap-10">
+                                    <button onclick="switchTab('dashboard')" class="btn-text mobile-only"><i data-lucide="arrow-left"></i></button>
+                                    <h3 class="panel-title">🍽️ Select Items</h3>
+                                </div>
                                 <input type="text" id="walkinDishSearch" placeholder="Search dishes..." class="search-input-group search-input-w200">
                             </div>
                             <!-- Category Tabs -->
@@ -801,6 +804,18 @@
                                 ✅ Record Sale
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Mobile Cart Summary (Floating) -->
+                <div id="mobileCartSummary" class="mobile-cart-summary hidden" onclick="toggleMobileCart(true)">
+                    <div class="summary-left">
+                        <span id="mobileCartCount" class="cart-count">0</span>
+                        <span class="lbl">Items in Cart</span>
+                    </div>
+                    <div class="summary-right">
+                        <span id="mobileCartTotal" class="price">₹0</span>
+                        <i data-lucide="chevron-up"></i>
                     </div>
                 </div>
             </div>
@@ -893,7 +908,7 @@
     </div>
 
     <!-- RIDER MANAGEMENT MODAL -->
-    <div id="riderModal" class="modal">
+    <div id="riderModal" class="modal modal-fullscreen-top">
         <div class="modal-content glass-card rider-modal-width">
             <div class="modal-header">
                 <div>
@@ -907,7 +922,7 @@
                 <!-- Left: Profile & Photos -->
                 <div class="modal-media-section">
                     <div class="profile-upload-container">
-                        <img id="riderProfilePreview" src="assets/rider_placeholder.png" class="rider-preview-lg" alt="Rider Profile">
+                        <img id="riderProfilePreview" src="assets/rider_placeholder.png" class="rider-preview-sm" alt="Rider Profile">
                         <input type="file" id="riderPhotoInput" accept="image/*" class="hidden" onchange="previewImage(this, 'riderProfilePreview')" title="Select Rider Profile Photo">
                         <button onclick="document.getElementById('riderPhotoInput').click()" class="btn-secondary btn-small mt-10">Upload Photo</button>
                         <input type="hidden" id="riderPhotoUrl">
@@ -915,7 +930,7 @@
 
                     <div class="aadhar-upload-container mt-20">
                         <label class="form-label-small">AADHAR CARD COPY</label>
-                        <img id="aadharPreview" src="assets/aadhar_placeholder.png" class="aadhar-preview-md" alt="Aadhar Card">
+                        <img id="aadharPreview" src="assets/aadhar_placeholder.png" class="aadhar-preview-sm" alt="Aadhar Card">
                         <input type="file" id="aadharPhotoInput" accept="image/*" class="hidden" onchange="previewImage(this, 'aadharPreview')" title="Select Aadhar Card Image">
                         <button onclick="document.getElementById('aadharPhotoInput').click()" class="btn-secondary btn-small mt-10">Upload Aadhar</button>
                         <input type="hidden" id="aadharUrl">
