@@ -108,11 +108,12 @@ const ordersMap = new Map(); // For XSS-safe access to order objects in UI
 
 // SECONDARY AUTH FOR RIDER CREATION (Avoids logging out admin)
 let secondaryAuth;
+let secondaryAuthAvailable = false;
 function initSecondaryAuth() {
     try {
         if (!window.firebaseConfig) {
-            console.error("Firebase Config not found! Secondary auth check skipped.");
-            secondaryAuth = firebase.auth();
+            console.error("Firebase Config not found! Rider creation will be disabled.");
+            secondaryAuthAvailable = false;
             return;
         }
         if (firebase.apps.length > 1) {
@@ -121,9 +122,10 @@ function initSecondaryAuth() {
             const secondaryApp = firebase.initializeApp(window.firebaseConfig, "secondary");
             secondaryAuth = secondaryApp.auth();
         }
+        secondaryAuthAvailable = true;
     } catch (e) {
         console.error("Secondary Auth Init Error:", e);
-        secondaryAuth = firebase.auth(); // Fallback
+        secondaryAuthAvailable = false;
     }
 }
 initSecondaryAuth();
@@ -1723,6 +1725,10 @@ window.saveRiderAccount = async () => {
 
         if (!isEditRiderMode) {
             // 1. Create in secondary Auth
+            if (!secondaryAuthAvailable) {
+                alert("Rider creation is currently unavailable (Secondary Auth failed to initialize). Please check your configuration.");
+                return;
+            }
             if (!pass || pass.length < 6) {
                 alert("Password must be at least 6 characters for new accounts.");
                 return;
