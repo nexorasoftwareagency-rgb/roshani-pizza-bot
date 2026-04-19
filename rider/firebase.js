@@ -27,7 +27,7 @@ async function getData(path) {
         return snap.val();
     } catch (err) {
         console.error("GET ERROR:", err);
-        return null;
+        throw err;
     }
 }
 
@@ -37,6 +37,7 @@ async function setData(path, data) {
         await db.ref(path).set(data);
     } catch (err) {
         console.error("SET ERROR:", err);
+        throw err;
     }
 }
 
@@ -46,6 +47,7 @@ async function updateData(path, data) {
         await db.ref(path).update(data);
     } catch (err) {
         console.error("UPDATE ERROR:", err);
+        throw err;
     }
 }
 
@@ -55,14 +57,17 @@ async function deleteData(path) {
         await db.ref(path).remove();
     } catch (err) {
         console.error("DELETE ERROR:", err);
+        throw err;
     }
 }
 
 // REALTIME LISTENER
 function onValue(path, callback) {
-    db.ref(path).on('value', (snap) => {
+    const ref = db.ref(path);
+    const cb = ref.on('value', (snap) => {
         callback(snap.val());
     });
+    return () => ref.off('value', cb);
 }
 
 // =============================

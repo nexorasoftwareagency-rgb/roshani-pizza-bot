@@ -46,7 +46,12 @@
 
         // Update Theme Color
         let themeColor = document.querySelector('meta[name="theme-color"]');
-        if (themeColor) themeColor.setAttribute('content', active.theme);
+        if (!themeColor) {
+            themeColor = document.createElement('meta');
+            themeColor.setAttribute('name', 'theme-color');
+            document.head.appendChild(themeColor);
+        }
+        themeColor.setAttribute('content', active.theme);
         
         console.log(`[Branding] Switched to ${brand.toUpperCase()} mode.`);
     });
