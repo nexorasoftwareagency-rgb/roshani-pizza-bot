@@ -548,11 +548,34 @@
                         <!-- Admin Notifications -->
                         <div class="glass-card p-20">
                             <h4 class="mb-14">📲 Order Notifications</h4>
-                            <p class="text-secondary-small mb-14">Configure where the bot sends New Order alerts</p>
                             
-                            <label class="form-label-small">Notification WhatsApp Number</label>
-                            <input type="text" id="settingAdminPhone" class="form-input mb-14" placeholder="e.g. 919876543210 (with country code)">
-                            <p class="text-secondary-small note-small">* Orders will be forwarded to this number automatically.</p>
+                            <div class="notification-setting-group mb-20">
+                                <h5 class="mb-8 text-muted-small text-upper ls-sm">WhatsApp Alerts</h5>
+                                <label class="form-label-small">Notification WhatsApp Number</label>
+                                <input type="text" id="settingAdminPhone" class="form-input mb-8" placeholder="e.g. 919876543210">
+                                <p class="text-secondary-small note-small">* Existing behavior: Orders forwarded via bot.</p>
+                            </div>
+
+                            <div class="divider-dashed mb-20"></div>
+
+                            <div class="notification-setting-group">
+                                <h5 class="mb-8 text-muted-small text-upper ls-sm">Browser & App Push</h5>
+                                <p class="text-secondary-small mb-14">Get instant sound & visual alerts on this device even if the app is in background.</p>
+                                
+                                <div id="notifStatusInfo" class="status-badge-ghost mb-14">
+                                    <i data-lucide="info"></i>
+                                    <span id="notifPermissionText">Permission: Unknown</span>
+                                </div>
+
+                                <div class="flex-row flex-gap-10">
+                                    <button onclick="requestNotificationPermission()" id="btnEnableNotif" class="btn-primary flex-center flex-gap-8 flex-1">
+                                        <i data-lucide="bell"></i> <span>Enable Alerts</span>
+                                    </button>
+                                    <button onclick="testNotification()" id="btnTestNotif" class="btn-secondary flex-center flex-gap-8">
+                                        <i data-lucide="play-circle"></i> <span>Test</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Delivery Fees -->
@@ -826,19 +849,7 @@
                     </div>
                 </div>
 
-                <!-- Mobile Cart Summary (Floating) -->
-                <div id="mobileCartSummary" class="mobile-cart-summary hidden" onclick="toggleMobileCart(true)">
-                    <div class="summary-left">
-                        <span id="mobileCartCount" class="cart-count">0</span>
-                        <span class="lbl">Items in Cart</span>
-                    </div>
-                    <div class="summary-right">
-                        <span id="mobileCartTotal" class="price">₹0</span>
-                        <i data-lucide="chevron-up"></i>
-                    </div>
-                </div>
             </div>
-
         </div>
     </div>
 
@@ -1012,6 +1023,7 @@
             </div>
 
             <div class="modal-footer">
+                <small id="uploadStatusRider" class="hidden upload-status-text">Processing...</small>
                 <button id="saveRiderBtn" onclick="saveRiderAccount()" class="btn-primary flex-center flex-gap-8 w-150">
                     <i data-lucide="check-circle"></i> Save Rider
                 </button>
@@ -1045,46 +1057,47 @@
                 <span>More</span>
             </div>
         </nav>
+        
+        <!-- MOBILE NOTIFICATION SHEET -->
+        <div id="notificationOverlay" class="sheet-overlay mobile-only" onclick="toggleNotificationSheet()"></div>
+        <div id="notificationSheet" class="bottom-sheet notification-sheet mobile-only">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header">
+                <h3>Recent Notifications</h3>
+                <button class="sheet-clear-btn" onclick="clearNotifications()" title="Remove All Notifications">Clear All</button>
+            </div>
+            <div id="notificationList" class="sheet-content">
+                <div class="empty-notif">No new notifications</div>
+            </div>
+        </div>
+
+        <!-- MOBILE POS FLOATING SUMMARY -->
+        <div id="mobileCartSummary" class="mobile-cart-summary hidden mobile-only" onclick="switchTab('walkin')">
+            <div class="flex-between flex-center h-full">
+                <div class="flex-row flex-center flex-gap-10">
+                    <div class="summary-icon"><i data-lucide="shopping-bag"></i></div>
+                    <div>
+                        <div id="mobileCartCount" class="summary-count">0 Items</div>
+                        <div id="mobileCartTotal" class="summary-total">₹0</div>
+                    </div>
+                </div>
+                <button class="btn-checkout-mobile">View Cart <i data-lucide="chevron-right"></i></button>
+            </div>
+        </div>
+
+        <!-- PREMIUM ORDER DETAIL DRAWER (Bottom Sheet) -->
+        <div id="orderDrawerOverlay" class="drawer-overlay" onclick="closeOrderDrawer()"></div>
+        <div id="orderDrawer" class="drawer-content">
+            <div class="drawer-handle"></div>
+            <div id="orderDrawerBody">
+                <!-- Populated via JS -->
+                <div class="shimmer skeleton-title"></div>
+                <div class="shimmer skeleton-text"></div>
+                <div class="shimmer skeleton-text"></div>
+            </div>
+        </div>
     </div> <!-- END LAYOUT -->
 
-    <!-- MOBILE NOTIFICATION SHEET -->
-    <div id="notificationOverlay" class="sheet-overlay mobile-only" onclick="toggleNotificationSheet()"></div>
-    <div id="notificationSheet" class="bottom-sheet notification-sheet mobile-only">
-        <div class="sheet-handle"></div>
-        <div class="sheet-header">
-            <h3>Recent Notifications</h3>
-            <button class="sheet-clear-btn" onclick="clearNotifications()" title="Remove All Notifications">Clear All</button>
-        </div>
-        <div id="notificationList" class="sheet-content">
-            <div class="empty-notif">No new notifications</div>
-        </div>
-    </div>
-
-    <!-- MOBILE POS FLOATING SUMMARY -->
-    <div id="mobileCartSummary" class="mobile-cart-summary hidden mobile-only" onclick="switchTab('walkin')">
-        <div class="flex-between flex-center h-full">
-            <div class="flex-row flex-center flex-gap-10">
-                <div class="summary-icon"><i data-lucide="shopping-bag"></i></div>
-                <div>
-                    <div id="mobileCartCount" class="summary-count">0 Items</div>
-                    <div id="mobileCartTotal" class="summary-total">₹0</div>
-                </div>
-            </div>
-            <button class="btn-checkout-mobile">View Cart <i data-lucide="chevron-right"></i></button>
-        </div>
-    </div>
-
-    <!-- PREMIUM ORDER DETAIL DRAWER (Bottom Sheet) -->
-    <div id="orderDrawerOverlay" class="drawer-overlay" onclick="closeOrderDrawer()"></div>
-    <div id="orderDrawer" class="drawer-content">
-        <div class="drawer-handle"></div>
-        <div id="orderDrawerBody">
-            <!-- Populated via JS -->
-            <div class="shimmer skeleton-title"></div>
-            <div class="shimmer skeleton-text"></div>
-            <div class="shimmer skeleton-text"></div>
-        </div>
-    </div>
 
     <script src="app.js?v=3.1.0"></script>
     <script>
