@@ -17,10 +17,23 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 window.installPWA = async () => {
-    if (!deferredPrompt) {
-        alert("The app is already installed or your browser doesn't support PWA installation.");
+    // Check if searching for a prompt or if already in standalone mode
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    
+    if (isStandalone) {
+        console.log("[PWA] Already running in standalone mode.");
         return;
     }
+
+    if (!deferredPrompt) {
+        console.log("[PWA] deferredPrompt is null. Installation may not be supported or was recently accepted.");
+        // Only alert if we're on mobile/desktop and installation is actually missing
+        if (!isStandalone) {
+            alert("To install this app, look for 'Add to Home Screen' in your browser menu.");
+        }
+        return;
+    }
+    
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
@@ -40,6 +53,13 @@ window.addEventListener('appinstalled', () => {
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed', err));
+        
+        // Hide download button if already installed
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        if (isStandalone) {
+            const downloadBtn = document.getElementById('menu-download');
+            if (downloadBtn) downloadBtn.classList.add('hidden');
+        }
     });
 }
 
@@ -372,11 +392,22 @@ adminEmail.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin()
 adminPassword.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
 
 window.userLogout = () => {
-    // Force UI reset immediately (don't rely only on onAuthStateChanged)
-    if (authOverlay) authOverlay.classList.remove('hidden');
+    // Force UI reset immediately using classes
+    const overlay = document.getElementById("authOverlay");
     const layout = document.querySelector(".layout");
-    if (layout) layout.classList.add('hidden');
-    auth.signOut();
+    
+    if (overlay) {
+        overlay.classList.remove('hidden');
+    }
+    if (layout) {
+        layout.classList.add('hidden');
+    }
+    
+    // Clear session-specific branding and outlet selections
+    localStorage.removeItem('adminSelectedOutlet');
+    localStorage.removeItem('admin_brand');
+    
+    auth.signOut().catch(err => console.error("Logout Error:", err));
 };
 
 auth.onAuthStateChanged(async user => {
@@ -387,9 +418,15 @@ auth.onAuthStateChanged(async user => {
         if (_ordersChangedCb) { db.ref("orders").off("child_changed", _ordersChangedCb); _ordersChangedCb = null; }
         if (window.currentOutlet) db.ref(`dishes/${window.currentOutlet}`).off();
         
-        if (authOverlay) authOverlay.classList.remove('hidden');
+        if (authOverlay) {
+            authOverlay.classList.remove('hidden');
+            authOverlay.style.display = ''; // Clear any legacy inline styles
+        }
         const layout = document.querySelector(".layout");
-        if (layout) layout.classList.add('hidden');
+        if (layout) {
+            layout.classList.add('hidden');
+            layout.style.display = ''; // Clear any legacy inline styles
+        }
         return;
     }
 
@@ -433,12 +470,26 @@ auth.onAuthStateChanged(async user => {
                 if (switcher) switcher.classList.add('hidden');
             }
 
+            // Sync Branding Engine with the actual assigned outlet
+            const brandType = window.currentOutlet === 'cake' ? 'cake' : 'pizza';
+            if (localStorage.getItem('admin_brand') !== brandType) {
+                console.log(`[Branding] Syncing brand to: ${brandType}`);
+                localStorage.setItem('admin_brand', brandType);
+                // Reload only if the brand actually changed to ensure manifest and theme-colors refresh
+                location.reload();
+                return; 
+            }
+
             userEmailDisplay.innerText = user.email;
-            if (authOverlay) authOverlay.classList.add('hidden');
+            if (authOverlay) {
+                authOverlay.classList.add('hidden');
+                authOverlay.style.display = ''; // Ensure no inline styles override classes
+            }
             const layout = document.querySelector(".layout");
             if (layout) {
                 layout.classList.remove('hidden');
                 layout.classList.add('flex');
+                layout.style.display = ''; // Ensure no inline styles override classes
             }
 
             updateBranding();
@@ -779,22 +830,35 @@ window.switchTab = (tabId) => {
     if (tabId === 'customers' && typeof loadCustomers === 'function') loadCustomers();
     if (tabId === 'feedback' && typeof loadFeedbacks === 'function') loadFeedbacks();
     if (tabId === 'reports' && typeof loadReports === 'function') loadReports();
+
+    // Sync mobile cart summary visibility
+    if (typeof updateMobileCartSummaryState === 'function') {
+        updateMobileCartSummaryState();
+    }
 };
 
 function updateMobileCartSummaryState() {
     const cartSummary = document.getElementById('mobileCartSummary');
-    if (!cartSummary) return;
+    const walkinTab = document.getElementById('tab-walkin');
+    
+    if (!cartSummary || !walkinTab) return;
     
     // Check both tab state and the data
-    const cartItems = window.walkinCartData ? Object.values(window.walkinCartData) : [];
+    const cartItems = walkinCart ? Object.values(walkinCart) : [];
     const hasItems = cartItems.length > 0;
-    const isWalkinTab = !document.getElementById('tab-walkin').classList.contains('hidden');
+    const isWalkinTab = !walkinTab.classList.contains('hidden');
 
     if (hasItems && isWalkinTab && window.innerWidth < 768) {
         cartSummary.classList.remove('hidden');
-        document.getElementById('mobileCartCount').innerText = `${cartItems.length} Items`;
-        const total = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
-        document.getElementById('mobileCartTotal').innerText = `₹${total.toLocaleString()}`;
+        
+        const countEl = document.getElementById('mobileCartCount');
+        const totalEl = document.getElementById('mobileCartTotal');
+        
+        if (countEl) countEl.innerText = `${cartItems.length} Items`;
+        if (totalEl) {
+            const total = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+            totalEl.innerText = `₹${total.toLocaleString()}`;
+        }
     } else {
         cartSummary.classList.add('hidden');
     }
