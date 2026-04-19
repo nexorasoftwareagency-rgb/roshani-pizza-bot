@@ -266,10 +266,27 @@ async function sendGreeting(sock, sender, user) {
 }
 
 // =============================
+// ORDER ID GENERATION (Shared daily sequence)
+// =============================
+async function generateOrderId() {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = (today.getMonth() + 1).toString().padStart(2, '0');
+    const d = today.getDate().toString().padStart(2, '0');
+    const dateStr = `${y}${m}${d}`;
+    
+    const seqRef = db.ref(`metadata/orderSequence/${dateStr}`);
+    const result = await seqRef.transaction((current) => (current || 0) + 1);
+    
+    const seqNum = result.snapshot.val() || 1;
+    return `${dateStr}-${seqNum.toString().padStart(4, '0')}`;
+}
+
+// =============================
 // CATEGORY
 // =============================
 async function sendCategories(sock, sender, user) {
-    const categoriesData = await getData(`Menu/Categories`);
+    const categoriesData = await getData(`categories`);
     const settings = await getData(`settings`);
     const bannerFallback = settings?.bannerImage || "https://via.placeholder.com/600x400?text=Roshani+ERP";
 
@@ -279,10 +296,15 @@ async function sendCategories(sock, sender, user) {
         return sock.sendMessage(sender, { text: "❌ *No categories available.* \nPlease try again later." });
     }
 
-    // Filter by outlet (consistent with Admin)
+    // Filter by outlet (Robust matching, consistent with Admin)
     user.categoryList = Object.entries(categoriesData)
         .map(([id, val]) => ({ id, ...val }))
-        .filter(cat => cat.outlet === user.outlet);
+        .filter(cat => {
+            const catOutlet = (cat.outlet || "pizza").toLowerCase();
+            const userOutlet = (user.outlet || "pizza").toLowerCase();
+            // Match exactly, or if one contains the other (e.g., "cake shop" includes "cake")
+            return catOutlet === userOutlet || catOutlet.includes(userOutlet) || userOutlet.includes(catOutlet);
+        });
 
     if (user.categoryList.length === 0) {
         user.step = "CATEGORY";
@@ -391,19 +413,37 @@ async function startBot() {
     // EVENT LISTENERS (Real-time)
     // =============================
     db.ref("orders").on("child_changed", async (snap) => {
-        try {
-            const id = snap.key;
-            const order = snap.val();
-            if (!order) return;
+        const id = snap.key;
+        const order = snap.val();
+        if (order) handleOrderStatusUpdate(sock, id, order);
+    });
 
+    const botStartTime = Date.now();
+    db.ref("orders").on("child_added", (snap) => {
+        const id = snap.key;
+        const order = snap.val();
+        if (order) {
+            // Fill cache silently for old orders on startup
+            if (Date.now() - botStartTime < 10000) {
+                processedStatus[id] = { status: order.status, timestamp: Date.now() };
+                if (order.deliveryOTP) processedOTP[id] = order.deliveryOTP;
+                return;
+            }
+
+            // For NEW orders added while bot is running, trigger status logic
+            // This ensures POS (Walk-in) which starts as "Delivered" or Online which starts as "Confirmed" sends a message
+            handleOrderStatusUpdate(sock, id, order, true); 
+        }
+    });
+
+    async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
+        try {
             const phone = order.whatsappNumber || order.phone;
             if (!phone) return;
             const number = phone + "@s.whatsapp.net";
 
             // 1. STATUS UPDATE LOGIC
-            if (!processedStatus[id]) {
-                processedStatus[id] = { status: order.status, timestamp: Date.now() };
-            } else if (processedStatus[id].status !== order.status) {
+            if (!processedStatus[id] || processedStatus[id].status !== order.status || isNew) {
                 processedStatus[id] = { status: order.status, timestamp: Date.now() };
                 
                 // RIDER NOTIFICATION LOGIC
@@ -434,10 +474,26 @@ async function startBot() {
                 }
 
                 let msg = "";
-                if (order.status === "Confirmed") msg = `✅ *ORDER CONFIRMED*\n\nGreat news! Your order *#${id}* is accepted and will be prepared soon. 🍕`;
-                else if (order.status === "Preparing") msg = `👨‍🍳 *PREPARING ORDER*\n\nOur chef is currently crafting your delicious meal. Stay tuned!`;
-                else if (order.status === "Cooked") msg = `🍕 *READY TO PACK*\n\nYour order is cooked and getting packed for delivery!`;
-                else if (order.status === "Out for Delivery") msg = `🚀 *OUT FOR DELIVERY*\n\nYour order is on its way to you! Please be ready. 🚚`;
+                let statusImg = null;
+                const botSettingsSnap = await getData("settings/Bot");
+                const botSettings = botSettingsSnap || {};
+
+                if (order.status === "Confirmed") {
+                    msg = `✅ *ORDER CONFIRMED*\n\nGreat news! Your order *#${id}* is accepted and will be prepared soon. 🍕`;
+                    statusImg = botSettings.imgConfirmed;
+                }
+                else if (order.status === "Preparing") {
+                    msg = `👨‍🍳 *PREPARING ORDER*\n\nOur chef is currently crafting your delicious meal. Stay tuned!`;
+                    statusImg = botSettings.imgPreparing;
+                }
+                else if (order.status === "Cooked") {
+                    msg = `🍕 *READY TO PACK*\n\nYour order is cooked and getting packed for delivery!`;
+                    statusImg = botSettings.imgCooked;
+                }
+                else if (order.status === "Out for Delivery") {
+                    msg = `🚀 *OUT FOR DELIVERY*\n\nYour order is on its way to you! Please be ready.\n\n💵 *Payment Mode:* ${order.paymentMethod || 'Cash/UPI'} 🚚`;
+                    statusImg = botSettings.imgOut;
+                }
                 else if (order.status === "Delivered") {
                     // Load Marketing & Feedback Info
                     const storeData = await getData("settings/Store");
@@ -447,16 +503,34 @@ async function startBot() {
                     let promoMsg = `🌟 *WE HOPE YOU ENJOYED YOUR MEAL!* 🌟\n`;
                     promoMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                     promoMsg += `Your order *#${id}* from *${(brands.storeName || "Roshani Pizza & Cake").toUpperCase()}* has been delivered! 🍕🎂\n\n`;
+                    promoMsg += `🤝 *Delivered via:* ${order.paymentMethod || 'Cash/UPI'}\n\n`;
 
-                    if (brands.config?.showSocial) {
+                    if (botSettings.socialInsta || botSettings.socialFb || botSettings.socialReview) {
                         promoMsg += `We'd love to stay connected with you:\n`;
-                        if (brands.instagram) promoMsg += `📸 *Instagram:* ${brands.instagram}\n`;
-                        if (brands.facebook) promoMsg += `👥 *Facebook:* ${brands.facebook}\n`;
-                        if (brands.reviewUrl) promoMsg += `🏅 *Rate us on Google:* ${brands.reviewUrl}\n\n`;
+                        if (botSettings.socialInsta) promoMsg += `📸 *Instagram:* ${botSettings.socialInsta}\n`;
+                        if (botSettings.socialFb) promoMsg += `👥 *Facebook:* ${botSettings.socialFb}\n`;
+                        if (botSettings.socialReview) promoMsg += `🏅 *Rate us on Google:* ${botSettings.socialReview}\n`;
+                        if (botSettings.socialWebsite) promoMsg += `🌍 *Website:* ${botSettings.socialWebsite}\n\n`;
                     }
 
                     promoMsg += `Thank you for choosing us! ✨`;
-                    await sock.sendMessage(number, { text: promoMsg });
+
+                    if (botSettings.imgDelivered) {
+                        await sendImage(sock, number, botSettings.imgDelivered, promoMsg);
+                    } else {
+                        await sock.sendMessage(number, { text: promoMsg });
+                    }
+
+                    // 2. Feedback Logic with Delay
+                    setTimeout(async () => {
+                        const feedbackMsg = `⭐ *HOW WAS YOUR EXPERIENCE?*\n\nWe value your feedback! Please rate your order *#${id}* out of 5 stars by replying with a number (1-5).`;
+                        if (botSettings.imgFeedback) {
+                            await sendImage(sock, number, botSettings.imgFeedback, feedbackMsg);
+                        } else {
+                            await sock.sendMessage(number, { text: feedbackMsg });
+                        }
+                    }, 10000); // 10 second delay
+                    return;
 
                     // 2. Clear previous session and start Feedback Flow
                     sessions[number] = {
@@ -493,7 +567,6 @@ async function startBot() {
                     `Your OTP is: *${order.deliveryOTP}*\n\n` +
                     `👉 Share this only after receiving your order.`;
                 await sock.sendMessage(number, { text: otpMsg });
-                console.log("OTP sent to:", number);
             }
 
             // Cleanup memory (Limit to 200 entries)
@@ -504,16 +577,7 @@ async function startBot() {
         } catch (err) {
             console.error("Order update listener error:", err);
         }
-    });
-
-    db.ref("orders").on("child_added", (snap) => {
-        const id = snap.key;
-        const order = snap.val();
-        if (order) {
-            processedStatus[id] = { status: order.status, timestamp: Date.now() };
-            if (order.deliveryOTP) processedOTP[id] = order.deliveryOTP;
-        }
-    });
+    }
 
     const processedOTP = {};
 
@@ -926,21 +990,54 @@ async function startBot() {
                 summary += `📞 *PHONE:* ${user.phone}\n`;
                 summary += `🏠 *ADDRESS:* ${user.address}\n`;
                 summary += `📍 *LOCATION:* _Shared Successfully_ ✅\n\n`;
-                summary += `1️⃣  *Confirm & Place Order* ✅\n`;
+                summary += `1️⃣  *Confirm & Choose Payment* ✅\n`;
                 summary += `2️⃣  *Cancel Order* ❌\n\n`;
                 summary += `_Reply with number to finalize_`;
 
+                user.step = "CHOOSE_PAYMENT";
                 return sock.sendMessage(sender, { text: summary });
+            }
+
+            // CHOOSE_PAYMENT
+            if (user.step === "CHOOSE_PAYMENT") {
+                if (text === "2") {
+                    sessions[sender] = { step: "START", current: {}, cart: [] };
+                    return sock.sendMessage(sender, { text: "❌ *Order Cancelled.* \nReply any message to start a new order." });
+                }
+                if (text !== "1") {
+                    return sock.sendMessage(sender, { text: "⚠️ *Invalid selection.* Please reply with 1 to Confirm or 2 to Cancel." });
+                }
+
+                let payMsg = `💳 *CHOOSE PAYMENT MODE*\n`;
+                payMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+                payMsg += `1️⃣  *Cash on Delivery*\n`;
+                payMsg += `2️⃣  *UPI / Online* (Pay on Delivery)\n`;
+                payMsg += `3️⃣  *Both* (Flexible)\n\n`;
+                payMsg += `_Please reply with 1, 2 or 3_`;
+
+                user.step = "FINAL_CONFIRM";
+                return sock.sendMessage(sender, { text: payMsg });
+            }
+
+            // FINAL_CONFIRM
+            if (user.step === "FINAL_CONFIRM") {
+                let payMethod = "Cash";
+                if (text === "1") payMethod = "Cash";
+                else if (text === "2") payMethod = "UPI";
+                else if (text === "3") payMethod = "Cash/UPI";
+                else {
+                    return sock.sendMessage(sender, { text: "⚠️ *Invalid selection.* Please reply with 1, 2 or 3." });
+                }
+
+                user.paymentMethod = payMethod;
+                user.step = "CONFIRM";
+                // Fallthrough to CONFIRM logic below or just move the logic here
             }
 
             // CONFIRM
             if (user.step === "CONFIRM") {
-                if (text !== "1") {
-                    sessions[sender] = { step: "START", current: {}, cart: [] };
-                    return sock.sendMessage(sender, { text: "❌ *Order Cancelled.* \nReply any message to start a new order." });
-                }
 
-                const orderId = "ORD" + Date.now().toString(36).toUpperCase();
+                const orderId = await generateOrderId();
                 const { subtotal } = formatCartSummary(user.cart);
                 const grandTotal = subtotal + user.deliveryFee;
 
@@ -975,6 +1072,7 @@ async function startBot() {
                     distance: user.distance,
                     total: grandTotal,
                     status: "Placed",
+                    paymentMethod: user.paymentMethod || "Cash/UPI",
                     createdAt: new Date().toISOString(),
                     items: orderItems
                 });
