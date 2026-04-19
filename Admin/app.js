@@ -682,12 +682,15 @@ window.switchTab = (tabId) => {
         if (typeof updateNotificationUI === 'function') updateNotificationUI();
     }
 
-    const layout = document.querySelector('.layout');
+    const body = document.body;
     const posTab = document.getElementById('tab-walkin');
 
     // Handle POS (Walk-in) Fullscreen on Mobile
-    if (tabId === 'walkin' && window.innerWidth < 768) {
-        if (layout) layout.classList.add('pos-immersion');
+    if (tabId === 'walkin') {
+        if (window.innerWidth < 1024) {
+             body.classList.add('pos-immersion-active');
+        }
+        
         if (posTab) posTab.classList.add('pos-fullscreen');
         
         if (!document.getElementById('posExitBtn') && posTab) {
@@ -703,6 +706,8 @@ window.switchTab = (tabId) => {
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     } else {
+        const layout = document.querySelector('.layout');
+        body.classList.remove('pos-immersion-active');
         if (layout) layout.classList.remove('pos-immersion');
         if (posTab) posTab.classList.remove('pos-fullscreen');
     }
@@ -2500,8 +2505,10 @@ function renderWalkinCart() {
 
 window.updateWalkinTotal = () => {
     let subtotal = 0;
+    let itemCount = 0;
     Object.values(walkinCart).forEach(item => {
         subtotal += item.price * item.qty;
+        itemCount += item.qty;
     });
 
     const discount = Math.max(0, Number(document.getElementById('walkinDiscount')?.value) || 0);
@@ -2512,8 +2519,30 @@ window.updateWalkinTotal = () => {
     if (subEl) subEl.textContent = '₹' + subtotal.toLocaleString();
     if (totalEl) totalEl.textContent = '₹' + total.toLocaleString();
 
-    // Export walkinCart to window for mobile summary logic
-    window.walkinCartData = walkinCart; 
+    // Mobile Summary Update
+    const mobileCountEl = document.getElementById('mobileCartCount');
+    const mobileTotalEl = document.getElementById('mobileCartTotal');
+    const mobileSummary = document.getElementById('mobileCartSummary');
+
+    if (mobileCountEl) mobileCountEl.textContent = itemCount;
+    if (mobileTotalEl) mobileTotalEl.textContent = '₹' + total.toLocaleString();
+    
+    if (mobileSummary) {
+        if (itemCount > 0) mobileSummary.classList.remove('hidden');
+        else mobileSummary.classList.add('hidden');
+    }
+};
+
+window.toggleMobileCart = (show) => {
+    const cartEl = document.querySelector('#tab-walkin .walkin-cart');
+    if (!cartEl) return;
+    if (show) {
+        cartEl.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    } else {
+        cartEl.classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
 };
 
 window.selectPayMethod = (btn) => {
