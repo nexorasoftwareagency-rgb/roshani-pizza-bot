@@ -672,6 +672,12 @@
                                 <p style="font-size: 11px; margin-bottom: 12px; color: var(--text-muted);">Moves all add-ons from dishes to categories. Use this once to sync existing data.</p>
                                 <button class="btn-primary btn-small" onclick="migrateAddonsToCategories()">🚀 Run Migration</button>
                             </div>
+
+                            <div style="margin-top: 20px; padding: 15px; border: 2px dashed var(--action-green); border-radius: 12px; background: rgba(34, 197, 94, 0.05);">
+                                <h5 style="margin-bottom: 8px; color: var(--action-green); font-size: 13px;">🖼️ Image Storage Migration</h5>
+                                <p style="font-size: 11px; margin-bottom: 12px; color: var(--text-muted);">Converts all Firebase Storage images to Base64 text in the database. Run this to finalize the move to text-only storage.</p>
+                                <button class="btn-action btn-small" onclick="runImageMigration()" style="background: var(--action-green); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">⚡ Migrate Images</button>
+                            </div>
                         </div>
 
                         <!-- Delivery Fees -->

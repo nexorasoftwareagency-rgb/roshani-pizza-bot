@@ -78,12 +78,29 @@ async function addInAppNotification(uid, title, message) {
 let reportInterval = null;
 
 async function sendImage(sock, to, image, text) {
+    if (!image) {
+        await sock.sendMessage(to, { text });
+        return;
+    }
     try {
-        await sock.sendMessage(to, {
-            image: { url: image },
-            caption: text
-        });
-    } catch {
+        let payload;
+        // Detect if image is a Base64 data string (starts with "data:image")
+        if (typeof image === 'string' && image.startsWith('data:image')) {
+            // Extract the base64 part
+            const base64Data = image.split(',')[1];
+            if (base64Data) {
+                payload = { image: Buffer.from(base64Data, 'base64'), caption: text };
+            } else {
+                throw new Error("Invalid base64 format");
+            }
+        } else {
+            // Assume it's a URL
+            payload = { image: { url: image }, caption: text };
+        }
+        await sock.sendMessage(to, { ...payload });
+    } catch (err) {
+        console.error("Image Send Error:", err);
+        // Fallback to text message
         await sock.sendMessage(to, { text });
     }
 }
