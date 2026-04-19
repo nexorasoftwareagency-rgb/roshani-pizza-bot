@@ -71,11 +71,19 @@ if ('serviceWorker' in navigator) {
 // =============================
 // FIREBASE INITIALIZATION
 // =============================
-if (window.firebaseConfig && !firebase.apps.length) {
+let db, auth;
+
+if (!window.firebaseConfig) {
+    console.error("[Firebase] window.firebaseConfig is not defined. Firebase services cannot be initialized. Check firebase-config.js.");
+    throw new Error("Firebase configuration is missing. Cannot initialize app.");
+}
+
+if (!firebase.apps.length) {
     firebase.initializeApp(window.firebaseConfig);
 }
-const db = firebase.database();
-const auth = firebase.auth();
+
+db = firebase.database();
+auth = firebase.auth();
 
 
 // =============================
@@ -155,6 +163,11 @@ function initSecondaryAuth() {
             const secondaryApp = firebase.initializeApp(window.firebaseConfig, "secondary_auth");
             secondaryAuth = secondaryApp.auth();
         }
+        
+        // CRITICAL: Set persistence to NONE so it doesn't affect the Admin's login session
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+            secondaryAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+        }
         secondaryAuthAvailable = true;
         console.log("Secondary Auth initialized successfully.");
     } catch (e) {
@@ -166,6 +179,10 @@ initSecondaryAuth();
 
 let editingDishId = null;
 let categories = [];
+let allWalkinDishes = [];
+let activeWalkinCategory = 'All';
+let walkinCart = {}; 
+let walkinPayMethod = 'Cash';
 let isEditRiderMode = false;
 let currentEditingRiderId = null;
 
@@ -363,8 +380,27 @@ function formatDate(ts) {
     if (!ts) return "N/A";
     const d = new Date(ts);
     if (isNaN(d.getTime())) return ts; // Fallback for raw strings
-    return d.toLocaleDateString('en-IN', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+    return d.toLocaleDateString('en-IN', {day:'numeric', month:'short'}) + ", " + d.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
 }
+
+/**
+ * Generates a unique, daily sequenced Order ID (YYYYMMDD-####)
+ * Shares the same sequence with the WhatsApp Bot via Firebase metadata.
+ */
+async function generateNextOrderId() {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = (today.getMonth() + 1).toString().padStart(2, '0');
+    const d = today.getDate().toString().padStart(2, '0');
+    const dateStr = `${y}${m}${d}`;
+    
+    const seqRef = db.ref(`metadata/orderSequence/${dateStr}`);
+    const result = await seqRef.transaction((current) => (current || 0) + 1);
+    
+    const seqNum = result.snapshot.val() || 1;
+    return `${dateStr}-${seqNum.toString().padStart(4, '0')}`;
+}
+
 const authOverlay = document.getElementById("authOverlay");
 const adminEmail = document.getElementById("adminEmail");
 const adminPassword = document.getElementById("adminPassword");
@@ -477,10 +513,10 @@ auth.onAuthStateChanged(async user => {
                     `;
                     const savedOutlet = localStorage.getItem('adminSelectedOutlet') || adminData.outlet;
                     switcher.value = savedOutlet;
-                    window.currentOutlet = savedOutlet;
+                    window.currentOutlet = (savedOutlet || 'pizza').toLowerCase();
                 }
             } else {
-                window.currentOutlet = adminData.outlet;
+                window.currentOutlet = (adminData.outlet || 'pizza').toLowerCase();
                 if (switcher) switcher.classList.add('hidden');
             }
 
@@ -1188,8 +1224,13 @@ function renderOrders(snap) {
 
         if (o.outlet !== currentOutlet) return;
 
-        revenue += Number(o.total || 0);
+        // Revenue should only include non-cancelled and marked as Delivered or Paid
+        if (o.status !== "Cancelled" && (o.status === "Delivered" || o.paymentStatus === "Paid")) {
+            revenue += Number(o.total || 0);
+        }
+
         const orderDateStr = o.createdAt ? (typeof o.createdAt === 'string' ? o.createdAt : new Date(o.createdAt).toISOString()).split('T')[0] : '';
+
         if (orderDateStr === todayStr) today++;
 
         if (o.status === "Delivered") {
@@ -1407,8 +1448,8 @@ window.deleteOrder = (id) => {
 // =============================
 // CATEGORIES
 function loadCategories() {
-    db.ref('Menu/Categories').off(); // Detach previous listener before re-attaching
-    db.ref('Menu/Categories').on('value', snap => {
+    db.ref('categories').off(); // Detach previous listener before re-attaching
+    db.ref('categories').on('value', snap => {
         categories = [];
         const container = document.getElementById('categoryList');
         if (!container) return;
@@ -1458,11 +1499,24 @@ async function addCategory() {
             imageUrl = await uploadImage(file, `categories/${Date.now()}_${file.name}`);
         }
 
-        await db.ref('Menu/Categories').push({
+        // Collect Category Add-ons
+        const addons = {};
+        document.querySelectorAll('#categoryAddonsList .addon-row-small').forEach(row => {
+            const inputs = row.querySelectorAll('input');
+            if (inputs[0].value && inputs[1].value) {
+                addons[inputs[0].value] = Number(inputs[1].value);
+            }
+        });
+
+        await db.ref('categories').push({
             name: name,
             image: imageUrl,
-            outlet: currentOutlet
+            outlet: (window.currentOutlet || currentOutlet || 'pizza').toLowerCase(),
+            addons: Object.keys(addons).length > 0 ? addons : null
         });
+
+        const addonsList = document.getElementById('categoryAddonsList');
+        if (addonsList) addonsList.innerHTML = "";
 
         nameInput.value = "";
         fileInput.value = "";
@@ -1476,7 +1530,7 @@ async function addCategory() {
 
 window.deleteCategory = (id) => {
     if (confirm("Delete this category?")) {
-        db.ref('Menu/Categories/' + id).remove();
+        db.ref('categories/' + id).remove();
     }
 };
 
@@ -1945,6 +1999,10 @@ window.saveRiderAccount = async () => {
             try {
                 const cred = await secondaryAuth.createUserWithEmailAndPassword(email, pass);
                 uid = cred.user.uid;
+                
+                // CRITICAL: Immediately sign out the rider from the secondary instance
+                // to prevent any accidental session bleeding into the admin's database write.
+                await secondaryAuth.signOut();
             } catch (authError) {
                 if (authError.code === 'auth/email-already-in-use') {
                     alert("CRITICAL ERROR: This email (" + email + ") is already registered in the Authentication system but has no database record.\n\nTo fix this:\n1. Delete the user from the Firebase Console (Authentication tab).\n2. OR try using a different email.\n\nNote: If this rider was recently deleted from the dashboard, their login credentials still exist in Firebase security records.");
@@ -1976,7 +2034,7 @@ window.saveRiderAccount = async () => {
             address,
             profilePhoto,
             aadharPhoto,
-            outlet: currentOutlet,
+            outlet: (window.currentOutlet || currentOutlet || 'pizza').toLowerCase(),
             updatedAt: firebase.database.ServerValue.TIMESTAMP
         };
 
@@ -2088,9 +2146,13 @@ window.generateCustomReport = () => {
             const o = child.val();
             if (o.outlet !== currentOutlet) return;
             if (o.status === "Cancelled") return;
-            if (!o.createdAt) return;
-
-            const dateStr = typeof o.createdAt === 'string' ? o.createdAt.split('T')[0] : new Date(o.createdAt).toISOString().split('T')[0];
+            let itemDate;
+            try {
+                itemDate = new Date(o.createdAt);
+            } catch(e) { return; }
+            
+            if (isNaN(itemDate.getTime())) return;
+            const dateStr = itemDate.toISOString().split('T')[0];
             
             if (dateStr >= from && dateStr <= to) {
                 totalRev += Number(o.total || 0);
@@ -2527,41 +2589,24 @@ function loadWalkinMenu() {
     const grid = document.getElementById('walkinDishGrid');
     if (!grid) return;
 
-    // Fetch Categories for Tabs
-    db.ref('Menu/Categories').once('value').then(catSnap => {
-        const catContainer = document.getElementById('walkinCategoryTabs');
-        if (catContainer) {
-            let catsHtml = `<div class="category-tab ${activeWalkinCategory === 'All' ? 'active' : ''}" onclick="filterWalkinByCategory('All')">All</div>`;
-            catSnap.forEach(child => {
-                const cat = child.val();
-                if (!cat.outlet || cat.outlet === currentOutlet) {
-                    catsHtml += `<div class="category-tab ${activeWalkinCategory === cat.name ? 'active' : ''}" onclick="filterWalkinByCategory('${escapeHtml(cat.name)}')">${escapeHtml(cat.name)}</div>`;
-                }
-            });
-            catContainer.innerHTML = catsHtml;
-        }
-    });
+    renderWalkinCategoryTabs();
 
     db.ref(`dishes/${currentOutlet}`).once('value').then(snap => {
-        cachedDishes = [];
+        allWalkinDishes = [];
         snap.forEach(child => {
-            cachedDishes.push({ id: child.key, ...child.val() });
+            allWalkinDishes.push({ id: child.key, ...child.val() });
         });
 
-        if (cachedDishes.length === 0) {
+        if (allWalkinDishes.length === 0) {
             grid.innerHTML = '<p class="menu-loading-placeholder">No dishes found. Add dishes in Menu → Dishes first.</p>';
             return;
         }
 
         applyWalkinFilters();
 
-        // Search filter
         const search = document.getElementById('walkinDishSearch');
-        if (search) {
-            search.oninput = () => applyWalkinFilters();
-        }
+        if (search) search.oninput = () => applyWalkinFilters();
 
-        // Customer Phone Auto-fill
         const phoneInput = document.getElementById('walkinCustPhone');
         if (phoneInput) {
             phoneInput.oninput = () => {
@@ -2586,7 +2631,7 @@ function applyWalkinFilters() {
     const search = document.getElementById('walkinDishSearch');
     const term = search ? search.value.toLowerCase() : "";
     
-    const filtered = cachedDishes.filter(d => {
+    const filtered = allWalkinDishes.filter(d => {
         const matchesSearch = d.name.toLowerCase().includes(term);
         const matchesCat = activeWalkinCategory === 'All' || d.category === activeWalkinCategory;
         return matchesSearch && matchesCat;
@@ -2640,42 +2685,20 @@ function renderWalkinDishGrid(dishes) {
     grid.innerHTML = '';
 
     dishes.forEach(d => {
-        const hasSizes = d.sizes && Object.keys(d.sizes).length > 0;
         const card = document.createElement('div');
         card.className = 'walkin-dish-card' + (d.stock === false ? ' out-of-stock' : '');
         
-        let cardContent = `
+        card.innerHTML = `
             <div class="dish-emoji">${getCatEmoji(d.category)}</div>
             <div class="dish-name" title="${escapeHtml(d.name)}">${escapeHtml(d.name)}</div>
+            <div class="dish-price">₹${d.price || 0}</div>
+            ${d.stock === false ? '<div style="font-size:10px; color:#ef4444; margin-top:4px;">Out of Stock</div>' : ''}
         `;
 
-        if (hasSizes) {
-            cardContent += `<div class="size-chip-container">`;
-            Object.entries(d.sizes).forEach(([size, price]) => {
-                cardContent += `
-                    <div class="size-chip" onclick="event.stopPropagation(); addToWalkinCart('${d.id}', '${escapeHtml(d.name)}', ${price}, '${escapeHtml(size)}')">
-                        <span>${escapeHtml(size)}</span>
-                        <span class="price">₹${price}</span>
-                    </div>
-                `;
-            });
-            cardContent += `</div>`;
-        } else {
-            cardContent += `<div class="dish-price">₹${d.price || 0}</div>`;
-        }
-
-        if (d.stock === false) {
-            cardContent += `<div style="font-size:10px; color:#ef4444; margin-top:4px;">Out of Stock</div>`;
-        }
-        
-        card.innerHTML = cardContent;
-
-        if (!hasSizes) {
-            card.addEventListener('click', () => {
-                if (d.stock === false) return;
-                addToWalkinCart(d.id, d.name, Number(d.price) || 0);
-            });
-        }
+        card.addEventListener('click', () => {
+            if (d.stock === false) return;
+            openPOSSelectionModal(d.id);
+        });
         
         grid.appendChild(card);
     });
@@ -2715,29 +2738,40 @@ function renderWalkinCart() {
     if (keys.length === 0) {
         container.innerHTML = '<p id="walkinEmptyMsg" style="color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;">Tap dishes to add them here</p>';
         updateWalkinTotal();
-        updateMobileCartSummaryState(); // Keep mobile summary synced
+        updateMobileCartSummaryState();
         return;
     }
 
-    container.innerHTML = keys.map(key => {
-        const item = walkinCart[key];
-        const displayName = item.size !== "Regular" ? `${item.name} (${item.size})` : item.name;
-        return `
-            <div class="walkin-cart-item">
-                <span class="item-name">${escapeHtml(displayName)}</span>
-                <div class="qty-controls">
-                    <button class="qty-btn" onclick="walkinQtyChange('${key}', -1)">−</button>
-                    <span class="qty-val">${item.qty}</span>
-                    <button class="qty-btn" onclick="walkinQtyChange('${key}', 1)">+</button>
+    container.innerHTML = '';
+    Object.entries(walkinCart).forEach(([key, item]) => {
+        const div = document.createElement('div');
+        div.className = 'walkin-cart-item';
+        
+        const addonsText = item.addons && item.addons.length > 0 
+            ? `<div class="item-addons-list">+ ${item.addons.map(a => a.name).join(', ')}</div>`
+            : '';
+
+        div.innerHTML = `
+            <div class="item-info">
+                <div class="item-main">
+                    <div class="item-name">${escapeHtml(item.name)}</div>
+                    <div class="item-variant">${escapeHtml(item.size)} - ₹${item.price}</div>
                 </div>
-                <span class="item-price">₹${(item.price * item.qty).toLocaleString()}</span>
-                <button class="remove-btn" onclick="walkinRemoveItem('${key}')" title="Remove">✕</button>
+                ${addonsText}
+                <button class="btn-text-primary small-btn mt-4" onclick="openCartAddonPicker('${key}')">+ Addons</button>
+            </div>
+            <div class="item-controls">
+                <div class="qty-btn" onclick="walkinQtyChange('${key}', -1)">-</div>
+                <div class="qty-val">${item.qty}</div>
+                <div class="qty-btn" onclick="walkinQtyChange('${key}', 1)">+</div>
+                <div class="remove-btn" onclick="walkinRemoveItem('${key}')">&times;</div>
             </div>
         `;
-    }).join('');
+        container.appendChild(div);
+    });
 
     updateWalkinTotal();
-    updateMobileCartSummaryState(); // Keep mobile summary synced
+    updateMobileCartSummaryState();
 }
 
 window.updateWalkinTotal = () => {
@@ -2797,12 +2831,15 @@ window.submitWalkinSale = async () => {
             name: item.name, 
             price: item.price, 
             quantity: item.qty,
-            size: item.size 
+            size: item.size,
+            addons: item.addons || null
         };
     });
 
     const total = Math.max(0, subtotal - discount);
-    const orderId = 'WALK-' + Date.now().toString().slice(-6);
+    
+    // Get Sequenced ID (YYYYMMDD-####)
+    const orderId = await generateNextOrderId();
 
     const orderData = {
         orderId,
@@ -2817,8 +2854,10 @@ window.submitWalkinSale = async () => {
         status: 'Delivered',
         type: 'Walk-in',
         outlet: currentOutlet,
-        createdAt: firebase.database.ServerValue.TIMESTAMP
+        createdAt: Date.now()
     };
+
+
 
     try {
         await db.ref('orders/' + orderId).set(orderData);
@@ -2878,9 +2917,12 @@ function standardizeOrderData(o) {
         price: parseFloat(i.price || i.unitPrice || 0)
     }));
 
+    const orderDate = o.createdAt ? new Date(o.createdAt) : new Date();
+    
     return {
         orderId: orderId,
-        date: o.createdAt ? new Date(o.createdAt).toLocaleString() : new Date().toLocaleString(),
+        date: orderDate.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        time: orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
         customerName: o.customerName || "Walk-in Customer",
         phone: o.phone || o.whatsappNumber || "",
         address: o.address || "",
@@ -2999,7 +3041,7 @@ async function printOrderReceipt(rawOrder, isReprint = false) {
 
             <div class="meta-text">
                 <div class="summary-row"><span class="bold">Order ID:</span> <span>${o.orderId}</span></div>
-                <div class="summary-row"><span class="bold">Date:</span> <span>${o.date}</span></div>
+                <div class="summary-row"><span class="bold">Date & Time:</span> <span>${o.date} ${o.time}</span></div>
                 <div class="summary-row"><span class="bold">Pay Mode:</span> <span>${o.paymentMethod}</span></div>
             </div>
             
@@ -3170,6 +3212,31 @@ window.loadStoreSettings = async () => {
             document.getElementById('settingQRUrl').value = storeData.qrUrl;
         }
 
+        // WhatsApp Bot Aesthetics
+        const botSnap = await db.ref("settings/Bot").once("value");
+        const botData = botSnap.val() || {};
+        
+        const botMaps = {
+            'botImgConfirmed': botData.imgConfirmed,
+            'botImgPreparing': botData.imgPreparing,
+            'botImgCooked': botData.imgCooked,
+            'botImgOut': botData.imgOut,
+            'botImgDelivered': botData.imgDelivered,
+            'botImgFeedback': botData.imgFeedback
+        };
+
+        for (const [id, url] of Object.entries(botMaps)) {
+            if (url) {
+                const preview = document.getElementById(id + 'Preview');
+                if (preview) preview.src = url;
+            }
+        }
+
+        document.getElementById('botSocialInsta').value = botData.socialInsta || "";
+        document.getElementById('botSocialFb').value = botData.socialFb || "";
+        document.getElementById('botSocialReview').value = botData.socialReview || "";
+        document.getElementById('botSocialWebsite').value = botData.socialWebsite || "";
+
     } catch (e) {
         console.error("Load Store Settings Error:", e);
     }
@@ -3236,10 +3303,36 @@ window.saveStoreSettings = async () => {
             }
         };
 
-        // 4. Update Firebase
+        // 4. Handle Bot Image Uploads
+        const botFiles = [
+            { id: 'botImgConfirmed', key: 'imgConfirmed' },
+            { id: 'botImgPreparing', key: 'imgPreparing' },
+            { id: 'botImgCooked', key: 'imgCooked' },
+            { id: 'botImgOut', key: 'imgOut' },
+            { id: 'botImgDelivered', key: 'imgDelivered' },
+            { id: 'botImgFeedback', key: 'imgFeedback' }
+        ];
+
+        const botDataUpdates = {
+            socialInsta: document.getElementById('botSocialInsta').value.trim(),
+            socialFb: document.getElementById('botSocialFb').value.trim(),
+            socialReview: document.getElementById('botSocialReview').value.trim(),
+            socialWebsite: document.getElementById('botSocialWebsite').value.trim()
+        };
+
+        for (const item of botFiles) {
+            const file = document.getElementById(item.id + 'File').files[0];
+            if (file) {
+                const url = await uploadImage(file, `bot/status_${item.key}_${Date.now()}`);
+                botDataUpdates[item.key] = url;
+            }
+        }
+
+        // 5. Update Firebase
         await Promise.all([
             db.ref("settings/Delivery").update({ coords: { lat, lng }, notifyPhone, slabs }),
-            db.ref("settings/Store").update(storeData)
+            db.ref("settings/Store").update(storeData),
+            db.ref("settings/Bot").update(botDataUpdates)
         ]);
 
         document.getElementById('displayCoords').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
@@ -3394,4 +3487,319 @@ function startRiderLocationListener() {
             adminTrackerMap.fitBounds(currentBounds, { padding: [50, 50], maxZoom: 15 });
         }
     });
+}
+
+// =============================
+// POS SELECTION MODAL & LOGIC
+// =============================
+let currentPOSModalDish = null;
+let currentPOSModalSize = null;
+let currentPOSModalAddons = {}; // name -> price
+let currentPOSModalQty = 1;
+
+window.addNewCategoryAddonField = (name = "", price = "") => {
+    const container = document.getElementById('categoryAddonsList');
+    if (!container) return;
+    const div = document.createElement('div');
+    div.className = "addon-row-small";
+    div.innerHTML = `
+        <input placeholder="Addon" value="${name}" class="form-input flex-2">
+        <input type="number" placeholder="₹" value="${price}" class="form-input flex-1">
+        <button onclick="this.parentElement.remove()" class="btn-text-danger" style="font-size:18px;">&times;</button>
+    `;
+    container.appendChild(div);
+};
+
+window.openPOSSelectionModal = async (dishId) => {
+    haptic(10);
+    const snap = await db.ref(`dishes/${currentOutlet}/${dishId}`).once('value');
+    const dish = snap.val();
+    if (!dish) return;
+
+    currentPOSModalDish = { id: dishId, ...dish };
+    currentPOSModalQty = 1;
+    currentPOSModalAddons = {};
+    
+    document.getElementById('posModalDishName').innerText = dish.name;
+    document.getElementById('posModalDishCategory').innerText = dish.category;
+    document.getElementById('posModalQty').innerText = "1";
+    
+    // 1. Render Sizes as Chips/Grid for better clarity
+    const sizeGrid = document.getElementById('posSizeGrid');
+    sizeGrid.innerHTML = "";
+    
+    // Logic for Request 5: Simple dishes show - Default -
+    let sizes = dish.sizes || {};
+    if (Object.keys(sizes).length === 0 || (Object.keys(sizes).length === 1 && !dish.sizes)) {
+        sizes = { "- Default -": dish.price || 0 };
+    }
+
+    Object.entries(sizes).forEach(([name, price], idx) => {
+        const card = document.createElement('div');
+        card.className = `size-card ${idx === 0 ? 'active' : ''}`;
+        card.innerHTML = `
+            <div class="size-chip-box">
+                <span class="size-name">${name}</span>
+                <span class="size-price">₹${price}</span>
+            </div>
+        `;
+        card.onclick = () => selectPOSSize(name, price, card);
+        sizeGrid.appendChild(card);
+        if (idx === 0) currentPOSModalSize = { name, price };
+    });
+
+    // 2. Render Category-Bound Add-ons
+    const addonsList = document.getElementById('posAddonsList');
+    addonsList.innerHTML = "";
+    
+    // Find category to get its addons
+    const cat = categories.find(c => c.name === dish.category);
+    if (cat && cat.addons) {
+        document.getElementById('posAddonsSection').style.display = 'block';
+        Object.entries(cat.addons).forEach(([name, price]) => {
+            const item = document.createElement('div');
+            item.className = "addon-check-item";
+            item.innerHTML = `
+                <div class="flex-row flex-center">
+                    <input type="checkbox" onchange="togglePOSAddon('${name}', ${price}, this)">
+                    <span class="fs-13 font-weight-600">${name}</span>
+                </div>
+                <span class="text-muted-small font-weight-700">+₹${price}</span>
+            `;
+            addonsList.appendChild(item);
+        });
+    } else {
+        document.getElementById('posAddonsSection').style.display = 'none';
+    }
+
+    updatePOSModalTotal();
+    document.getElementById('posSelectionModal').style.display = 'flex';
+};
+
+window.hidePOSSelectionModal = () => {
+    document.getElementById('posSelectionModal').style.display = 'none';
+};
+
+function selectPOSSize(name, price, el) {
+    document.querySelectorAll('.size-card').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    currentPOSModalSize = { name, price };
+    updatePOSModalTotal();
+}
+
+window.togglePOSAddon = (name, price, checkbox) => {
+    if (checkbox.checked) {
+        currentPOSModalAddons[name] = price;
+    } else {
+        delete currentPOSModalAddons[name];
+    }
+    updatePOSModalTotal();
+};
+
+window.adjustPOSModalQty = (delta) => {
+    currentPOSModalQty = Math.max(1, currentPOSModalQty + delta);
+    document.getElementById('posModalQty').innerText = currentPOSModalQty;
+    updatePOSModalTotal();
+};
+
+function updatePOSModalTotal() {
+    let base = currentPOSModalSize ? currentPOSModalSize.price : 0;
+    let addonsTotal = Object.values(currentPOSModalAddons).reduce((a, b) => a + b, 0);
+    let total = (Number(base) + addonsTotal) * currentPOSModalQty;
+    document.getElementById('posModalTotal').innerText = `₹${total}`;
+}
+
+window.addToWalkinCartFromModal = () => {
+    if (!currentPOSModalDish || !currentPOSModalSize) return;
+    
+    const baseId = currentPOSModalDish.id;
+    const sizeName = currentPOSModalSize.name;
+    const addonNames = Object.keys(currentPOSModalAddons);
+    
+    // Create unique key for cart item (dish + size + addons)
+    const cartKey = `${baseId}_${sizeName}_${addonNames.sort().join('_')}`;
+    
+    const pricePerItem = Number(currentPOSModalSize.price) + Object.values(currentPOSModalAddons).reduce((a, b) => a + b, 0);
+    
+    if (walkinCart[cartKey]) {
+        walkinCart[cartKey].qty += currentPOSModalQty;
+    } else {
+        walkinCart[cartKey] = {
+            id: baseId,
+            name: currentPOSModalDish.name,
+            category: currentPOSModalDish.category, // Needed for cart-side addons
+            size: sizeName,
+            price: pricePerItem,
+            qty: currentPOSModalQty,
+            addons: addonNames.map(name => ({ name, price: currentPOSModalAddons[name] }))
+        };
+    }
+    
+    hidePOSSelectionModal();
+    renderWalkinCart();
+    haptic(20);
+};
+
+window.openCartAddonPicker = async (cartKey) => {
+    const item = walkinCart[cartKey];
+    if (!item) return;
+
+    // We reuse the POS selection modal but focus it on addons
+    // To do this simply, we'll just set up the modal with the current item's data
+    const dishSnap = await db.ref(`dishes/${currentOutlet}/${item.id}`).once('value');
+    const dish = dishSnap.val();
+    if (!dish) return;
+
+    currentPOSModalDish = { id: item.id, ...dish };
+    currentPOSModalQty = item.qty;
+    currentPOSModalSize = { name: item.size, price: item.price - (item.addons ? item.addons.reduce((a, b) => a + b.price, 0) : 0) };
+    currentPOSModalAddons = {};
+    if (item.addons) {
+        item.addons.forEach(a => currentPOSModalAddons[a.name] = a.price);
+    }
+
+    // Refresh UI
+    document.getElementById('posModalDishName').innerText = dish.name + " (Update Addons)";
+    document.getElementById('posModalDishCategory').innerText = dish.category;
+    document.getElementById('posModalQty').innerText = currentPOSModalQty;
+    
+    // Hide sizes if we are just updating addons from cart (Keep UI simple)
+    document.getElementById('posSizeSection').style.display = 'none';
+    
+    // Render Category Addons
+    const addonsList = document.getElementById('posAddonsList');
+    addonsList.innerHTML = "";
+    const cat = categories.find(c => c.name === dish.category);
+    if (cat && cat.addons) {
+        document.getElementById('posAddonsSection').style.display = 'block';
+        Object.entries(cat.addons).forEach(([name, price]) => {
+            const isChecked = currentPOSModalAddons[name] !== undefined;
+            const itemDiv = document.createElement('div');
+            itemDiv.className = "addon-check-item";
+            itemDiv.innerHTML = `
+                <div class="flex-row flex-center">
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="togglePOSAddon('${name}', ${price}, this)">
+                    <span class="fs-13 font-weight-600">${name}</span>
+                </div>
+                <span class="text-muted-small font-weight-700">+₹${price}</span>
+            `;
+            addonsList.appendChild(itemDiv);
+        });
+    }
+
+    // Change the "Add to Cart" button to "Update Item"
+    const submitBtn = document.getElementById('posModalSubmitBtn');
+    const originalText = submitBtn.innerText;
+    submitBtn.innerText = "💾 Update Selection";
+    
+    // Temporarily replace the click handler
+    const originalHandler = window.addToWalkinCartFromModal;
+    window.addToWalkinCartFromModal = () => {
+        // Remove old item, add new updated one
+        delete walkinCart[cartKey];
+        
+        // Use the standard logic to add back
+        const newSizeName = currentPOSModalSize.name;
+        const newAddonNames = Object.keys(currentPOSModalAddons);
+        const newCartKey = `${item.id}_${newSizeName}_${newAddonNames.sort().join('_')}`;
+        const pricePerItem = Number(currentPOSModalSize.price) + Object.values(currentPOSModalAddons).reduce((a, b) => a + b, 0);
+
+        walkinCart[newCartKey] = {
+            id: item.id,
+            name: currentPOSModalDish.name,
+            category: currentPOSModalDish.category,
+            size: newSizeName,
+            price: pricePerItem,
+            qty: currentPOSModalQty,
+            addons: newAddonNames.map(name => ({ name, price: currentPOSModalAddons[name] }))
+        };
+
+        hidePOSSelectionModal();
+        renderWalkinCart();
+        
+        // Restore original things
+        window.addToWalkinCartFromModal = originalHandler;
+        submitBtn.innerText = originalText;
+        document.getElementById('posSizeSection').style.display = 'block';
+    };
+
+    updatePOSModalTotal();
+    document.getElementById('posSelectionModal').style.display = 'flex';
+};
+window.migrateAddonsToCategories = async () => {
+    try {
+        console.log("Starting add-on migration...");
+        const dishesSnap = await db.ref(`dishes`).once('value');
+        const categoriesSnap = await db.ref('categories').once('value');
+        
+        const dishes = dishesSnap.val() || {};
+        const categoriesData = categoriesSnap.val() || {};
+        
+        const categoryAddons = {}; // categoryName -> { addonName: price }
+
+        // 1. Collect from all dishes
+        Object.keys(dishes).forEach(outletId => {
+            const outletDishes = dishes[outletId];
+            Object.values(outletDishes).forEach(dish => {
+                if (dish.category && dish.addons) {
+                    if (!categoryAddons[dish.category]) categoryAddons[dish.category] = {};
+                    Object.entries(dish.addons).forEach(([name, price]) => {
+                        categoryAddons[dish.category][name] = price;
+                    });
+                }
+            });
+        });
+
+        // 2. Update Categories
+        const updates = {};
+        Object.entries(categoriesData).forEach(([catId, cat]) => {
+            if (categoryAddons[cat.name]) {
+                updates[`categories/${catId}/addons`] = categoryAddons[cat.name];
+            }
+        });
+
+        if (Object.keys(updates).length > 0) {
+            await db.ref().update(updates);
+            console.log("✅ Migration complete!", updates);
+            alert("Success: Add-ons migrated to categories!");
+        } else {
+            console.log("No add-ons found to migrate.");
+            alert("No add-ons found to migrate.");
+        }
+    } catch (e) {
+        console.error("Migration failed:", e);
+        alert("Migration failed: " + e.message);
+    }
+};
+
+// =============================
+// CATEGORY RENDERING IN POS
+// =============================
+function renderWalkinCategoryTabs() {
+    const container = document.getElementById('walkinCategoryTabs');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="category-tab active" onclick="filterWalkinByCategory('All', this)">All</div>
+    `;
+    
+    categories.forEach(cat => {
+        const tab = document.createElement('div');
+        tab.className = "category-tab";
+        tab.innerText = cat.name;
+        tab.onclick = () => filterWalkinByCategory(cat.name, tab);
+        container.appendChild(tab);
+    });
+}
+
+function filterWalkinByCategory(catName, el) {
+    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+    if (el) el.classList.add('active');
+    
+    if (catName === 'All') {
+        renderWalkinDishGrid(allWalkinDishes);
+    } else {
+        const filtered = allWalkinDishes.filter(d => d.category === catName);
+        renderWalkinDishGrid(filtered);
+    }
 }
