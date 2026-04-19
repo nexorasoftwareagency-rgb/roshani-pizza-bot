@@ -2553,10 +2553,8 @@ window.downloadPDF = () => {
 // WALK-IN / COUNTER SALE (POS)
 // =============================
 
-// Cart state: { dishId: { name, price, qty } }
-let walkinCart = {};
-let walkinPayMethod = 'Cash';
-let activeWalkinCategory = 'All';
+// Cart state inherited from global scope at line 174
+// walkinCart, walkinPayMethod, activeWalkinCategory, allWalkinDishes are initialized there.
 let cachedDishes = [];
 
 // Category emoji map for dish cards
