@@ -1,4 +1,4 @@
-const CACHE_NAME = 'roshani-pizza-v1.4';
+const CACHE_NAME = 'roshani-pizza-v1.51';
 const ASSETS = [
   './',
   './index.html',
