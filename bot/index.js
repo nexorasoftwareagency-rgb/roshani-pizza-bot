@@ -252,15 +252,18 @@ async function sendGreeting(sock, sender, user) {
 // CATEGORY
 // =============================
 async function sendCategories(sock, sender, user) {
-    const data = await getData(`Menu/Categories`);
-    if (!data) {
+    const categoriesData = await getData(`Menu/Categories`);
+    const settings = await getData(`settings`);
+    const bannerFallback = settings?.bannerImage || "https://via.placeholder.com/600x400?text=Roshani+ERP";
+
+    if (!categoriesData) {
         user.categoryList = [];
         user.step = "CATEGORY";
         return sock.sendMessage(sender, { text: "❌ *No categories available.* \nPlease try again later." });
     }
 
     // Filter by outlet (consistent with Admin)
-    user.categoryList = Object.entries(data)
+    user.categoryList = Object.entries(categoriesData)
         .map(([id, val]) => ({ id, ...val }))
         .filter(cat => cat.outlet === user.outlet);
 
@@ -291,7 +294,9 @@ async function sendCategories(sock, sender, user) {
     msg += `\n0️⃣  *Back to Menu* ⬅️`;
     user.step = "CATEGORY";
 
-    await sendImage(sock, sender, user.categoryList[0]?.image, msg);
+    // Use specific category image if available, else use banner fallback
+    const displayImg = user.categoryList[0]?.image || bannerFallback;
+    await sendImage(sock, sender, displayImg, msg);
 }
 
 // =============================
@@ -645,8 +650,12 @@ async function startBot() {
                 msgText += `\n0️⃣  *Go Back* ⬅️`;
 
                 user.step = "DISH";
+                
+                // Fallback image handling
+                const settings = await getData(`settings`);
+                const displayImg = cat.image || settings?.bannerImage;
 
-                return sendImage(sock, sender, cat.image, msgText);
+                return sendImage(sock, sender, displayImg, msgText);
             }
 
             // DISH
