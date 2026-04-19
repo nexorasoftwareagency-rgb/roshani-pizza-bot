@@ -68,8 +68,15 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+// =============================
+// FIREBASE INITIALIZATION
+// =============================
+if (window.firebaseConfig && !firebase.apps.length) {
+    firebase.initializeApp(window.firebaseConfig);
+}
 const db = firebase.database();
 const auth = firebase.auth();
+
 
 // =============================
 // FILE UPLOAD UTILITY (Base64)
@@ -141,13 +148,15 @@ function initSecondaryAuth() {
             secondaryAuthAvailable = false;
             return;
         }
-        if (firebase.apps.length > 1) {
-            secondaryAuth = firebase.app("secondary").auth();
+        // Use a unique name for the secondary app to avoid collisions
+        if (firebase.apps.some(app => app.name === "secondary_auth")) {
+            secondaryAuth = firebase.app("secondary_auth").auth();
         } else {
-            const secondaryApp = firebase.initializeApp(window.firebaseConfig, "secondary");
+            const secondaryApp = firebase.initializeApp(window.firebaseConfig, "secondary_auth");
             secondaryAuth = secondaryApp.auth();
         }
         secondaryAuthAvailable = true;
+        console.log("Secondary Auth initialized successfully.");
     } catch (e) {
         console.error("Secondary Auth Init Error:", e);
         secondaryAuthAvailable = false;
@@ -1925,15 +1934,34 @@ window.saveRiderAccount = async () => {
         if (!isEditRiderMode) {
             // 1. Create in secondary Auth
             if (!secondaryAuthAvailable) {
-                alert("Rider creation is currently unavailable (Secondary Auth failed to initialize). Please check your configuration.");
+                alert("Rider creation is currently unavailable (Secondary Auth failed to initialize). Please ensure firebase-config.js is correctly loaded.");
                 return;
             }
             if (!pass || pass.length < 6) {
                 alert("Password must be at least 6 characters for new accounts.");
                 return;
             }
-            const cred = await secondaryAuth.createUserWithEmailAndPassword(email, pass);
-            uid = cred.user.uid;
+            
+            try {
+                const cred = await secondaryAuth.createUserWithEmailAndPassword(email, pass);
+                uid = cred.user.uid;
+            } catch (authError) {
+                if (authError.code === 'auth/email-already-in-use') {
+                    alert("CRITICAL ERROR: This email (" + email + ") is already registered in the Authentication system but has no database record.\n\nTo fix this:\n1. Delete the user from the Firebase Console (Authentication tab).\n2. OR try using a different email.\n\nNote: If this rider was recently deleted from the dashboard, their login credentials still exist in Firebase security records.");
+                    statusLabel.classList.add('hidden');
+                    return;
+                }
+                throw authError;
+            }
+        } else if (pass && pass.length >= 6) {
+            // Update password in edit mode if provided
+            try {
+                // To update password, we'd need to sign in as the user. 
+                // Since this is restricted, we recommend using 'Forgot Password' or resetting via Firebase Console.
+                alert("Password update requested. Note: Password can only be changed by the Rider using the 'Forgot Password' link or by Admin via Firebase Console.");
+            } catch (e) {
+                console.error("Password update error:", e);
+            }
         }
 
         // 2. Save/Update rider details to DB
