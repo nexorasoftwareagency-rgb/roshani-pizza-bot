@@ -918,75 +918,77 @@
                 <button onclick="hideRiderModal()" class="close-btn">&times;</button>
             </div>
 
-            <div class="modal-grid-2col">
-                <!-- Left: Profile & Photos -->
-                <div class="modal-media-section">
-                    <div class="profile-upload-container">
-                        <img id="riderProfilePreview" src="assets/rider_placeholder.png" class="rider-preview-sm" alt="Rider Profile">
-                        <input type="file" id="riderPhotoInput" accept="image/*" class="hidden" onchange="previewImage(this, 'riderProfilePreview')" title="Select Rider Profile Photo">
-                        <button onclick="document.getElementById('riderPhotoInput').click()" class="btn-secondary btn-small mt-10">Upload Photo</button>
-                        <input type="hidden" id="riderPhotoUrl">
-                    </div>
-
-                    <div class="aadhar-upload-container mt-20">
-                        <label class="form-label-small">AADHAR CARD COPY</label>
-                        <img id="aadharPreview" src="assets/aadhar_placeholder.png" class="aadhar-preview-sm" alt="Aadhar Card">
-                        <input type="file" id="aadharPhotoInput" accept="image/*" class="hidden" onchange="previewImage(this, 'aadharPreview')" title="Select Aadhar Card Image">
-                        <button onclick="document.getElementById('aadharPhotoInput').click()" class="btn-secondary btn-small mt-10">Upload Aadhar</button>
-                        <input type="hidden" id="aadharUrl">
-                    </div>
-                </div>
-
-                <!-- Right: Form Fields -->
-                <div class="modal-form-section scroll-y h-500 p-r-10">
-                    <input type="hidden" id="modalRiderId">
-                    
-                    <div class="form-row">
-                        <div class="flex-1">
-                            <label class="form-label">Full Name</label>
-                            <input id="riderName" placeholder="John Doe" class="form-input w-full" title="Rider's full name">
+            <div class="modal-body">
+                <div class="modal-grid-2col">
+                    <!-- Left: Profile & Photos -->
+                    <div class="modal-media-section">
+                        <div class="profile-upload-container">
+                            <img id="riderProfilePreview" src="assets/rider_placeholder.png" class="rider-preview-sm" alt="Rider Profile">
+                            <input type="file" id="riderPhotoInput" accept="image/*" class="hidden" onchange="previewImage(this, 'riderProfilePreview')" title="Select Rider Profile Photo">
+                            <button onclick="document.getElementById('riderPhotoInput').click()" class="btn-secondary btn-small mt-10">Upload Photo</button>
+                            <input type="hidden" id="riderPhotoUrl">
                         </div>
-                        <div class="flex-1">
-                            <label class="form-label">Email (Login)</label>
-                            <input id="riderEmail" type="email" placeholder="john@example.com" class="form-input w-full" title="Rider's login email address">
+
+                        <div class="aadhar-upload-container mt-20">
+                            <label class="form-label-small">AADHAR CARD COPY</label>
+                            <img id="aadharPreview" src="assets/aadhar_placeholder.png" class="aadhar-preview-sm" alt="Aadhar Card">
+                            <input type="file" id="aadharPhotoInput" accept="image/*" class="hidden" onchange="previewImage(this, 'aadharPreview')" title="Select Aadhar Card Image">
+                            <button onclick="document.getElementById('aadharPhotoInput').click()" class="btn-secondary btn-small mt-10">Upload Aadhar</button>
+                            <input type="hidden" id="aadharUrl">
                         </div>
                     </div>
 
-                    <div class="form-row">
-                        <div class="flex-1">
-                            <label class="form-label" id="riderPassLabel">Portal Password</label>
-                            <div class="password-input-group">
-                                <input id="riderPass" type="password" placeholder="••••••••" class="form-input w-full" title="New password for rider portal">
+                    <!-- Right: Form Fields -->
+                    <div class="modal-form-section p-r-10">
+                        <input type="hidden" id="modalRiderId">
+                        
+                        <div class="form-row">
+                            <div class="flex-1">
+                                <label class="form-label">Full Name</label>
+                                <input id="riderName" placeholder="John Doe" class="form-input w-full" title="Rider's full name">
                             </div>
-                            <small id="riderPassHint" class="hidden text-muted-small">Leave blank to keep current password</small>
+                            <div class="flex-1">
+                                <label class="form-label">Email (Login)</label>
+                                <input id="riderEmail" type="email" placeholder="john@example.com" class="form-input w-full" title="Rider's login email address">
+                            </div>
                         </div>
-                        <div class="flex-1">
-                            <label class="form-label">Primary Phone</label>
-                            <input id="riderPhone" type="tel" placeholder="+91 99999 00000" class="form-input w-full" title="Rider's primary contact number">
+
+                        <div class="form-row">
+                            <div class="flex-1">
+                                <label class="form-label" id="riderPassLabel">Portal Password</label>
+                                <div class="password-input-group">
+                                    <input id="riderPass" type="password" placeholder="••••••••" class="form-input w-full" title="New password for rider portal">
+                                </div>
+                                <small id="riderPassHint" class="hidden text-muted-small">Leave blank to keep current password</small>
+                            </div>
+                            <div class="flex-1">
+                                <label class="form-label">Primary Phone</label>
+                                <input id="riderPhone" type="tel" placeholder="+91 99999 00000" class="form-input w-full" title="Rider's primary contact number">
+                            </div>
                         </div>
+
+                        <div class="divider-dashed"></div>
+
+                        <div class="form-row">
+                            <div class="flex-1">
+                                <label class="form-label">Father's Name</label>
+                                <input id="riderFatherName" placeholder="Father's Name" class="form-input w-full">
+                            </div>
+                            <div class="flex-1">
+                                <label class="form-label">Age</label>
+                                <input id="riderAge" type="number" placeholder="25" class="form-input w-full">
+                            </div>
+                        </div>
+
+                        <label class="form-label">Aadhar Number</label>
+                        <input id="riderAadharNo" placeholder="0000 0000 0000" class="form-input w-full" title="Rider's 12-digit Aadhar number">
+
+                        <label class="form-label">Educational Qualification</label>
+                        <input id="riderQual" placeholder="e.g. Graduate" class="form-input w-full" title="Highest educational degree">
+
+                        <label class="form-label">Current Address</label>
+                        <textarea id="riderAddress" placeholder="Full residential address..." class="form-input w-full h-80" title="Full permanent/current address"></textarea>
                     </div>
-
-                    <div class="divider-dashed"></div>
-
-                    <div class="form-row">
-                        <div class="flex-1">
-                            <label class="form-label">Father's Name</label>
-                            <input id="riderFatherName" placeholder="Father's Name" class="form-input w-full">
-                        </div>
-                        <div class="flex-1">
-                            <label class="form-label">Age</label>
-                            <input id="riderAge" type="number" placeholder="25" class="form-input w-full">
-                        </div>
-                    </div>
-
-                    <label class="form-label">Aadhar Number</label>
-                    <input id="riderAadharNo" placeholder="0000 0000 0000" class="form-input w-full" title="Rider's 12-digit Aadhar number">
-
-                    <label class="form-label">Educational Qualification</label>
-                    <input id="riderQual" placeholder="e.g. Graduate" class="form-input w-full" title="Highest educational degree">
-
-                    <label class="form-label">Current Address</label>
-                    <textarea id="riderAddress" placeholder="Full residential address..." class="form-input w-full h-80" title="Full permanent/current address"></textarea>
                 </div>
             </div>
 
