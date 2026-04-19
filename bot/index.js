@@ -138,16 +138,33 @@ function getFeeFromSlabs(distance, slabs) {
 
 function isShopOpen(openTime, closeTime) {
     if (!openTime || !closeTime) return true; // Default to open if not set
+    
+    const parseTime = (timeStr) => {
+        if (!timeStr) return 0;
+        // Clean string and handle AM/PM
+        const cleanStr = timeStr.trim().toUpperCase();
+        const isPM = cleanStr.includes('PM');
+        const isAM = cleanStr.includes('AM');
+        
+        // Extract numbers
+        const parts = cleanStr.replace(/AM|PM/i, '').trim().split(':');
+        let hours = parseInt(parts[0], 10) || 0;
+        const minutes = parseInt(parts[1], 10) || 0;
+
+        if (isPM && hours < 12) hours += 12;
+        if (isAM && hours === 12) hours = 0;
+
+        return hours * 60 + minutes;
+    };
+
     const now = new Date();
+    // Bot usually runs on server time. Ensure this matches shop's local time if possible.
     const currentTime = now.getHours() * 60 + now.getMinutes();
 
-    const [openH, openM] = openTime.split(':').map(Number);
-    const [closeH, closeM] = closeTime.split(':').map(Number);
+    const start = parseTime(openTime);
+    const end = parseTime(closeTime);
 
-    const start = openH * 60 + openM;
-    const end = closeH * 60 + closeM;
-
-    // Handle overnight hours (e.g. 10:00 to 02:00)
+    // Handle overnight hours (e.g. 10:00 PM to 02:00 AM)
     if (end < start) {
         return currentTime >= start || currentTime <= end;
     }
