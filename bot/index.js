@@ -312,7 +312,7 @@ async function startBot() {
         auth: state,
         printQRInTerminal: true,
         logger: pino({ level: 'silent' }),
-        browser: ['Roshani Pizza ERP', 'Safari', '3.0']
+        browser: ['Windows', 'Chrome', '11.0.0']
     });
 
     // =============================
@@ -356,7 +356,7 @@ async function startBot() {
 
         if (connection === 'close') {
             const code = lastDisconnect?.error?.output?.statusCode || lastDisconnect?.error?.code;
-            const shouldReconnect = code !== 401 && code !== 515; // Logged out codes
+            const shouldReconnect = code !== 401; // Allow retry on 515 or other transient errors
 
             console.log(`🔌 Disconnected (Code: ${code}). Reconnecting: ${shouldReconnect}`);
 
