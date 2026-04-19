@@ -8,6 +8,29 @@ window.haptic = window.haptic || ((val) => {
 });
 let deferredPrompt;
 
+// --- REFRESH CIRCUIT BREAKER ---
+(function() {
+    const REFRESH_LIMIT = 5;
+    const TIME_WINDOW = 10000; // 10 seconds
+    const now = Date.now();
+    let refreshData = JSON.parse(sessionStorage.getItem('erp_refresh_log') || '{"count": 0, "first": 0}');
+    
+    if (now - refreshData.first > TIME_WINDOW) {
+        refreshData = { count: 1, first: now };
+    } else {
+        refreshData.count++;
+    }
+    
+    sessionStorage.setItem('erp_refresh_log', JSON.stringify(refreshData));
+    
+    if (refreshData.count > REFRESH_LIMIT) {
+        console.error("CRITICAL: Infinite redirect loop detected. Stopping and purging cache.");
+        sessionStorage.setItem('erp_refresh_log', '{"count": 0, "first": 0}');
+        alert("System detected a refresh loop. Please try clearing your browser cache or contact support if the issue persists.");
+        throw new Error("Refresh Loop Halted");
+    }
+})();
+
 // PWA Install Logic
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -513,13 +536,21 @@ auth.onAuthStateChanged(async user => {
                 if (switcher) switcher.classList.add('hidden');
             }
 
-            // Sync Branding Engine with the actual assigned outlet
+            // --- CONSOLIDATED BRANDING SYNC ---
             const brandType = window.currentOutlet === 'cake' ? 'cake' : 'pizza';
+            // Only reload if the brand actually changed to ensure manifest and theme-colors refresh
             if (localStorage.getItem('admin_brand') !== brandType) {
-                console.log(`[Branding] Syncing brand to: ${brandType}`);
+                console.log(`[Branding Sync] Updating brand to: ${brandType}`);
                 localStorage.setItem('admin_brand', brandType);
-                // Reload only if the brand actually changed to ensure manifest and theme-colors refresh
-                location.reload();
+                
+                // Clear the 'brand' URL parameter before reloading to prevent loops
+                const url = new URL(window.location.href);
+                if (url.searchParams.has('brand')) {
+                    url.searchParams.delete('brand');
+                    window.location.href = url.toString();
+                } else {
+                    location.reload();
+                }
                 return; 
             }
 
@@ -574,10 +605,8 @@ function updateBranding() {
     if (typeof window.switchBrand === 'function' && brand !== localStorage.getItem('admin_brand')) {
         localStorage.setItem('admin_brand', brand);
         console.log("[Branding] Outlet changed brand to:", brand);
-        // We don't force reload here to avoid interrupting the user, 
-        // but the NEXT visit or a manual reload will finalize the PWA icon.
-        // We trigger the DOM update immediately though.
-        location.reload(); 
+        // Do not force reload here to avoid interrupting user; 
+        // the consolidated sync in onAuthStateChanged or a manual reload handles it.
     }
 
     const ridersMenu = document.getElementById("menu-riders");
