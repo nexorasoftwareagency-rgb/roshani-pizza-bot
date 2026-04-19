@@ -52,8 +52,30 @@
             document.head.appendChild(themeColor);
         }
         themeColor.setAttribute('content', active.theme);
+
+        // Dynamic CSS Variable Injection for Global Themes
+        const root = document.documentElement;
+        if (brand === 'cake') {
+            root.style.setProperty('--primary', '#EC4899'); // Pink-500
+            root.style.setProperty('--primary-orange', '#EC4899'); // Alias for components using old name
+            root.style.setProperty('--primary-dark', '#BE185D'); // Pink-700
+        } else {
+            root.style.setProperty('--primary', '#F97316'); // Orange-500
+            root.style.setProperty('--primary-orange', '#F97316'); 
+            root.style.setProperty('--primary-dark', '#EA580C'); // Orange-700
+        }
         
-        console.log(`[Branding] Switched to ${brand.toUpperCase()} mode.`);
+        // Update Header Titles
+        const sidebarBrand = document.getElementById('sidebarBrandText');
+        const loginHeader = document.querySelector('.login-box h2');
+        if (sidebarBrand) {
+            sidebarBrand.innerText = brand === 'cake' ? 'ROSHANI CAKE' : 'ROSHANI PIZZA';
+        }
+        if (loginHeader) {
+            loginHeader.innerText = brand === 'cake' ? 'ROSHANI CAKES LOGIN' : 'ROSHANI PIZZA LOGIN';
+        }
+
+        console.log(`[Branding] Switched to ${brand.toUpperCase()} mode. Theme: ${active.theme}`);
     });
 })();
 

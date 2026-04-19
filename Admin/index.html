@@ -7,13 +7,32 @@
     <title>Roshani Pizza | Admin Dashboard</title>
 
     <!-- Dynamic Branding Engine -->
-    <script src="branding.js"></script>
+    <script src="branding.js?v=3.1.0"></script>
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=3.1.0">
     <link rel="manifest" href="manifest.json"> <!-- Fallback, handled by branding.js -->
     <link rel="apple-touch-icon" href="icon-512.png"> <!-- Fallback, handled by branding.js -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Double-Refresh Cache Invalidation -->
+    <script>
+        (function() {
+            const count = parseInt(sessionStorage.getItem('refresh_count') || '0');
+            if (count >= 1) {
+                console.log("[Cache] Double-refresh detected. Purging ERP caches...");
+                if ('caches' in window) {
+                    caches.keys().then(names => {
+                        for (let name of names) caches.delete(name);
+                    });
+                }
+                sessionStorage.setItem('refresh_count', '0');
+            } else {
+                sessionStorage.setItem('refresh_count', (count + 1).toString());
+            }
+        })();
+    </script>
+
     <!-- Theme color injected by branding.js to avoid static validation warnings -->
     <!-- Secondary theme color meta for broader support -->
     <meta name="msapplication-TileColor" content="#FF6B00">
@@ -1067,7 +1086,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=1.3"></script>
+    <script src="app.js?v=3.1.0"></script>
     <script>
         // Ensure Lucide icons are rendered
         if(typeof lucide !== 'undefined') lucide.createIcons();

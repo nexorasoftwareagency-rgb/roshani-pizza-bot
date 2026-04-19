@@ -1,7 +1,6 @@
 {
   "rules": {
     "orders": {
-      // Admin can see everything. Riders can only see orders assigned to them or unassigned.
       ".read": "(auth != null && auth.token.admin === true) || (auth != null && query.orderByChild == 'assignedRider')",
       "$orderId": {
         ".read": "auth != null && (auth.token.admin === true || data.child('assignedRider').val() == auth.token.email || data.child('whatsappNumber').val() == auth.token.whatsapp)",
@@ -20,7 +19,6 @@
       }
     },
     "riders": {
-      // Only admins should see the list of all riders. Riders can only see their own profile.
       ".read": "auth != null && auth.token.admin === true",
       "$riderId": {
         ".read": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
@@ -35,7 +33,6 @@
       }
     },
     "customers": {
-      // Customers node is PII, only admins read/write
       ".read": "auth != null && auth.token.admin === true",
       ".write": "auth.token.admin === true"
     },
@@ -53,6 +50,10 @@
     },
     "admins": {
         ".read": "auth != null && auth.token.admin === true",
+        ".write": "auth.token.admin === true"
+    },
+    "Menu": {
+        ".read": "auth != null",
         ".write": "auth.token.admin === true"
     }
   }
