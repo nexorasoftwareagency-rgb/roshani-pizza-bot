@@ -173,7 +173,7 @@ body {
 }
 
 .sidebar-header {
-    color: var(--action-green);
+    color: var(--primary);
     font-size: 22px;
     font-weight: 800;
     letter-spacing: -1px;
@@ -865,7 +865,7 @@ tr:hover td {
     inset: 0;
     justify-content: center;
     position: fixed;
-    z-index: 1000;
+    z-index: 10000;
 }
 
 .login-box {
@@ -1580,7 +1580,7 @@ html, body {
     }
 
     .mobile-cart-summary {
-        display: flex !important;
+        display: flex;
         position: fixed;
         bottom: 20px;
         left: 20px;
@@ -1620,4 +1620,38 @@ html, body {
 @keyframes slideInUp {
     from { transform: translateY(100%); }
     to { transform: translateY(0); }
+}
+/* NOTIFICATION SETTINGS UI */
+.notification-setting-group {
+    padding: 10px 0;
+}
+
+.status-badge-ghost {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(0,0,0,0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.status-badge-ghost [data-lucide] {
+    width: 18px;
+    height: 18px;
+    color: var(--primary);
+}
+
+.divider-dashed {
+    height: 1px;
+    border-top: 1px dashed var(--glass-border);
+    width: 100%;
+}
+
+.note-small {
+    font-style: italic;
+    font-size: 11px;
 }
