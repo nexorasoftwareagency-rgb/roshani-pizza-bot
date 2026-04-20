@@ -44,7 +44,7 @@
 
     /* HEADER & SPACING */
     --header-height: 80px;
-    --header-offset: 110px;
+    --header-offset: 120px;
 
     /* SURFACES */
     --glass-surface: rgba(255, 255, 255, 0.4);
@@ -277,7 +277,7 @@ body {
 .main {
     flex: 1;
     min-width: 0;
-    padding: 30px;
+    padding: var(--header-offset) 30px 30px;
     display: flex;
     flex-direction: column;
     /* Removed overflow-y: auto to allow window level scrolling and sticky sidebar/topbar stability */
@@ -303,13 +303,7 @@ body {
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Spacer to prevent content from hiding under fixed topbar */
-.main::before {
-    content: "";
-    display: block;
-    height: var(--header-offset);
-    margin-bottom: 10px;
-}
+
 
 
 
@@ -1443,7 +1437,7 @@ html, body {
         background: rgba(255, 255, 255, 0.95);
         -webkit-backdrop-filter: blur(20px);
         backdrop-filter: blur(20px);
-        z-index: 1000;
+        z-index: 1500;
         padding: 0 16px;
         justify-content: space-between;
         align-items: center;
