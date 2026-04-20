@@ -388,6 +388,13 @@ window.openOrderDrawer = (id) => {
             </div>
         </div>
 
+        ${o.customerNote ? `
+        <div style="background:rgba(255,107,0,0.05); border:1px dashed var(--primary); border-radius:15px; padding:15px; margin-bottom:24px;">
+            <div style="font-size:10px; font-weight:900; color:var(--primary); letter-spacing:1px; margin-bottom:6px; text-transform:uppercase;">Customer Note</div>
+            <div style="font-size:14px; line-height:1.5; color:var(--text-dark); font-weight:500;">${escapeHtml(o.customerNote)}</div>
+        </div>
+        ` : ''}
+
         <div style="display:flex; flex-direction:column; gap:12px;">
             <div style="font-size:11px; font-weight:800; color:var(--text-muted); text-align:center;">QUICK ACTIONS</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -1301,6 +1308,14 @@ function renderOrders(snap) {
         if (o.outlet && currentOutlet && o.outlet.toLowerCase().trim() !== currentOutlet.toLowerCase().trim()) return;
 
         const isLive = ["Placed", "Confirmed", "Preparing", "Cooked", "Out for Delivery"].includes(o.status);
+        if (isLive) liveCount++;
+        
+        if (o.status === "Delivered") {
+            revenue += Number(o.total || 0);
+        } else if (isLive || o.status === "Placed" || o.status === "Pending") {
+            pending++;
+        }
+
         const safeOrderId = escapeHtml(o.orderId || id.slice(-5));
         const safeCustomerName = escapeHtml(o.customerName);
         const safeStatus = escapeHtml(o.status);
@@ -1333,7 +1348,7 @@ function renderOrders(snap) {
                         <option value="Cooked" ${safeStatus === "Cooked" ? "selected" : ""}>Cooked</option>
                         <option value="Out for Delivery" ${safeStatus === "Out for Delivery" ? "selected" : ""}>Out for Delivery</option>
                         <option value="Delivered" ${safeStatus === "Delivered" ? "selected" : ""}>Delivered</option>
-                        ${["Placed", "Pending"].includes(safeStatus) ? `<option value="Cancelled" ${safeStatus === "Cancelled" ? "selected" : ""}>Cancel</option>` : ""}
+                        <option value="Cancelled" ${safeStatus === "Cancelled" ? "selected" : ""}>Cancelled X</option>
                     </select>
                     <button onclick="event.stopPropagation(); window.printReceiptById('${o.orderId || id}')" class="btn-icon" style="padding: 4px 8px; font-size: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; border-radius: 4px;" title="Print Receipt">🖨️</button>
                 </div>
@@ -2526,6 +2541,10 @@ window.updateStatus = (id, status) => {
     if (!status) return;
     window.haptic(20);
     
+    if (status === "Delivered") {
+        return window.openPaymentModal(id);
+    }
+    
     return db.ref("orders/" + id).update({ 
         status: status,
         updatedAt: firebase.database.ServerValue.TIMESTAMP 
@@ -2537,6 +2556,93 @@ window.updateStatus = (id, status) => {
         console.error("[StatusUpdate Error]", err);
         window.showToast("Failed to update status: " + err.message, 'error');
     });
+};
+
+window.openPaymentModal = (id) => {
+    const existing = document.getElementById('paymentModal');
+    if (existing) existing.remove();
+
+    const order = ordersMap.get(id);
+    const total = order ? order.total : '...';
+
+    const modal = document.createElement('div');
+    modal.id = 'paymentModal';
+    modal.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+        display: flex; align-items: center; justify-content: center; z-index: 10000;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; width: 90%; max-width: 400px; border-radius: 24px; padding: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.3); overflow: hidden; position: relative;">
+            <div style="text-align: center; margin-bottom: 25px;">
+                <div style="font-size: 12px; font-weight: 800; color: var(--primary); letter-spacing: 2px; margin-bottom: 8px; text-transform: uppercase;">Payment Settlement</div>
+                <h2 style="font-size: 24px; font-weight: 900; color: #1a1a1a; margin: 0;">₹${total}</h2>
+                <p style="color: #666; font-size: 14px; margin-top: 5px;">Select payment method used for this delivery</p>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button onclick="saveDeliveredOrder('${id}', 'Cash')" class="pay-option-btn" style="background: #f0fdf4; border: 2px solid #bbf7d0; color: #166534;">
+                    <span style="font-size: 24px;">💵</span>
+                    <div style="text-align: left;">
+                        <div style="font-weight: 800; font-size: 16px;">Cash</div>
+                        <div style="font-size: 11px; opacity: 0.7;">Received by Hand</div>
+                    </div>
+                </button>
+                <button onclick="saveDeliveredOrder('${id}', 'UPI')" class="pay-option-btn" style="background: #eff6ff; border: 2px solid #bfdbfe; color: #1e40af;">
+                    <span style="font-size: 24px;">📱</span>
+                    <div style="text-align: left;">
+                        <div style="font-weight: 800; font-size: 16px;">UPI / Online</div>
+                        <div style="font-size: 11px; opacity: 0.7;">GPay, PhonePe, etc.</div>
+                    </div>
+                </button>
+                <button onclick="saveDeliveredOrder('${id}', 'Card')" class="pay-option-btn" style="background: #faf5ff; border: 2px solid #e9d5ff; color: #6b21a8;">
+                    <span style="font-size: 24px;">💳</span>
+                    <div style="text-align: left;">
+                        <div style="font-weight: 800; font-size: 16px;">Card</div>
+                        <div style="font-size: 11px; opacity: 0.7;">Debit / Credit Card</div>
+                    </div>
+                </button>
+            </div>
+
+            <button onclick="document.getElementById('paymentModal').remove()" style="width: 100%; margin-top: 20px; background: none; border: none; color: #999; font-weight: 700; cursor: pointer; padding: 10px; font-size: 13px;">CANCEL</button>
+        </div>
+        <style>
+            .pay-option-btn {
+                display: flex; align-items: center; gap: 15px; padding: 15px 20px;
+                border-radius: 16px; cursor: pointer; transition: all 0.2s ease;
+                text-align: left; width: 100%;
+            }
+            .pay-option-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+            .pay-option-btn:active { transform: scale(0.98); }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        </style>
+    `;
+
+    document.body.appendChild(modal);
+};
+
+window.saveDeliveredOrder = async (id, method) => {
+    window.haptic(30);
+    const btn = document.querySelector(`.pay-option-btn`);
+    if(btn) btn.disabled = true;
+
+    try {
+        await db.ref("orders/" + id).update({
+            status: "Delivered",
+            paymentMethod: method,
+            paymentStatus: "Paid",
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        
+        window.showToast(`Order marked Delivered via ${method}`, 'success');
+        const modal = document.getElementById('paymentModal');
+        if (modal) modal.remove();
+    } catch (err) {
+        console.error("[DeliveredSave Error]", err);
+        window.showToast("Failed to finalize order: " + err.message, 'error');
+    }
 };
 
 
@@ -3064,6 +3170,7 @@ window.submitWalkinSale = async () => {
         return alert('Please add at least one item to the cart.');
     }
 
+    const custNote = document.getElementById('walkinCustNote')?.value.trim() || '';
     const custName = document.getElementById('walkinCustName')?.value.trim() || 'Walk-in Customer';
     const custPhoneRaw = document.getElementById('walkinCustPhone')?.value.trim() || '';
     let custPhone = custPhoneRaw.replace(/\D/g, '');
@@ -3095,6 +3202,7 @@ window.submitWalkinSale = async () => {
         customerName: custName,
         phone: custPhone,
         whatsappNumber: custPhone, // Added for bot compatibility
+        customerNote: custNote,
 
         items,
         subtotal,
@@ -3147,6 +3255,8 @@ window.submitWalkinSale = async () => {
         document.getElementById('walkinDiscount').value = 0;
         document.getElementById('walkinCustName').value = '';
         document.getElementById('walkinCustPhone').value = '';
+        const noteEl = document.getElementById('walkinCustNote');
+        if (noteEl) noteEl.value = '';
         renderWalkinCart();
         showAlert('Sale Recorded successfully!', 'success');
     } catch (e) {
@@ -3340,9 +3450,10 @@ async function printOrderReceipt(rawOrder, isReprint = false) {
             </div>
 
             <div class="mt-10 meta-text">
-                <div class="bold">Customer:</div>
-                <div>${o.customerName} ${o.phone ? `(${o.phone})` : ''}</div>
-                ${o.address && o.type === 'Online Booked' ? `<div style="font-size:0.75rem;">Addr: ${o.address}</div>` : ''}
+                <div class="bold">Customer: ${escapeHtml(o.customerName)}</div>
+                ${o.phone ? `<div>Phone: ${escapeHtml(o.phone)}</div>` : ''}
+                ${o.customerNote ? `<div style="margin-top:5px; padding: 5px; border: 1px dashed #000; font-size: 0.75rem;"><strong>Note:</strong> ${escapeHtml(o.customerNote)}</div>` : ''}
+                ${o.address && o.type === 'Online Booked' ? `<div style="font-size:0.75rem; margin-top:3px;">Addr: ${escapeHtml(o.address)}</div>` : ''}
             </div>
 
             ${store.config.showWifiInfo && store.wifiName ? `
