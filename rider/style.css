@@ -910,7 +910,7 @@ body {
 /* -------------------------------------------------------------------------- */
 @media (max-width: 1024px) {
     :root {
-        --header-offset: 25px;
+        --header-offset: 70px;
     }
     .sidebar { 
         display: none !important; /* Managed by .active toggle */
