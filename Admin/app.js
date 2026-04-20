@@ -2750,7 +2750,7 @@ function renderWalkinDishGrid(dishes) {
         }
 
         const sizeOptions = Object.entries(sizes).map(([name, price]) => 
-            `<option value="${name}" data-price="${price}">${name} - ₹${price}</option>`
+            `<option value="${escapeHtml(name)}" data-price="${price}">${escapeHtml(name)} - ₹${price}</option>`
         ).join('');
 
         card.innerHTML = `
@@ -2834,7 +2834,7 @@ window.showAddonView = (dishId) => {
             item.innerHTML = `
                 <div class="flex-row flex-center flex-gap-8">
                     <input type="checkbox" ${isSelected ? 'checked' : ''} style="pointer-events:none;">
-                    <span class="fs-12 font-weight-700">${name}</span>
+                    <span class="fs-12 font-weight-700">${escapeHtml(name)}</span>
                 </div>
                 <span class="fs-12 font-weight-800 color-green">₹${price}</span>
             `;
@@ -2895,7 +2895,7 @@ window.addToWalkinCartFromCard = (dishId) => {
     }));
 
     const pricePerItem = basePrice + addons.reduce((sum, a) => sum + a.price, 0);
-    const cartKey = `${dishId}_${sizeName}_${addonNames.sort().join('_')}`;
+    const cartKey = `${dishId}::${sizeName}::${addonNames.sort().join('|')}`;
 
     if (walkinCart[cartKey]) {
         walkinCart[cartKey].qty += qty;
@@ -2917,7 +2917,7 @@ window.addToWalkinCartFromCard = (dishId) => {
 };
 
 function addToWalkinCart(id, name, price, size = "Regular") {
-    const cartKey = id + "_" + size;
+    const cartKey = id + "::" + size;
     if (walkinCart[cartKey]) {
         walkinCart[cartKey].qty++;
     } else {
@@ -3829,7 +3829,7 @@ window.addToWalkinCartFromModal = () => {
     const addonNames = Object.keys(currentPOSModalAddons);
     
     // Create unique key for cart item (dish + size + addons)
-    const cartKey = `${baseId}_${sizeName}_${addonNames.sort().join('_')}`;
+    const cartKey = `${baseId}::${sizeName}::${addonNames.sort().join('|')}`;
     
     const pricePerItem = Number(currentPOSModalSize.price) + Object.values(currentPOSModalAddons).reduce((a, b) => a + b, 0);
     
@@ -3913,7 +3913,7 @@ window.openCartAddonPicker = async (cartKey) => {
         // Use the standard logic to add back
         const newSizeName = currentPOSModalSize.name;
         const newAddonNames = Object.keys(currentPOSModalAddons);
-        const newCartKey = `${item.id}_${newSizeName}_${newAddonNames.sort().join('_')}`;
+        const newCartKey = `${item.id}::${newSizeName}::${newAddonNames.sort().join('|')}`;
         const pricePerItem = Number(currentPOSModalSize.price) + Object.values(currentPOSModalAddons).reduce((a, b) => a + b, 0);
 
         walkinCart[newCartKey] = {
