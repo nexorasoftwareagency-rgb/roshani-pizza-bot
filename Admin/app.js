@@ -912,7 +912,8 @@ window.switchTab = (tabId) => {
 
     // Handle POS (Walk-in) Fullscreen on Mobile
     if (tabId === 'walkin') {
-        if (window.innerWidth < 1024) {
+        // Only trigger immersion on actual mobile screens (strict)
+        if (window.innerWidth < 768) {
              body.classList.add('pos-immersion-active');
         }
         
@@ -1259,7 +1260,7 @@ function renderOrders(snap) {
         const id = child.key;
         const o = child.val();
 
-        if (o.outlet !== currentOutlet) return;
+        if (o.outlet && currentOutlet && o.outlet.toLowerCase().trim() !== currentOutlet.toLowerCase().trim()) return;
 
         // Revenue should only include non-cancelled and marked as Delivered or Paid
         if (o.status !== "Cancelled" && (o.status === "Delivered" || o.paymentStatus === "Paid")) {
@@ -1425,7 +1426,7 @@ function calculateTopSpenders(snap) {
     const spencerStats = {};
     snap.forEach(child => {
         const o = child.val();
-        if (o.outlet === currentOutlet && o.status === "Delivered") {
+        if (o.outlet && currentOutlet && o.outlet.toLowerCase().trim() === currentOutlet.toLowerCase().trim() && o.status === "Delivered") {
             const key = o.phone || "Unknown";
             if (!spencerStats[key]) {
                 spencerStats[key] = { name: o.customerName || "Customer", total: 0, count: 0 };
@@ -2187,7 +2188,7 @@ window.generateCustomReport = () => {
 
         snap.forEach(child => {
             const o = child.val();
-            if (o.outlet !== currentOutlet) return;
+            if (o.outlet && currentOutlet && o.outlet.toLowerCase().trim() !== currentOutlet.toLowerCase().trim()) return;
             if (o.status === "Cancelled") return;
             let itemDate;
             try {
