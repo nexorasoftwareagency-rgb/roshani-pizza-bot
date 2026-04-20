@@ -8,6 +8,32 @@ window.haptic = window.haptic || ((val) => {
 });
 let deferredPrompt;
 
+// --- GLOBAL TOAST SYSTEM ---
+window.showToast = (msg, type = 'success') => {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast-notif ${type}`;
+    toast.innerHTML = `
+        <div class="toast-indicator"></div>
+        <div class="toast-content">
+            <span class="toast-icon">${type === 'success' ? '✓' : '✕'}</span>
+            <span class="toast-msg">${msg}</span>
+        </div>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 400);
+    }, 4000);
+};
+
+
 // --- REFRESH CIRCUIT BREAKER ---
 (function() {
     const REFRESH_LIMIT = 5;
@@ -1256,59 +1282,40 @@ function renderOrders(snap) {
     if (liveOrdersTable) liveOrdersTable.innerHTML = "";
     if (paymentsTable) paymentsTable.innerHTML = "";
 
-    snap.forEach(child => {
-        const id = child.key;
-        const o = child.val();
+        ordersMap.set(id, o);
+    });
 
+    // Sort orders by createdAt descending (Latest on Top)
+    const sortedOrders = Array.from(ordersMap.entries()).map(([id, o]) => ({ id, ...o }))
+        .sort((a, b) => {
+            const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return timeB - timeA;
+        });
+
+    sortedOrders.forEach(o => {
+        const id = o.id;
         if (o.outlet && currentOutlet && o.outlet.toLowerCase().trim() !== currentOutlet.toLowerCase().trim()) return;
 
-        // Revenue should only include non-cancelled and marked as Delivered or Paid
-        if (o.status !== "Cancelled" && (o.status === "Delivered" || o.paymentStatus === "Paid")) {
-            revenue += Number(o.total || 0);
-        }
-
-        const orderDateStr = o.createdAt ? (typeof o.createdAt === 'string' ? o.createdAt : new Date(o.createdAt).toISOString()).split('T')[0] : '';
-
-        if (orderDateStr === todayStr) today++;
-
-        if (o.status === "Delivered") {
-            // Collect Item Stats for Dashboard
-            if (o.items) {
-                o.items.forEach(item => {
-                    window.itemStats = window.itemStats || {};
-                    window.itemStats[item.name] = (window.itemStats[item.name] || 0) + 1;
-                });
-            }
-        }
-
         const isLive = ["Placed", "Confirmed", "Preparing", "Cooked", "Out for Delivery"].includes(o.status);
-        if (isLive) {
-            liveCount++;
-            pending++;
-        }
-
         const safeOrderId = escapeHtml(o.orderId || id.slice(-5));
         const safeCustomerName = escapeHtml(o.customerName);
-        const safePhone = escapeHtml(o.phone);
-        const safeAddress = escapeHtml(o.address);
-        const safeLocationLink = validateUrl(o.locationLink) ? escapeHtml(o.locationLink) : '';
-        const safeTotal = escapeHtml(o.total);
         const safeStatus = escapeHtml(o.status);
         const safeStatusClass = escapeHtml(o.status?.replace(/ /g, ''));
-        const safeAssignedRider = escapeHtml(o.assignedRider);
-
+        const safeTotal = escapeHtml(o.total);
+        const safeAddress = escapeHtml(o.address);
+        const safeLocationLink = validateUrl(o.locationLink) ? escapeHtml(o.locationLink) : '';
         const displayPhone = o.phone ? o.phone : "Guest";
         const truncatedAddress = o.address ? (o.address.length > 30 ? o.address.substring(0, 30) + "..." : o.address) : "Counter Sale";
 
-        // Store full phone in map for authorized actions
-        ordersMap.set(id, o);
+        const trHTML = `
 
         const trHTML = `
             <td data-label="Order ID" style="font-family: monospace; font-weight: 600;">#${safeOrderId}</td>
             <td data-label="Customer">
                 ${safeCustomerName}<br>
                 <small style="color:var(--text-muted)">${displayPhone}</small>
-                ${o.phone ? `<button onclick="window.chatOnWhatsapp('${id}')" class="btn-chat" title="Message on WhatsApp">💬</button>` : ''}
+                ${o.phone ? `<button onclick="event.stopPropagation(); window.chatOnWhatsapp('${id}')" class="btn-chat" title="Message on WhatsApp">💬</button>` : ''}
             </td>
             <td data-label="Address">
                 <span title="${safeAddress}">${escapeHtml(truncatedAddress)}</span>
@@ -1318,7 +1325,7 @@ function renderOrders(snap) {
             <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
             <td data-label="Actions">
                 <div class="flex-row flex-gap-5">
-                    <select onchange="updateStatus('${id}', this.value)" style="width:100px">
+                    <select onchange="event.stopPropagation(); updateStatus('${id}', this.value)" onclick="event.stopPropagation()" style="width:100px">
                         <option value="">Status</option>
                         <option value="Confirmed" ${safeStatus === "Confirmed" ? "selected" : ""}>Confirm</option>
                         <option value="Preparing" ${safeStatus === "Preparing" ? "selected" : ""}>Preparing</option>
@@ -1327,10 +1334,10 @@ function renderOrders(snap) {
                         <option value="Delivered" ${safeStatus === "Delivered" ? "selected" : ""}>Delivered</option>
                         ${["Placed", "Pending"].includes(safeStatus) ? `<option value="Cancelled" ${safeStatus === "Cancelled" ? "selected" : ""}>Cancel</option>` : ""}
                     </select>
-                    <button onclick="window.printReceiptById('${o.orderId || id}')" class="btn-icon" style="padding: 4px 8px; font-size: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; border-radius: 4px;" title="Print Receipt">🖨️</button>
+                    <button onclick="event.stopPropagation(); window.printReceiptById('${o.orderId || id}')" class="btn-icon" style="padding: 4px 8px; font-size: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; border-radius: 4px;" title="Print Receipt">🖨️</button>
                 </div>
                 <div class="mt-5">
-                    <select onchange="assignRider('${id}', this.value)" style="width:100%; max-width:145px;">
+                    <select onchange="event.stopPropagation(); assignRider('${id}', this.value)" onclick="event.stopPropagation()" style="width:100%; max-width:145px;">
                         <option value="">Assign Rider</option>
                         ${ridersList.map(r => `<option value="${escapeHtml(r.email)}" ${o.assignedRider === r.email ? "selected" : ""}>${escapeHtml(r.name)}</option>`).join("")}
                     </select>
@@ -1374,13 +1381,13 @@ function renderOrders(snap) {
                 <td data-label="Total" style="font-weight:700">₹${safeTotal}</td>
                 <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
                 <td data-label="Rider">
-                    <select onchange="assignRider('${id}', this.value)" style="width:120px">
+                    <select onchange="event.stopPropagation(); assignRider('${id}', this.value)" onclick="event.stopPropagation()" style="width:120px">
                         <option value="">Select Rider</option>
                         ${ridersList.map(r => `<option value="${escapeHtml(r.email)}" ${o.assignedRider === r.email ? "selected" : ""}>${escapeHtml(r.name)}</option>`).join("")}
                     </select>
                 </td>
                 <td data-label="Action">
-                    <button onclick="updateStatus('${id}', 'Delivered')" class="btn-primary" style="padding:4px 8px; font-size:11px;">Deliver</button>
+                    <button onclick="event.stopPropagation(); updateStatus('${id}', 'Delivered')" class="btn-primary" style="padding:4px 8px; font-size:11px;">Deliver</button>
                 </td>
             `;
             liveOrdersTable.appendChild(rowLive);
@@ -1399,7 +1406,7 @@ function renderOrders(snap) {
                 <td data-label="Total" style="font-weight:700">₹${safeTotal}</td>
                 <td data-label="Status"><span class="status-${safePStatusClass}">${safePStatus}</span></td>
                 <td data-label="Action">
-                    ${safePStatus === 'Pending' ? `<button onclick="markAsPaid('${id}')" class="btn-secondary" style="padding:4px 8px; font-size:11px;">Mark Paid</button>` : '✅'}
+                    ${safePStatus === 'Pending' ? `<button onclick="event.stopPropagation(); markAsPaid('${id}')" class="btn-secondary" style="padding:4px 8px; font-size:11px;">Mark Paid</button>` : '✅'}
                 </td>
             `;
             paymentsTable.appendChild(rowPay);
@@ -2503,8 +2510,21 @@ function renderTopItems() {
 // ACTIONS
 window.updateStatus = (id, status) => {
     if (!status) return;
-    db.ref("orders/" + id).update({ status });
+    window.haptic(20);
+    
+    db.ref("orders/" + id).update({ 
+        status: status,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP 
+    })
+    .then(() => {
+        window.showToast(`Order status updated to "${status}"`, 'success');
+    })
+    .catch(err => {
+        console.error("[StatusUpdate Error]", err);
+        window.showToast("Failed to update status: " + err.message, 'error');
+    });
 };
+
 
 window.assignRider = async (id, riderEmail) => {
     if (!riderEmail) return;
@@ -3031,7 +3051,10 @@ window.submitWalkinSale = async () => {
     }
 
     const custName = document.getElementById('walkinCustName')?.value.trim() || 'Walk-in Customer';
-    const custPhone = document.getElementById('walkinCustPhone')?.value.trim() || '';
+    const custPhoneRaw = document.getElementById('walkinCustPhone')?.value.trim() || '';
+    let custPhone = custPhoneRaw.replace(/\D/g, '');
+    if (custPhone.length === 10) custPhone = '91' + custPhone; // Auto-format for India
+
     const discount = Math.max(0, Number(document.getElementById('walkinDiscount')?.value) || 0);
 
     let subtotal = 0;
@@ -3057,6 +3080,8 @@ window.submitWalkinSale = async () => {
         orderId,
         customerName: custName,
         phone: custPhone,
+        whatsappNumber: custPhone, // Added for bot compatibility
+
         items,
         subtotal,
         discount,
@@ -3165,7 +3190,14 @@ window.printReceiptById = async (orderId) => {
             return;
         }
 
+        // --- AUTOMATION: Dine-in Messaging Trigger ---
+        // If order type is Walk-in and it's not Delivered yet, mark as Delivered to trigger Bot Feedback/Promotion
+        if (order.type === 'Walk-in' && order.status !== 'Delivered') {
+            window.updateStatus(orderId, 'Delivered');
+        }
+
         printOrderReceipt(order, true); // true for 'Reprint' label if needed
+
     } catch (e) {
         console.error("Print Error:", e);
         alert("Failed to fetch order for printing.");

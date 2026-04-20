@@ -5,7 +5,7 @@
       "$orderId": {
         ".read": "auth != null && (auth.token.admin === true || data.child('assignedRider').val() == auth.token.email || data.child('whatsappNumber').val() == auth.token.whatsapp)",
         ".write": "auth != null && (auth.token.admin === true || !data.exists())",
-        ".validate": "newData.hasChildren(['total', 'items', 'status'])"
+        ".validate": "newData.hasChild('status')"
       }
     },
     "dishes": {
@@ -71,7 +71,7 @@
     "metadata": {
         ".read": "auth != null",
         ".write": "auth.token.admin === true",
-        ".validate": "newData.isObject()"
+        ".validate": "newData.hasChildren()"
     },
     "botStatus": {
         ".read": "auth != null",
