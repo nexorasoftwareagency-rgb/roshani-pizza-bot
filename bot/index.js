@@ -159,7 +159,7 @@ function isShopOpen(openTime, closeTime) {
     const parseTime = (timeStr) => {
         if (!timeStr) return 0;
         // Clean string and handle AM/PM
-        const cleanStr = timeStr.trim().toUpperCase();
+        const cleanStr = String(timeStr).trim().toUpperCase();
         const isPM = cleanStr.includes('PM');
         const isAM = cleanStr.includes('AM');
         
@@ -174,12 +174,23 @@ function isShopOpen(openTime, closeTime) {
         return hours * 60 + minutes;
     };
 
+    // FORCE IST (Asia/Kolkata) Timezone
     const now = new Date();
-    // Bot usually runs on server time. Ensure this matches shop's local time if possible.
-    const currentTime = now.getHours() * 60 + now.getMinutes();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour: 'numeric',
+        minute: 'numeric',
+        hourCycle: 'h23'
+    });
+    const parts = formatter.formatToParts(now);
+    const h = parseInt(parts.find(p => p.type === 'hour').value);
+    const m = parseInt(parts.find(p => p.type === 'minute').value);
+    const currentTime = h * 60 + m;
 
     const start = parseTime(openTime);
     const end = parseTime(closeTime);
+
+    // console.log(`[ShopHours] Current(IST): ${h}:${m} (${currentTime}m) | Open: ${openTime}(${start}m) | Close: ${closeTime}(${end}m)`);
 
     // Handle overnight hours (e.g. 10:00 PM to 02:00 AM)
     if (end < start) {
@@ -383,11 +394,21 @@ async function startBot() {
             const today = new Date().toISOString().split('T')[0];
             const botSettings = await getData("settings/Bot") || {};
 
-            // Daily Report Trigger
+            // Daily Report Trigger (Sync'd to Asia/Kolkata)
             if (storeSettings?.shopCloseTime && botSettings.lastReportDate !== today) {
                 const now = new Date();
+                const istParts = new Intl.DateTimeFormat('en-US', {
+                    timeZone: 'Asia/Kolkata',
+                    hour: 'numeric',
+                    minute: 'numeric',
+                    hourCycle: 'h23'
+                }).formatToParts(now);
+                
+                const curH = parseInt(istParts.find(p => p.type === 'hour').value);
+                const curM = parseInt(istParts.find(p => p.type === 'minute').value);
+
                 const [closeH, closeM] = storeSettings.shopCloseTime.split(':').map(Number);
-                if (now.getHours() === closeH && now.getMinutes() >= closeM) {
+                if (curH === closeH && curM >= closeM) {
                     await sendDailyReport(sock);
                 }
             }

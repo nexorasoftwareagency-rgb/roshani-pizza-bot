@@ -3,18 +3,18 @@
  * Handles multi-brand PWA manifests and theme switching.
  */
 (function() {
-    // 1. Determine Brand (URL Param > LocalStorage > Default)
+    // 1. Determine Brand (URL Param > SessionStorage > Default)
     const urlParams = new URLSearchParams(window.location.search);
     let brand = urlParams.get('brand');
     
     // Circuit Breaker: Strip brand from URL to prevent loop if it conflicts with DB
     if (brand) {
-        localStorage.setItem('admin_brand', brand);
+        sessionStorage.setItem('admin_brand', brand);
         const url = new URL(window.location.href);
         url.searchParams.delete('brand');
         window.history.replaceState({}, '', url.toString());
     } else {
-        brand = localStorage.getItem('admin_brand') || 'pizza';
+        brand = sessionStorage.getItem('admin_brand') || 'pizza';
     }
 
     // 2. Branding Config
@@ -87,7 +87,7 @@
  * Global helper to switch brands
  */
 window.switchBrand = function(newBrand) {
-    if (newBrand === localStorage.getItem('admin_brand')) return;
-    localStorage.setItem('admin_brand', newBrand);
+    if (newBrand === sessionStorage.getItem('admin_brand')) return;
+    sessionStorage.setItem('admin_brand', newBrand);
     window.location.reload(); // Reload to apply manifest changes
 };
