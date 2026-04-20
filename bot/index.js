@@ -183,8 +183,11 @@ function isShopOpen(openTime, closeTime) {
         hourCycle: 'h23'
     });
     const parts = formatter.formatToParts(now);
-    const h = parseInt(parts.find(p => p.type === 'hour').value);
-    const m = parseInt(parts.find(p => p.type === 'minute').value);
+    const hourPart = parts.find(p => p.type === 'hour');
+    const minutePart = parts.find(p => p.type === 'minute');
+
+    const h = hourPart ? parseInt(hourPart.value) : 0;
+    const m = minutePart ? parseInt(minutePart.value) : 0;
     const currentTime = h * 60 + m;
 
     const start = parseTime(openTime);
@@ -404,11 +407,16 @@ async function startBot() {
                     hourCycle: 'h23'
                 }).formatToParts(now);
                 
-                const curH = parseInt(istParts.find(p => p.type === 'hour').value);
-                const curM = parseInt(istParts.find(p => p.type === 'minute').value);
+                const istHourPart = istParts.find(p => p.type === 'hour');
+                const istMinutePart = istParts.find(p => p.type === 'minute');
+                
+                const curH = istHourPart ? parseInt(istHourPart.value) : 0;
+                const curM = istMinutePart ? parseInt(istMinutePart.value) : 0;
 
-                const [closeH, closeM] = storeSettings.shopCloseTime.split(':').map(Number);
-                if (curH === closeH && curM >= closeM) {
+                const closeTimeMinutes = parseTime(storeSettings.shopCloseTime);
+                const currentTimeMinutes = curH * 60 + curM;
+
+                if (currentTimeMinutes >= closeTimeMinutes) {
                     await sendDailyReport(sock);
                 }
             }
@@ -751,9 +759,13 @@ async function startBot() {
 
                 const dishes = await getData(`dishes/${user.outlet}`) || {};
 
-                // Filter by category NAME (consistent with Admin)
+                // Filter by category NAME (Case-insensitive & Robust)
                 user.dishList = Object.entries(dishes)
-                    .filter(([id, d]) => d.category === cat.name)
+                    .filter(([id, d]) => {
+                        const dishCat = String(d.category || "").toLowerCase().trim();
+                        const selectedCat = String(cat.name || "").toLowerCase().trim();
+                        return dishCat === selectedCat;
+                    })
                     .map(([id, d]) => ({ id, ...d }));
 
                 if (user.dishList.length === 0) {

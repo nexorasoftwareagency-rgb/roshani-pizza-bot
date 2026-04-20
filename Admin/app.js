@@ -470,8 +470,8 @@ window.userLogout = () => {
     }
     
     // Clear session-specific branding and outlet selections
-    localStorage.removeItem('adminSelectedOutlet');
-    localStorage.removeItem('admin_brand');
+    sessionStorage.removeItem('adminSelectedOutlet');
+    sessionStorage.removeItem('admin_brand');
     
     auth.signOut().catch(err => console.error("Logout Error:", err));
 };
@@ -2522,6 +2522,15 @@ window.toggleWifiPass = () => {
     }
 };
 
+window.toggleRiderPass = () => {
+    const passInput = document.getElementById('riderPass');
+    if (passInput.type === 'password') {
+        passInput.type = 'text';
+    } else {
+        passInput.type = 'password';
+    }
+};
+
 window.downloadExcel = () => {
     if (salesData.length === 0) {
         alert("No data available to export. Generate a report first.");
@@ -2787,7 +2796,22 @@ window.showAddonView = (dishId) => {
     addonGrid.classList.remove('hidden');
     if (searchBox) searchBox.classList.add('hidden');
     
-    walkinTitle.innerHTML = `<button onclick="hideAddonView()" class="btn-text" style="padding:0; margin-right:10px;"><i data-lucide="arrow-left"></i></button> Add-ons: ${dish.name}`;
+    // SAFE TITLE CONSTRUCTION (Prevent XSS)
+    walkinTitle.innerHTML = ''; 
+    const backBtn = document.createElement('button');
+    backBtn.onclick = hideAddonView;
+    backBtn.className = 'btn-text';
+    backBtn.style.padding = '0';
+    backBtn.style.marginRight = '10px';
+    backBtn.innerHTML = '<i data-lucide="arrow-left"></i>';
+    
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'title-text';
+    titleSpan.textContent = `Add-ons: ${dish.name}`;
+    
+    walkinTitle.appendChild(backBtn);
+    walkinTitle.appendChild(titleSpan);
+
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
     // Render Addons
