@@ -42,6 +42,10 @@
     --sidebar-width: 260px;
     --sidebar-collapsed-width: 80px;
 
+    /* HEADER & SPACING */
+    --header-height: 80px;
+    --header-offset: 110px;
+
     /* SURFACES */
     --glass-surface: rgba(255, 255, 255, 0.4);
 }
@@ -303,8 +307,8 @@ body {
 .main::before {
     content: "";
     display: block;
-    height: 70px;
-    margin-bottom: 20px;
+    height: var(--header-offset);
+    margin-bottom: 10px;
 }
 
 
@@ -1408,7 +1412,7 @@ html, body {
     .main {
         margin-left: 0 !important;
         padding: 16px !important;
-        padding-top: 72px !important;
+        padding-top: var(--header-offset) !important;
         padding-bottom: 80px !important; /* Space for bottom nav */
         width: 100% !important;
         max-width: 100% !important;
