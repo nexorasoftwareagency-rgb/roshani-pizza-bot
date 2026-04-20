@@ -1738,14 +1738,12 @@ html, body {
         display: flex !important;
         flex-direction: row !important; /* Menu on Left, POS Panel (Cart) on Right */
         gap: 0;
-        height: 100vh;
-        width: 100vw;
-        position: fixed;
-        top: 0;
-        left: 0;
-        z-index: 2000;
+        height: auto;
+        min-height: 80vh;
+        width: 100%;
+        position: relative;
         background: white;
-        overflow: hidden;
+        overflow: visible;
     }
 
     #tab-walkin .walkin-picker {
