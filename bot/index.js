@@ -465,7 +465,7 @@ async function startBot() {
     });
 
     const botStartTime = Date.now();
-    db.ref("orders").on("child_added", (snap) => {
+    db.ref("orders").on("child_added", async (snap) => {
         const id = snap.key;
         const order = snap.val();
         if (order) {
@@ -476,11 +476,58 @@ async function startBot() {
                 return;
             }
 
+            // [NEW] NOTIFY ADMIN IMMEDIATELY
+            await notifyAdminNewOrder(sock, id, order);
+
             // For NEW orders added while bot is running, trigger status logic
             // This ensures POS (Walk-in) which starts as "Delivered" or Online which starts as "Confirmed" sends a message
             handleOrderStatusUpdate(sock, id, order, true); 
         }
     });
+
+    async function notifyAdminNewOrder(sock, orderId, order) {
+        try {
+            const delSettings = await getData("settings/Delivery");
+            if (!delSettings || !delSettings.notifyPhone) return;
+
+            const adminNumber = delSettings.notifyPhone.replace(/\D/g, '') + "@s.whatsapp.net";
+            
+            let itemsText = "";
+            if (order.items) {
+                order.items.forEach(item => {
+                    itemsText += `• *${item.name}* (${item.size}) x ${item.quantity || 1}\n`;
+                    if (item.addons && item.addons.length > 0) {
+                        itemsText += `  _Addons: ${item.addons.map(a => a.name).join(", ")}_\n`;
+                    }
+                });
+            }
+
+            let adminMsg = `🔔 *NEW ORDER RECEIVED!* 🔔\n`;
+            adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            adminMsg += `🆔 *Order ID:* #${order.orderId || orderId.slice(-5)}\n`;
+            adminMsg += `👤 *Customer:* ${order.customerName || "Guest"}\n`;
+            adminMsg += `📞 *Phone:* ${order.phone || "N/A"}\n`;
+            adminMsg += `📍 *Type:* ${order.type || "Online"}\n`;
+            if (order.address && order.type !== 'Walk-in') {
+                adminMsg += `🏠 *Address:* ${order.address}\n`;
+            }
+            adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            adminMsg += `📦 *ITEMS:*\n${itemsText || 'No items listed'}\n`;
+            adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            adminMsg += `💰 *TOTAL:* ₹${order.total}\n`;
+            adminMsg += `💳 *Payment:* ${order.paymentMethod || 'COD'} (${order.paymentStatus || 'Pending'})\n`;
+            if (order.specialInstructions) {
+                adminMsg += `📝 *Note:* ${order.specialInstructions}\n`;
+            }
+            adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            adminMsg += `_Time: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}_`;
+
+            await sock.sendMessage(adminNumber, { text: adminMsg });
+            console.log(`✅ Admin Notified via WhatsApp: ${adminNumber}`);
+        } catch (err) {
+            console.error("Admin Notification Error:", err);
+        }
+    }
 
     async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
         try {
@@ -567,7 +614,8 @@ async function startBot() {
                         await sock.sendMessage(number, { text: promoMsg });
                     }
 
-                    // 2. Feedback Logic with Delay
+                    // 2. Feedback Logic with Delay (0 for walk-in, 10s for delivery)
+                    const delay = order.type === 'Walk-in' ? 0 : 10000;
                     setTimeout(async () => {
                         const feedbackMsg = `⭐ *HOW WAS YOUR EXPERIENCE?*\n\nWe value your feedback! Please rate your order *#${id}* out of 5 stars by replying with a number (1-5).`;
                         if (botSettings.imgFeedback) {
@@ -575,7 +623,8 @@ async function startBot() {
                         } else {
                             await sock.sendMessage(number, { text: feedbackMsg });
                         }
-                    }, 10000); // 10 second delay
+                    }, delay);
+
                     return;
 
                     // 2. Clear previous session and start Feedback Flow
