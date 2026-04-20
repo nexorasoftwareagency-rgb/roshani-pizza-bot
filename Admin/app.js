@@ -22,7 +22,7 @@ window.showToast = (msg, type = 'success') => {
         <div class="toast-indicator"></div>
         <div class="toast-content">
             <span class="toast-icon">${type === 'success' ? '✓' : '✕'}</span>
-            <span class="toast-msg">${msg}</span>
+            <span class="toast-msg">${escapeHtml(msg)}</span>
         </div>
     `;
     container.appendChild(toast);
@@ -1281,7 +1281,10 @@ function renderOrders(snap) {
     if (document.getElementById("ordersTableFull")) document.getElementById("ordersTableFull").innerHTML = "";
     if (liveOrdersTable) liveOrdersTable.innerHTML = "";
     if (paymentsTable) paymentsTable.innerHTML = "";
-
+    ordersMap.clear();
+    snap.forEach(child => {
+        const o = child.val();
+        const id = child.key;
         ordersMap.set(id, o);
     });
 
@@ -1307,8 +1310,6 @@ function renderOrders(snap) {
         const safeLocationLink = validateUrl(o.locationLink) ? escapeHtml(o.locationLink) : '';
         const displayPhone = o.phone ? o.phone : "Guest";
         const truncatedAddress = o.address ? (o.address.length > 30 ? o.address.substring(0, 30) + "..." : o.address) : "Counter Sale";
-
-        const trHTML = `
 
         const trHTML = `
             <td data-label="Order ID" style="font-family: monospace; font-weight: 600;">#${safeOrderId}</td>
@@ -2512,7 +2513,7 @@ window.updateStatus = (id, status) => {
     if (!status) return;
     window.haptic(20);
     
-    db.ref("orders/" + id).update({ 
+    return db.ref("orders/" + id).update({ 
         status: status,
         updatedAt: firebase.database.ServerValue.TIMESTAMP 
     })
