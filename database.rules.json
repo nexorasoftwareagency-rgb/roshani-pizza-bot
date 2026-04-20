@@ -70,7 +70,8 @@
     },
     "metadata": {
         ".read": "auth != null",
-        ".write": "auth.token.admin === true"
+        ".write": "auth.token.admin === true",
+        ".validate": "newData.isObject()"
     },
     "botStatus": {
         ".read": "auth != null",
