@@ -274,6 +274,8 @@ body {
     flex: 1;
     min-width: 0;
     padding: 30px;
+    display: flex;
+    flex-direction: column;
     overflow-y: auto;
     height: 100vh;
 }
