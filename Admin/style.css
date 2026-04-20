@@ -41,6 +41,9 @@
 
     --sidebar-width: 260px;
     --sidebar-collapsed-width: 80px;
+
+    /* SURFACES */
+    --glass-surface: rgba(255, 255, 255, 0.4);
 }
 
 #authOverlay.hidden {
@@ -62,6 +65,19 @@
 /* Desktop-only elements are HIDDEN by default on mobile */
 @media (max-width: 1024px) {
     .desktop-only { display: none !important; }
+}
+
+.tab-content {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+}
+
+.tab-content.hidden {
+    display: none !important;
 }
 
 /* MOBILE WIDGETS - Managed by STRICT VISIBILITY */
@@ -425,6 +441,7 @@ body {
     box-shadow: var(--shadow-medium);
     margin-bottom: 24px;
     padding: 28px;
+    width: 100%; /* Ensure panels always fill the available width */
 }
 
 .panel-header {
@@ -2052,10 +2069,7 @@ html, body {
     padding: 8px 12px;
 }
 
-/* --- LINTING & UTILITY FIXES --- */
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-.text-upper { text-transform: uppercase; }
-.ls-sm { letter-spacing: 0.5px; }
+/* --- LINTING & UTILITY FIXES --- (Duplicates removed) */
 .font-800 { font-weight: 800; }
 
 .migration-card {
