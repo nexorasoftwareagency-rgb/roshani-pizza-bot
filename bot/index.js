@@ -477,12 +477,14 @@ async function startBot() {
             }
 
             // [NEW] NOTIFY ADMIN IMMEDIATELY
-            await notifyAdminNewOrder(sock, id, order);
-
-            // For NEW orders added while bot is running, trigger status logic
-            // This ensures POS (Walk-in) which starts as "Delivered" or Online which starts as "Confirmed" sends a message
-            handleOrderStatusUpdate(sock, id, order, true); 
-        }
+            try {
+                await notifyAdminNewOrder(sock, id, order);
+                // For NEW orders added while bot is running, trigger status logic
+                // This ensures POS (Walk-in) which starts as "Delivered" or Online which starts as "Confirmed" sends a message
+                await handleOrderStatusUpdate(sock, id, order, true); 
+            } catch (err) {
+                console.error("New Order Processing Error:", err);
+            }        }
     });
 
     async function notifyAdminNewOrder(sock, orderId, order) {
@@ -504,7 +506,8 @@ async function startBot() {
 
             let adminMsg = `🔔 *NEW ORDER RECEIVED!* 🔔\n`;
             adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-            adminMsg += `🆔 *Order ID:* #${order.orderId || orderId.slice(-5)}\n`;
+            const safeOrderId = String(order.orderId || orderId || "");
+            adminMsg += `🆔 *Order ID:* #${safeOrderId ? safeOrderId.slice(-5) : "N/A"}\n`;
             adminMsg += `👤 *Customer:* ${order.customerName || "Guest"}\n`;
             adminMsg += `📞 *Phone:* ${order.phone || "N/A"}\n`;
             adminMsg += `📍 *Type:* ${order.type || "Online"}\n`;
@@ -514,7 +517,8 @@ async function startBot() {
             adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
             adminMsg += `📦 *ITEMS:*\n${itemsText || 'No items listed'}\n`;
             adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-            adminMsg += `💰 *TOTAL:* ₹${order.total}\n`;
+            const safeTotal = order.total !== undefined ? Number(order.total) : 0;
+            adminMsg += `💰 *TOTAL:* ₹${!isNaN(safeTotal) ? safeTotal : "N/A"}\n`;
             adminMsg += `💳 *Payment:* ${order.paymentMethod || 'COD'} (${order.paymentStatus || 'Pending'})\n`;
             if (order.specialInstructions) {
                 adminMsg += `📝 *Note:* ${order.specialInstructions}\n`;
@@ -1180,43 +1184,7 @@ async function startBot() {
                     text: `🎉 *ORDER PLACED SUCCESSFULLY!*\n\n✅ *Order ID:* #${orderId}\n📦 *Items:* ${user.cart.length}\n💵 *Total:* ₹${grandTotal}\n\nThank you, *${user.name}*! Our team has received your order and will start preparing it shortly. We'll notify you here once it's out for delivery. 👨‍🍳🍕`
                 });
 
-                // Admin Notification
-                try {
-                    const adminSettings = await getData("settings/Delivery");
-                    const adminPhone = adminSettings?.notifyPhone;
-                    if (adminPhone) {
-                        const adminJid = adminPhone.replace(/\D/g, '') + "@s.whatsapp.net";
-
-                        let adminMsg = `🚨 *NEW ORDER ALERT* 🚨\n`;
-                        adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                        adminMsg += `🆔 *Order ID:* #${orderId}\n`;
-                        adminMsg += `🏬 *Outlet:* ${primaryOutlet.toUpperCase()}\n\n`;
-                        adminMsg += `📋 *ORDER DETAILS:*\n`;
-
-                        user.cart.forEach((item, i) => {
-                            const lineTotal = item.total * item.quantity;
-                            adminMsg += `  ${i + 1}. ${item.name} (${item.size}) ×${item.quantity} = ₹${lineTotal}\n`;
-                            if (item.addons && item.addons.length > 0) {
-                                adminMsg += `     + ${item.addons.map(a => `${a.name}(₹${a.price})`).join(', ')}\n`;
-                            }
-                        });
-
-                        adminMsg += `\n💰 *Subtotal:* ₹${subtotal}\n`;
-                        adminMsg += `🚚 *Delivery:* ₹${user.deliveryFee} (${user.distance} km)\n`;
-                        adminMsg += `💵 *COLLECT: ₹${grandTotal}*\n\n`;
-                        adminMsg += `👤 *CUSTOMER:*\n`;
-                        adminMsg += `  Name: ${user.name}\n`;
-                        adminMsg += `  Phone: ${user.phone}\n`;
-                        adminMsg += `🏠 *ADDRESS:* ${user.address}\n`;
-                        adminMsg += `📍 *LOCATION:* ${user.locationLink}\n`;
-                        adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                        adminMsg += `_Check Admin Panel to confirm._`;
-
-                        await sock.sendMessage(adminJid, { text: adminMsg });
-                    }
-                } catch (err) {
-                    console.error("Admin Notification Failed:", err);
-                }
+                /* Redundant Admin Notification moved to central notifyAdminNewOrder listener */
 
                 delete sessions[sender];
             }
