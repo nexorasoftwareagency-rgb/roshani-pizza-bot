@@ -55,6 +55,26 @@
     "Menu": {
         ".read": "auth != null",
         ".write": "auth.token.admin === true"
+    },
+    "categories": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+    },
+    "inventory": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+    },
+    "liveTracker": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+    },
+    "metadata": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+    },
+    "botStatus": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
     }
   }
 }
