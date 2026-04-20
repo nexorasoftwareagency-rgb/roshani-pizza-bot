@@ -276,13 +276,110 @@ function formatCartSummary(cart) {
     return { lines, subtotal };
 }
 
+function formatOrderInvoice(orderId, order) {
+    let itemsText = "";
+    if (order.items) {
+        order.items.forEach((item, i) => {
+            const qty = item.quantity || 1;
+            const itemTotal = (item.total || 0) * qty;
+            itemsText += `• *${item.name}* (${item.size}) x ${qty} - ₹${itemTotal}\n`;
+            if (item.addons && item.addons.length > 0) {
+                itemsText += `  _Addons: ${item.addons.map(a => a.name).join(", ")}_\n`;
+            }
+        });
+    }
+
+    const safeId = String(order.orderId || orderId || "");
+    const displayId = safeId ? safeId.slice(-5) : "N/A";
+    const type = order.type === 'Walk-in' ? 'Dine-in' : 'Online';
+
+    const name = order.customerName || "";
+    const greeting = name ? `Hello *${name}*! 👋\n\n` : "";
+
+    let msg = `${greeting}🧾 *ORDER SUMMARY*\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `🆔 *Order ID:* #${displayId}\n`;
+    msg += `📍 *Type:* ${type}\n`;
+    msg += `👤 *Customer:* ${order.customerName || "Guest"}\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `📦 *ITEMS:*\n${itemsText || 'No items listed'}\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `💰 *BILLING:*\n`;
+    msg += `Subtotal: ₹${order.subtotal || order.itemTotal || 0}\n`;
+    if (order.discount) msg += `Discount: ₹${order.discount}\n`;
+    msg += `*TOTAL AMOUNT: ₹${order.total || 0}*\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    return msg;
+}
+
+function formatCompactSummary(order) {
+    if (!order.items) return "";
+    let items = order.items.map(item => `• *${item.name}* (${item.size}) x${item.quantity || 1}`).join("\n");
+    return `📦 *ORDER ITEMS:*\n${items}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+}
+
+// =============================
+// FUNNY FOOD JOKES
+// =============================
+function getFunnyFoodJoke() {
+    const jokes = [
+        "Why did the pizza go to the doctor? It was feeling a bit 'cheesy'! 🍕",
+        "What's a pizza's favorite movie? 'Slice of life'! 🎬",
+        "What do you call a fake pizza? A 'pepper-phoney'! 🍕",
+        "How do you fix a broken pizza? With tomato paste! 🍅",
+        "Why did the baker go to jail? He was caught 'kneading' the dough too much! 🥯",
+        "What's a pizza's favorite song? 'Slice, Slice, Baby'! 🎶",
+        "Why did the pizza delivery guy get a promotion? He always 'delivered' on time! 🛵",
+        "What do you call a sleepy pizza? A 'doze-za'! 😴",
+        "Why did the tomato turn red? Because it saw the pizza dressing! 🍅",
+        "What's the best way to eat pizza? With your mouth! (Okay, that was a bad one, but we hope it made you smile!) 😊"
+    ];
+    return jokes[Math.floor(Math.random() * jokes.length)];
+}
+
+function getFoodFunnyProgress(status, name = "") {
+    const quips = {
+        "Preparing": [
+            `Our chef is currently whispering sweet nothings to your dough to make it extra fluffy, ${name}. 👨‍🍳`,
+            `Ingredients are being introduced to each other. It's a very romantic kitchen session, ${name}. 🥣`,
+            `We're making sure your pizza is more circular than the wheels on a delivery bike, ${name}! 🍕`
+        ],
+        "Cooked": [
+            `Your food is currently in its final photo shoot, ${name}. It's looking delicious and ready to travel! 📸`,
+            `It's hot, it's fresh, and it's currently being tucked into its box for a cozy ride, ${name}. 🍱`,
+            `Smelling so good even the neighboring building is jealous! Almost ready, ${name}! 🍱`
+        ],
+        "Out for Delivery": [
+            `Our delivery hero is moving faster than a pizza falling off a table, ${name}! Keep the napkins ready. 🚀`,
+            `Escape plan successful! Your food has left the kitchen and is racing to your doorstep, ${name}. 🛵`,
+            `The bike is fueled, the box is hot, and the hunger games are almost over, ${name}! 🚀`
+        ]
+    };
+
+    const bars = {
+        "Confirmed":  "✅⬜⬜⬜⬜",
+        "Preparing":  "✅👨‍🍳⬜⬜⬜",
+        "Cooked":     "✅👨‍🍳🔥⬜⬜",
+        "Out for Delivery": "✅👨‍🍳🔥🍱🚀",
+        "Delivered":  "✅👨‍🍳🔥🍱🍕"
+    };
+
+    const statusQuips = quips[status] || [`Almost there, ${name}!`];
+    const quip = statusQuips[Math.floor(Math.random() * statusQuips.length)];
+    const bar = bars[status] || "⬜⬜⬜⬜⬜";
+
+    return `\n*Progress:* [ ${bar} ]\n\n_${quip}_\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+}
+
 // =============================
 // GREETING
 // =============================
 async function sendGreeting(sock, sender, user) {
     const settings = await getData("settings");
+    const name = user.name || user.pushName || "";
+    const greeting = name ? `Hello *${name}*! 👋\n` : "";
 
-    let msg = `✨ *WELCOME TO ROSHANI PIZZA & CAKE* 🍕🎂\n`;
+    let msg = `${greeting}✨ *WELCOME TO ROSHANI PIZZA & CAKE* 🍕🎂\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
     msg += `Delicious food, delivered fast to your doorstep! 🚀\n\n`;
     msg += `Please select an outlet to view the menu:\n\n`;
@@ -345,8 +442,9 @@ async function sendCategories(sock, sender, user) {
 
     const outletName = user.outlet === 'pizza' ? 'Pizza' : 'Cake';
     const outletEmoji = user.outlet === 'pizza' ? '🍕' : '🎂';
+    const name = user.name || user.pushName || "";
 
-    let msg = '';
+    let msg = name ? `Hi *${name}*! 👋\n\n` : "";
 
     // Show mini cart if items exist
     if (user.cart && user.cart.length > 0) {
@@ -577,19 +675,31 @@ async function startBot() {
                 const botSettings = botSettingsSnap || {};
 
                 if (order.status === "Confirmed") {
-                    msg = `✅ *ORDER CONFIRMED*\n\nGreat news! Your order *#${id}* is accepted and will be prepared soon. 🍕`;
+                    const invoice = formatOrderInvoice(id, order);
+                    const progress = getFoodFunnyProgress("Confirmed", order.customerName);
+                    msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n${invoice}${progress}\n✅ *ORDER CONFIRMED*\n\nGreat news! Your order *#${id.slice(-5)}* has been confirmed. We're getting started! 🍕`;
                     statusImg = botSettings.imgConfirmed;
                 }
                 else if (order.status === "Preparing") {
-                    msg = `👨‍🍳 *PREPARING ORDER*\n\nOur chef is currently crafting your delicious meal. Stay tuned!`;
+                    const summary = formatCompactSummary(order);
+                    const progress = getFoodFunnyProgress("Preparing", order.customerName);
+                    msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n👨‍🍳 *CHEF IS COOKING!*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order:* #${id.slice(-5)}\n${summary}${progress}`;
                     statusImg = botSettings.imgPreparing;
                 }
                 else if (order.status === "Cooked") {
-                    msg = `🍕 *READY TO PACK*\n\nYour order is cooked and getting packed for delivery!`;
+                    const summary = formatCompactSummary(order);
+                    const progress = getFoodFunnyProgress("Cooked", order.customerName);
+                    msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n🍱 *READY & GETTING PACKED*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order:* #${id.slice(-5)}\n${summary}${progress}`;
                     statusImg = botSettings.imgCooked;
                 }
                 else if (order.status === "Out for Delivery") {
-                    msg = `🚀 *OUT FOR DELIVERY*\n\nYour order is on its way to you! Please be ready.\n\n💵 *Payment Mode:* ${order.paymentMethod || 'Cash/UPI'} 🚚`;
+                    const summary = formatCompactSummary(order);
+                    const progress = getFoodFunnyProgress("Out for Delivery", order.customerName);
+                    let addrText = "";
+                    if (order.address && order.type !== 'Walk-in') {
+                        addrText = `🏠 *To:* ${order.address}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    }
+                    msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n🚀 *OUT FOR DELIVERY*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order:* #${id.slice(-5)}\n${addrText}${summary}${progress}\n💵 *Payment:* ${order.paymentMethod || 'Cash/UPI'} (₹${order.total || 0})`;
                     statusImg = botSettings.imgOut;
                 }
                 else if (order.status === "Delivered") {
@@ -597,21 +707,26 @@ async function startBot() {
                     const storeData = await getData("settings/Store");
                     const brands = storeData || {};
 
-                    // 1. Send Premium Delivered & Promotion Message
+                    // 1. Send Invoice & Payment Confirmation
+                    const invoice = formatOrderInvoice(id, order);
+                    let deliveryMsg = `Hello *${order.customerName || "Guest"}*! 👋\n\n✅ *ORDER DELIVERED SUCCESSFULLY!* 🍕\n\n${invoice}\n🤝 *Payment done via:* ${order.paymentMethod || 'Cash/UPI'}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    
+                    await sock.sendMessage(number, { text: deliveryMsg });
+
+                    // 2. Send Promotional Message + Funny Joke + Feedback Request
                     let promoMsg = `🌟 *WE HOPE YOU ENJOYED YOUR MEAL!* 🌟\n`;
                     promoMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    promoMsg += `Your order *#${id}* from *${(brands.storeName || "Roshani Pizza & Cake").toUpperCase()}* has been delivered! 🍕🎂\n\n`;
-                    promoMsg += `🤝 *Delivered via:* ${order.paymentMethod || 'Cash/UPI'}\n\n`;
+                    promoMsg += `_${getFunnyFoodJoke()}_\n\n`;
+                    promoMsg += `Your order from *${(brands.storeName || "Roshani Pizza & Cake").toUpperCase()}* is complete. We'd love to hear from you!\n\n`;
 
                     if (botSettings.socialInsta || botSettings.socialFb || botSettings.socialReview) {
-                        promoMsg += `We'd love to stay connected with you:\n`;
-                        if (botSettings.socialInsta) promoMsg += `📸 *Instagram:* ${botSettings.socialInsta}\n`;
-                        if (botSettings.socialFb) promoMsg += `👥 *Facebook:* ${botSettings.socialFb}\n`;
-                        if (botSettings.socialReview) promoMsg += `🏅 *Rate us on Google:* ${botSettings.socialReview}\n`;
-                        if (botSettings.socialWebsite) promoMsg += `🌍 *Website:* ${botSettings.socialWebsite}\n\n`;
+                        promoMsg += `Stay connected:\n`;
+                        if (botSettings.socialInsta) promoMsg += `📸 Instagram: ${botSettings.socialInsta}\n`;
+                        if (botSettings.socialFb) promoMsg += `👥 Facebook: ${botSettings.socialFb}\n`;
+                        if (botSettings.socialReview) promoMsg += `🏅 Rate us: ${botSettings.socialReview}\n\n`;
                     }
 
-                    promoMsg += `Thank you for choosing us! ✨`;
+                    promoMsg += `Please rate your experience (1-5):`;
 
                     if (botSettings.imgDelivered) {
                         await sendImage(sock, number, botSettings.imgDelivered, promoMsg);
@@ -619,7 +734,7 @@ async function startBot() {
                         await sock.sendMessage(number, { text: promoMsg });
                     }
 
-                    // 2. Clear previous session and start Feedback Flow
+                    // 3. Start Feedback Flow
                     sessions[number] = {
                         step: "FEEDBACK_RATING",
                         orderId: id,
@@ -628,6 +743,9 @@ async function startBot() {
                         lastActivity: Date.now()
                     };
                     return;
+                }
+                else if (order.status === "Cancelled") {
+                    msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n❌ *ORDER CANCELLED*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nWe're sorry, but your order *#${id.slice(-5)}* has been cancelled. If you have any questions, please contact our support team. We hope to serve you again soon! 🍕🎂`;
                 }
 
                 if (msg) await sock.sendMessage(number, { text: msg });
@@ -665,11 +783,13 @@ async function startBot() {
             const sender = msg.key.remoteJid;
             const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
 
+            const pushName = msg.pushName || "";
             if (!sessions[sender]) {
-                sessions[sender] = { step: "START", current: {}, cart: [] };
+                sessions[sender] = { step: "START", current: {}, cart: [], pushName: pushName };
             }
             sessions[sender].lastActivity = Date.now();
             const user = sessions[sender];
+            if (pushName && !user.pushName) user.pushName = pushName;
 
             // Ensure cart array exists (for older sessions)
             if (!user.cart) user.cart = [];
@@ -704,8 +824,10 @@ async function startBot() {
 
                 user.feedback = { rating };
                 const storeData = await getData("settings/Store") || {};
+                const name = user.customerName || user.pushName || "";
 
-                let msg = `✨ *THANK YOU FOR YOUR RATING!* ✨\n`;
+                let msg = name ? `Thanks *${name}*! 👋\n\n` : "";
+                msg += `✨ *THANK YOU FOR YOUR RATING!* ✨\n`;
                 msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                 msg += `What did you enjoy the most about your experience?\n\n`;
                 msg += `1️⃣  ${storeData.feedbackReason1 || 'Delicious Taste'}\n`;
@@ -809,6 +931,9 @@ async function startBot() {
 
                 user.step = "DISH";
                 
+                const name = user.name || user.pushName || "";
+                if (name) msgText = `Hi *${name}*! 👋\n\n` + msgText;
+
                 // Fallback image handling
                 const settings = await getData(`settings`);
                 const displayImg = cat.image || settings?.bannerImage;
@@ -911,9 +1036,10 @@ async function startBot() {
                     }
 
                     user.step = "QUANTITY";
-                    return sock.sendMessage(sender, {
-                        text: `🔢 *HOW MANY?*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🍽️ ${user.current.dish.name} (${user.current.size} — ₹${user.current.unitPrice})${selectedAddons}\n💰 *Per unit: ₹${totalPerUnit}*\n\n*Enter quantity:*\n_Example: 1, 2, 3..._`
-                    });
+                    const name = user.name || user.pushName || "";
+                    let qtyMsg = `🔢 *HOW MANY?*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🍽️ ${user.current.dish.name} (${user.current.size} — ₹${user.current.unitPrice})${selectedAddons}\n💰 *Per unit: ₹${totalPerUnit}*\n\n*Enter quantity:*\n_Example: 1, 2, 3..._`;
+                    if (name) qtyMsg = `Excellent choice, *${name}*! 👋\n\n` + qtyMsg;
+                    return sock.sendMessage(sender, { text: qtyMsg });
                 }
 
                 const idx = parseInt(text) - 1;
@@ -997,7 +1123,7 @@ async function startBot() {
                 if (!text || text.length < 2) return sock.sendMessage(sender, { text: "⚠️ *Please enter a valid name.*" });
                 user.name = text;
                 user.step = "PHONE";
-                return sock.sendMessage(sender, { text: "📞 *Enter your 10-digit Mobile Number:*\n\n_Example: 9876543210_" });
+                return sock.sendMessage(sender, { text: `Nice to meet you, *${user.name}*! 👋\n\n📞 *Enter your 10-digit Mobile Number:*\n\n_Example: 9876543210_` });
             }
 
             // PHONE - validate and normalize
@@ -1008,7 +1134,7 @@ async function startBot() {
                 }
                 user.phone = "+91" + cleaned;
                 user.step = "ADDRESS_TEXT";
-                return sock.sendMessage(sender, { text: "🏠 *Please provide your full Delivery Address:*\n\n_Include House No, Building Name, and nearby Landmark._" });
+                return sock.sendMessage(sender, { text: `Got it, *${user.name}*! 👍\n\n🏠 *Please provide your full Delivery Address:*\n\n_Include House No, Building Name, and nearby Landmark._` });
             }
 
             // ADDRESS_TEXT
@@ -1018,7 +1144,7 @@ async function startBot() {
                 }
                 user.address = text;
                 user.step = "LOCATION";
-                return sock.sendMessage(sender, { text: "📍 *FINAL STEP! Share your Current Location:*\n\nTo help our rider reach you faster, please share your *Current Location* on WhatsApp.\n\n_Tap 📎 → Location → Send Current Location_" });
+                return sock.sendMessage(sender, { text: `Almost there, *${user.name}*! 📍\n\n*FINAL STEP! Share your Current Location:*\n\nTo help our rider reach you faster, please share your *Current Location* on WhatsApp.\n\n_Tap 📎 → Location → Send Current Location_` });
             }
 
             // LOCATION
@@ -1051,11 +1177,11 @@ async function startBot() {
                 const { lines, subtotal } = formatCartSummary(user.cart);
                 const grandTotal = subtotal + deliveryFee;
 
-                user.step = "CONFIRM";
+                user.step = "ORDER_CONFIRM_PRE_PAY";
 
-                let summary = `🧾 *ORDER SUMMARY*\n`;
+                let summary = `🧾 *YOUR FULL INVOICE*\n`;
                 summary += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-                summary += `📦 *YOUR ITEMS:*\n`;
+                summary += `📦 *ITEMS:*\n`;
                 summary += lines;
                 summary += `\n━━━━━━━━━━━━━━━━━━━━\n`;
                 summary += `💰 *Subtotal:* ₹${subtotal}\n`;
@@ -1063,16 +1189,33 @@ async function startBot() {
                 summary += `━━━━━━━━━━━━━━━━━━━━\n`;
                 summary += `💵 *GRAND TOTAL: ₹${grandTotal}*\n`;
                 summary += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-                summary += `👤 *CUSTOMER:* ${user.name}\n`;
-                summary += `📞 *PHONE:* ${user.phone}\n`;
-                summary += `🏠 *ADDRESS:* ${user.address}\n`;
-                summary += `📍 *LOCATION:* _Shared Successfully_ ✅\n\n`;
-                summary += `1️⃣  *Confirm & Choose Payment* ✅\n`;
+                summary += `👤 *NAME:* ${user.name}\n`;
+                summary += `🏠 *ADDRESS:* ${user.address}\n\n`;
+                summary += `1️⃣  *Confirm Order* ✅\n`;
                 summary += `2️⃣  *Cancel Order* ❌\n\n`;
-                summary += `_Reply with number to finalize_`;
+                summary += `_Please review all details carefully!_`;
 
-                user.step = "CHOOSE_PAYMENT";
                 return sock.sendMessage(sender, { text: summary });
+            }
+
+            // ORDER_CONFIRM_PRE_PAY
+            if (user.step === "ORDER_CONFIRM_PRE_PAY") {
+                if (text === "2") {
+                    sessions[sender] = { step: "START", current: {}, cart: [] };
+                    return sock.sendMessage(sender, { text: "❌ *Order Cancelled.* \nReply any message to start a new order." });
+                }
+                if (text === "1") {
+                    let payMsg = `💳 *SELECT PAYMENT METHOD*\n`;
+                    payMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+                    payMsg += `1️⃣  *Cash on Delivery*\n`;
+                    payMsg += `2️⃣  *UPI / Online* (Pay on Delivery)\n`;
+                    payMsg += `3️⃣  *Any / Flexible*\n\n`;
+                    payMsg += `_Please reply with 1, 2 or 3_`;
+
+                    user.step = "CHOOSE_PAYMENT";
+                    return sock.sendMessage(sender, { text: payMsg });
+                }
+                return sock.sendMessage(sender, { text: "⚠️ Please reply with *1* to Confirm or *2* to Cancel." });
             }
 
             // CHOOSE_PAYMENT
@@ -1154,11 +1297,22 @@ async function startBot() {
                     items: orderItems
                 });
 
-                await sock.sendMessage(sender, {
-                    text: `🎉 *ORDER PLACED SUCCESSFULLY!*\n\n✅ *Order ID:* #${orderId}\n📦 *Items:* ${user.cart.length}\n💵 *Total:* ₹${grandTotal}\n\nThank you, *${user.name}*! Our team has received your order and will start preparing it shortly. We'll notify you here once it's out for delivery. 👨‍🍳🍕`
-                });
+                const storeData = await getData("settings/Store") || {};
+                const delSettings = await getData("settings/Delivery") || {};
+                const adminPhone = delSettings.notifyPhone || storeData.developerPhone || "999";
+                const shopName = storeData.storeName || "Roshani Pizza & Cake";
 
-                /* Redundant Admin Notification moved to central notifyAdminNewOrder listener */
+                let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY, ${user.name.toUpperCase()}!* 🎉\n`;
+                successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                successMsg += `🆔 *Order ID:* #${orderId.slice(-5)}\n`;
+                successMsg += `🏪 *Shop:* ${shopName}\n`;
+                successMsg += `📞 *Admin:* ${adminPhone}\n`;
+                successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+                successMsg += `_${getFunnyFoodJoke()}_\n\n`;
+                successMsg += `*Please wait for a while as the admin is confirming your order.* ⏳\n\n`;
+                successMsg += `Thank you for choosing us! 🍕🎂`;
+
+                await sock.sendMessage(sender, { text: successMsg });
 
                 delete sessions[sender];
             }
@@ -1178,8 +1332,10 @@ async function startBot() {
 // =============================
 async function sendCartView(sock, sender, user) {
     const { lines, subtotal } = formatCartSummary(user.cart);
+    const name = user.name || user.pushName || "";
 
-    let msg = `🛒 *YOUR CART*\n`;
+    let msg = name ? `Hi *${name}*! 👋\n\n` : "";
+    msg += `🛒 *YOUR CART*\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
     msg += lines;
     msg += `\n━━━━━━━━━━━━━━━━━━━━\n`;
