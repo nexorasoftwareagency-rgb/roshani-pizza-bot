@@ -223,7 +223,7 @@ window.showDishModal = async (dishId = null) => {
         document.getElementById('dishCategory').value = '';
         document.getElementById('dishPriceBase').value = '';
         document.getElementById('dishImage').value = '';
-        document.getElementById('dishPreview').src = "https://via.placeholder.com/100";
+        document.getElementById('dishPreview').src = "https://placehold.co/100";
         document.getElementById('sizesContainer').innerHTML = '';
         document.getElementById('addonsContainer').innerHTML = '';
     } else {
@@ -242,7 +242,7 @@ window.showDishModal = async (dishId = null) => {
             select.value = catValue;
             document.getElementById('dishPriceBase').value = d.price || '';
             document.getElementById('dishImage').value = d.image || '';
-            document.getElementById('dishPreview').src = d.image || "https://via.placeholder.com/100";
+            document.getElementById('dishPreview').src = d.image || "https://placehold.co/100";
             
             const sizesContainer = document.getElementById('sizesContainer');
             sizesContainer.innerHTML = '';
@@ -527,9 +527,12 @@ auth.onAuthStateChanged(async user => {
                         <option value="pizza">🍕 Pizza ERP</option>
                         <option value="cake">🎂 Cakes ERP</option>
                     `;
-                    const savedOutlet = localStorage.getItem('adminSelectedOutlet') || adminData.outlet;
+                    const savedOutlet = sessionStorage.getItem('adminSelectedOutlet') || adminData.outlet;
                     switcher.value = savedOutlet;
                     window.currentOutlet = (savedOutlet || 'pizza').toLowerCase();
+                    
+                    const btnNewTab = document.getElementById('btnNewTabOutlet');
+                    if (btnNewTab) btnNewTab.classList.remove('hidden');
                 }
             } else {
                 window.currentOutlet = (adminData.outlet || 'pizza').toLowerCase();
@@ -539,9 +542,9 @@ auth.onAuthStateChanged(async user => {
             // --- CONSOLIDATED BRANDING SYNC ---
             const brandType = window.currentOutlet === 'cake' ? 'cake' : 'pizza';
             // Only reload if the brand actually changed to ensure manifest and theme-colors refresh
-            if (localStorage.getItem('admin_brand') !== brandType) {
+            if (sessionStorage.getItem('admin_brand') !== brandType) {
                 console.log(`[Branding Sync] Updating brand to: ${brandType}`);
-                localStorage.setItem('admin_brand', brandType);
+                sessionStorage.setItem('admin_brand', brandType);
                 
                 // Clear the 'brand' URL parameter before reloading to prevent loops
                 const url = new URL(window.location.href);
@@ -602,8 +605,8 @@ function updateBranding() {
     document.title = (isPizza ? 'Roshani Pizza' : 'Roshani Cakes') + ' | Admin Dashboard';
 
     // Synchronize PWA Manifest & Icons (from branding.js)
-    if (typeof window.switchBrand === 'function' && brand !== localStorage.getItem('admin_brand')) {
-        localStorage.setItem('admin_brand', brand);
+    if (typeof window.switchBrand === 'function' && brand !== sessionStorage.getItem('admin_brand')) {
+        sessionStorage.setItem('admin_brand', brand);
         console.log("[Branding] Outlet changed brand to:", brand);
         // Do not force reload here to avoid interrupting user; 
         // the consolidated sync in onAuthStateChanged or a manual reload handles it.
@@ -616,7 +619,7 @@ function updateBranding() {
 }
 
 window.switchOutlet = (val) => {
-    localStorage.setItem('adminSelectedOutlet', val);
+    sessionStorage.setItem('adminSelectedOutlet', val);
     window.currentOutlet = val;
     
     updateBranding();
@@ -626,6 +629,18 @@ window.switchOutlet = (val) => {
     const activeTabId = document.querySelector('.nav-links li.active')?.id.replace('menu-', '') || 'dashboard';
     switchTab(activeTabId);
     console.log("Admin switched outlet to:", val);
+};
+
+window.openOutletInNewTab = () => {
+    const switcher = document.getElementById('outletSwitcher');
+    const targetOutlet = switcher ? switcher.value : window.currentOutlet;
+    const brand = targetOutlet === 'cake' ? 'cake' : 'pizza';
+    
+    // Open the portal in a new tab with the brand parameter to bootstrap sessionStorage
+    const url = new URL(window.location.origin + window.location.pathname);
+    url.searchParams.set('brand', brand);
+    
+    window.open(url.toString(), '_blank');
 };
 
 function closeSidebar() {
@@ -2700,29 +2715,175 @@ window.clearWalkinCart = () => {
     }
 };
 
+let pendingAddonsByDish = {}; // Stores selected addon names for each dish card
+
 function renderWalkinDishGrid(dishes) {
     const grid = document.getElementById('walkinDishGrid');
+    if (!grid) return;
     grid.innerHTML = '';
 
     dishes.forEach(d => {
+        const dishId = d.id;
         const card = document.createElement('div');
         card.className = 'walkin-dish-card' + (d.stock === false ? ' out-of-stock' : '');
+        card.dataset.id = dishId;
         
+        let sizes = d.sizes || {};
+        if (Object.keys(sizes).length === 0) {
+            sizes = { "Regular": d.price || 0 };
+        }
+
+        const sizeOptions = Object.entries(sizes).map(([name, price]) => 
+            `<option value="${name}" data-price="${price}">${name} - ₹${price}</option>`
+        ).join('');
+
         card.innerHTML = `
             <div class="dish-emoji">${getCatEmoji(d.category)}</div>
             <div class="dish-name" title="${escapeHtml(d.name)}">${escapeHtml(d.name)}</div>
-            <div class="dish-price">₹${d.price || 0}</div>
-            ${d.stock === false ? '<div style="font-size:10px; color:#ef4444; margin-top:4px;">Out of Stock</div>' : ''}
+            
+            <div class="dish-controls">
+                <select class="dish-size-select" id="size_${dishId}">
+                    ${sizeOptions}
+                </select>
+                
+                <div class="dish-qty-row">
+                    <button class="qty-btn-sm" onclick="adjustCardQty('${dishId}', -1)">-</button>
+                    <span class="qty-val-sm" id="qty_${dishId}">1</span>
+                    <button class="qty-btn-sm" onclick="adjustCardQty('${dishId}', 1)">+</button>
+                </div>
+                
+                <div class="dish-action-row">
+                    <button class="btn-card-add" onclick="addToWalkinCartFromCard('${dishId}')">ADD</button>
+                    <button class="btn-card-addon" onclick="showAddonView('${dishId}')" title="Configure Add-ons">✚</button>
+                </div>
+            </div>
         `;
-
-        card.addEventListener('click', () => {
-            if (d.stock === false) return;
-            openPOSSelectionModal(d.id);
-        });
         
         grid.appendChild(card);
     });
 }
+
+window.adjustCardQty = (dishId, delta) => {
+    const el = document.getElementById(`qty_${dishId}`);
+    if (!el) return;
+    let val = parseInt(el.innerText);
+    val = Math.max(1, val + delta);
+    el.innerText = val;
+};
+
+window.showAddonView = (dishId) => {
+    const dish = allWalkinDishes.find(d => d.id === dishId);
+    if (!dish) return;
+
+    const dishGrid = document.getElementById('walkinDishGrid');
+    const addonGrid = document.getElementById('walkinAddonsGrid');
+    const walkinTitle = document.querySelector('#tab-walkin .panel-title');
+    const searchBox = document.getElementById('walkinDishSearch');
+
+    if (!dishGrid || !addonGrid) return;
+
+    // Switch Views
+    dishGrid.classList.add('hidden');
+    addonGrid.classList.remove('hidden');
+    if (searchBox) searchBox.classList.add('hidden');
+    
+    walkinTitle.innerHTML = `<button onclick="hideAddonView()" class="btn-text" style="padding:0; margin-right:10px;"><i data-lucide="arrow-left"></i></button> Add-ons: ${dish.name}`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Render Addons
+    addonGrid.innerHTML = "";
+    const cat = categories.find(c => c.name === dish.category);
+    if (!cat || !cat.addons) {
+        addonGrid.innerHTML = `<p class='p-20 text-muted center-text'>No add-ons available for this category.</p>`;
+    } else {
+        Object.entries(cat.addons).forEach(([name, price]) => {
+            const isSelected = (pendingAddonsByDish[dishId] || []).includes(name);
+            const item = document.createElement('div');
+            item.className = `addon-picker-item ${isSelected ? 'active' : ''}`;
+            item.innerHTML = `
+                <div class="flex-row flex-center flex-gap-8">
+                    <input type="checkbox" ${isSelected ? 'checked' : ''} style="pointer-events:none;">
+                    <span class="fs-12 font-weight-700">${name}</span>
+                </div>
+                <span class="fs-12 font-weight-800 color-green">₹${price}</span>
+            `;
+            item.onclick = (e) => {
+                if (!pendingAddonsByDish[dishId]) pendingAddonsByDish[dishId] = [];
+                const idx = pendingAddonsByDish[dishId].indexOf(name);
+                if (idx === -1) {
+                    pendingAddonsByDish[dishId].push(name);
+                    item.classList.add('active');
+                    item.querySelector('input').checked = true;
+                } else {
+                    pendingAddonsByDish[dishId].splice(idx, 1);
+                    item.classList.remove('active');
+                    item.querySelector('input').checked = false;
+                }
+            };
+            addonGrid.appendChild(item);
+        });
+    }
+
+    // Add "Done" button
+    const doneBtn = document.createElement('button');
+    doneBtn.className = "btn-primary w-full mt-20";
+    doneBtn.innerText = "Apply & Return";
+    doneBtn.onclick = hideAddonView;
+    addonGrid.appendChild(doneBtn);
+};
+
+window.hideAddonView = () => {
+    const dishGrid = document.getElementById('walkinDishGrid');
+    const addonGrid = document.getElementById('walkinAddonsGrid');
+    const walkinTitle = document.querySelector('#tab-walkin .panel-title');
+    const searchBox = document.getElementById('walkinDishSearch');
+
+    if (dishGrid) dishGrid.classList.remove('hidden');
+    if (addonGrid) addonGrid.classList.add('hidden');
+    if (searchBox) searchBox.classList.remove('hidden');
+    if (walkinTitle) walkinTitle.innerHTML = `🍽️ Select Items`;
+};
+
+window.addToWalkinCartFromCard = (dishId) => {
+    const dish = allWalkinDishes.find(d => d.id === dishId);
+    if (!dish) return;
+
+    const sizeEl = document.getElementById(`size_${dishId}`);
+    const qtyEl = document.getElementById(`qty_${dishId}`);
+    if (!sizeEl || !qtyEl) return;
+
+    const sizeName = sizeEl.value;
+    const basePrice = Number(sizeEl.options[sizeEl.selectedIndex].dataset.price);
+    const qty = parseInt(qtyEl.innerText);
+    const addonNames = pendingAddonsByDish[dishId] || [];
+
+    const cat = categories.find(c => c.name === dish.category);
+    const addons = addonNames.map(name => ({
+        name,
+        price: (cat && cat.addons) ? (cat.addons[name] || 0) : 0
+    }));
+
+    const pricePerItem = basePrice + addons.reduce((sum, a) => sum + a.price, 0);
+    const cartKey = `${dishId}_${sizeName}_${addonNames.sort().join('_')}`;
+
+    if (walkinCart[cartKey]) {
+        walkinCart[cartKey].qty += qty;
+    } else {
+        walkinCart[cartKey] = {
+            id: dishId,
+            name: dish.name,
+            category: dish.category,
+            size: sizeName,
+            price: pricePerItem,
+            qty: qty,
+            addons: addons
+        };
+    }
+
+    renderWalkinCart();
+    haptic(20);
+    showAlert(`✅ Added ${qty}x ${dish.name}`, 'success');
+};
 
 function addToWalkinCart(id, name, price, size = "Regular") {
     const cartKey = id + "_" + size;

@@ -11,10 +11,9 @@
     <script src="firebase-config.js?v=3.1.0"></script>
 
     <link rel="stylesheet" href="style.css?v=3.1.0">
-    <link rel="manifest" href="manifest.json"> <!-- Fallback, handled by branding.js -->
-    <link rel="apple-touch-icon" href="icon-512.png"> <!-- Fallback, handled by branding.js -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pizza ERP">
     
     <!-- Theme color injected by branding.js to avoid static validation warnings -->
     <!-- Secondary theme color meta for broader support -->
@@ -48,13 +47,13 @@
 
     <!-- LOGIN -->
     <div id="authOverlay" title="Admin Login Screen">
-        <div class="login-box">
+        <form class="login-box" onsubmit="event.preventDefault(); document.getElementById('loginBtn').click();">
             <h2>ROSHANI PIZZA LOGIN</h2>
             <input id="adminEmail" placeholder="Email Address" title="Your administrative email address">
             <input id="adminPassword" type="password" placeholder="Password" title="Your administrative password">
-            <button id="loginBtn" class="btn-primary w-full flex-center" title="Sign into the Admin Dashboard">Sign In</button>
+            <button id="loginBtn" type="button" class="btn-primary w-full flex-center" title="Sign into the Admin Dashboard">Sign In</button>
             <p id="authError" class="login-error"></p>
-        </div>
+        </form>
     </div>
 
     <div class="layout">
@@ -116,9 +115,14 @@
                         <h2 id="currentTabTitle">Dashboard Overview</h2>
                         <span id="outletBadge" class="outlet-badge">LOADING...</span>
                     </div>
-                    <select id="outletSwitcher" class="outlet-switcher-admin hidden" onchange="switchOutlet(this.value)" title="Switch Active Outlet">
-                        <!-- Populated via JS for Super Admins -->
-                    </select>
+                    <div class="flex-row flex-center flex-gap-10">
+                        <select id="outletSwitcher" class="outlet-switcher-admin hidden" onchange="switchOutlet(this.value)" title="Switch Active Outlet">
+                            <!-- Populated via JS for Super Admins -->
+                        </select>
+                        <button id="btnNewTabOutlet" class="btn-text-primary-sm hidden" onclick="openOutletInNewTab()" title="Open selected outlet in new tab">
+                             <i data-lucide="external-link" class="icon-fixed-sm"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="user-display">
                     <span id="userEmailDisplay" class="user-email"></span>
@@ -202,7 +206,7 @@
                         <div class="panel">
                             <div class="card-header flex-row flex-between">
                                 <h3 class="card-title">All Categories</h3>
-                                <button onclick="migrateAddonsToCategories()" class="btn-text" style="font-size:12px; color:var(--primary);">
+                                <button onclick="migrateAddonsToCategories()" class="btn-text-primary-sm" title="Synchronize existing dish add-ons to categories">
                                     <i class="fas fa-sync"></i> Migrate Dish Add-ons
                                 </button>
                             </div>
@@ -270,7 +274,7 @@
                 <div class="panel">
                     <div class="panel-header">
                         <h3 class="desktop-only">Menu Management</h3>
-                        <button onclick="showDishModal()" class="btn-primary btn-small">+ Add Dish</button>
+                        <button onclick="showDishModal()" class="btn-primary btn-small" title="Add a new dish to the menu">+ Add Dish</button>
                     </div>
                     <div id="menuGrid" class="menu-grid"></div>
                 </div>
@@ -279,26 +283,26 @@
             <!-- CATEGORIES TAB -->
             <div id="tab-categories" class="tab-content hidden">
                 <div class="panel">
-                    <div class="panel-header" style="justify-content: space-between;">
+                    <div class="panel-header flex-between-header">
                         <h3 class="desktop-only">Category Management</h3>
-                        <button onclick="migrateAddonsToCategories()" class="btn-secondary btn-small" style="font-size:10px; opacity:0.7;">
+                        <button onclick="migrateAddonsToCategories()" class="btn-secondary btn-secondary-xs" title="Force sync of dish-level add-ons to their respective categories">
                             <i class="fas fa-sync"></i> Migrate Dish Add-ons
                         </button>
                     </div>
                         <div class="flex-row flex-gap-10 flex-center">
                         <div class="flex-row flex-gap-10 flex-center p-15 glass-card category-upload-box">
-                                <img id="catPreview" src="assets/category_icon.png" class="category-preview-img" alt="Category Preview">
+                                <img id="catPreview" src="https://placehold.co/100/orange/white?text=Category" class="category-preview-img" alt="Category Preview">
                                 <input type="file" id="catFile" accept="image/*" class="hidden" onchange="previewImage(this, 'catPreview')" title="Select category photo">
                                 <button onclick="document.getElementById('catFile').click()" class="btn-secondary small-photo-btn">Photo</button>
+                                <input id="newCatName" placeholder="Category Name" class="form-input mb-0 w-150" title="Category Name">
+                                <button onclick="addCategory()" class="btn-primary report-gen-btn" title="Save new category">Add</button>
                             </div>
-                             <input id="newCatName" placeholder="Category Name" class="form-input mb-0 w-150" title="Category Name">
-                            <button onclick="addCategory()" class="btn-primary report-gen-btn">Add</button>
                         </div>
                     </div>
-                    <div id="categoryAddonsContainer" class="glass-card p-15 mt-10" style="max-width: 400px;">
+                    <div id="categoryAddonsContainer" class="category-addons-container">
                         <div class="flex-between flex-center mb-10">
                             <label class="form-label-small mb-0">Category Add-ons (Optional)</label>
-                            <button onclick="addNewCategoryAddonField()" class="btn-secondary btn-small">+ Add Addon</button>
+                            <button onclick="addNewCategoryAddonField()" class="btn-secondary btn-small" title="Add a new customization option for this category">+ Add Addon</button>
                         </div>
                         <div id="categoryAddonsList">
                             <!-- Rows added here -->
@@ -313,7 +317,7 @@
                 <div class="panel">
                     <div class="panel-header">
                         <h3 class="desktop-only">Rider Management</h3>
-                        <button onclick="showRiderModal()" class="btn-primary btn-small">+ Add New Rider</button>
+                        <button onclick="showRiderModal()" class="btn-primary btn-small" title="Create a new rider account">+ Add New Rider</button>
                     </div>
                     <div class="scroll-x">
                         <table>
@@ -453,10 +457,10 @@
                                         </div>
                                         <div class="flex-1">
                                             <label class="form-label-small">WiFi Password</label>
-                                            <div class="flex-row flex-gap-10">
+                                            <form onsubmit="event.preventDefault();" class="flex-row flex-gap-10">
                                                 <input type="password" id="settingWifiPass" class="form-input flex-1" placeholder="WiFi Password" title="WiFi Password">
-                                                <button onclick="toggleWifiPass()" class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
-                                            </div>
+                                                <button type="button" onclick="toggleWifiPass()" class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
+                                            </form>
                                             <div class="notif-sub-premium mt-6 font-weight-500 color-primary">
                                                 ⚠️ Note: This password will be printed on customer receipts for their convenience.
                                             </div>
@@ -521,7 +525,7 @@
 
                                     <h5 class="mb-12 text-muted-small text-upper ls-sm">Payment QR</h5>
                                     <div class="qr-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
-                                        <img id="qrPreview" src="assets/qr_placeholder.png" alt="Payment QR Preview" class="br-8 mb-12 w-100 h-100 border-ghost-light bg-white">
+                                        <img id="qrPreview" src="https://placehold.co/150x150?text=QR+Code" alt="Payment QR Preview" class="br-8 mb-12 w-100 h-100 border-ghost-light bg-white">
                                         <input type="file" id="settingQRFile" accept="image/*" class="hidden" onchange="previewImage(this, 'qrPreview')" title="Select QR Image">
                                         <button onclick="document.getElementById('settingQRFile').click()" class="btn-secondary btn-small w-full" title="Upload New Payment QR Code">Change QR</button>
                                         <input type="hidden" id="settingQRUrl">
@@ -589,39 +593,39 @@
                             <div class="grid grid-cols-2 grid-gap-12 mb-20">
                                 <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">✅ Order Confirmed</label>
-                                    <img id="botImgConfirmedPreview" src="assets/banner_placeholder.png" alt="Confirmed" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <img id="botImgConfirmedPreview" src="https://placehold.co/600x200/orange/white?text=Banner" alt="Confirmed" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
                                     <input type="file" id="botImgConfirmedFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgConfirmedPreview')">
                                     <button onclick="document.getElementById('botImgConfirmedFile').click()" class="btn-secondary btn-small w-full">Upload</button>
                                 </div>
                                 <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">👨‍🍳 Preparing</label>
-                                    <img id="botImgPreparingPreview" src="assets/banner_placeholder.png" alt="Preparing" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <img id="botImgPreparingPreview" src="https://placehold.co/600x200/orange/white?text=Banner" alt="Preparing" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
                                     <input type="file" id="botImgPreparingFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgPreparingPreview')">
-                                    <button onclick="document.getElementById('botImgPreparingFile').click()" class="btn-secondary btn-small w-full">Upload</button>
+                                    <button onclick="document.getElementById('botImgPreparingFile').click()" class="btn-secondary btn-small w-full" title="Upload Preparing Status Image">Upload</button>
                                 </div>
                                 <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">🍕 Ready / Cooked</label>
-                                    <img id="botImgCookedPreview" src="assets/banner_placeholder.png" alt="Cooked" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <img id="botImgCookedPreview" src="https://placehold.co/600x200/orange/white?text=Banner" alt="Cooked" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
                                     <input type="file" id="botImgCookedFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgCookedPreview')">
-                                    <button onclick="document.getElementById('botImgCookedFile').click()" class="btn-secondary btn-small w-full">Upload</button>
+                                    <button onclick="document.getElementById('botImgCookedFile').click()" class="btn-secondary btn-small w-full" title="Upload Ready / Cooked Status Image">Upload</button>
                                 </div>
                                 <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">🚚 Out for Delivery</label>
-                                    <img id="botImgOutPreview" src="assets/banner_placeholder.png" alt="Out for Delivery" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
-                                    <input type="file" id="botImgOutFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgOutPreview')">
-                                    <button onclick="document.getElementById('botImgOutFile').click()" class="btn-secondary btn-small w-full">Upload</button>
+                                    <img id="botImgOutPreview" src="https://placehold.co/600x200/orange/white?text=Banner" alt="Out for Delivery" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgOutFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgOutPreview')" aria-label="Upload Out for Delivery Image">
+                                    <button onclick="document.getElementById('botImgOutFile').click()" class="btn-secondary btn-small w-full" title="Upload Out for Delivery Image">Upload</button>
                                 </div>
                                 <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">🌟 Delivered (Thank You)</label>
-                                    <img id="botImgDeliveredPreview" src="assets/banner_placeholder.png" alt="Delivered" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
-                                    <input type="file" id="botImgDeliveredFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgDeliveredPreview')">
-                                    <button onclick="document.getElementById('botImgDeliveredFile').click()" class="btn-secondary btn-small w-full">Upload</button>
+                                    <img id="botImgDeliveredPreview" src="https://placehold.co/600x200/orange/white?text=Banner" alt="Delivered" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgDeliveredFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgDeliveredPreview')" aria-label="Upload Delivered Image">
+                                    <button onclick="document.getElementById('botImgDeliveredFile').click()" class="btn-secondary btn-small w-full" title="Upload Delivered Image">Upload</button>
                                 </div>
                                 <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">⭐ Feedback / Rating</label>
-                                    <img id="botImgFeedbackPreview" src="assets/banner_placeholder.png" alt="Feedback" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
-                                    <input type="file" id="botImgFeedbackFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgFeedbackPreview')">
-                                    <button onclick="document.getElementById('botImgFeedbackFile').click()" class="btn-secondary btn-small w-full">Upload</button>
+                                    <img id="botImgFeedbackPreview" src="https://placehold.co/600x200/orange/white?text=Banner" alt="Feedback" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgFeedbackFile" accept="image/*" class="hidden" onchange="previewImage(this, 'botImgFeedbackPreview')" aria-label="Upload Feedback Image">
+                                    <button onclick="document.getElementById('botImgFeedbackFile').click()" class="btn-secondary btn-small w-full" title="Upload Feedback Image">Upload</button>
                                 </div>
                             </div>
 
@@ -649,16 +653,16 @@
                                 </div>
                             </div>
 
-                            <div style="margin-top: 20px; padding: 15px; border: 2px dashed var(--primary); border-radius: 12px; background: var(--sidebar-accent);">
-                                <h5 style="margin-bottom: 8px; color: var(--primary); font-size: 13px;">🛠️ POS Migration Utility</h5>
-                                <p style="font-size: 11px; margin-bottom: 12px; color: var(--text-muted);">Moves all add-ons from dishes to categories. Use this once to sync existing data.</p>
+                            <div class="migration-card">
+                                <h5 class="migration-title primary">🛠️ POS Migration Utility</h5>
+                                <p class="migration-text">Moves all add-ons from dishes to categories. Use this once to sync existing data.</p>
                                 <button class="btn-primary btn-small" onclick="migrateAddonsToCategories()">🚀 Run Migration</button>
                             </div>
 
-                            <div style="margin-top: 20px; padding: 15px; border: 2px dashed var(--action-green); border-radius: 12px; background: rgba(34, 197, 94, 0.05);">
-                                <h5 style="margin-bottom: 8px; color: var(--action-green); font-size: 13px;">🖼️ Image Storage Migration</h5>
-                                <p style="font-size: 11px; margin-bottom: 12px; color: var(--text-muted);">Converts all Firebase Storage images to Base64 text in the database. Run this to finalize the move to text-only storage.</p>
-                                <button class="btn-action btn-small" onclick="runImageMigration()" style="background: var(--action-green); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">⚡ Migrate Images</button>
+                            <div class="migration-card alt">
+                                <h5 class="migration-title green">🖼️ Image Storage Migration</h5>
+                                <p class="migration-text">Converts all Firebase Storage images to Base64 text in the database. Run this to finalize the move to text-only storage.</p>
+                                <button class="btn-action-green btn-small" onclick="runImageMigration()" title="Start image storage migration">⚡ Migrate Images</button>
                             </div>
                         </div>
 
@@ -866,6 +870,9 @@
                             <div id="walkinDishGrid" class="walkin-dish-grid">
                                 <p class="menu-loading-placeholder">Loading menu...</p>
                             </div>
+                            <div id="walkinAddonsGrid" class="walkin-addons-grid hidden">
+                                <!-- Populated dynamically -->
+                            </div>
                         </div>
                     </div>
 
@@ -971,7 +978,7 @@
                 <!-- Left: Media -->
                 <div>
                     <div class="modal-media-upload">
-                        <img id="dishPreview" src="assets/pizza_placeholder.png" class="modal-img-preview" alt="Dish Preview">
+                        <img id="dishPreview" src="https://placehold.co/150x150?text=Pizza" class="modal-img-preview" alt="Dish Preview">
                         <div class="modal-img-overlay">
                             <input type="file" id="dishFile" accept="image/*" class="hidden" onchange="previewImage(this, 'dishPreview')" title="Upload dish photo">
                             <button onclick="document.getElementById('dishFile').click()" class="btn-secondary update-photo-btn">Update Photo</button>
@@ -1037,7 +1044,7 @@
                     <!-- Left: Profile & Photos -->
                     <div class="modal-media-section">
                         <div class="profile-upload-container">
-                            <img id="riderProfilePreview" src="assets/rider_placeholder.png" class="rider-preview-sm" alt="Rider Profile">
+                            <img id="riderProfilePreview" src="https://placehold.co/150x150?text=Rider" class="rider-preview-sm" alt="Rider Profile">
                             <input type="file" id="riderPhotoInput" accept="image/*" class="hidden" onchange="previewImage(this, 'riderProfilePreview')" title="Select Rider Profile Photo">
                             <button onclick="document.getElementById('riderPhotoInput').click()" class="btn-secondary btn-small mt-10">Upload Photo</button>
                             <input type="hidden" id="riderPhotoUrl">
@@ -1045,7 +1052,7 @@
 
                         <div class="aadhar-upload-container mt-20">
                             <label class="form-label-small">AADHAR CARD COPY</label>
-                            <img id="aadharPreview" src="assets/aadhar_placeholder.png" class="aadhar-preview-sm" alt="Aadhar Card">
+                            <img id="aadharPreview" src="https://placehold.co/300x200?text=Aadhar" class="aadhar-preview-sm" alt="Aadhar Card">
                             <input type="file" id="aadharPhotoInput" accept="image/*" class="hidden" onchange="previewImage(this, 'aadharPreview')" title="Select Aadhar Card Image">
                             <button onclick="document.getElementById('aadharPhotoInput').click()" class="btn-secondary btn-small mt-10">Upload Aadhar</button>
                             <input type="hidden" id="aadharUrl">
@@ -1070,9 +1077,9 @@
                         <div class="form-row">
                             <div class="flex-1">
                                 <label class="form-label" id="riderPassLabel">Portal Password</label>
-                                <div class="password-input-group">
+                                <form onsubmit="event.preventDefault();" class="password-input-group">
                                     <input id="riderPass" type="password" placeholder="••••••••" class="form-input w-full" title="New password for rider portal">
-                                </div>
+                                </form>
                                 <small id="riderPassHint" class="hidden text-muted-small">Leave blank to keep current password</small>
                             </div>
                             <div class="flex-1">
@@ -1086,11 +1093,11 @@
                         <div class="form-row">
                             <div class="flex-1">
                                 <label class="form-label">Father's Name</label>
-                                <input id="riderFatherName" placeholder="Father's Name" class="form-input w-full">
+                                <input id="riderFatherName" placeholder="Father's Name" class="form-input w-full" title="Rider's father name">
                             </div>
                             <div class="flex-1">
                                 <label class="form-label">Age</label>
-                                <input id="riderAge" type="number" placeholder="25" class="form-input w-full">
+                                <input id="riderAge" type="number" placeholder="25" class="form-input w-full" title="Rider's age">
                             </div>
                         </div>
 
@@ -1188,21 +1195,20 @@
         // Ensure Lucide icons are rendered
         if(typeof lucide !== 'undefined') lucide.createIcons();
     </script>
-    <!-- POS SELECTION MODAL -->
     <div id="posSelectionModal" class="modal">
-        <div class="modal-content glass-card selection-modal" style="max-width: 500px; width: 95%;">
+        <div class="modal-content glass-card selection-modal pos-selection-modal-width">
             <div class="modal-header">
                 <div>
                     <h2 id="posModalDishName" class="modal-title">Select Options</h2>
-                    <p id="posModalDishCategory" class="text-muted-small" style="margin-top: 4px;"></p>
+                    <p id="posModalDishCategory" class="text-muted-small mt-4"></p>
                 </div>
-                <button onclick="hidePOSSelectionModal()" class="close-btn">&times;</button>
+                <button onclick="hidePOSSelectionModal()" class="close-btn" title="Close selection modal">&times;</button>
             </div>
             
             <div class="modal-body p-20">
                 <!-- Size Selection -->
-                <div class="selection-section">
-                    <label class="form-label-small upper-label" style="font-weight: 800; color: var(--text-muted); font-size: 11px; letter-spacing: 1px;">CHOOSE SIZE</label>
+                <div id="posSizeSection" class="selection-section">
+                    <label class="pos-section-label">CHOOSE SIZE</label>
                     <div id="posSizeGrid" class="size-selection-grid mt-10">
                         <!-- Dynamic Size Cards -->
                     </div>
@@ -1210,7 +1216,7 @@
 
                 <!-- Add-ons Selection -->
                 <div id="posAddonsSection" class="selection-section mt-24">
-                    <label class="form-label-small upper-label" style="font-weight: 800; color: var(--text-muted); font-size: 11px; letter-spacing: 1px;">EXTRA ADD-ONS</label>
+                    <label class="pos-section-label">EXTRA ADD-ONS</label>
                     <div id="posAddonsList" class="addons-checklist-grid mt-10">
                         <!-- Dynamic Addons -->
                     </div>
@@ -1218,11 +1224,11 @@
 
                 <!-- Quantity Selection -->
                 <div class="selection-section mt-24">
-                    <label class="form-label-small upper-label" style="font-weight: 800; color: var(--text-muted); font-size: 11px; letter-spacing: 1px;">QUANTITY</label>
+                    <label class="pos-section-label">QUANTITY</label>
                     <div class="flex-row flex-center flex-gap-20 mt-10">
-                        <button onclick="adjustPOSModalQty(-1)" class="qty-btn-large">−</button>
+                        <button onclick="adjustPOSModalQty(-1)" class="qty-btn-large" title="Decrease quantity">−</button>
                         <span id="posModalQty" class="qty-val-large">1</span>
-                        <button onclick="adjustPOSModalQty(1)" class="qty-btn-large">+</button>
+                        <button onclick="adjustPOSModalQty(1)" class="qty-btn-large" title="Increase quantity">+</button>
                     </div>
                 </div>
             </div>
@@ -1232,7 +1238,7 @@
                     <div class="text-muted-small">Total Price</div>
                     <div id="posModalTotal" class="total-price-large">₹0</div>
                 </div>
-                <button id="posAddBtn" onclick="addToWalkinCartFromModal()" class="btn-primary btn-add-large">
+                <button id="posAddBtn" onclick="addToWalkinCartFromModal()" class="btn-primary btn-add-large" title="Add this item with selected options to your cart">
                     🛒 Add to Cart
                 </button>
             </div>
