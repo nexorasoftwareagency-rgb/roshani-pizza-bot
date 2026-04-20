@@ -44,7 +44,7 @@
 
     /* HEADER & SPACING */
     --header-height: 80px;
-    --header-offset: 120px;
+    --header-offset: 180px;
 
     /* SURFACES */
     --glass-surface: rgba(255, 255, 255, 0.4);
@@ -1346,6 +1346,7 @@ html, body {
 
     :root {
         --sidebar-width: 0px;
+        --header-offset: 25px;
     }
 
     body {
