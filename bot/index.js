@@ -153,26 +153,27 @@ function getFeeFromSlabs(distance, slabs) {
     return slabs[slabs.length - 1].fee; // Max tier
 }
 
+// Time parsing helper (Global for use in isShopOpen and Scheduler)
+function parseTime(timeStr) {
+    if (!timeStr) return 0;
+    // Clean string and handle AM/PM
+    const cleanStr = String(timeStr).trim().toUpperCase();
+    const isPM = cleanStr.includes('PM');
+    const isAM = cleanStr.includes('AM');
+    
+    // Extract numbers
+    const parts = cleanStr.replace(/AM|PM/i, '').trim().split(':');
+    let hours = parseInt(parts[0], 10) || 0;
+    const minutes = parseInt(parts[1], 10) || 0;
+
+    if (isPM && hours < 12) hours += 12;
+    if (isAM && hours === 12) hours = 0;
+
+    return hours * 60 + minutes;
+}
+
 function isShopOpen(openTime, closeTime) {
     if (!openTime || !closeTime) return true; // Default to open if not set
-    
-    const parseTime = (timeStr) => {
-        if (!timeStr) return 0;
-        // Clean string and handle AM/PM
-        const cleanStr = String(timeStr).trim().toUpperCase();
-        const isPM = cleanStr.includes('PM');
-        const isAM = cleanStr.includes('AM');
-        
-        // Extract numbers
-        const parts = cleanStr.replace(/AM|PM/i, '').trim().split(':');
-        let hours = parseInt(parts[0], 10) || 0;
-        const minutes = parseInt(parts[1], 10) || 0;
-
-        if (isPM && hours < 12) hours += 12;
-        if (isAM && hours === 12) hours = 0;
-
-        return hours * 60 + minutes;
-    };
 
     // FORCE IST (Asia/Kolkata) Timezone
     const now = new Date();
@@ -618,19 +619,6 @@ async function startBot() {
                         await sock.sendMessage(number, { text: promoMsg });
                     }
 
-                    // 2. Feedback Logic with Delay (0 for walk-in, 10s for delivery)
-                    const delay = order.type === 'Walk-in' ? 0 : 10000;
-                    setTimeout(async () => {
-                        const feedbackMsg = `⭐ *HOW WAS YOUR EXPERIENCE?*\n\nWe value your feedback! Please rate your order *#${id}* out of 5 stars by replying with a number (1-5).`;
-                        if (botSettings.imgFeedback) {
-                            await sendImage(sock, number, botSettings.imgFeedback, feedbackMsg);
-                        } else {
-                            await sock.sendMessage(number, { text: feedbackMsg });
-                        }
-                    }, delay);
-
-                    return;
-
                     // 2. Clear previous session and start Feedback Flow
                     sessions[number] = {
                         step: "FEEDBACK_RATING",
@@ -639,20 +627,6 @@ async function startBot() {
                         phone: phone,
                         lastActivity: Date.now()
                     };
-
-                    let feedbackMsg = `🙏 *A QUICK FAVOR...*\n`;
-                    feedbackMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    feedbackMsg += `How would you rate your overall experience with us today?\n\n`;
-                    feedbackMsg += `*Reply with a number (1-5):*\n`;
-                    feedbackMsg += `5️⃣  ⭐⭐⭐⭐⭐ (Excellent)\n`;
-                    feedbackMsg += `4️⃣  ⭐⭐⭐⭐ (Very Good)\n`;
-                    feedbackMsg += `3️⃣  ⭐⭐⭐ (Average)\n`;
-                    feedbackMsg += `2️⃣  ⭐⭐ (Poor)\n`;
-                    feedbackMsg += `1️⃣  ⭐ (Terrible)`;
-
-                    setTimeout(async () => {
-                        await sock.sendMessage(number, { text: feedbackMsg });
-                    }, 2000);
                     return;
                 }
 
