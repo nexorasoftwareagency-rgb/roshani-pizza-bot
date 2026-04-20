@@ -1346,7 +1346,7 @@ html, body {
 
     :root {
         --sidebar-width: 0px;
-        --header-offset: 25px;
+        --header-offset: 70px;
     }
 
     body {
