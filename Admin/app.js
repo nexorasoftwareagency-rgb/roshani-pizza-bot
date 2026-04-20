@@ -2038,6 +2038,7 @@ window.saveRiderAccount = async () => {
         let uid = currentEditingRiderId;
 
         if (!isEditRiderMode) {
+            console.log("[saveRiderAccount] Creating new rider account...");
             // 1. Create in secondary Auth
             if (!secondaryAuthAvailable) {
                 alert("Rider creation is currently unavailable (Secondary Auth failed to initialize). Please ensure firebase-config.js is correctly loaded.");
@@ -2049,11 +2050,14 @@ window.saveRiderAccount = async () => {
             }
             
             try {
+                console.log("[saveRiderAccount] Attempting secondary Auth creation for:", email);
                 const cred = await secondaryAuth.createUserWithEmailAndPassword(email, pass);
                 uid = cred.user.uid;
+                console.log("[saveRiderAccount] User created with UID:", uid);
                 
                 // CRITICAL: Immediately sign out the rider from the secondary instance
                 // to prevent any accidental session bleeding into the admin's database write.
+                console.log("[saveRiderAccount] Signing out of secondaryAuth...");
                 await secondaryAuth.signOut();
             } catch (authError) {
                 if (authError.code === 'auth/email-already-in-use') {
@@ -2095,9 +2099,18 @@ window.saveRiderAccount = async () => {
             riderData.createdAt = firebase.database.ServerValue.TIMESTAMP;
         }
 
+        console.log("[saveRiderAccount] Writing rider data to DB path:", `riders/${uid}`);
         await db.ref(`riders/${uid}`).update(riderData);
 
-        alert(isEditRiderMode ? "Rider updated successfully!" : "Rider account created successfully!");
+        // Verification Check
+        const verifySnap = await db.ref(`riders/${uid}`).once('value');
+        if (verifySnap.exists()) {
+            console.log("[saveRiderAccount] Database write verified successfully.");
+            alert(isEditRiderMode ? "Rider updated successfully!" : "Rider account created successfully!");
+        } else {
+            console.error("[saveRiderAccount] Database write FAILED verification.");
+            alert("Warning: Auth account created, but database record failed to save. Please contact support.");
+        }
         hideRiderModal();
     } catch (e) {
         alert("Operation failed: " + e.message);
