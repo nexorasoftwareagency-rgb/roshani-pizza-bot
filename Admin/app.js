@@ -1597,7 +1597,13 @@ window.addNewAddonField = (name = "", price = "") => {
     container.appendChild(div);
 };
 
-window.hideDishModal = () => document.getElementById('dishModal').style.display = 'none';
+window.hideDishModal = () => {
+    const modal = document.getElementById('dishModal');
+    if (modal) {
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+    }
+};
 
 document.getElementById('saveDishBtn').onclick = async () => {
     const name = document.getElementById('dishName').value;
