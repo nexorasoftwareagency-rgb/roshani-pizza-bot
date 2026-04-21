@@ -49,14 +49,34 @@ let currentOrderId = null;
 window.activeOrders = {};
 
 // XSS prevention helper
-function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+}
+
+/**
+ * PATH RESOLUTION HELPER for Multi-Outlet
+ * Ensures data is scoped to /{outlet}/{node} unless shared globally.
+ */
+function resolvePath(path, outlet = null) {
+    if (!path) return "";
+    
+    // Nodes that remain at the root level for all outlets
+    const sharedNodes = ['admins', 'migrationStatus', 'settings', 'logs', 'errorLogs'];
+    const parts = path.split('/');
+    const rootNode = parts[0];
+
+    if (sharedNodes.includes(rootNode)) {
+        return path;
+    }
+
+    // Determine target outlet
+    const targetOutlet = outlet || window.currentOutlet || 'pizza';
+    
+    // If already prefixed with an outlet id, return as is
+    // (Assuming outlets don't have slashes and match our known list)
+    if (targetOutlet && path.startsWith(`${targetOutlet}/`)) {
+        return path;
+    }
+
+    return `${targetOutlet}/${path}`;
 }
 
 /**
@@ -88,8 +108,9 @@ window.toggleRiderSidebar = () => {
 function initNotificationListener() {
     if (!currentUser || !currentUser.profile.id) return;
     const uid = currentUser.profile.id;
+    const path = resolvePath(`riders/${uid}/notifications`);
     
-    db.ref(`riders/${uid}/notifications`).orderByChild('timestamp').limitToLast(20).on('value', snap => {
+    db.ref(path).orderByChild('timestamp').limitToLast(20).on('value', snap => {
         const list = document.getElementById('notificationList');
         const badge = document.getElementById('notifBadge');
         if (!list) return;
@@ -266,39 +287,45 @@ auth.onAuthStateChanged(async user => {
     }
 
     try {
-        // Caching: Check for cached profile
-        const cachedOutlet = localStorage.getItem('selectedOutlet');
-        
-        const ridersSnap = await db.ref("riders").once("value");
-        let riderProfile = null;
         const normalizedEmail = user.email.toLowerCase();
 
-        ridersSnap.forEach(child => {
-            const r = child.val();
-            if (r.email && r.email.toLowerCase() === normalizedEmail) {
-                riderProfile = { id: child.key, ...r };
+        // 1. Check for Super Admin privileges in 'admins' node (root level)
+        const adminsSnap = await db.ref("admins").once("value");
+        let foundAdmin = null;
+        adminsSnap.forEach(snap => {
+            const admin = snap.val();
+            if (admin && admin.email && admin.email.toLowerCase() === normalizedEmail && admin.isSuper) {
+                foundAdmin = { 
+                    id: `admin_${snap.key}`,
+                    name: "Super User", 
+                    outlet: "all", 
+                    status: "Online",
+                    isAdmin: true
+                };
             }
         });
 
-        // Check for Super Admin privileges in 'admins' node too if not a rider
-        let isSuper = false;
+        let riderProfile = foundAdmin;
+        let foundOutlet = "all";
+
+        // 2. If not a super admin, search across ALL outlets for the rider
         if (!riderProfile) {
-            const adminsSnap = await db.ref("admins").once("value");
-            adminsSnap.forEach(snap => {
-                const admin = snap.val();
-                if (admin && admin.email && admin.email.toLowerCase() === normalizedEmail && admin.isSuper) {
-                    riderProfile = { 
-                        id: `admin_${snap.key}`, // Sentinel ID to prevent writing to riders/ node
-                        name: "Super User", 
-                        outlet: "all", 
-                        status: "Online",
-                        isAdmin: true
-                    };
-                    isSuper = true;
+            const migrationSnap = await db.ref("migrationStatus/multiOutlet/outlets").once("value");
+            const outlets = migrationSnap.val() || ['pizza']; // Default to pizza if not set
+
+            for (const outletId of outlets) {
+                const outletRidersSnap = await db.ref(`${outletId}/riders`).once("value");
+                if (outletRidersSnap.exists()) {
+                    outletRidersSnap.forEach(child => {
+                        const r = child.val();
+                        if (r.email && r.email.toLowerCase() === normalizedEmail) {
+                            riderProfile = { id: child.key, ...r, outlet: outletId };
+                            foundOutlet = outletId;
+                        }
+                    });
                 }
-            });
-        } else {
-            isSuper = riderProfile.isSuper || false;
+                if (riderProfile) break; // Found the rider
+            }
         }
 
         if (!riderProfile) {
@@ -307,7 +334,9 @@ auth.onAuthStateChanged(async user => {
             return;
         }
 
-        currentUser = { ...user, profile: riderProfile, isSuper: isSuper };
+        // Set global outlet context
+        window.currentOutlet = riderProfile.outlet;
+        currentUser = { ...user, profile: riderProfile, isSuper: (riderProfile.outlet === 'all') };
         
         // Handle Outlet Switcher for Super Users
         const switcher = document.getElementById('outletSwitcher');
@@ -403,7 +432,7 @@ window.toggleRiderStatus = async () => {
     }
     const newStatus = currentUser.profile.status === "Online" ? "Offline" : "Online";
     try {
-        await db.ref(`riders/${currentUser.profile.id}`).update({ status: newStatus });
+        await db.ref(resolvePath(`riders/${currentUser.profile.id}`)).update({ status: newStatus });
         currentUser.profile.status = newStatus;
         updateStatusUI(newStatus);
     } catch (e) {
@@ -461,7 +490,7 @@ function initLocationTracking() {
             // If denied, we should probably force offline
             if (err.code === 1) { // PERMISSION_DENIED
                 alert("GPS Permission Denied. Live tracking disabled.");
-                db.ref(`riders/${currentUser.profile.id}`).update({ status: "Offline" });
+                db.ref(resolvePath(`riders/${currentUser.profile.id}`)).update({ status: "Offline" });
             }
         },
         { enableHighAccuracy: true }
@@ -471,7 +500,7 @@ function initLocationTracking() {
     _locationInterval = setInterval(() => {
         if (_lastPos && currentUser && currentUser.profile.status === "Online") {
             const uid = currentUser.profile.id;
-            db.ref(`riders/${uid}/location`).set(_lastPos);
+            db.ref(resolvePath(`riders/${uid}/location`)).set(_lastPos);
             console.log("Location Synced to Cloud (30s Interval)");
         }
     }, 30000);
@@ -544,42 +573,68 @@ window.updateRiderMap = (destLat, destLng) => {
  * 3. REALTIME DATA
  */
 function initRealtimeListeners() {
-    // Detach old listeners if re-initializing
-    db.ref('orders').off();
+    const userOutlet = window.currentOutlet || 'pizza';
+    const outletsToListen = userOutlet === 'all' ? ['pizza', 'cake'] : [userOutlet];
 
-    db.ref('orders').on('value', snap => {
-        const unassignedList = document.getElementById('unassignedOrdersList');
-        const activeView = document.getElementById('activeOrderView');
-        const completedList = document.getElementById('completedOrdersList');
-        const banner = document.getElementById('activeStatusBanner');
-        
-        if (!unassignedList || !activeView || !completedList) return;
+    // Clear old listeners
+    if (window._activeListeners) {
+        window._activeListeners.forEach(path => db.ref(path).off());
+    }
+    window._activeListeners = [];
 
-        unassignedList.innerHTML = '';
-        completedList.innerHTML = '';
-        
-        let stats = {
-            todayDelivered: 0,
-            pizzaEarnings: 0,
-            cakeEarnings: 0,
-            todayPizza: 0,
-            todayCake: 0,
-            hasActive: false,
-            availableCount: 0
-        };
+    const orderCache = {}; // Global cache across all outlets
+    const statsCache = {}; // Global cache for stats across outlets
 
-        const today = new Date().toDateString();
-        const myEmail = currentUser.email.toLowerCase();
-        let activeOrderData = null;
+    outletsToListen.forEach(outletId => {
+        const orderPath = `${outletId}/orders`;
+        window._activeListeners.push(orderPath);
 
-        snap.forEach(child => {
-            const o = child.val();
-            const id = child.key;
-            const outlet = (o.outlet || "pizza").toLowerCase();
+        db.ref(orderPath).on('value', snap => {
+            orderCache[outletId] = snap.val() || {};
+            renderAllOrders(orderCache);
+        });
+
+        // Also listen to riderStats for this outlet
+        const statsPath = `${outletId}/riderStats`;
+        window._activeListeners.push(statsPath);
+        db.ref(statsPath).on('value', snap => {
+            statsCache[outletId] = snap.val() || {};
+        });
+    });
+}
+
+function renderAllOrders(orderCache) {
+    const unassignedList = document.getElementById('unassignedOrdersList');
+    const activeView = document.getElementById('activeOrderView');
+    const completedList = document.getElementById('completedOrdersList');
+    const banner = document.getElementById('activeStatusBanner');
+    
+    if (!unassignedList || !activeView || !completedList) return;
+
+    unassignedList.innerHTML = '';
+    completedList.innerHTML = '';
+    
+    let stats = {
+        todayDelivered: 0,
+        pizzaEarnings: 0,
+        cakeEarnings: 0,
+        todayPizza: 0,
+        todayCake: 0,
+        hasActive: false,
+        availableCount: 0
+    };
+
+    const today = new Date().toDateString();
+    const myEmail = currentUser.email.toLowerCase();
+    let activeOrderData = null;
+    let activeOrderId = null;
+
+    Object.keys(orderCache).forEach(outletId => {
+        const orders = orderCache[outletId];
+        Object.keys(orders).forEach(id => {
+            const o = orders[id];
+            const outlet = (o.outlet || outletId).toLowerCase();
             
-            // Filter by outlet if not set to "all"
-            if (window.currentOutlet !== "all" && outlet !== window.currentOutlet.toLowerCase()) return;
-
             const rawDate = o.createdAt || o.timestamp;
             let orderDate = '';
             if (rawDate) {
@@ -600,92 +655,98 @@ function initRealtimeListeners() {
                 }
 
                 if (isToday) stats.todayDelivered++;
-                completedList.prepend(createOrderCard(id, o, "completed"));
+                completedList.prepend(createOrderCard(id, o, "completed", outletId));
             }
 
             // 2. AVAILABLE (Cooked/Ready & Unassigned)
             const isReady = o.status === "Cooked" || o.status === "Ready";
             if (isReady && !o.assignedRider) {
                 stats.availableCount++;
-                unassignedList.appendChild(createOrderCard(id, o, "available"));
+                unassignedList.appendChild(createOrderCard(id, o, "available", outletId));
             }
 
             // 3. ACTIVE
             if (o.status === "Out for Delivery" && o.assignedRider && o.assignedRider.toLowerCase() === myEmail) {
                 stats.hasActive = true;
                 activeOrderData = o;
+                activeOrderId = id;
+                activeOrderData.outletContext = outletId; // Store which outlet it belongs to
                 activeView.innerHTML = ''; 
-                activeView.appendChild(createOrderCard(id, o, "active"));
+                activeView.appendChild(createOrderCard(id, o, "active", outletId));
             }
         });
+    });
 
-        // Update Dashboard Stats
-        const sDelivered = document.getElementById('statsTodayDelivered');
-        const sEarnings = document.getElementById('statsTodayEarnings');
-        if (sDelivered) sDelivered.innerText = stats.todayDelivered;
-        if (sEarnings) sEarnings.innerText = `₹${stats.todayPizza + stats.todayCake}`;
-        
-        // Split Wallet UI
-        const eTotal = document.getElementById('e-total');
-        if (eTotal) {
-            eTotal.innerText = `₹${stats.pizzaEarnings + stats.cakeEarnings}`;
-            document.getElementById('e-pizza').innerText = `₹${stats.pizzaEarnings}`;
-            document.getElementById('e-cake').innerText = `₹${stats.cakeEarnings}`;
-            document.getElementById('e-pizza-today').innerText = `₹${stats.todayPizza}`;
-            document.getElementById('e-cake-today').innerText = `₹${stats.todayCake}`;
+    // Update Dashboard Stats
+    const sDelivered = document.getElementById('statsTodayDelivered');
+    const sEarnings = document.getElementById('statsTodayEarnings');
+    if (sDelivered) sDelivered.innerText = stats.todayDelivered;
+    if (sEarnings) sEarnings.innerText = `₹${stats.todayPizza + stats.todayCake}`;
+    
+    // Split Wallet UI
+    const eTotal = document.getElementById('e-total');
+    if (eTotal) {
+        eTotal.innerText = `₹${stats.pizzaEarnings + stats.cakeEarnings}`;
+        if (document.getElementById('e-pizza')) document.getElementById('e-pizza').innerText = `₹${stats.pizzaEarnings}`;
+        if (document.getElementById('e-cake')) document.getElementById('e-cake').innerText = `₹${stats.cakeEarnings}`;
+        if (document.getElementById('e-pizza-today')) document.getElementById('e-pizza-today').innerText = `₹${stats.todayPizza}`;
+        if (document.getElementById('e-cake-today')) document.getElementById('e-cake-today').innerText = `₹${stats.todayCake}`;
+    }
+    
+    const pCount = document.getElementById('pickupCount');
+    if (pCount) pCount.innerText = `${stats.availableCount} Orders`;
+
+    // Active Trip Banner
+    if (banner) {
+        if (stats.hasActive) {
+            banner.onclick = () => showSection('active');
+            banner.innerHTML = `
+                <div class="banner-glass">
+                    <p class="banner-title"><span class="pulse-icon"></span> 🚀 ONGOING TRIP</p>
+                    <p class="banner-subtitle">Customer is waiting! Open Trip for details.</p>
+                </div>`;
+            banner.classList.remove('hidden');
+        } else {
+            banner.onclick = null;
+            banner.innerHTML = '';
+            banner.classList.add('hidden');
+            activeView.innerHTML = '<div class="empty-state-glass"><p>No active trip. Choose an order from Pickup Hub.</p></div>';
         }
-        
-        const pCount = document.getElementById('pickupCount');
-        if (pCount) pCount.innerText = `${stats.availableCount} Orders`;
+    }
 
-        // Active Trip Banner
-        if (banner) {
-            if (stats.hasActive) {
-                banner.onclick = () => showSection('active');
-                banner.innerHTML = `
-                    <div class="banner-glass">
-                        <p class="banner-title"><span class="pulse-icon"></span> 🚀 ONGOING TRIP</p>
-                        <p class="banner-subtitle">Customer is waiting! Open Trip for details.</p>
-                    </div>`;
-                banner.classList.remove('hidden');
+    if (unassignedList.children.length === 0) unassignedList.innerHTML = '<div class="empty-state-glass"><p>All caught up! No orders for pickup.</p></div>';
+    if (completedList.children.length === 0) completedList.innerHTML = '<div class="empty-state-glass"><p>Start delivering to see history.</p></div>';
+
+    if (window.lucide) lucide.createIcons();
+
+    // Toggle Map View
+    const mapCont = document.getElementById('activeTripMap');
+    if (mapCont) {
+        if (activeOrderData) {
+            mapCont.classList.remove('hidden');
+            if (activeOrderData.lat && activeOrderData.lng) {
+                window.updateRiderMap(activeOrderData.lat, activeOrderData.lng);
             } else {
-                banner.onclick = null;
-                banner.innerHTML = '';
-                banner.classList.add('hidden');
-                activeView.innerHTML = '<div class="empty-state-glass"><p>No active trip. Choose an order from Pickup Hub.</p></div>';
+                window.updateRiderMap();
             }
+        } else {
+            mapCont.classList.add('hidden');
         }
+    }
 
-        if (unassignedList.children.length === 0) unassignedList.innerHTML = '<div class="empty-state-glass"><p>All caught up! No orders for pickup.</p></div>';
-        if (completedList.children.length === 0) completedList.innerHTML = '<div class="empty-state-glass"><p>Start delivering to see history.</p></div>';
-
-        if (window.lucide) lucide.createIcons();
-
-        // Toggle Map View
-        const mapCont = document.getElementById('activeTripMap');
-        if (mapCont) {
-            if (activeOrderData) {
-                mapCont.classList.remove('hidden');
-                if (activeOrderData.lat && activeOrderData.lng) {
-                    window.updateRiderMap(activeOrderData.lat, activeOrderData.lng);
-                } else {
-                    window.updateRiderMap();
-                }
-            } else {
-                mapCont.classList.add('hidden');
-            }
-        }
-
-        // Initialize Sliders
-        document.querySelectorAll('.slide-action-container:not(.initialized)').forEach(slider => {
-            const orderId = slider.id.replace('slider-', '');
-            window.initSliderAction(slider.id, () => window.confirmDelivery(orderId));
-            slider.classList.add('initialized');
-        });
+    // Initialize Sliders
+    document.querySelectorAll('.slide-action-container:not(.initialized)').forEach(slider => {
+        const orderId = slider.id.replace('slider-', '');
+        // Find which outlet this order belongs to for completing it
+        let oContext = 'pizza';
+        Object.keys(orderCache).forEach(oId => { if (orderCache[oId][orderId]) oContext = oId; });
+        
+        window.initSliderAction(slider.id, () => window.confirmDelivery(orderId, oContext));
+        slider.classList.add('initialized');
     });
 }
 
-function createOrderCard(id, o, type) {
+function createOrderCard(id, o, type, outletId) {
     const card = document.createElement('div');
     const outlet = (o.outlet || 'pizza').toLowerCase();
     card.className = `order-card order-${outlet}`;
@@ -734,7 +795,7 @@ function createOrderCard(id, o, type) {
             </div>
         </div>
         <div class="card-actions">
-            ${isAvailable ? `<button class="btn-primary btn-full" onclick="acceptOrder('${id}')">START PICKUP</button>` : ''}
+            ${isAvailable ? `<button class="btn-primary btn-full" onclick="acceptOrder('${id}', '${outletId}')">START PICKUP</button>` : ''}
             ${isActive ? `
                 <div class="active-actions">
                     <button class="btn-action btn-nav" onclick="navigateToCustomer('${id}', ${addressJson})">
@@ -757,10 +818,11 @@ function createOrderCard(id, o, type) {
     return card;
 }
 
-window.acceptOrder = async (id) => {
+window.acceptOrder = async (id, outletId) => {
     window.haptic(40);
     try {
-        const result = await db.ref(`orders/${id}`).transaction(current => {
+        const orderPath = `${outletId}/orders/${id}`;
+        const result = await db.ref(orderPath).transaction(current => {
             // Abort if order is already assigned — prevents race condition between riders
             if (!current || current.assignedRider) return;
             return {
@@ -798,8 +860,9 @@ window.contactCustomer = (phone) => {
     window.open(url, '_blank');
 };
 
-window.confirmDelivery = (id) => {
+window.confirmDelivery = (id, outletId) => {
     currentOrderId = id;
+    window._currentOrderOutlet = outletId;
     const otpInput = document.getElementById('otpInput');
     const otpPanel = document.getElementById('otpPanel');
     if (otpInput) otpInput.value = '';
@@ -822,18 +885,21 @@ window.emergencyOverride = async () => {
         window.haptic([50, 50, 50]);
         // Simulate OTP verification with actual logic but skip mismatch check
         try {
-            await db.ref(`orders/${currentOrderId}`).update({
+            const outletId = window._currentOrderOutlet || 'pizza';
+            const orderPath = `${outletId}/orders/${currentOrderId}`;
+            
+            await db.ref(orderPath).update({
                 status: "Delivered",
                 deliveredAt: firebase.database.ServerValue.TIMESTAMP,
                 overrideBy: currentUser.email
             });
 
             // Update rider stats
-            const snap = await db.ref(`orders/${currentOrderId}`).once('value');
+            const snap = await db.ref(orderPath).once('value');
             const order = snap.val();
             const riderId = currentUser.profile.id;
             const commission = order.riderCommission || 40;
-            const statsRef = db.ref(`riderStats/${riderId}`);
+            const statsRef = db.ref(`${outletId}/riderStats/${riderId}`);
             await statsRef.transaction(current => {
                 if (!current) return { totalOrders: 1, totalEarnings: commission };
                 return {
@@ -863,14 +929,16 @@ window.verifyOTP = async () => {
     if (!otp) return;
     
     try {
-        const snap = await db.ref(`orders/${currentOrderId}`).once('value');
+        const outletId = window._currentOrderOutlet || 'pizza';
+        const orderPath = `${outletId}/orders/${currentOrderId}`;
+        const snap = await db.ref(orderPath).once('value');
         const order = snap.val();
         
         // Only accept the OTP from the customer — no master bypass
         // Bot writes deliveryOTP; fall back to otp for legacy orders
         const storedOTP = order.deliveryOTP || order.otp;
         if (String(otp).trim() === String(storedOTP).trim()) {
-            await db.ref(`orders/${currentOrderId}`).update({
+            await db.ref(orderPath).update({
                 status: "Delivered",
                 deliveredAt: firebase.database.ServerValue.TIMESTAMP
             });
@@ -878,7 +946,7 @@ window.verifyOTP = async () => {
             // Update rider stats (totalOrders, totalEarnings)
             const riderId = currentUser.profile.id;
             const commission = order.riderCommission || 40;
-            const statsRef = db.ref(`riderStats/${riderId}`);
+            const statsRef = db.ref(`${outletId}/riderStats/${riderId}`);
             await statsRef.transaction(current => {
                 if (!current) {
                     return { totalOrders: 1, totalEarnings: commission, avgDeliveryTime: 0 };

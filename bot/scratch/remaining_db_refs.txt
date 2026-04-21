@@ -1,0 +1,55 @@
+﻿
+LineNumber Line                                                                                                        
+---------- ----                                                                                                        
+       150         if (!path) return db.ref();                                                                         
+       160             return db.ref(`${outletInPath}/dishes`);                                                        
+       163         if (shared.includes(rootPath)) return db.ref(path);                                                 
+       166         return db.ref(`${this.current}/${path}`);                                                           
+      1686                 const snap = await db.ref(`dishes/${window.currentOutlet}/${editingDishId}`).once('value'); 
+      1729         const ref = db.ref(`dishes/${window.currentOutlet}`);                                               
+      1747     db.ref(`dishes/${window.currentOutlet}`).off(); // Detach previous listener before re-attaching         
+      1748     db.ref(`dishes/${window.currentOutlet}`).on("value", snap => {                                          
+      1810 window.toggleStock = (id, current) => db.ref(`dishes/${window.currentOutlet}/${id}`).update({ stock: !cur...
+      1860             const snap = await db.ref(`dishes/${window.currentOutlet}/${dishId}`).once('value');            
+      1863             await db.ref(`dishes/${window.currentOutlet}/${dishId}`).remove();                              
+      1876     db.ref("riderStats").off(); // Detach previous listeners before re-attaching                            
+      1877     db.ref("riders").off();                                                                                 
+      1880     db.ref("riderStats").on("value", s => {                                                                 
+      1885     db.ref("riders").on("value", snap => {                                                                  
+      1966 window.deleteRider = (id) => confirm("Remove this rider? This will NOT delete their login but will preven...
+      2154         await db.ref(`riders/${uid}`).update(riderData);                                                    
+      2157         const verifySnap = await db.ref(`riders/${uid}`).once('value');                                     
+      2186         db.ref("customers").once("value"),                                                                  
+      2187         db.ref("orders").once("value")                                                                      
+      2256     db.ref("orders").once("value", snap => {                                                                
+      2369     db.ref("appConfig").once("value", async configSnap => {                                                 
+      2371         const uiSnap = await db.ref("uiConfig").once("value");                                              
+      2518         await db.ref("appConfig").update({                                                                  
+      2527         await db.ref("uiConfig").update({ welcomeImage: welcome, menuImage: menu });                        
+      2584     return db.ref("orders/" + id).update({                                                                  
+      2668         await db.ref("orders/" + id).update({                                                               
+      2691     const configSnap = await db.ref("appConfig").once("value");                                             
+      2694     db.ref("orders/" + id).update({                                                                         
+      2823     db.ref(`dishes/${window.currentOutlet}`).once('value').then(snap => {                                   
+      2874         const snap = await db.ref(`customers/${window.currentOutlet}/${phone}`).once('value');              
+      3260         await db.ref('orders/' + orderId).set(orderData);                                                   
+      3264             const custRef = db.ref(`customers/${window.currentOutlet}/${custPhone}`);                       
+      3341         const snap = await db.ref("orders").orderByChild("orderId").equalTo(orderId).once("value");         
+      3347             const snap2 = await db.ref(`orders/${orderId}`).once("value");                                  
+      3382         const storeSnap = await db.ref("settings/Store").once("value");                                     
+      3554         const delSnap = await db.ref("settings/Delivery").once("value");                                    
+      3561         const storeSnap = await db.ref("settings/Store").once("value");                                     
+      3624         const botSnap = await db.ref("settings/Bot").once("value");                                         
+      3741             db.ref("settings/Delivery").update({ coords: { lat, lng }, notifyPhone, slabs }),               
+      3742             db.ref("settings/Store").update(storeData),                                                     
+      3743             db.ref("settings/Bot").update(botDataUpdates)                                                   
+      3923     const snap = await db.ref(`dishes/${window.currentOutlet}/${dishId}`).once('value');                    
+      4170             await db.ref().update(updates);                                                                 
+      4238         const dishesSnap = await db.ref('dishes').once('value');                                            
+      4251         const catsSnap = await db.ref('categories').once('value');                                          
+      4264         const ridersSnap = await db.ref('riders').once('value');                                            
+      4282         const botSnap = await db.ref('settings/Bot').once('value');                                         
+      4304         const storeSnap = await db.ref('settings/Store').once('value');                                     
+      4318             await db.ref().update(updates);                                                                 
+
+

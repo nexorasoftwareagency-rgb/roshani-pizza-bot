@@ -134,6 +134,40 @@ if (!firebase.apps.length) {
 db = firebase.database();
 auth = firebase.auth();
 
+/**
+ * =============================================
+ * OUTLET SEPARATION HELPER
+ * =============================================
+ * Handles path resolution for multi-outlet data isolation.
+ * Automatically prefixes outlet-specific nodes (orders, riders, etc.)
+ * but keeps global nodes (admins, settings) at the root.
+ */
+const Outlet = {
+    get current() { 
+        return (window.currentOutlet || 'pizza').toLowerCase(); 
+    },
+    ref(path) {
+        if (!path) return db.ref();
+        
+        // Shared paths that stay at root level
+        const shared = ['admins', 'settings', 'uiConfig', 'appConfig', 'Menu', 'botStatus'];
+        const rootPath = path.split('/')[0];
+        
+        // Special case: dishes was dishes/${outlet}, now ${outlet}/dishes
+        if (rootPath === 'dishes') {
+            const parts = path.split('/');
+            const outletInPath = parts[1] ? parts[1].toLowerCase() : this.current;
+            return db.ref(`${outletInPath}/dishes`);
+        }
+
+        if (shared.includes(rootPath)) return db.ref(path);
+        
+        // Outlet-specific paths (orders, categories, riders, feedbacks, inventory, etc.)
+        return db.ref(`${this.current}/${path}`);
+    }
+};
+
+
 
 // =============================
 // FILE UPLOAD UTILITY (Base64)
@@ -253,7 +287,7 @@ window.showDishModal = async (dishId = null) => {
         document.getElementById('sizesContainer').innerHTML = '';
         document.getElementById('addonsContainer').innerHTML = '';
     } else {
-        const snap = await db.ref(`dishes/${window.currentOutlet}/${dishId}`).once('value');
+        const snap = await Outlet.ref(`dishes/${window.currentOutlet}/${dishId}`).once('value');
         const d = snap.val();
         if(d) {
             document.getElementById('dishName').value = d.name || '';
@@ -443,7 +477,7 @@ async function generateNextOrderId() {
     const d = today.getDate().toString().padStart(2, '0');
     const dateStr = `${y}${m}${d}`;
     
-    const seqRef = db.ref(`metadata/orderSequence/${dateStr}`);
+    const seqRef = Outlet.ref(`metadata/orderSequence/${dateStr}`);
     const result = await seqRef.transaction((current) => (current || 0) + 1);
     
     const seqNum = result.snapshot.val() || 1;
@@ -512,10 +546,10 @@ window.userLogout = () => {
 auth.onAuthStateChanged(async user => {
     if (!user) {
         // Detach persistent listeners
-        if (_ordersChildCb) { db.ref("orders").off("child_added", _ordersChildCb); _ordersChildCb = null; }
-        if (_ordersValueCb) { db.ref("orders").off("value", _ordersValueCb); _ordersValueCb = null; }
-        if (_ordersChangedCb) { db.ref("orders").off("child_changed", _ordersChangedCb); _ordersChangedCb = null; }
-        if (window.currentOutlet) db.ref(`dishes/${window.currentOutlet}`).off();
+        if (_ordersChildCb) { Outlet.ref("orders").off("child_added", _ordersChildCb); _ordersChildCb = null; }
+        if (_ordersValueCb) { Outlet.ref("orders").off("value", _ordersValueCb); _ordersValueCb = null; }
+        if (_ordersChangedCb) { Outlet.ref("orders").off("child_changed", _ordersChangedCb); _ordersChangedCb = null; }
+        if (window.currentOutlet) Outlet.ref(`dishes/${window.currentOutlet}`).off();
         
         if (authOverlay) {
             authOverlay.classList.remove('hidden');
@@ -530,7 +564,7 @@ auth.onAuthStateChanged(async user => {
     }
 
         try {
-            const adminSnap = await db.ref("admins").once("value");
+            const adminSnap = await Outlet.ref("admins").once("value");
             adminData = null;
             const normalizedEmail = (user.email || "").toLowerCase();
 
@@ -1084,9 +1118,9 @@ function updateMobileCartSummaryState() {
 // =============================
 function initRealtimeListeners() {
     // Detach any previous listeners first
-    if (_ordersChildCb) db.ref("orders").off("child_added", _ordersChildCb);
-    if (_ordersChangedCb) db.ref("orders").off("child_changed", _ordersChangedCb);
-    if (_ordersValueCb) db.ref("orders").off("value", _ordersValueCb);
+    if (_ordersChildCb) Outlet.ref("orders").off("child_added", _ordersChildCb);
+    if (_ordersChangedCb) Outlet.ref("orders").off("child_changed", _ordersChangedCb);
+    if (_ordersValueCb) Outlet.ref("orders").off("value", _ordersValueCb);
 
     let firstLoad = true;
     const loadTime = Date.now();
@@ -1106,7 +1140,7 @@ function initRealtimeListeners() {
             }
         }
     };
-    db.ref("orders").on("child_added", _ordersChildCb);
+    Outlet.ref("orders").on("child_added", _ordersChildCb);
 
     // 2. Status Transitions (e.g. Delivered)
     _ordersChangedCb = snap => {
@@ -1117,13 +1151,13 @@ function initRealtimeListeners() {
             }
         }
     };
-    db.ref("orders").on("child_changed", _ordersChangedCb);
+    Outlet.ref("orders").on("child_changed", _ordersChangedCb);
 
     setTimeout(() => { firstLoad = false; }, 3000);
 
     // 3. Full Data Sync
     _ordersValueCb = snap => { renderOrders(snap); };
-    db.ref("orders").on("value", _ordersValueCb, err => console.error("Firebase Read Error:", err));
+    Outlet.ref("orders").on("value", _ordersValueCb, err => console.error("Firebase Read Error:", err));
 
     // Order Search Logic
     const searchInput = document.getElementById("orderSearch");
@@ -1497,7 +1531,7 @@ function renderTopItems() {
 }
 
 window.markAsPaid = (id) => {
-    db.ref("orders/" + id).update({ paymentStatus: "Paid" });
+    Outlet.ref("orders/" + id).update({ paymentStatus: "Paid" });
 };
 
 window.deleteOrder = (id) => {
@@ -1509,8 +1543,8 @@ window.deleteOrder = (id) => {
 // =============================
 // CATEGORIES
 function loadCategories() {
-    db.ref('categories').off(); // Detach previous listener before re-attaching
-    db.ref('categories').on('value', snap => {
+    Outlet.ref('categories').off(); // Detach previous listener before re-attaching
+    Outlet.ref('categories').on('value', snap => {
         categories = [];
         const container = document.getElementById('categoryList');
         if (!container) return;
@@ -1518,7 +1552,6 @@ function loadCategories() {
         
         snap.forEach(child => {
             const cat = { id: child.key, ...child.val() };
-            if (cat.outlet && cat.outlet !== window.currentOutlet) return;
             
             categories.push(cat);
             
@@ -1569,7 +1602,7 @@ async function addCategory() {
             }
         });
 
-        await db.ref('categories').push({
+        await Outlet.ref('categories').push({
             name: name,
             image: imageUrl,
             outlet: (window.currentOutlet || 'pizza').toLowerCase(),
@@ -1591,7 +1624,7 @@ async function addCategory() {
 
 window.deleteCategory = (id) => {
     if (confirm("Delete this category?")) {
-        db.ref('categories/' + id).remove();
+        Outlet.ref('categories/' + id).remove();
     }
 };
 
@@ -1650,7 +1683,7 @@ document.getElementById('saveDishBtn').onclick = async () => {
             // If editing, get old image to delete later
             let oldImageUrl = null;
             if (editingDishId) {
-                const snap = await db.ref(`dishes/${window.currentOutlet}/${editingDishId}`).once('value');
+                const snap = await Outlet.ref(`dishes/${editingDishId}`).once('value');
                 oldImageUrl = snap.val()?.image;
             }
 
@@ -1711,8 +1744,8 @@ document.getElementById('saveDishBtn').onclick = async () => {
 
 function loadMenu() {
     const grid = document.getElementById("menuGrid");
-    db.ref(`dishes/${window.currentOutlet}`).off(); // Detach previous listener before re-attaching
-    db.ref(`dishes/${window.currentOutlet}`).on("value", snap => {
+    Outlet.ref(`dishes`).off(); // Detach previous listener before re-attaching
+    Outlet.ref(`dishes`).on("value", snap => {
         grid.innerHTML = "";
         snap.forEach(child => {
             const d = child.val();
@@ -1774,7 +1807,7 @@ function loadMenu() {
     });
 }
 
-window.toggleStock = (id, current) => db.ref(`dishes/${window.currentOutlet}/${id}`).update({ stock: !current });
+window.toggleStock = (id, current) => Outlet.ref(`dishes/${id}`).update({ stock: !current });
 window.deleteDish = (dishId) => {
     // Remove any existing confirm overlay
     const existing = document.getElementById('deleteConfirmOverlay');
@@ -1824,10 +1857,10 @@ window.deleteDish = (dishId) => {
     overlay.querySelector('#confirmDeleteYes').onclick = async () => {
         cleanup();
         try {
-            const snap = await db.ref(`dishes/${window.currentOutlet}/${dishId}`).once('value');
+            const snap = await Outlet.ref(`dishes/${dishId}`).once('value');
             const img = snap.val()?.image;
             if (img) await deleteImage(img);
-            await db.ref(`dishes/${window.currentOutlet}/${dishId}`).remove();
+            await Outlet.ref(`dishes/${dishId}`).remove();
         } catch(e) {
             alert('Delete failed: ' + e.message);
         }
@@ -1840,16 +1873,16 @@ window.deleteDish = (dishId) => {
 let riderStatsData = {};
 
 function loadRiders() {
-    db.ref("riderStats").off(); // Detach previous listeners before re-attaching
-    db.ref("riders").off();
+    Outlet.ref("riderStats").off(); // Detach previous listeners before re-attaching
+    Outlet.ref("riders").off();
 
     // Listen for performance stats
-    db.ref("riderStats").on("value", s => {
+    Outlet.ref("riderStats").on("value", s => {
         riderStatsData = s.val() || {};
         if (ridersList.length > 0) renderRiders();
     });
 
-    db.ref("riders").on("value", snap => {
+    Outlet.ref("riders").on("value", snap => {
         ridersList = [];
         snap.forEach(child => {
             const val = child.val();
@@ -1930,7 +1963,7 @@ function renderRiders() {
     if (onlineCountBadge) onlineCountBadge.innerText = onlineCount + " ON";
 }
 
-window.deleteRider = (id) => confirm("Remove this rider? This will NOT delete their login but will prevent them from accessing the shop.") && db.ref(`riders/${id}`).remove();
+window.deleteRider = (id) => confirm("Remove this rider? This will NOT delete their login but will prevent them from accessing the shop.") && Outlet.ref(`riders/${id}`).remove();
 
 // (Duplicate loadReports/generateCustomReport/download blocks removed — canonical versions below at ~L1207)
 // UTILITY: Image Preview to Base64
@@ -2118,10 +2151,10 @@ window.saveRiderAccount = async () => {
         }
 
         console.log("[saveRiderAccount] Writing rider data to DB path:", `riders/${uid}`);
-        await db.ref(`riders/${uid}`).update(riderData);
+        await Outlet.ref(`riders/${uid}`).update(riderData);
 
         // Verification Check
-        const verifySnap = await db.ref(`riders/${uid}`).once('value');
+        const verifySnap = await Outlet.ref(`riders/${uid}`).once('value');
         if (verifySnap.exists()) {
             console.log("[saveRiderAccount] Database write verified successfully.");
             alert(isEditRiderMode ? "Rider updated successfully!" : "Rider account created successfully!");
@@ -2150,8 +2183,8 @@ function loadCustomers() {
 
     // Fetch both to correlate
     Promise.all([
-        db.ref("customers").once("value"),
-        db.ref("orders").once("value")
+        Outlet.ref("customers").once("value"),
+        Outlet.ref("orders").once("value")
     ]).then(([custSnap, orderSnap]) => {
         const orders = [];
         orderSnap.forEach(o => { orders.push(o.val()); });
@@ -2220,7 +2253,7 @@ window.generateCustomReport = () => {
 
     tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px;'>🔄 Collecting sales data...</td></tr>";
 
-    db.ref("orders").once("value", snap => {
+    Outlet.ref("orders").once("value", snap => {
         let totalRev = 0;
         let totalOrd = 0;
         salesData = [];
@@ -2548,7 +2581,7 @@ window.updateStatus = (id, status) => {
         return window.openPaymentModal(id);
     }
     
-    return db.ref("orders/" + id).update({ 
+    return Outlet.ref("orders/" + id).update({ 
         status: status,
         updatedAt: firebase.database.ServerValue.TIMESTAMP 
     })
@@ -2632,7 +2665,7 @@ window.saveDeliveredOrder = async (id, method) => {
     buttons.forEach(btn => btn.disabled = true);
 
     try {
-        await db.ref("orders/" + id).update({
+        await Outlet.ref("orders/" + id).update({
             status: "Delivered",
             paymentMethod: method,
             paymentStatus: "Paid",
@@ -2658,7 +2691,7 @@ window.assignRider = async (id, riderEmail) => {
     const configSnap = await db.ref("appConfig").once("value");
     const masterOTP = configSnap.val()?.masterOTP || "0000";
 
-    db.ref("orders/" + id).update({ 
+    Outlet.ref("orders/" + id).update({ 
         assignedRider: riderEmail,
         status: "Out for Delivery"
         // Security logic: adminMasterOTP removed as per "no master bypass" policy
@@ -2787,7 +2820,7 @@ function loadWalkinMenu() {
 
     renderWalkinCategoryTabs();
 
-    db.ref(`dishes/${window.currentOutlet}`).once('value').then(snap => {
+    Outlet.ref(`dishes`).once('value').then(snap => {
         allWalkinDishes = [];
         snap.forEach(child => {
             allWalkinDishes.push({ id: child.key, ...child.val() });
@@ -2838,7 +2871,7 @@ function applyWalkinFilters() {
 
 async function checkWalkinCustomer(phone) {
     try {
-        const snap = await db.ref(`customers/${window.currentOutlet}/${phone}`).once('value');
+        const snap = await Outlet.ref(`customers/${phone}`).once('value');
         if (snap.exists()) {
             const data = snap.val();
             const nameInput = document.getElementById('walkinCustName');
@@ -3224,11 +3257,11 @@ window.submitWalkinSale = async () => {
 
 
     try {
-        await db.ref('orders/' + orderId).set(orderData);
+        await Outlet.ref('orders/' + orderId).set(orderData);
         
         // Update customer LTV if phone provided
         if (custPhone) {
-            const custRef = db.ref(`customers/${window.currentOutlet}/${custPhone}`);
+            const custRef = Outlet.ref(`customers/${custPhone}`);
             await custRef.transaction((current) => {
                 if (current) {
                     current.orders = (current.orders || 0) + 1;
@@ -3305,13 +3338,13 @@ function standardizeOrderData(o) {
 
 window.printReceiptById = async (orderId) => {
     try {
-        const snap = await db.ref("orders").orderByChild("orderId").equalTo(orderId).once("value");
+        const snap = await Outlet.ref("orders").orderByChild("orderId").equalTo(orderId).once("value");
         let order;
         if (snap.exists()) {
             snap.forEach(s => order = s.val());
         } else {
             // Try by push key
-            const snap2 = await db.ref(`orders/${orderId}`).once("value");
+            const snap2 = await Outlet.ref(`orders/${orderId}`).once("value");
             order = snap2.val();
         }
 
@@ -3739,8 +3772,8 @@ function loadFeedbacks() {
     const tableBody = document.getElementById("feedbackTableBody");
     if (!tableBody) return;
 
-    db.ref("feedbacks").off();
-    db.ref("feedbacks").on("value", snap => {
+    Outlet.ref("feedbacks").off();
+    Outlet.ref("feedbacks").on("value", snap => {
         tableBody.innerHTML = "";
         const feedbacks = [];
         snap.forEach(child => {
@@ -3800,7 +3833,7 @@ window.initLiveRiderTracker = () => {
 };
 
 function startRiderLocationListener() {
-    db.ref('riders').on('value', snap => {
+    Outlet.ref('riders').on('value', snap => {
         let onlineCount = 0;
         let bounds = [];
 
@@ -3887,7 +3920,7 @@ window.addNewCategoryAddonField = (name = "", price = "") => {
 
 window.openPOSSelectionModal = async (dishId) => {
     haptic(10);
-    const snap = await db.ref(`dishes/${window.currentOutlet}/${dishId}`).once('value');
+    const snap = await Outlet.ref(`dishes/${dishId}`).once('value');
     const dish = snap.val();
     if (!dish) return;
 
@@ -4021,7 +4054,7 @@ window.openCartAddonPicker = async (cartKey) => {
 
     // We reuse the POS selection modal but focus it on addons
     // To do this simply, we'll just set up the modal with the current item's data
-    const dishSnap = await db.ref(`dishes/${window.currentOutlet}/${item.id}`).once('value');
+    const dishSnap = await Outlet.ref(`dishes/${item.id}`).once('value');
     const dish = dishSnap.val();
     if (!dish) return;
 
@@ -4104,8 +4137,8 @@ window.openCartAddonPicker = async (cartKey) => {
 window.migrateAddonsToCategories = async () => {
     try {
         console.log("Starting add-on migration...");
-        const dishesSnap = await db.ref(`dishes`).once('value');
-        const categoriesSnap = await db.ref('categories').once('value');
+        const dishesSnap = await Outlet.ref(`dishes`).once('value');
+        const categoriesSnap = await Outlet.ref('categories').once('value');
         
         const dishes = dishesSnap.val() || {};
         const categoriesData = categoriesSnap.val() || {};
@@ -4202,7 +4235,7 @@ async function runImageMigration() {
         }
 
         // 1. Dishes
-        const dishesSnap = await db.ref('dishes').once('value');
+        const dishesSnap = await Outlet.ref('dishes').once('value');
         const dishesData = dishesSnap.val();
         if (dishesData) {
             for (const id in dishesData) {
