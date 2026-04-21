@@ -150,7 +150,7 @@ const Outlet = {
         if (!path) return db.ref();
         
         // Shared paths that stay at root level (admins, shared riders)
-        const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'logs'];
+        const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'bot', 'logs'];
         const rootPath = path.split('/')[0];
         
         // Special case: dishes was dishes/${outlet}, now ${outlet}/dishes
@@ -1510,14 +1510,14 @@ function renderPriorityTable(sortedOrders) {
             <div class="priority-card" onclick="window.openOrderDrawer('${o.id}')">
                 <div class="p-header">
                     <span class="p-id">#${escapeHtml(o.orderId || o.id.slice(-5))}</span>
-                    <span class="status-badge ${o.status.toLowerCase().replace(/ /g, '-')}">${o.status}</span>
+                    <span class="status-badge ${(o.status || 'Pending').toLowerCase().replace(/ /g, '-')}">${o.status || 'Pending'}</span>
                 </div>
                 <div class="p-body">
                     <div class="p-cust">${escapeHtml(o.customerName)}</div>
                     <div class="p-meta">₹${escapeHtml(o.total)} • ${o.items?.length || 0} items</div>
                 </div>
                 <div class="p-footer">
-                    <span class="p-time">${new Date(o.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    <span class="p-time">${new Date(o.createdAt || Date.now()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                     <button class="btn-priority-action" onclick="event.stopPropagation(); updateStatus('${o.id}', 'Confirmed')">Confirm</button>
                 </div>
             </div>
@@ -2707,8 +2707,8 @@ window.saveSettings = async () => {
             whatsapp,
             status,
             masterOTP,
-            lat: lat ? Number(lat) : null,
-            lng: lng ? Number(lng) : null
+            lat: (lat !== undefined && lat !== null && lat !== "") ? Number(lat) : null,
+            lng: (lng !== undefined && lng !== null && lng !== "") ? Number(lng) : null
         });
         await Outlet.ref("uiConfig").update({ welcomeImage: welcome, menuImage: menu });
         
@@ -3890,8 +3890,8 @@ window.saveStoreSettings = async () => {
             qrUrl = await uploadImage(qrFile, `settings/payment_qr_${Date.now()}`);
         }
 
-        const lat = parseFloat(document.getElementById('settingLat').value);
-        const lng = parseFloat(document.getElementById('settingLng').value);
+        const lat = parseFloat(document.getElementById('settingLat').value) || 0;
+        const lng = parseFloat(document.getElementById('settingLng').value) || 0;
         const notifyPhone = document.getElementById('settingAdminPhone').value.trim();
 
         const slabRows = document.querySelectorAll('#feeSlabsTable tr');
@@ -4005,7 +4005,11 @@ function loadFeedbacks() {
         });
 
         // Sort by date (desc)
-        feedbacks.sort((a,b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+        feedbacks.sort((a,b) => {
+            const dateB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+            const dateA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            return dateB - dateA;
+        });
 
         if (feedbacks.length === 0) {
             tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">No feedback received yet.</td></tr>`;
@@ -4546,97 +4550,12 @@ async function runImageMigration() {
         } else {
             alert("No legacy images found to migrate.");
         }
-        }
     } catch (err) {
         console.error("Migration Failed:", err);
         alert("Critical Error: Migration failed. Check console for details.");
     }
 }
 
-// =============================
-// LOST SALES (ABANDONED CARTS)
-// =============================
-window.loadLostSales = async () => {
-    const tableBody = document.getElementById("lostSalesTableBody");
-    const revenueKPI = document.getElementById("lostSalesTotalRevenue");
-    if (!tableBody) return;
-
-    tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">🔄 Loading abandonment data...</td></tr>`;
-
-    try {
-        const snap = await Outlet.ref("lostSales").once("value");
-        let totalRevenue = 0;
-        const rows = [];
-
-        snap.forEach(child => {
-            const data = child.val();
-            totalRevenue += Number(data.total || 0);
-
-            const itemsStr = data.items ? data.items.map(i => `${i.name} x${i.quantity}`).join(', ') : 'Empty Cart';
-            const timeStr = data.cancelledAt ? new Date(data.cancelledAt).toLocaleString() : 'N/A';
-            const safePhone = data.phone ? data.phone.replace(/(\d{2})(\d{4})(\d{4})/, '$1-XXXX-$3') : 'N/A';
-
-            rows.push({
-                ...data,
-                id: child.key,
-                itemsStr,
-                timeStr,
-                safePhone
-            });
-        });
-
-        // Sort by newest first
-        rows.sort((a, b) => b.cancelledAt - a.cancelledAt);
-
-        if (revenueKPI) {
-            const span = revenueKPI.querySelector('span');
-            if (span) span.innerText = `₹${totalRevenue.toLocaleString()}`;
-        }
-
-        if (rows.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">No abandonment records found.</td></tr>`;
-            return;
-        }
-
-        tableBody.innerHTML = rows.map(r => `
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.02)">
-                <td data-label="Date & Time" style="font-size:12px; color:var(--text-muted)">${r.timeStr}</td>
-                <td data-label="Customer">
-                    <div style="font-weight:700; color:var(--text-main)">${escapeHtml(r.customerName || 'Guest')}</div>
-                    <div style="font-size:10px; color:var(--text-muted)">${escapeHtml(r.safePhone)}</div>
-                </td>
-                <td data-label="Abandonment Step">
-                    <span style="font-size:11px; font-weight:700; background:rgba(239, 68, 68, 0.1); color:#ef4444; padding:3px 8px; border-radius:12px; border:1px solid rgba(239, 68, 68, 0.1);">
-                        ${escapeHtml(r.sourceStep || 'Checkout')}
-                    </span>
-                </td>
-                <td data-label="Items Summary">
-                    <div style="max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; color:var(--text-muted)" title="${escapeHtml(r.itemsStr)}">
-                        ${escapeHtml(r.itemsStr)}
-                    </div>
-                    <a href="https://wa.me/${r.phone?.replace(/\D/g, '')}" target="_blank" style="font-size:10px; color:var(--primary); text-decoration:none; display:inline-block; margin-top:4px;">RECOVER ON WHATSAPP ➔</a>
-                </td>
-                <td data-label="Potential Value" style="text-align:right; font-weight:800; color:var(--action-green); padding-right:25px;">₹${Number(r.total || 0).toLocaleString()}</td>
-            </tr>
-        `).join('');
-
-    } catch (err) {
-        console.error("Load Lost Sales Error:", err);
-        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">Failed to load data.</td></tr>`;
-    }
-};
-
-window.clearLostSales = async () => {
-    if (!confirm("Are you sure you want to clear all abandoned cart logs? This cannot be undone.")) return;
-    
-    try {
-        await Outlet.ref("lostSales").remove();
-        window.showToast("Lost sales logs cleared.", "success");
-        window.loadLostSales();
-    } catch (err) {
-        window.showToast("Failed to clear logs.", "error");
-    }
-};
 
 window.exportLostSalesData = async () => {
     const snap = await Outlet.ref("lostSales").once("value");
@@ -4671,11 +4590,3 @@ window.exportLostSalesData = async () => {
     document.body.removeChild(a);
 };
 
-// ALIAS for naming consistency in index.html
-window.saveStoreSettings = () => {
-    if (typeof window.saveSettings === 'function') {
-        window.saveSettings();
-    } else {
-        console.error("saveSettings function not found!");
-    }
-};
