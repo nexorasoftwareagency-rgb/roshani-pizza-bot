@@ -79,10 +79,14 @@
       "metadata": {
         ".read": "auth != null",
         ".write": "auth.token.admin === true"
+      },
+      "lostSales": {
+        ".read": "auth != null && auth.token.admin === true",
+        ".write": "auth != null"
       }
     },
 
-    // LEGACY ROOT NODES (Keep temporarily during migration)
+    
     "settings": { ".read": "auth != null", ".write": "auth.token.admin === true" },
     "appConfig": { ".read": "auth != null", ".write": "auth.token.admin === true" },
     "uiConfig": { ".read": "auth != null", ".write": "auth.token.admin === true" },
