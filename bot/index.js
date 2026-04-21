@@ -908,6 +908,7 @@ async function startBot() {
                 if (!cat) return sendGreeting(sock, sender, user); // Invalid number or other message
 
                 const dishes = await getData(`dishes/${user.outlet}`) || {};
+                console.log(`[BOT] Fetching dishes for outlet: ${user.outlet}. Total dishes in DB for this outlet: ${Object.keys(dishes).length}`);
 
                 // Filter by category NAME (Case-insensitive & Robust)
                 user.dishList = Object.entries(dishes)
@@ -918,8 +919,11 @@ async function startBot() {
                     })
                     .map(([id, d]) => ({ id, ...d }));
 
+                console.log(`[BOT] Category: ${cat.name}, Dishes found: ${user.dishList.length}`);
+
                 if (user.dishList.length === 0) {
-                    return sock.sendMessage(sender, { text: "❌ No dishes available in this category." });
+                    console.warn(`[BOT] No dishes found in category '${cat.name}' for outlet '${user.outlet}'`);
+                    return sock.sendMessage(sender, { text: `❌ *No dishes available* in the *${cat.name}* category right now. \nPlease check back later or try another category! 🍕` });
                 }
 
                 let msgText = `🍽️  *SELECT DISH: ${cat.name.toUpperCase()}*\n`;
