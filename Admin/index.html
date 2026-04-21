@@ -72,6 +72,7 @@
                 <li id="menu-categories" onclick="switchTab('categories')" title="Organize Menu Categories"><i data-lucide="folder-tree"></i> <span>Categories</span></li>
                 <li id="menu-riders" onclick="switchTab('riders')" title="Manage Delivery Staff and Status"><i data-lucide="bike"></i> <span>Riders</span></li>
                 <li id="menu-customers" onclick="switchTab('customers')" title="View and Manage Customer Records"><i data-lucide="users"></i> <span>Customers</span></li>
+                <li id="menu-lostSales" onclick="switchTab('lostSales')" title="View Orders Abandoned at Checkout"><i data-lucide="shopping-bag"></i> <span>Lost Sales</span></li>
                 <li id="menu-reports" onclick="switchTab('reports')"><i data-lucide="bar-chart-3"></i> <span>Analytics</span></li>
                 <li id="menu-feedback" onclick="switchTab('feedback')"><i data-lucide="star"></i> <span>Feedback</span></li>
                 <li id="menu-liveTracker" onclick="switchTab('liveTracker')"><i data-lucide="map-pin"></i> <span>Live Tracking</span> <span class="badge-new badge-live-tracking-pill">LIVE</span></li>
@@ -165,21 +166,27 @@
 
                 <div class="dashboard-grid">
                     <!-- MAIN: Recent Orders -->
-                    <div class="panel">
-                        <div class="panel-header">
-                            <h3 class="panel-title">Recent Order Management</h3>
-                            <button class="btn-primary btn-small" onclick="switchTab('orders')">View All</button>
+                    <div class="priority-section">
+                        <div class="flex-row justify-between flex-center mb-15">
+                            <h3 class="section-title"><i data-lucide="alert-circle" class="icon-fixed-sm"></i> Priority Orders (Action Required)</h3>
+                            <button class="btn-text-primary-sm" onclick="switchTab('orders')">View All</button>
                         </div>
-                        <div class="scroll-x">
-                            <table>
+                        <div id="priorityOrderList" class="priority-order-list">
+                            <div class="loading-placeholder">Scanning for pending orders...</div>
+                        </div>
+                    </div>
+
+                    <div class="recent-section">
+                        <h3 class="section-title">Recent Order History</h3>
+                        <div class="table-responsive">
+                            <table class="table">
                                 <thead>
                                     <tr>
-                                        <th>Order ID</th>
+                                        <th>ID</th>
                                         <th>Customer</th>
-                                        <th>Address</th>
                                         <th>Total</th>
+                                        <th>Payment</th>
                                         <th>Status</th>
-                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="ordersTable"></tbody>
@@ -386,6 +393,47 @@
                     <div id="adminLiveMap" class="admin-map-container h-600 br-20 border-glass"></div>
                 </div>
             </section>
+            
+            <!-- SECTION: LOST SALES -->
+            <div id="tab-lostSales" class="tab-content hidden">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="flex-column">
+                            <h3>🚨 Lost Sales (Abandoned Checkout)</h3>
+                            <p class="panel-subtitle">Insights into customers who dropped off at the finish line</p>
+                        </div>
+                        <div class="flex-row flex-gap-12 flex-center">
+                            <div class="notif-time-badge-premium" id="lostSalesTotalRevenue" style="background:rgba(239, 68, 68, 0.1); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.2); height:auto; padding:8px 15px;">
+                                <small style="display:block; font-size:9px; text-transform:uppercase; opacity:0.7;">Potential Revenue Lost</small>
+                                <span style="font-size:18px; font-weight:900;">₹0</span>
+                            </div>
+                            <button onclick="clearLostSales()" class="btn-secondary" style="height:45px; background:rgba(0,0,0,0.05);">🗑️ Clear Logs</button>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card mb-20 p-0 overflow-hidden">
+                        <div class="table-responsive">
+                            <table class="premium-table">
+                                <thead>
+                                    <tr>
+                                        <th style="padding-left:25px;">Date & Time</th>
+                                        <th>Customer Detail</th>
+                                        <th>Abandonment Step</th>
+                                        <th>Items Summary</th>
+                                        <th style="padding-right:25px; text-align:right;">Potential Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lostSalesTableBody">
+                                    <tr><td colspan="5" style="text-align:center; padding:60px; color:var(--text-muted)">
+                                        <div class="loading-spinner mb-14" style="margin:0 auto;"></div>
+                                        🔄 Collecting abandonment records...
+                                    </td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- SECTION: SETTINGS -->
             <div id="tab-settings" class="tab-content hidden">
@@ -575,6 +623,15 @@
                                 <label class="form-label-small">Notification WhatsApp Number</label>
                                 <input type="text" id="settingAdminPhone" class="form-input mb-8" placeholder="e.g. 919876543210">
                                 <p class="text-secondary-small note-small">* Existing behavior: Orders forwarded via bot.</p>
+                            </div>
+
+                            <div class="divider-dashed mb-20"></div>
+
+                            <div class="notification-setting-group mb-20">
+                                <h5 class="mb-8 text-muted-small text-upper ls-sm">Delivery Security</h5>
+                                <label class="form-label-small">Verification Backup Code (Admin Fallback)</label>
+                                <input type="text" id="settingDeliveryBackupCode" class="form-input mb-8" placeholder="e.g. 123456" title="Fallback code for riders in case customer is unavailable">
+                                <p class="text-secondary-small note-small">* Use this 6-digit code to bypass customer OTP if needed.</p>
                             </div>
 
                             <div class="divider-dashed mb-20"></div>

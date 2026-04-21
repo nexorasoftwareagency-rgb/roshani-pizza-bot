@@ -89,6 +89,15 @@ async function updateData(path, data, outlet = 'pizza') {
     }
 }
 
+async function pushData(path, data, outlet = 'pizza') {
+    try {
+        const resolved = resolvePath(path, outlet);
+        await db.ref(resolved).push(data);
+    } catch (err) {
+        console.error("PUSH ERROR:", err, "Path:", path);
+    }
+}
+
 async function deleteData(path, outlet = 'pizza') {
     try {
         const resolved = resolvePath(path, outlet);
@@ -107,5 +116,6 @@ module.exports = {
     getData,
     setData,
     updateData,
-    deleteData
+    deleteData,
+    pushData
 };
