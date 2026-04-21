@@ -2625,8 +2625,8 @@ window.openPaymentModal = (id) => {
 
 window.saveDeliveredOrder = async (id, method) => {
     window.haptic(30);
-    const btn = document.querySelector(`.pay-option-btn`);
-    if(btn) btn.disabled = true;
+    const buttons = document.querySelectorAll(`.pay-option-btn`);
+    buttons.forEach(btn => btn.disabled = true);
 
     try {
         await db.ref("orders/" + id).update({
@@ -2642,6 +2642,8 @@ window.saveDeliveredOrder = async (id, method) => {
     } catch (err) {
         console.error("[DeliveredSave Error]", err);
         window.showToast("Failed to finalize order: " + err.message, 'error');
+        // Re-enable buttons on error so user can retry
+        buttons.forEach(btn => btn.disabled = false);
     }
 };
 
@@ -3287,6 +3289,7 @@ function standardizeOrderData(o) {
         customerName: o.customerName || "Walk-in Customer",
         phone: o.phone || o.whatsappNumber || "",
         address: o.address || "",
+        customerNote: o.customerNote || "",
         items: items,
         subtotal: parseFloat(o.subtotal || o.itemTotal || 0),
         discount: parseFloat(o.discount || 0),
