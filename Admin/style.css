@@ -763,7 +763,7 @@ tr:hover td {
 .p-28 { padding: 28px; }
 .border-l-ghost { border-left: 1px solid rgba(255,255,255,0.05); }
 .border-t-ghost { border-top: 1px solid rgba(255,255,255,0.05); }
-.bg-ghost { background: rgba(255,255,255,0.03); }
+.bg-ghost { background: rgba(0, 0, 0, 0.04); }
 .br-10 { border-radius: 10px; }
 .br-8 { border-radius: 8px; }
 .text-muted-small { font-size: 11px; color: var(--text-muted); }
@@ -1657,7 +1657,7 @@ html, body {
 }
 
 .priority-card {
-    background: rgba(255,255,255,0.03);
+    background: rgba(0, 0, 0, 0.04);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 16px;
     padding: 16px;
@@ -2264,3 +2264,31 @@ html, body {
     width: 14px;
     height: 14px;
 }
+
+/* LOST SALES PANEL UTILITIES */
+.revenue-badge-lost {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    height: auto;
+    padding: 8px 15px;
+    border-radius: 12px;
+}
+.revenue-badge-sub {
+    display: block;
+    font-size: 9px;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+.revenue-badge-val {
+    font-size: 18px;
+    font-weight: 900;
+}
+.btn-lost-sales-clear {
+    height: 45px;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* THEME ACCESSIBILITY FIXES */
+.bg-ghost-visible { background: rgba(0, 0, 0, 0.04); }
+.border-ghost-visible { border: 1px solid rgba(0, 0, 0, 0.08); }

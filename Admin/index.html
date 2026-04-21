@@ -398,16 +398,16 @@
             <div id="tab-lostSales" class="tab-content hidden">
                 <div class="panel">
                     <div class="panel-header">
-                        <div class="flex-column">
+                        <div class="flex-col">
                             <h3>🚨 Lost Sales (Abandoned Checkout)</h3>
                             <p class="panel-subtitle">Insights into customers who dropped off at the finish line</p>
                         </div>
                         <div class="flex-row flex-gap-12 flex-center">
-                            <div class="notif-time-badge-premium" id="lostSalesTotalRevenue" style="background:rgba(239, 68, 68, 0.1); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.2); height:auto; padding:8px 15px;">
-                                <small style="display:block; font-size:9px; text-transform:uppercase; opacity:0.7;">Potential Revenue Lost</small>
-                                <span style="font-size:18px; font-weight:900;">₹0</span>
+                            <div class="notif-time-badge-premium revenue-badge-lost" id="lostSalesTotalRevenue">
+                                <small class="revenue-badge-sub">Potential Revenue Lost</small>
+                                <span class="revenue-badge-val">₹0</span>
                             </div>
-                            <button onclick="clearLostSales()" class="btn-secondary" style="height:45px; background:rgba(0,0,0,0.05);">🗑️ Clear Logs</button>
+                            <button onclick="clearLostSales()" class="btn-secondary btn-lost-sales-clear">🗑️ Clear Logs</button>
                         </div>
                     </div>
                     
@@ -416,16 +416,16 @@
                             <table class="premium-table">
                                 <thead>
                                     <tr>
-                                        <th style="padding-left:25px;">Date & Time</th>
+                                        <th class="p-l-25">Date & Time</th>
                                         <th>Customer Detail</th>
                                         <th>Abandonment Step</th>
                                         <th>Items Summary</th>
-                                        <th style="padding-right:25px; text-align:right;">Potential Value</th>
+                                        <th class="p-r-25 text-right">Potential Value</th>
                                     </tr>
                                 </thead>
                                 <tbody id="lostSalesTableBody">
-                                    <tr><td colspan="5" style="text-align:center; padding:60px; color:var(--text-muted)">
-                                        <div class="loading-spinner mb-14" style="margin:0 auto;"></div>
+                                    <tr><td colspan="5" class="text-center p-60 text-muted">
+                                        <div class="loading-spinner mb-14 m-auto"></div>
                                         🔄 Collecting abandonment records...
                                     </td></tr>
                                 </tbody>
