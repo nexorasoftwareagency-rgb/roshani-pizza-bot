@@ -1630,6 +1630,9 @@ window.hideDishModal = () => {
 };
 
 document.getElementById('saveDishBtn').onclick = async () => {
+    if (!window.currentOutlet || window.currentOutlet === 'null' || window.currentOutlet === 'undefined') {
+        return alert("Error: Current outlet context is missing. Please refresh or select an outlet first.");
+    }
     const name = document.getElementById('dishName').value;
     const cat = document.getElementById('dishCategory').value;
     const basePrice = document.getElementById('dishPriceBase').value;

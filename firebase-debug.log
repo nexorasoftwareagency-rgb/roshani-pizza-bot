@@ -1,0 +1,193 @@
+[debug] [2026-04-21T01:16:16.183Z] ----------------------------------------------------------------------
+[debug] [2026-04-21T01:16:16.189Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\DELL\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only database hosting
+[debug] [2026-04-21T01:16:16.190Z] CLI Version:   15.15.0
+[debug] [2026-04-21T01:16:16.190Z] Platform:      win32
+[debug] [2026-04-21T01:16:16.190Z] Node Version:  v24.14.0
+[debug] [2026-04-21T01:16:16.190Z] Time:          Tue Apr 21 2026 06:46:16 GMT+0530 (India Standard Time)
+[debug] [2026-04-21T01:16:16.190Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-04-21T01:16:21.424Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-04-21T01:16:21.425Z] > authorizing via signed-in user (nexorasoftwareagency@gmail.com)
+[debug] [2026-04-21T01:16:21.426Z] [iam] checking project prashant-pizza-e86e4 for permissions ["firebase.projects.get","firebasedatabase.instances.update","firebasehosting.sites.update"]
+[debug] [2026-04-21T01:16:21.433Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:21.433Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:21.437Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/prashant-pizza-e86e4:testIamPermissions [none]
+[debug] [2026-04-21T01:16:21.437Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/prashant-pizza-e86e4:testIamPermissions  x-goog-user-project=prashant-pizza-e86e4
+[debug] [2026-04-21T01:16:21.437Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/prashant-pizza-e86e4:testIamPermissions {"permissions":["firebase.projects.get","firebasedatabase.instances.update","firebasehosting.sites.update"]}
+[debug] [2026-04-21T01:16:22.917Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/prashant-pizza-e86e4:testIamPermissions 200
+[debug] [2026-04-21T01:16:22.918Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/prashant-pizza-e86e4:testIamPermissions {"permissions":["firebase.projects.get","firebasedatabase.instances.update","firebasehosting.sites.update"]}
+[debug] [2026-04-21T01:16:22.919Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:22.919Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:22.920Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/prashant-pizza-e86e4 [none]
+[debug] [2026-04-21T01:16:23.456Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/prashant-pizza-e86e4 200
+[debug] [2026-04-21T01:16:23.456Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/prashant-pizza-e86e4 {"projectId":"prashant-pizza-e86e4","projectNumber":"857471482885","displayName":"Roshani-Shudha","name":"projects/prashant-pizza-e86e4","resources":{"hostingSite":"prashant-pizza-e86e4","realtimeDatabaseInstance":"prashant-pizza-e86e4-default-rtdb"},"state":"ACTIVE","etag":"1_0f1b6cb5-0565-4ee6-b71b-650e1d798973"}
+[debug] [2026-04-21T01:16:23.457Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:23.457Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:23.457Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/prashant-pizza-e86e4 [none]
+[debug] [2026-04-21T01:16:23.851Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/prashant-pizza-e86e4 200
+[debug] [2026-04-21T01:16:23.851Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/prashant-pizza-e86e4 {"projectId":"prashant-pizza-e86e4","projectNumber":"857471482885","displayName":"Roshani-Shudha","name":"projects/prashant-pizza-e86e4","resources":{"hostingSite":"prashant-pizza-e86e4","realtimeDatabaseInstance":"prashant-pizza-e86e4-default-rtdb"},"state":"ACTIVE","etag":"1_0f1b6cb5-0565-4ee6-b71b-650e1d798973"}
+[info] 
+[info] === Deploying to 'prashant-pizza-e86e4'...
+[info] 
+[info] i  deploying database, hosting 
+[info] i  database: checking rules syntax... 
+[debug] [2026-04-21T01:16:23.862Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:23.863Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:23.863Z] >>> [apiv2][query] GET https://firebasedatabase.googleapis.com/v1beta/projects/prashant-pizza-e86e4/locations/-/instances/prashant-pizza-e86e4-default-rtdb [none]
+[debug] [2026-04-21T01:16:25.607Z] <<< [apiv2][status] GET https://firebasedatabase.googleapis.com/v1beta/projects/prashant-pizza-e86e4/locations/-/instances/prashant-pizza-e86e4-default-rtdb 200
+[debug] [2026-04-21T01:16:25.607Z] <<< [apiv2][body] GET https://firebasedatabase.googleapis.com/v1beta/projects/prashant-pizza-e86e4/locations/-/instances/prashant-pizza-e86e4-default-rtdb {"name":"projects/857471482885/locations/us-central1/instances/prashant-pizza-e86e4-default-rtdb","project":"projects/857471482885","databaseUrl":"https://prashant-pizza-e86e4-default-rtdb.firebaseio.com","type":"DEFAULT_DATABASE","state":"ACTIVE"}
+[debug] [2026-04-21T01:16:25.608Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:25.608Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:25.608Z] >>> [apiv2][query] PUT https://prashant-pizza-e86e4-default-rtdb.firebaseio.com/.settings/rules.json dryRun=true
+[debug] [2026-04-21T01:16:25.608Z] >>> [apiv2][body] PUT https://prashant-pizza-e86e4-default-rtdb.firebaseio.com/.settings/rules.json "{\r\n  \"rules\": {\r\n    \"orders\": {\r\n      \".read\": \"(auth != null && auth.token.admin === true) || (auth != null && query.orderByChild == 'assignedRider')\",\r\n      \"$orderId\": {\r\n        \".read\": \"auth != null && (auth.token.admin === true || data.child('assignedRider').val() == auth.token.email || data.child('whatsappNumber').val() == auth.token.whatsapp)\",\r\n        \".write\": \"auth != null && (auth.token.admin === true || !data.exists())\",\r\n        \".validate\": \"newData.hasChild('status')\"\r\n      }\r\n    },\r\n    \"dishes\": {\r\n      \".read\": \"auth != null\",\r\n      \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"riderStats\": {\r\n      \".read\": \"auth != null\",\r\n      \"$riderId\": {\r\n        \".write\": \"auth != null && (auth.token.admin === true || auth.uid == $riderId)\"\r\n      }\r\n    },\r\n    \"riders\": {\r\n      \".read\": \"auth != null && auth.token.admin === true\",\r\n      \"$riderId\": {\r\n        \".read\": \"auth != null && (auth.token.admin === true || auth.uid == $riderId)\",\r\n        \".write\": \"auth != null && (auth.token.admin === true || auth.uid == $riderId)\",\r\n        \".validate\": \"newData.hasChildren(['name', 'email', 'outlet'])\"\r\n      }\r\n    },\r\n    \"feedbacks\": {\r\n      \".read\": \"auth != null && auth.token.admin === true\",\r\n      \"$feedbackId\": {\r\n        \".write\": \"auth != null && !data.exists()\"\r\n      }\r\n    },\r\n    \"customers\": {\r\n      \".read\": \"auth != null && auth.token.admin === true\",\r\n      \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"appConfig\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"uiConfig\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"settings\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"admins\": {\r\n        \".read\": \"auth != null && auth.token.admin === true\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"Menu\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"categories\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"inventory\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"liveTracker\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"metadata\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\",\r\n        \".validate\": \"newData.hasChildren()\"\r\n    },\r\n    \"botStatus\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    }\r\n  }\r\n}\r\n"
+[debug] [2026-04-21T01:16:26.397Z] <<< [apiv2][status] PUT https://prashant-pizza-e86e4-default-rtdb.firebaseio.com/.settings/rules.json 200
+[debug] [2026-04-21T01:16:26.397Z] <<< [apiv2][body] PUT https://prashant-pizza-e86e4-default-rtdb.firebaseio.com/.settings/rules.json {"status":"ok"}
+[info] +  database: rules syntax for database prashant-pizza-e86e4-default-rtdb is valid 
+[debug] [2026-04-21T01:16:26.407Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:26.408Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:26.412Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:26.413Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:26.413Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-admin/versions [none]
+[debug] [2026-04-21T01:16:26.414Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-admin/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2026-04-21T01:16:26.417Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-rider/versions [none]
+[debug] [2026-04-21T01:16:26.417Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-rider/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2026-04-21T01:16:28.405Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-admin/versions 200
+[debug] [2026-04-21T01:16:28.405Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-admin/versions {"name":"projects/857471482885/sites/roshani-sudha-admin/versions/bb4b427bc433878e","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2026-04-21T01:16:28.555Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-rider/versions 200
+[debug] [2026-04-21T01:16:28.555Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-rider/versions {"name":"projects/857471482885/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
+[info] i  hosting[roshani-sudha-admin]: beginning deploy... 
+[info] i  hosting[roshani-sudha-admin]: found 15 files in Admin 
+[debug] [2026-04-21T01:16:28.593Z] [hosting] uploading with 200 concurrency
+[debug] [2026-04-21T01:16:28.644Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:28.645Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:28.656Z] [hosting] hash cache [QWRtaW4] stored for 15 files
+[debug] [2026-04-21T01:16:28.656Z] [hosting][hash queue][FINAL] {"max":42,"min":1,"avg":5.866666666666666,"active":0,"complete":15,"success":15,"errored":0,"retried":0,"total":15,"elapsed":56}
+[debug] [2026-04-21T01:16:28.657Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/857471482885/sites/roshani-sudha-admin/versions/bb4b427bc433878e:populateFiles [none]
+[debug] [2026-04-21T01:16:28.657Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/857471482885/sites/roshani-sudha-admin/versions/bb4b427bc433878e:populateFiles {"files":{"/sw.js":"a9abaa35f157a9ac2a625964eeb0dd65e1cf3cdd0d22a2edb7b709f1f3be0152","/manifest.json":"a8089545947a20f871969fbd4249d18a46f5283d2a892b0d26a8d239077848d1","/manifest-pizza.json":"ae03a489605738b918a29a2896f4268da2cd37c1f3049c631de2d247c667abc1","/manifest-cake.json":"1a2ab6f263914c641399632c53aebc561bae58a55d96df939bb7b421475c1a37","/index.html":"a8afcf90e49a390a23de7766e063f368c14d78ce61dd46fdcfa927535906bcc2","/icon-pizza.png":"d3ff761f70584393a2506b101d8082f784ddd1cd187954873028b59f8d6f3ca7","/icon-cake.png":"70c019aaae831ef61304dacbfdc694042d90e234aee792236cb5dbd2f81a6029","/icon-512.png":"d3ff761f70584393a2506b101d8082f784ddd1cd187954873028b59f8d6f3ca7","/firebase-config.js":"bebe12d272eaa7bd22f1843d4bf010a4cdee85355c207a00de6151a99080ab55","/branding.js":"0ae1dc31f241e3213682af802b909a795f4e8d59315fb00cb51c2378c9d42c7d","/assets/images/qr_placeholder.png":"9fb428a9fcb5e7ede028bc23a70f8264e5db59acb1dd50e6bcb29c7ebb2f8f67","/assets/images/pizza_placeholder.png":"ede71796b59fb35623bda34541260e849a69ac13fe58d0b96618d909ff41b710","/assets/images/category_icon.png":"3e5d498371f32a47c3c1cbe985942fb927bdf426437015a30717a3824150958b","/app.js":"91e1cd7f5df86521c13b7651ed06af28ae3e23194cd6a24b3ceae7f69126a411","/style.css":"7a271b052ddbcd51b585cfcd78a3266156140e742760e832305ea045714d09c9"}}
+[debug] [2026-04-21T01:16:29.609Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/857471482885/sites/roshani-sudha-admin/versions/bb4b427bc433878e:populateFiles 200
+[debug] [2026-04-21T01:16:29.609Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/857471482885/sites/roshani-sudha-admin/versions/bb4b427bc433878e:populateFiles {"uploadRequiredHashes":["91e1cd7f5df86521c13b7651ed06af28ae3e23194cd6a24b3ceae7f69126a411","7a271b052ddbcd51b585cfcd78a3266156140e742760e832305ea045714d09c9"],"uploadUrl":"https://upload-firebasehosting.googleapis.com/upload/sites/roshani-sudha-admin/versions/bb4b427bc433878e/files"}
+[debug] [2026-04-21T01:16:29.610Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:29.611Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:29.611Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:29.611Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:29.612Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/roshani-sudha-admin/versions/bb4b427bc433878e/files/91e1cd7f5df86521c13b7651ed06af28ae3e23194cd6a24b3ceae7f69126a411 [none]
+[debug] [2026-04-21T01:16:29.612Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/roshani-sudha-admin/versions/bb4b427bc433878e/files/91e1cd7f5df86521c13b7651ed06af28ae3e23194cd6a24b3ceae7f69126a411 [stream]
+[debug] [2026-04-21T01:16:29.616Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/roshani-sudha-admin/versions/bb4b427bc433878e/files/7a271b052ddbcd51b585cfcd78a3266156140e742760e832305ea045714d09c9 [none]
+[debug] [2026-04-21T01:16:29.617Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/roshani-sudha-admin/versions/bb4b427bc433878e/files/7a271b052ddbcd51b585cfcd78a3266156140e742760e832305ea045714d09c9 [stream]
+[debug] [2026-04-21T01:16:29.620Z] [hosting][populate queue][FINAL] {"max":968,"min":968,"avg":968,"active":0,"complete":1,"success":1,"errored":0,"retried":0,"total":1,"elapsed":976}
+[debug] [2026-04-21T01:16:29.620Z] [hosting] uploads queued: 2
+[info] i  hosting: uploading new files [0/2] (0%) 
+[debug] [2026-04-21T01:16:31.551Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/roshani-sudha-admin/versions/bb4b427bc433878e/files/7a271b052ddbcd51b585cfcd78a3266156140e742760e832305ea045714d09c9 200
+[debug] [2026-04-21T01:16:31.551Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/roshani-sudha-admin/versions/bb4b427bc433878e/files/7a271b052ddbcd51b585cfcd78a3266156140e742760e832305ea045714d09c9 [stream]
+[debug] [2026-04-21T01:16:31.816Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/roshani-sudha-admin/versions/bb4b427bc433878e/files/91e1cd7f5df86521c13b7651ed06af28ae3e23194cd6a24b3ceae7f69126a411 200
+[debug] [2026-04-21T01:16:31.816Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/roshani-sudha-admin/versions/bb4b427bc433878e/files/91e1cd7f5df86521c13b7651ed06af28ae3e23194cd6a24b3ceae7f69126a411 [stream]
+[debug] [2026-04-21T01:16:31.816Z] [hosting][upload queue][FINAL] {"max":2207,"min":1940,"avg":2073.5,"active":0,"complete":2,"success":2,"errored":0,"retried":0,"total":2,"elapsed":2207}
+[info] i  hosting: upload complete 
+[info] +  hosting[roshani-sudha-admin]: file upload complete 
+[debug] [2026-04-21T01:16:31.817Z] [hosting] deploy completed after 3256ms
+[info] i  hosting[roshani-sudha-rider]: beginning deploy... 
+[info] i  hosting[roshani-sudha-rider]: found 8 files in rider 
+[debug] [2026-04-21T01:16:31.822Z] [hosting] uploading with 200 concurrency
+[debug] [2026-04-21T01:16:31.826Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:31.826Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:31.827Z] [hosting] hash cache [cmlkZXI] stored for 8 files
+[debug] [2026-04-21T01:16:31.828Z] [hosting][hash queue][FINAL] {"max":2,"min":1,"avg":1,"active":0,"complete":8,"success":8,"errored":0,"retried":0,"total":8,"elapsed":4}
+[debug] [2026-04-21T01:16:31.828Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/857471482885/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf:populateFiles [none]
+[debug] [2026-04-21T01:16:31.828Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/857471482885/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf:populateFiles {"files":{"/sw.js":"fc25d288c6dc672cee192724e39affe5b1666e59ab18a8a88e781760815e78da","/style.css":"2c4921abc26c4875508c0a21a2ff8f3780a4ea5c78a1e96ba3fa13f98c15f2e6","/manifest.json":"f3ca88a830911f00ab6acfd6a900d9c8449020c79215b6d4d1ccfd84ed3b6379","/login.html":"33b548e4a6244b27c3eaf21ee6c67881307e2186059fcbfbba5aa619981ce928","/index.html":"bd3100b11a04eb7ad92c20b785388bfebfaf025d1272113101942c320a53c9b3","/icon-512.png":"ce23bd5e850f3cdf9e0fb4b38006e988b6fdd424caaa270a8ae91f2073f69d58","/firebase.js":"bc9214aaaa2144c34a305a540337eb49363da98e56d98debc56480702cbd7450","/app.js":"efa579ddc18db01125435965ec208e0c70b78c83714f33b8aa01710dbb46f993"}}
+[debug] [2026-04-21T01:16:32.710Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/857471482885/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf:populateFiles 200
+[debug] [2026-04-21T01:16:32.710Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/857471482885/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf:populateFiles {"uploadUrl":"https://upload-firebasehosting.googleapis.com/upload/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf/files"}
+[debug] [2026-04-21T01:16:32.710Z] [hosting][populate queue][FINAL] {"max":884,"min":884,"avg":884,"active":0,"complete":1,"success":1,"errored":0,"retried":0,"total":1,"elapsed":884}
+[debug] [2026-04-21T01:16:32.711Z] [hosting] uploads queued: 0
+[debug] [2026-04-21T01:16:32.711Z] [hosting][upload queue][FINAL] {"max":0,"min":9999999999,"avg":0,"active":0,"complete":0,"success":0,"errored":0,"retried":0,"total":0,"elapsed":1776734192711}
+[info] i  hosting: upload complete 
+[info] +  hosting[roshani-sudha-rider]: file upload complete 
+[debug] [2026-04-21T01:16:32.711Z] [hosting] deploy completed after 894ms
+[info] i  database: releasing rules... 
+[debug] [2026-04-21T01:16:32.712Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:32.712Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:32.713Z] >>> [apiv2][query] GET https://firebasedatabase.googleapis.com/v1beta/projects/prashant-pizza-e86e4/locations/-/instances/prashant-pizza-e86e4-default-rtdb [none]
+[debug] [2026-04-21T01:16:34.499Z] <<< [apiv2][status] GET https://firebasedatabase.googleapis.com/v1beta/projects/prashant-pizza-e86e4/locations/-/instances/prashant-pizza-e86e4-default-rtdb 200
+[debug] [2026-04-21T01:16:34.500Z] <<< [apiv2][body] GET https://firebasedatabase.googleapis.com/v1beta/projects/prashant-pizza-e86e4/locations/-/instances/prashant-pizza-e86e4-default-rtdb {"name":"projects/857471482885/locations/us-central1/instances/prashant-pizza-e86e4-default-rtdb","project":"projects/857471482885","databaseUrl":"https://prashant-pizza-e86e4-default-rtdb.firebaseio.com","type":"DEFAULT_DATABASE","state":"ACTIVE"}
+[debug] [2026-04-21T01:16:34.500Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:34.501Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:34.501Z] >>> [apiv2][query] PUT https://prashant-pizza-e86e4-default-rtdb.firebaseio.com/.settings/rules.json 
+[debug] [2026-04-21T01:16:34.501Z] >>> [apiv2][body] PUT https://prashant-pizza-e86e4-default-rtdb.firebaseio.com/.settings/rules.json "{\r\n  \"rules\": {\r\n    \"orders\": {\r\n      \".read\": \"(auth != null && auth.token.admin === true) || (auth != null && query.orderByChild == 'assignedRider')\",\r\n      \"$orderId\": {\r\n        \".read\": \"auth != null && (auth.token.admin === true || data.child('assignedRider').val() == auth.token.email || data.child('whatsappNumber').val() == auth.token.whatsapp)\",\r\n        \".write\": \"auth != null && (auth.token.admin === true || !data.exists())\",\r\n        \".validate\": \"newData.hasChild('status')\"\r\n      }\r\n    },\r\n    \"dishes\": {\r\n      \".read\": \"auth != null\",\r\n      \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"riderStats\": {\r\n      \".read\": \"auth != null\",\r\n      \"$riderId\": {\r\n        \".write\": \"auth != null && (auth.token.admin === true || auth.uid == $riderId)\"\r\n      }\r\n    },\r\n    \"riders\": {\r\n      \".read\": \"auth != null && auth.token.admin === true\",\r\n      \"$riderId\": {\r\n        \".read\": \"auth != null && (auth.token.admin === true || auth.uid == $riderId)\",\r\n        \".write\": \"auth != null && (auth.token.admin === true || auth.uid == $riderId)\",\r\n        \".validate\": \"newData.hasChildren(['name', 'email', 'outlet'])\"\r\n      }\r\n    },\r\n    \"feedbacks\": {\r\n      \".read\": \"auth != null && auth.token.admin === true\",\r\n      \"$feedbackId\": {\r\n        \".write\": \"auth != null && !data.exists()\"\r\n      }\r\n    },\r\n    \"customers\": {\r\n      \".read\": \"auth != null && auth.token.admin === true\",\r\n      \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"appConfig\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"uiConfig\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"settings\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"admins\": {\r\n        \".read\": \"auth != null && auth.token.admin === true\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"Menu\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"categories\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"inventory\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"liveTracker\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    },\r\n    \"metadata\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\",\r\n        \".validate\": \"newData.hasChildren()\"\r\n    },\r\n    \"botStatus\": {\r\n        \".read\": \"auth != null\",\r\n        \".write\": \"auth.token.admin === true\"\r\n    }\r\n  }\r\n}\r\n"
+[debug] [2026-04-21T01:16:35.356Z] <<< [apiv2][status] PUT https://prashant-pizza-e86e4-default-rtdb.firebaseio.com/.settings/rules.json 200
+[debug] [2026-04-21T01:16:35.356Z] <<< [apiv2][body] PUT https://prashant-pizza-e86e4-default-rtdb.firebaseio.com/.settings/rules.json {"status":"ok"}
+[info] +  database: rules for database prashant-pizza-e86e4-default-rtdb released successfully 
+[debug] [2026-04-21T01:16:35.357Z] [
+  {
+    "config": {
+      "target": "admin",
+      "public": "Admin",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "site": "roshani-sudha-admin"
+    },
+    "version": "projects/857471482885/sites/roshani-sudha-admin/versions/bb4b427bc433878e"
+  },
+  {
+    "config": {
+      "target": "rider",
+      "public": "rider",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "site": "roshani-sudha-rider"
+    },
+    "version": "projects/857471482885/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf"
+  }
+]
+[info] i  hosting[roshani-sudha-admin]: finalizing version... 
+[info] i  hosting[roshani-sudha-rider]: finalizing version... 
+[debug] [2026-04-21T01:16:35.360Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:35.360Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:35.360Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:35.361Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:35.361Z] >>> [apiv2][query] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-admin/versions/bb4b427bc433878e updateMask=status%2Cconfig
+[debug] [2026-04-21T01:16:35.362Z] >>> [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-admin/versions/bb4b427bc433878e {"status":"FINALIZED","config":{}}
+[debug] [2026-04-21T01:16:35.363Z] >>> [apiv2][query] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf updateMask=status%2Cconfig
+[debug] [2026-04-21T01:16:35.364Z] >>> [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf {"status":"FINALIZED","config":{}}
+[debug] [2026-04-21T01:16:36.220Z] <<< [apiv2][status] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-admin/versions/bb4b427bc433878e 200
+[debug] [2026-04-21T01:16:36.221Z] <<< [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-admin/versions/bb4b427bc433878e {"name":"projects/857471482885/sites/roshani-sudha-admin/versions/bb4b427bc433878e","status":"FINALIZED","config":{},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-04-21T01:16:28.067811Z","createUser":{"email":"nexorasoftwareagency@gmail.com"},"finalizeTime":"2026-04-21T01:16:36.624121Z","finalizeUser":{"email":"nexorasoftwareagency@gmail.com"}}
+[debug] [2026-04-21T01:16:36.221Z] [hosting] finalized version for roshani-sudha-admin:[object Object]
+[info] +  hosting[roshani-sudha-admin]: version finalized 
+[info] i  hosting[roshani-sudha-admin]: releasing new version... 
+[debug] [2026-04-21T01:16:36.222Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:36.222Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:36.222Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-admin/channels/live/releases versionName=projects%2F857471482885%2Fsites%2Froshani-sudha-admin%2Fversions%2Fbb4b427bc433878e
+[debug] [2026-04-21T01:16:36.223Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-admin/channels/live/releases {}
+[debug] [2026-04-21T01:16:36.694Z] <<< [apiv2][status] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf 200
+[debug] [2026-04-21T01:16:36.695Z] <<< [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf {"name":"projects/857471482885/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf","status":"FINALIZED","config":{},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-04-21T01:16:28.383994Z","createUser":{"email":"nexorasoftwareagency@gmail.com"},"finalizeTime":"2026-04-21T01:16:37.076659Z","finalizeUser":{"email":"nexorasoftwareagency@gmail.com"}}
+[debug] [2026-04-21T01:16:36.695Z] [hosting] finalized version for roshani-sudha-rider:[object Object]
+[info] +  hosting[roshani-sudha-rider]: version finalized 
+[info] i  hosting[roshani-sudha-rider]: releasing new version... 
+[debug] [2026-04-21T01:16:36.696Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:36.696Z] Checked if tokens are valid: true, expires at: 1776735646798
+[debug] [2026-04-21T01:16:36.697Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-rider/channels/live/releases versionName=projects%2F857471482885%2Fsites%2Froshani-sudha-rider%2Fversions%2Fe9b8a3d6db8020cf
+[debug] [2026-04-21T01:16:36.697Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-rider/channels/live/releases {}
+[debug] [2026-04-21T01:16:37.123Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-admin/channels/live/releases 200
+[debug] [2026-04-21T01:16:37.123Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-admin/channels/live/releases {"name":"projects/857471482885/sites/roshani-sudha-admin/channels/live/releases/1776734196790000","version":{"name":"projects/857471482885/sites/roshani-sudha-admin/versions/bb4b427bc433878e","status":"FINALIZED","config":{},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-04-21T01:16:28.067811Z","createUser":{"email":"nexorasoftwareagency@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKnhJgCK1mL_Z24n01q-LWUpmsoBHWjoTIu73K1kASqESfP8HA"},"finalizeTime":"2026-04-21T01:16:36.624121Z","finalizeUser":{"email":"nexorasoftwareagency@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKnhJgCK1mL_Z24n01q-LWUpmsoBHWjoTIu73K1kASqESfP8HA"}},"type":"DEPLOY","releaseTime":"2026-04-21T01:16:36.790Z","releaseUser":{"email":"nexorasoftwareagency@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKnhJgCK1mL_Z24n01q-LWUpmsoBHWjoTIu73K1kASqESfP8HA"}}
+[debug] [2026-04-21T01:16:37.123Z] [hosting] release: {"name":"projects/857471482885/sites/roshani-sudha-admin/channels/live/releases/1776734196790000","version":{"name":"projects/857471482885/sites/roshani-sudha-admin/versions/bb4b427bc433878e","status":"FINALIZED","config":{},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-04-21T01:16:28.067811Z","createUser":{"email":"nexorasoftwareagency@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKnhJgCK1mL_Z24n01q-LWUpmsoBHWjoTIu73K1kASqESfP8HA"},"finalizeTime":"2026-04-21T01:16:36.624121Z","finalizeUser":{"email":"nexorasoftwareagency@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKnhJgCK1mL_Z24n01q-LWUpmsoBHWjoTIu73K1kASqESfP8HA"}},"type":"DEPLOY","releaseTime":"2026-04-21T01:16:36.790Z","releaseUser":{"email":"nexorasoftwareagency@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKnhJgCK1mL_Z24n01q-LWUpmsoBHWjoTIu73K1kASqESfP8HA"}}
+[info] +  hosting[roshani-sudha-admin]: release complete 
+[debug] [2026-04-21T01:16:37.512Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-rider/channels/live/releases 200
+[debug] [2026-04-21T01:16:37.512Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/roshani-sudha-rider/channels/live/releases {"name":"projects/857471482885/sites/roshani-sudha-rider/channels/live/releases/1776734197245000","version":{"name":"projects/857471482885/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf","status":"FINALIZED","config":{},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-04-21T01:16:28.383994Z","createUser":{"email":"nexorasoftwareagency@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKnhJgCK1mL_Z24n01q-LWUpmsoBHWjoTIu73K1kASqESfP8HA"},"finalizeTime":"2026-04-21T01:16:37.076659Z","finalizeUser":{"email":"nexorasoftwareagency@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKnhJgCK1mL_Z24n01q-LWUpmsoBHWjoTIu73K1kASqESfP8HA"}},"type":"DEPLOY","releaseTime":"2026-04-21T01:16:37.245Z","releaseUser":{"email":"nexorasoftwareagency@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKnhJgCK1mL_Z24n01q-LWUpmsoBHWjoTIu73K1kASqESfP8HA"}}
+[debug] [2026-04-21T01:16:37.512Z] [hosting] release: {"name":"projects/857471482885/sites/roshani-sudha-rider/channels/live/releases/1776734197245000","version":{"name":"projects/857471482885/sites/roshani-sudha-rider/versions/e9b8a3d6db8020cf","status":"FINALIZED","config":{},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-04-21T01:16:28.383994Z","createUser":{"email":"nexorasoftwareagency@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKnhJgCK1mL_Z24n01q-LWUpmsoBHWjoTIu73K1kASqESfP8HA"},"finalizeTime":"2026-04-21T01:16:37.076659Z","finalizeUser":{"email":"nexorasoftwareagency@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKnhJgCK1mL_Z24n01q-LWUpmsoBHWjoTIu73K1kASqESfP8HA"}},"type":"DEPLOY","releaseTime":"2026-04-21T01:16:37.245Z","releaseUser":{"email":"nexorasoftwareagency@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKnhJgCK1mL_Z24n01q-LWUpmsoBHWjoTIu73K1kASqESfP8HA"}}
+[info] +  hosting[roshani-sudha-rider]: release complete 
+[info] 
+[info] +  Deploy complete! 
+[info] 
+[info] Project Console: https://console.firebase.google.com/project/prashant-pizza-e86e4/overview
+[info] Hosting URL: https://roshani-sudha-admin.web.app
+[info] Hosting URL: https://roshani-sudha-rider.web.app
+[debug] [2026-04-21T01:16:42.766Z] Error: Timed out.
+    at Timeout._onTimeout (C:\Users\DELL\AppData\Roaming\npm\node_modules\firebase-tools\lib\utils.js:309:49)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+[error] 
+[error] Error: An unexpected error has occurred.
