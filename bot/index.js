@@ -1337,7 +1337,16 @@ async function startBot() {
 
             // CONFIRM
             if (user.step === "CONFIRM") {
-                const primaryOutlet = user.outlet || 'pizza';
+                // Determine primary outlet based on majority items
+                const outletCounts = {};
+                user.cart.forEach(i => {
+                    const o = i.outlet || 'pizza';
+                    outletCounts[o] = (outletCounts[o] || 0) + 1;
+                });
+                const primaryOutlet = Object.entries(outletCounts).length > 0
+                    ? Object.entries(outletCounts).sort((a, b) => b[1] - a[1])[0][0]
+                    : (user.outlet || 'pizza');
+
                 const orderId = await generateOrderId(primaryOutlet);
                 const { subtotal } = formatCartSummary(user.cart);
                 const grandTotal = subtotal + user.deliveryFee;
@@ -1352,13 +1361,7 @@ async function startBot() {
                     lineTotal: item.total * item.quantity
                 }));
 
-                // Determine primary outlet based on majority items
-                const outletCounts = {};
-                user.cart.forEach(i => {
-                    const o = i.outlet || 'pizza';
-                    outletCounts[o] = (outletCounts[o] || 0) + 1;
-                });
-                const primaryOutlet = Object.entries(outletCounts).sort((a,b) => b[1] - a[1])[0][0];
+                // (outletCounts and primaryOutlet already calculated above)
 
                 await setData(`orders/${orderId}`, {
                     orderId,
