@@ -774,7 +774,7 @@ async function startBot() {
                     msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n❌ *ORDER CANCELLED*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nWe're sorry, but your order *#${id.slice(-5)}* has been cancelled. If you have any questions, please contact our support team. We hope to serve you again soon! 🍕🎂`;
                 }
 
-                if (msg) await sock.sendMessage(number, { text: msg });
+                if (msg) await sendImage(sock, number, statusImg, msg);
             }
 
             // 2. OTP LOGIC
@@ -850,6 +850,7 @@ async function startBot() {
 
                 user.feedback = { rating };
                 const storeData = await getData("settings/Store") || {};
+                const botSettings = await getData("settings/Bot") || {};
                 const name = user.customerName || user.pushName || "";
 
                 let msg = name ? `Thanks *${name}*! 👋\n\n` : "";
@@ -863,7 +864,7 @@ async function startBot() {
                 msg += `_Reply with a number_`;
 
                 user.step = "FEEDBACK_REASON";
-                return sock.sendMessage(sender, { text: msg });
+                return await sendImage(sock, sender, botSettings.imgFeedback, msg);
             }
 
             // FEEDBACK FLOW - REASON
