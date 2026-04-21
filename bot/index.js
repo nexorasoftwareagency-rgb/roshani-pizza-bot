@@ -6,7 +6,7 @@ const {
 
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
-const { getData, setData, updateData, db } = require('./firebase');
+const { getData, setData, updateData, db, pushData } = require('./firebase');
 
 const sessions = {};
 const processedStatus = {};
@@ -203,21 +203,23 @@ function isShopOpen(openTime, closeTime) {
     return currentTime >= start && currentTime <= end;
 }
 
-async function sendDailyReport(sock) {
+async function sendDailyReport(sock, targetOutlet = null) {
     try {
-        const storeData = await getData("settings/Store") || {};
         const migrationInfo = await getData("migrationStatus/multiOutlet") || {};
-        const outlets = migrationInfo.outlets || ['pizza', 'cake'];
-
+        const outlets = targetOutlet ? [targetOutlet] : (migrationInfo.outlets || ['pizza', 'cake']);
+        
+        // Always use root store data for report contacts
+        const storeData = await getData("settings/Store") || {};
         const recipients = [];
         if (storeData.reportPhone) recipients.push(storeData.reportPhone.replace(/\D/g, '') + "@s.whatsapp.net");
         if (storeData.developerPhone) recipients.push(storeData.developerPhone.replace(/\D/g, '') + "@s.whatsapp.net");
 
         if (recipients.length === 0) return;
 
-        // Fetch Today's Orders from all outlets
+        // Fetch Today's Orders
         const now = new Date();
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const todayStr = now.toISOString().split('T')[0];
         
         let allTodayOrders = [];
         let revenueByOutlet = {};
@@ -233,23 +235,30 @@ async function sendDailyReport(sock) {
             revenueByOutlet[outlet] = todayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
         }
 
-        if (allTodayOrders.length === 0) {
+        if (allTodayOrders.length === 0 && targetOutlet) {
             const emptyMsg = `📊 *DAILY SALES SUMMARY* 📊\n` +
                 `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `🏪 *Store:* ${targetOutlet.toUpperCase()}\n` +
                 `📅 *Date:* ${new Date().toLocaleDateString()}\n` +
                 `🚫 No orders were placed today.\n` +
                 `━━━━━━━━━━━━━━━━━━━━━━━━━━`;
             for (const jid of recipients) await sock.sendMessage(jid, { text: emptyMsg });
-            await updateData('settings/Bot', { lastReportDate: now.toISOString().split('T')[0] });
+            await updateData('settings/Bot', { lastReportDate: todayStr }, targetOutlet);
             return;
         }
+
+        if (allTodayOrders.length === 0) return; // Don't send global empty report if not targeted
 
         const totalRevenue = allTodayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
 
         let reportMsg = `📊 *DAILY SALES SUMMARY* 📊\n`;
         reportMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
         reportMsg += `📅 *Date:* ${new Date().toLocaleDateString()}\n`;
-        reportMsg += `🏪 *Store:* ${storeData.storeName || 'Roshani ERP'}\n`;
+        if (targetOutlet) {
+            reportMsg += `🏪 *Store:* ${targetOutlet.toUpperCase()}\n`;
+        } else {
+            reportMsg += `🏪 *Store:* ALL OUTLETS\n`;
+        }
         reportMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
         reportMsg += `💰 *TOTAL REVENUE:* ₹${totalRevenue.toLocaleString()}\n`;
         reportMsg += `📦 *TOTAL ORDERS:* ${allTodayOrders.length}\n\n`;
@@ -264,19 +273,12 @@ async function sendDailyReport(sock) {
         reportMsg += `_Generated automatically at closing time._`;
 
         for (const jid of recipients) await sock.sendMessage(jid, { text: reportMsg });
-        await updateData('settings/Bot', { lastReportDate: now.toISOString().split('T')[0] });
-
-    } catch (err) {
-        console.error("Daily Report Error:", err);
-    }
-}
-
-        for (const jid of recipients) {
-            await sock.sendMessage(jid, { text: reportMsg });
+        
+        // Mark as sent for the specific outlets processed
+        for (const outlet of outlets) {
+            await updateData('settings/Bot', { lastReportDate: todayStr }, outlet);
         }
 
-        // Mark as sent
-        await updateData('settings/Bot', { lastReportDate: today });
     } catch (err) {
         console.error("Daily Report Error:", err);
     }
@@ -442,8 +444,8 @@ async function generateOrderId(outlet = 'pizza') {
 async function sendCategories(sock, sender, user) {
     const currentOutlet = user.outlet || 'pizza';
     const categoriesData = await getData(`categories`, currentOutlet);
-    const settings = await getData(`settings`);
-    const bannerFallback = settings?.bannerImage || "https://via.placeholder.com/600x400?text=Roshani+ERP";
+    const botSettings = await getData(`settings/Bot`, currentOutlet) || {};
+    const bannerFallback = botSettings.imgWelcome || "https://via.placeholder.com/600x400?text=Roshani+ERP";
 
     if (!categoriesData) {
         user.categoryList = [];
@@ -512,31 +514,37 @@ async function startBot() {
         cleanupSessions();
 
         try {
-            const storeSettings = await getData("settings/Store");
+            const migrationInfo = await getData("migrationStatus/multiOutlet") || {};
+            const outlets = migrationInfo.outlets || ['pizza', 'cake'];
             const today = new Date().toISOString().split('T')[0];
-            const botSettings = await getData("settings/Bot") || {};
 
-            // Daily Report Trigger (Sync'd to Asia/Kolkata)
-            if (storeSettings?.shopCloseTime && botSettings.lastReportDate !== today) {
-                const now = new Date();
-                const istParts = new Intl.DateTimeFormat('en-US', {
-                    timeZone: 'Asia/Kolkata',
-                    hour: 'numeric',
-                    minute: 'numeric',
-                    hourCycle: 'h23'
-                }).formatToParts(now);
-                
-                const istHourPart = istParts.find(p => p.type === 'hour');
-                const istMinutePart = istParts.find(p => p.type === 'minute');
-                
-                const curH = istHourPart ? parseInt(istHourPart.value) : 0;
-                const curM = istMinutePart ? parseInt(istMinutePart.value) : 0;
+            for (const outlet of outlets) {
+                const storeSettings = await getData("settings/Store", outlet);
+                const botSettings = await getData("settings/Bot", outlet) || {};
 
-                const closeTimeMinutes = parseTime(storeSettings.shopCloseTime);
-                const currentTimeMinutes = curH * 60 + curM;
+                // Daily Report Trigger (Sync'd to Asia/Kolkata)
+                if (storeSettings?.shopCloseTime && botSettings.lastReportDate !== today) {
+                    const now = new Date();
+                    const istParts = new Intl.DateTimeFormat('en-US', {
+                        timeZone: 'Asia/Kolkata',
+                        hour: 'numeric',
+                        minute: 'numeric',
+                        hourCycle: 'h23'
+                    }).formatToParts(now);
+                    
+                    const istHourPart = istParts.find(p => p.type === 'hour');
+                    const istMinutePart = istParts.find(p => p.type === 'minute');
+                    
+                    const curH = istHourPart ? parseInt(istHourPart.value) : 0;
+                    const curM = istMinutePart ? parseInt(istMinutePart.value) : 0;
 
-                if (currentTimeMinutes >= closeTimeMinutes) {
-                    await sendDailyReport(sock);
+                    const closeTimeMinutes = parseTime(storeSettings.shopCloseTime);
+                    const currentTimeMinutes = curH * 60 + curM;
+
+                    if (currentTimeMinutes >= closeTimeMinutes) {
+                        // Pass specific outlet to reporter
+                        await sendDailyReport(sock, outlet);
+                    }
                 }
             }
 
@@ -612,12 +620,17 @@ async function startBot() {
         });
     });
 
-    async function notifyAdminNewOrder(sock, orderId, order) {
+    async function notifyAdmin(sock, orderId, order, type = 'NEW') {
         try {
-            const delSettings = await getData("settings/Delivery");
-            if (!delSettings || !delSettings.notifyPhone) return;
+            const outletId = order.outlet || 'pizza';
+            const delSettings = await getData("settings/Delivery", outletId);
+            const storeSettings = await getData("settings/Store", outletId);
+            
+            // Priority: notifyPhone > developerPhone > Default
+            const rawPhone = delSettings?.notifyPhone || storeSettings?.developerPhone;
+            if (!rawPhone) return;
 
-            const adminNumber = delSettings.notifyPhone.replace(/\D/g, '') + "@s.whatsapp.net";
+            const adminNumber = rawPhone.replace(/\D/g, '') + "@s.whatsapp.net";
             
             let itemsText = "";
             if (order.items) {
@@ -629,22 +642,48 @@ async function startBot() {
                 });
             }
 
-            let adminMsg = `🔔 *NEW ORDER RECEIVED!* 🔔\n`;
+            let adminMsg = "";
+            if (type === 'NEW') {
+                adminMsg = `🔔 *NEW ORDER RECEIVED!* 🔔\n`;
+            } else if (type === 'DELIVERED') {
+                adminMsg = `✅ *ORDER DELIVERED & PAID* ✅\n`;
+            } else if (type === 'ABANDONED') {
+                adminMsg = `🚨 *CHECKOUT CANCELLED* 🚨\n`;
+                adminMsg += `🚫 _(Customer dropped off at Checkout)_ \n`;
+                adminMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+                adminMsg += `🔗 *FOLLOW UP:* https://wa.me/${order.phone.replace(/\D/g, '')}\n`;
+                adminMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+            } else {
+                adminMsg = `📢 *ORDER UPDATE* 📢\n`;
+            }
+
             adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            adminMsg += `🏪 *Outlet:* ${outletId.toUpperCase()}\n`;
             const safeOrderId = String(order.orderId || orderId || "");
-            adminMsg += `🆔 *Order ID:* #${safeOrderId ? safeOrderId.slice(-5) : "N/A"}\n`;
+            adminMsg += `🆔 *Order ID:* #${safeOrderId && safeOrderId !== 'N/A' ? safeOrderId.slice(-5) : "Draft"}\n`;
             adminMsg += `👤 *Customer:* ${order.customerName || "Guest"}\n`;
             adminMsg += `📞 *Phone:* ${order.phone || "N/A"}\n`;
-            adminMsg += `📍 *Type:* ${order.type || "Online"}\n`;
-            if (order.address && order.type !== 'Walk-in') {
-                adminMsg += `🏠 *Address:* ${order.address}\n`;
+            
+            if (type === 'NEW' || type === 'ABANDONED') {
+                adminMsg += `📍 *Type:* ${order.type || "Online"}\n`;
+                if (order.address && order.type !== 'Walk-in') {
+                    adminMsg += `🏠 *Address:* ${order.address}\n`;
+                }
             }
+
             adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
             adminMsg += `📦 *ITEMS:*\n${itemsText || 'No items listed'}\n`;
             adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
             const safeTotal = order.total !== undefined ? Number(order.total) : 0;
             adminMsg += `💰 *TOTAL:* ₹${!isNaN(safeTotal) ? safeTotal : "N/A"}\n`;
-            adminMsg += `💳 *Payment:* ${order.paymentMethod || 'COD'} (${order.paymentStatus || 'Pending'})\n`;
+            
+            if (type === 'DELIVERED') {
+                adminMsg += `🤝 *Status:* Payment Received\n`;
+                adminMsg += `💳 *Method:* ${order.paymentMethod || 'Cash/UPI'}\n`;
+            } else {
+                adminMsg += `💳 *Payment:* ${order.paymentMethod || 'COD'} (${order.paymentStatus || 'Pending'})\n`;
+            }
+
             if (order.specialInstructions) {
                 adminMsg += `📝 *Note:* ${order.specialInstructions}\n`;
             }
@@ -652,7 +691,7 @@ async function startBot() {
             adminMsg += `_Time: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}_`;
 
             await sock.sendMessage(adminNumber, { text: adminMsg });
-            console.log(`✅ Admin Notified via WhatsApp: ${adminNumber}`);
+            console.log(`✅ Admin Notified (${type}): ${adminNumber}`);
         } catch (err) {
             console.error("Admin Notification Error:", err);
         }
@@ -697,7 +736,7 @@ async function startBot() {
 
                 let msg = "";
                 let statusImg = null;
-                const botSettingsSnap = await getData("settings/Bot");
+                const botSettingsSnap = await getData("settings/Bot", order.outlet || 'pizza');
                 const botSettings = botSettingsSnap || {};
 
                 if (order.status === "Confirmed") {
@@ -730,7 +769,7 @@ async function startBot() {
                 }
                 else if (order.status === "Delivered") {
                     // Load Marketing & Feedback Info
-                    const storeData = await getData("settings/Store");
+                    const storeData = await getData("settings/Store", order.outlet || 'pizza');
                     const brands = storeData || {};
 
                     // 1. Send Invoice & Payment Confirmation
@@ -738,6 +777,9 @@ async function startBot() {
                     let deliveryMsg = `Hello *${order.customerName || "Guest"}*! 👋\n\n✅ *ORDER DELIVERED SUCCESSFULLY!* 🍕\n\n${invoice}\n🤝 *Payment done via:* ${order.paymentMethod || 'Cash/UPI'}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                     
                     await sock.sendMessage(number, { text: deliveryMsg });
+
+                    // NOTIFY ADMIN OF DELIVERY & PAYMENT
+                    await notifyAdmin(sock, id, order, 'DELIVERED').catch(e => console.error("Admin delivered notify error:", e));
 
                     // 2. Send Promotional Message + Funny Joke + Feedback Request
                     let promoMsg = `🌟 *WE HOPE YOU ENJOYED YOUR MEAL!* 🌟\n`;
@@ -766,12 +808,14 @@ async function startBot() {
                         orderId: id,
                         customerName: order.customerName,
                         phone: phone,
+                        outlet: order.outlet || 'pizza',
                         lastActivity: Date.now()
                     };
                     return;
                 }
                 else if (order.status === "Cancelled") {
                     msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n❌ *ORDER CANCELLED*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nWe're sorry, but your order *#${id.slice(-5)}* has been cancelled. If you have any questions, please contact our support team. We hope to serve you again soon! 🍕🎂`;
+                    statusImg = botSettings.imgCancelled;
                 }
 
                 if (msg) await sendImage(sock, number, statusImg, msg);
@@ -830,13 +874,12 @@ async function startBot() {
                 return sock.sendMessage(sender, { text: "❌ Cancelled. Reply anything to start fresh." });
             }
 
-            // CHECK SHOP HOURS (Before starting/continuing an order)
-            const storeData = await getData("settings/Store") || {};
-            if (!isShopOpen(storeData.shopOpenTime, storeData.shopCloseTime)) {
-                // Allow feedback even if shop is closed
-                if (!user.step?.startsWith("FEEDBACK")) {
+            // CHECK SHOP HOURS (Only after outlet is selected)
+            if (user.outlet && !user.step?.startsWith("FEEDBACK")) {
+                const storeData = await getData("settings/Store", user.outlet) || {};
+                if (!isShopOpen(storeData.shopOpenTime, storeData.shopCloseTime)) {
                     return sock.sendMessage(sender, {
-                        text: `🌙 *WE ARE CURRENTLY CLOSED*\n\nThank you for reaching out! Our shop is currently closed. We look forward to serving you during our opening hours:\n\n☀️ *Opening Time:* ${storeData.shopOpenTime || '10:00'}\n\nSee you soon! 🍕🎂`
+                        text: `🌙 *WE ARE CURRENTLY CLOSED*\n\nThank you for reaching out! Our *${user.outlet.toUpperCase()}* shop is currently closed. We look forward to serving you during our opening hours:\n\n☀️ *Opening Time:* ${storeData.shopOpenTime || '10:00'}\n\nSee you soon! 🍕🎂`
                     });
                 }
             }
@@ -849,8 +892,8 @@ async function startBot() {
                 }
 
                 user.feedback = { rating };
-                const storeData = await getData("settings/Store") || {};
-                const botSettings = await getData("settings/Bot") || {};
+                const storeData = await getData("settings/Store", user.outlet || 'pizza') || {};
+                const botSettings = await getData("settings/Bot", user.outlet || 'pizza') || {};
                 const name = user.customerName || user.pushName || "";
 
                 let msg = name ? `Thanks *${name}*! 👋\n\n` : "";
@@ -869,7 +912,7 @@ async function startBot() {
 
             // FEEDBACK FLOW - REASON
             if (user.step === "FEEDBACK_REASON") {
-                const storeData = await getData("settings/Store") || {};
+                const storeData = await getData("settings/Store", user.outlet || 'pizza') || {};
                 const reasons = [
                     storeData.feedbackReason1 || 'Delicious Taste',
                     storeData.feedbackReason2 || 'Lightning Fast Delivery',
@@ -892,7 +935,7 @@ async function startBot() {
                     rating: user.feedback.rating,
                     reason: reason,
                     timestamp: new Date().toISOString()
-                });
+                }, user.outlet || 'pizza');
 
                 await sock.sendMessage(sender, { text: "✅ *FEEDBACK RECEIVED!*\n\nThank you for helping us improve. Have a wonderful day! 🙏✨" });
                 user.step = "START";
@@ -910,7 +953,7 @@ async function startBot() {
                     reason: "Other",
                     comment: text,
                     timestamp: new Date().toISOString()
-                });
+                }, user.outlet || 'pizza');
 
                 await sock.sendMessage(sender, { text: "✅ *THANK YOU SO MUCH!*\n\nYour detailed feedback has been recorded. Our team will review it shortly. 🙏✨" });
                 user.step = "START";
@@ -933,7 +976,7 @@ async function startBot() {
                 const cat = user.categoryList[parseInt(text) - 1];
                 if (!cat) return sendGreeting(sock, sender, user); // Invalid number or other message
 
-                const dishes = await getData(`dishes/${user.outlet}`) || {};
+                const dishes = await getData(`dishes`, user.outlet) || {};
                 console.log(`[BOT] Fetching dishes for outlet: ${user.outlet}. Total dishes in DB for this outlet: ${Object.keys(dishes).length}`);
 
                 // Filter by category NAME (Case-insensitive & Robust)
@@ -1191,7 +1234,15 @@ async function startBot() {
 
                 // Calculate Distance & Delivery Charge
                 const settings = await getData("settings/Delivery");
-                const outletCoords = settings?.coords || { lat: 25.887444, lng: 85.026889 };
+                
+                // SHOP COORDINATES (User provided)
+                const outletCoordsMap = {
+                    'pizza': { lat: 25.887944, lng: 85.026194 },
+                    'cake': { lat: 25.887472, lng: 85.026861 }
+                };
+                const primaryOutlet = user.outlet || 'pizza';
+                const outletCoords = settings?.coords || outletCoordsMap[primaryOutlet] || outletCoordsMap['pizza'];
+                
                 const slabs = settings?.slabs || [
                     { km: 2, fee: 20 },
                     { km: 5, fee: 40 },
@@ -1232,6 +1283,26 @@ async function startBot() {
             // ORDER_CONFIRM_PRE_PAY
             if (user.step === "ORDER_CONFIRM_PRE_PAY") {
                 if (text === "2") {
+                    // NOTIFY ADMIN OF ABANDONED CART
+                    const { subtotal } = formatCartSummary(user.cart);
+                    const abandonedData = {
+                        customerName: user.name,
+                        phone: user.phone,
+                        address: user.address,
+                        total: subtotal + (user.deliveryFee || 0),
+                        items: user.cart,
+                        outlet: user.outlet || 'pizza',
+                        type: "Online"
+                    };
+                    await notifyAdmin(sock, 'N/A', abandonedData, 'ABANDONED').catch(e => console.error("Admin abandoned notify error:", e));
+
+                    // SAVE TO DATABASE
+                    await pushData('lostSales', {
+                        ...abandonedData,
+                        cancelledAt: Date.now(),
+                        sourceStep: "Review Invoice"
+                    }, abandonedData.outlet);
+
                     sessions[sender] = { step: "START", current: {}, cart: [] };
                     return sock.sendMessage(sender, { text: "❌ *Order Cancelled.* \nReply any message to start a new order." });
                 }
@@ -1249,40 +1320,19 @@ async function startBot() {
                 return sock.sendMessage(sender, { text: "⚠️ Please reply with *1* to Confirm or *2* to Cancel." });
             }
 
-            // CHOOSE_PAYMENT
+            // CHOOSE_PAYMENT -> FINAL ORDER PLACEMENT
             if (user.step === "CHOOSE_PAYMENT") {
-                if (text === "2") {
-                    sessions[sender] = { step: "START", current: {}, cart: [] };
-                    return sock.sendMessage(sender, { text: "❌ *Order Cancelled.* \nReply any message to start a new order." });
-                }
-                if (text !== "1") {
-                    return sock.sendMessage(sender, { text: "⚠️ *Invalid selection.* Please reply with 1 to Confirm or 2 to Cancel." });
-                }
-
-                let payMsg = `💳 *CHOOSE PAYMENT MODE*\n`;
-                payMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
-                payMsg += `1️⃣  *Cash on Delivery*\n`;
-                payMsg += `2️⃣  *UPI / Online* (Pay on Delivery)\n`;
-                payMsg += `3️⃣  *Both* (Flexible)\n\n`;
-                payMsg += `_Please reply with 1, 2 or 3_`;
-
-                user.step = "FINAL_CONFIRM";
-                return sock.sendMessage(sender, { text: payMsg });
-            }
-
-            // FINAL_CONFIRM
-            if (user.step === "FINAL_CONFIRM") {
-                let payMethod = "Cash";
+                let payMethod = "";
                 if (text === "1") payMethod = "Cash";
                 else if (text === "2") payMethod = "UPI";
                 else if (text === "3") payMethod = "Cash/UPI";
                 else {
-                    return sock.sendMessage(sender, { text: "⚠️ *Invalid selection.* Please reply with 1, 2 or 3." });
+                    return sock.sendMessage(sender, { text: "⚠️ *Invalid Selection.* Please select your payment method:\n\n1️⃣ Cash\n2️⃣ UPI\n3️⃣ Any/Flexible" });
                 }
 
                 user.paymentMethod = payMethod;
                 user.step = "CONFIRM";
-                // Fallthrough to CONFIRM logic below or just move the logic here
+                // Fallthrough to CONFIRM logic below
             }
 
             // CONFIRM
@@ -1318,15 +1368,31 @@ async function startBot() {
                     phone: user.phone,
                     address: user.address,
                     locationLink: user.locationLink || null,
+                    lat: user.location?.lat || null,
+                    lng: user.location?.lng || null,
                     itemTotal: subtotal,
-                    deliveryFee: user.deliveryFee,
-                    distance: user.distance,
+                    deliveryFee: user.deliveryFee || 0,
+                    distance: user.distance || 0,
                     total: grandTotal,
                     status: "Placed",
-                    paymentMethod: user.paymentMethod || "Cash/UPI",
+                    paymentMethod: user.paymentMethod || "Cash",
                     createdAt: new Date().toISOString(),
                     items: orderItems
                 }, primaryOutlet);
+
+                // NOTIFY ADMIN
+                const orderData = {
+                    orderId,
+                    outlet: primaryOutlet,
+                    customerName: user.name,
+                    phone: user.phone,
+                    address: user.address,
+                    total: grandTotal,
+                    items: orderItems,
+                    paymentMethod: user.paymentMethod,
+                    type: "Online"
+                };
+                await notifyAdmin(sock, orderId, orderData, 'NEW').catch(e => console.error("Admin notification failed:", e));
 
                 const storeData = await getData("settings/Store") || {};
                 const delSettings = await getData("settings/Delivery") || {};
