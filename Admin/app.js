@@ -253,7 +253,7 @@ window.showDishModal = async (dishId = null) => {
         document.getElementById('sizesContainer').innerHTML = '';
         document.getElementById('addonsContainer').innerHTML = '';
     } else {
-        const snap = await db.ref(`dishes/${currentOutlet}/${dishId}`).once('value');
+        const snap = await db.ref(`dishes/${window.currentOutlet}/${dishId}`).once('value');
         const d = snap.val();
         if(d) {
             document.getElementById('dishName').value = d.name || '';
@@ -459,7 +459,7 @@ const liveOrdersTable = document.getElementById("liveOrdersTable");
 const paymentsTable = document.getElementById("paymentsTable");
 const authError = document.getElementById("authError");
 
-let currentOutlet = null;
+
 let ridersList = [];
 let firstLoad = true;
 
@@ -1099,7 +1099,7 @@ function initRealtimeListeners() {
             const isRecent = orderTime && (Date.now() - orderTime) < 120000; // 2 min window
             const isPostLoad = orderTime && orderTime > loadTime - 5000;
 
-            if (order && (order.outlet === currentOutlet || !currentOutlet) && order.status === "Placed" && isRecent && isPostLoad) {
+            if (order && (order.outlet === window.currentOutlet || !window.currentOutlet) && order.status === "Placed" && isRecent && isPostLoad) {
                 showAlert(order);
                 addNotification(`New Order #${snap.key.slice(-5)}`, `Order for ₹${order.total} is placed.`, 'new');
                 setTimeout(() => highlightOrder(snap.key), 1000);
@@ -1111,7 +1111,7 @@ function initRealtimeListeners() {
     // 2. Status Transitions (e.g. Delivered)
     _ordersChangedCb = snap => {
         const order = snap.val();
-        if (order && (order.outlet === currentOutlet || !currentOutlet)) {
+        if (order && (order.outlet === window.currentOutlet || !window.currentOutlet)) {
             if (order.status === "Delivered") {
                 addNotification(`Order Delivered (#${snap.key.slice(-5)})`, `Customer: ${order.customer?.name || 'Walk-in'} • ₹${order.total}`, 'delivered');
             }
@@ -1305,7 +1305,7 @@ function renderOrders(snap) {
 
     sortedOrders.forEach(o => {
         const id = o.id;
-        if (o.outlet && currentOutlet && o.outlet.toLowerCase().trim() !== currentOutlet.toLowerCase().trim()) return;
+        if (o.outlet && window.currentOutlet && o.outlet.toLowerCase().trim() !== window.currentOutlet.toLowerCase().trim()) return;
 
         const isLive = ["Placed", "Confirmed", "Preparing", "Cooked", "Out for Delivery"].includes(o.status);
         if (isLive) liveCount++;
@@ -1449,7 +1449,7 @@ function calculateTopSpenders(snap) {
     const spencerStats = {};
     snap.forEach(child => {
         const o = child.val();
-        if (o.outlet && currentOutlet && o.outlet.toLowerCase().trim() === currentOutlet.toLowerCase().trim() && o.status === "Delivered") {
+        if (o.outlet && window.currentOutlet && o.outlet.toLowerCase().trim() === window.currentOutlet.toLowerCase().trim() && o.status === "Delivered") {
             const key = o.phone || "Unknown";
             if (!spencerStats[key]) {
                 spencerStats[key] = { name: o.customerName || "Customer", total: 0, count: 0 };
@@ -1518,7 +1518,7 @@ function loadCategories() {
         
         snap.forEach(child => {
             const cat = { id: child.key, ...child.val() };
-            if (cat.outlet && cat.outlet !== currentOutlet) return;
+            if (cat.outlet && cat.outlet !== window.currentOutlet) return;
             
             categories.push(cat);
             
@@ -1572,7 +1572,7 @@ async function addCategory() {
         await db.ref('categories').push({
             name: name,
             image: imageUrl,
-            outlet: (window.currentOutlet || currentOutlet || 'pizza').toLowerCase(),
+            outlet: (window.currentOutlet || 'pizza').toLowerCase(),
             addons: Object.keys(addons).length > 0 ? addons : null
         });
 
@@ -1647,7 +1647,7 @@ document.getElementById('saveDishBtn').onclick = async () => {
             // If editing, get old image to delete later
             let oldImageUrl = null;
             if (editingDishId) {
-                const snap = await db.ref(`dishes/${currentOutlet}/${editingDishId}`).once('value');
+                const snap = await db.ref(`dishes/${window.currentOutlet}/${editingDishId}`).once('value');
                 oldImageUrl = snap.val()?.image;
             }
 
@@ -1690,7 +1690,7 @@ document.getElementById('saveDishBtn').onclick = async () => {
             addons: Object.keys(addons).length > 0 ? addons : null
         };
         
-        const ref = db.ref(`dishes/${currentOutlet}`);
+        const ref = db.ref(`dishes/${window.currentOutlet}`);
         
         if (editingDishId) {
             await ref.child(editingDishId).update(data);
@@ -1708,8 +1708,8 @@ document.getElementById('saveDishBtn').onclick = async () => {
 
 function loadMenu() {
     const grid = document.getElementById("menuGrid");
-    db.ref(`dishes/${currentOutlet}`).off(); // Detach previous listener before re-attaching
-    db.ref(`dishes/${currentOutlet}`).on("value", snap => {
+    db.ref(`dishes/${window.currentOutlet}`).off(); // Detach previous listener before re-attaching
+    db.ref(`dishes/${window.currentOutlet}`).on("value", snap => {
         grid.innerHTML = "";
         snap.forEach(child => {
             const d = child.val();
@@ -1771,7 +1771,7 @@ function loadMenu() {
     });
 }
 
-window.toggleStock = (id, current) => db.ref(`dishes/${currentOutlet}/${id}`).update({ stock: !current });
+window.toggleStock = (id, current) => db.ref(`dishes/${window.currentOutlet}/${id}`).update({ stock: !current });
 window.deleteDish = (dishId) => {
     // Remove any existing confirm overlay
     const existing = document.getElementById('deleteConfirmOverlay');
@@ -1821,10 +1821,10 @@ window.deleteDish = (dishId) => {
     overlay.querySelector('#confirmDeleteYes').onclick = async () => {
         cleanup();
         try {
-            const snap = await db.ref(`dishes/${currentOutlet}/${dishId}`).once('value');
+            const snap = await db.ref(`dishes/${window.currentOutlet}/${dishId}`).once('value');
             const img = snap.val()?.image;
             if (img) await deleteImage(img);
-            await db.ref(`dishes/${currentOutlet}/${dishId}`).remove();
+            await db.ref(`dishes/${window.currentOutlet}/${dishId}`).remove();
         } catch(e) {
             alert('Delete failed: ' + e.message);
         }
@@ -1850,7 +1850,7 @@ function loadRiders() {
         ridersList = [];
         snap.forEach(child => {
             const val = child.val();
-            if(!val.outlet || val.outlet === currentOutlet) {
+            if(!val.outlet || val.outlet === window.currentOutlet) {
                 ridersList.push({ id: child.key, ...val });
             }
         });
@@ -2105,7 +2105,7 @@ window.saveRiderAccount = async () => {
             address,
             profilePhoto,
             aadharPhoto,
-            outlet: (window.currentOutlet || currentOutlet || 'pizza').toLowerCase(),
+            outlet: (window.currentOutlet || 'pizza').toLowerCase(),
             updatedAt: firebase.database.ServerValue.TIMESTAMP
         };
 
@@ -2224,7 +2224,7 @@ window.generateCustomReport = () => {
 
         snap.forEach(child => {
             const o = child.val();
-            if (o.outlet && currentOutlet && o.outlet.toLowerCase().trim() !== currentOutlet.toLowerCase().trim()) return;
+            if (o.outlet && window.currentOutlet && o.outlet.toLowerCase().trim() !== window.currentOutlet.toLowerCase().trim()) return;
             if (o.status === "Cancelled") return;
             let itemDate;
             try {
@@ -2784,7 +2784,7 @@ function loadWalkinMenu() {
 
     renderWalkinCategoryTabs();
 
-    db.ref(`dishes/${currentOutlet}`).once('value').then(snap => {
+    db.ref(`dishes/${window.currentOutlet}`).once('value').then(snap => {
         allWalkinDishes = [];
         snap.forEach(child => {
             allWalkinDishes.push({ id: child.key, ...child.val() });
@@ -2835,7 +2835,7 @@ function applyWalkinFilters() {
 
 async function checkWalkinCustomer(phone) {
     try {
-        const snap = await db.ref(`customers/${currentOutlet}/${phone}`).once('value');
+        const snap = await db.ref(`customers/${window.currentOutlet}/${phone}`).once('value');
         if (snap.exists()) {
             const data = snap.val();
             const nameInput = document.getElementById('walkinCustName');
@@ -3214,7 +3214,7 @@ window.submitWalkinSale = async () => {
         paymentStatus: 'Paid',
         status: 'Delivered',
         type: 'Walk-in',
-        outlet: currentOutlet,
+        outlet: window.currentOutlet,
         createdAt: Date.now()
     };
 
@@ -3225,7 +3225,7 @@ window.submitWalkinSale = async () => {
         
         // Update customer LTV if phone provided
         if (custPhone) {
-            const custRef = db.ref(`customers/${currentOutlet}/${custPhone}`);
+            const custRef = db.ref(`customers/${window.currentOutlet}/${custPhone}`);
             await custRef.transaction((current) => {
                 if (current) {
                     current.orders = (current.orders || 0) + 1;
@@ -3884,7 +3884,7 @@ window.addNewCategoryAddonField = (name = "", price = "") => {
 
 window.openPOSSelectionModal = async (dishId) => {
     haptic(10);
-    const snap = await db.ref(`dishes/${currentOutlet}/${dishId}`).once('value');
+    const snap = await db.ref(`dishes/${window.currentOutlet}/${dishId}`).once('value');
     const dish = snap.val();
     if (!dish) return;
 
@@ -4018,7 +4018,7 @@ window.openCartAddonPicker = async (cartKey) => {
 
     // We reuse the POS selection modal but focus it on addons
     // To do this simply, we'll just set up the modal with the current item's data
-    const dishSnap = await db.ref(`dishes/${currentOutlet}/${item.id}`).once('value');
+    const dishSnap = await db.ref(`dishes/${window.currentOutlet}/${item.id}`).once('value');
     const dish = dishSnap.val();
     if (!dish) return;
 
