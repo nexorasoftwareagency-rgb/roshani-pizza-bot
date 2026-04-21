@@ -8,17 +8,19 @@
       ".read": "auth != null",
       ".write": "auth.token.admin === true"
     },
-    "settings": {
+    "riders": {
       ".read": "auth != null",
-      ".write": "auth.token.admin === true"
+      "$riderId": {
+        ".read": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
+        ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
+        ".validate": "newData.hasChildren(['name', 'email'])"
+      }
     },
-    "appConfig": {
+    "riderStats": {
       ".read": "auth != null",
-      ".write": "auth.token.admin === true"
-    },
-    "uiConfig": {
-      ".read": "auth != null",
-      ".write": "auth.token.admin === true"
+      "$riderId": {
+        ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)"
+      }
     },
     "botStatus": {
       ".read": "auth != null",
@@ -30,10 +32,18 @@
     },
 
     "$outlet": {
-      // Basic validation: ensure the outlet key looks like a valid outlet (pizza, cake, etc)
-      // and isn't matching legacy root nodes if they still exist.
-      // Firebase specific: Wildcard matches if no other rule above it matches EXACTLY.
-      
+      "settings": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+      },
+      "appConfig": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+      },
+      "uiConfig": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+      },
       "orders": {
         ".read": "(auth != null && auth.token.admin === true) || (auth != null && query.orderByChild == 'assignedRider')",
         "$orderId": {
@@ -49,20 +59,6 @@
       "dishes": {
         ".read": "auth != null",
         ".write": "auth.token.admin === true"
-      },
-      "riders": {
-        ".read": "auth != null && auth.token.admin === true",
-        "$riderId": {
-          ".read": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
-          ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
-          ".validate": "newData.hasChildren(['name', 'email'])"
-        }
-      },
-      "riderStats": {
-        ".read": "auth != null",
-        "$riderId": {
-          ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)"
-        }
       },
       "feedbacks": {
         ".read": "auth != null && auth.token.admin === true",
@@ -87,6 +83,9 @@
     },
 
     // LEGACY ROOT NODES (Keep temporarily during migration)
+    "settings": { ".read": "auth != null", ".write": "auth.token.admin === true" },
+    "appConfig": { ".read": "auth != null", ".write": "auth.token.admin === true" },
+    "uiConfig": { ".read": "auth != null", ".write": "auth.token.admin === true" },
     "orders": {
       ".read": "(auth != null && auth.token.admin === true) || (auth != null && query.orderByChild == 'assignedRider')",
       "$orderId": {
@@ -94,26 +93,6 @@
         ".write": "auth != null && (auth.token.admin === true || !data.exists())"
       }
     },
-    "dishes": {
-      ".read": "auth != null",
-      ".write": "auth.token.admin === true"
-    },
-    "riders": {
-      ".read": "auth != null && auth.token.admin === true",
-      "$riderId": {
-        ".read": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
-        ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)"
-      }
-    },
-    "categories": {
-      ".read": "auth != null",
-      ".write": "auth.token.admin === true"
-    },
-    "feedbacks": {
-      ".read": "auth != null && auth.token.admin === true",
-      "$feedbackId": {
-        ".write": "auth != null && !data.exists()"
-      }
-    }
+    "categories": { ".read": "auth != null", ".write": "auth.token.admin === true" }
   }
 }
