@@ -274,12 +274,16 @@
     <div id="otpPanel" class="modal-overlay">
         <div class="modal-card">
             <h3 class="modal-title">TRIP COMPLETE</h3>
-            <p class="modal-sub">Enter verification code from customer</p>
-            <input type="text" id="otpInput" placeholder="0000" maxlength="4" inputmode="numeric" pattern="\d{4}" title="Enter 4-digit verification code from customer">
+            <p class="modal-sub">Enter 6-digit verification code from customer</p>
+            <input type="text" id="otpInput" placeholder="000000" maxlength="6" inputmode="numeric" pattern="\d{6}" title="Enter 6-digit verification code from customer">
+            
+            <button id="btnResendOTP" onclick="window.regenerateOTP()" class="btn-resend-otp">📩 RESEND OTP TO CUSTOMER</button>
+
             <div class="modal-actions">
                 <button class="btn-primary no-shadow" onclick="verifyOTP()">CONFIRM</button>
                 <button onclick="closeOTPPanel()" class="btn-ghost">LATER</button>
             </div>
+            <p class="mt-14 text-xtra-small text-muted italic">If customer is unreachable, contact Admin for Backup Code.</p>
             <button id="emergencyBtn" class="btn-ghost btn-emergency hidden" onclick="emergencyOverride()">EMERGENCY OVERRIDE</button>
         </div>
     </div>

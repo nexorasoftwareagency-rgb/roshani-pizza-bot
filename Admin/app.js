@@ -157,7 +157,8 @@ const Outlet = {
         if (rootPath === 'dishes') {
             const parts = path.split('/');
             const outletInPath = parts[1] ? parts[1].toLowerCase() : this.current;
-            return db.ref(`${outletInPath}/dishes`);
+            const subPath = parts.slice(2).join('/');
+            return db.ref(`${outletInPath}/dishes${subPath ? '/' + subPath : ''}`);
         }
 
         if (shared.includes(rootPath)) return db.ref(path);
@@ -1056,6 +1057,7 @@ window.switchTab = (tabId) => {
         'reports': 'Performance Analytics',
         'liveTracker': 'Rider Tracker',
         'notifications': 'Alerts',
+        'lostSales': 'Lost Sales (Abandoned)',
         'settings': 'System Settings'
     };
     
@@ -1077,6 +1079,7 @@ window.switchTab = (tabId) => {
     if (tabId === 'customers' && typeof loadCustomers === 'function') loadCustomers();
     if (tabId === 'feedback' && typeof loadFeedbacks === 'function') loadFeedbacks();
     if (tabId === 'reports' && typeof loadReports === 'function') loadReports();
+    if (tabId === 'lostSales' && typeof window.loadLostSales === 'function') window.loadLostSales();
 
     // Sync mobile cart summary visibility
     if (typeof updateMobileCartSummaryState === 'function') {
@@ -1479,9 +1482,47 @@ function renderOrders(snap) {
     if (document.getElementById("statRevenue")) document.getElementById("statRevenue").innerText = "₹" + revenue.toLocaleString();
     if (document.getElementById("statPending")) document.getElementById("statPending").innerText = pending;
     
+    // RENDER PRIORITY TABLE
+    renderPriorityTable(sortedOrders);
+
     // Populate Dashboard Sidebar Modules
     renderTopItems();
     calculateTopSpenders(snap);
+}
+
+function renderPriorityTable(sortedOrders) {
+    const list = document.getElementById('priorityOrderList');
+    if (!list) return;
+
+    // Filter for Placed, Confirmed, Preparing, Cooked (Anything not yet out or delivered)
+    const priority = sortedOrders.filter(o => 
+        ["Placed", "Confirmed", "Preparing", "Cooked"].includes(o.status) &&
+        (!window.currentOutlet || o.outlet === window.currentOutlet)
+    );
+
+    if (priority.length === 0) {
+        list.innerHTML = `
+            <div class="empty-priority">
+                <p>No pending orders. Good job!</p>
+            </div>`;
+    } else {
+        list.innerHTML = priority.map(o => `
+            <div class="priority-card" onclick="window.openOrderDrawer('${o.id}')">
+                <div class="p-header">
+                    <span class="p-id">#${escapeHtml(o.orderId || o.id.slice(-5))}</span>
+                    <span class="status-badge ${o.status.toLowerCase().replace(/ /g, '-')}">${o.status}</span>
+                </div>
+                <div class="p-body">
+                    <div class="p-cust">${escapeHtml(o.customerName)}</div>
+                    <div class="p-meta">₹${escapeHtml(o.total)} • ${o.items?.length || 0} items</div>
+                </div>
+                <div class="p-footer">
+                    <span class="p-time">${new Date(o.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    <button class="btn-priority-action" onclick="event.stopPropagation(); updateStatus('${o.id}', 'Confirmed')">Confirm</button>
+                </div>
+            </div>
+        `).join('');
+    }
 }
 
 function calculateTopSpenders(snap) {
@@ -2366,14 +2407,22 @@ function renderRevenueChart(data) {
 }
 
 // SETTINGS
-function loadSettings() {
+window.loadSettings = async () => {
     const container = document.getElementById('settingsContainer');
     if (!container) return;
 
-    Outlet.ref("appConfig").once("value", async configSnap => {
-        const c = configSnap.val() || {};
-        const uiSnap = await Outlet.ref("uiConfig").once("value");
+    try {
+        container.innerHTML = `<div style="text-align:center; padding:100px; color:var(--text-muted);">🔄 Loading shop settings...</div>`;
+
+        const [appSnap, uiSnap, botSnap] = await Promise.all([
+            Outlet.ref("appConfig").once("value"),
+            Outlet.ref("uiConfig").once("value"),
+            Outlet.ref("settings/Bot").once("value")
+        ]);
+
+        const c = appSnap.val() || {};
         const u = uiSnap.val() || {};
+        const b = botSnap.val() || {};
 
         container.innerHTML = `
             <div class="glass-card" style="padding: 3rem; max-width: 1000px; margin: 20px auto; border-radius: 30px; position:relative; overflow:hidden;">
@@ -2400,12 +2449,12 @@ function loadSettings() {
                                 
                                 <div style="margin-bottom:15px;">
                                     <label class="form-label" style="font-size:13px; font-weight:600;">Public Shop Name</label>
-                                    <input type="text" id="setConfigName" value="${c.shopName || ''}" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:600;">
+                                    <input type="text" id="setConfigName" value="${escapeHtml(c.shopName || '')}" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:600;">
                                 </div>
                                 
                                 <div style="margin-bottom:15px;">
                                     <label class="form-label" style="font-size:13px; font-weight:600;">WhatsApp Support / Bot</label>
-                                    <input type="text" id="setConfigPhone" value="${c.whatsapp || ''}" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:600;">
+                                    <input type="text" id="setConfigPhone" value="${escapeHtml(c.whatsapp || '')}" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:600;">
                                 </div>
                                 
                                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
@@ -2418,7 +2467,18 @@ function loadSettings() {
                                     </div>
                                     <div>
                                         <label class="form-label" style="font-size:13px; font-weight:600;">Master OTP</label>
-                                        <input type="text" id="setConfigMasterOTP" value="${c.masterOTP || '0000'}" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:700; color:var(--action-green); text-align:center;">
+                                        <input type="text" id="setConfigMasterOTP" value="${escapeHtml(c.masterOTP || '0000')}" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:700; color:var(--action-green); text-align:center;">
+                                    </div>
+                                </div>
+
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px;">
+                                    <div>
+                                        <label class="form-label" style="font-size:13px; font-weight:600;">Store Latitude</label>
+                                        <input type="text" id="setConfigLat" value="${c.lat || ''}" class="form-input" placeholder="e.g. 25.8879" style="background:white; border:1.5px solid rgba(0,0,0,0.05);">
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size:13px; font-weight:600;">Store Longitude</label>
+                                        <input type="text" id="setConfigLng" value="${c.lng || ''}" class="form-input" placeholder="e.g. 85.0261" style="background:white; border:1.5px solid rgba(0,0,0,0.05);">
                                     </div>
                                 </div>
                             </div>
@@ -2442,7 +2502,7 @@ function loadSettings() {
 
                                 <div style="margin-bottom:15px;">
                                     <label class="form-label" style="font-size:13px; font-weight:600;">Business Address</label>
-                                    <textarea id="setConfigAddress" class="form-input" style="height: 64px; background:white; border:1.5px solid rgba(0,0,0,0.05); font-size:13px; font-weight:500;">${c.address || ''}</textarea>
+                                    <textarea id="setConfigAddress" class="form-input" style="height: 64px; background:white; border:1.5px solid rgba(0,0,0,0.05); font-size:13px; font-weight:500;">${escapeHtml(c.address || '')}</textarea>
                                 </div>
 
                                 <div>
@@ -2470,6 +2530,95 @@ function loadSettings() {
                         </div>
                     </div>
 
+                    <!-- WhatsApp Bot Aesthetics Section -->
+                    <div style="margin-top:40px; border-top:1px solid rgba(0,0,0,0.05); padding-top:30px;">
+                        <label style="display:block; font-size:12px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:20px;">WhatsApp Bot Aesthetics (Per Outlet)</label>
+                        
+                        <div style="display:grid; grid-template-columns: 2fr 3fr; gap:30px;">
+                            <!-- Welcome Image -->
+                            <div class="settings-group">
+                                <label class="form-label" style="font-size:13px; font-weight:600; margin-bottom:12px; display:block;">Bot Welcome / Intro Image</label>
+                                <div style="cursor:pointer;" onclick="document.getElementById('botWelcomeFile').click()">
+                                    <div style="position:relative; width:100%; height:180px; border-radius:18px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
+                                        <img id="botWelcomePreview" src="${b.imgWelcome || 'https://via.placeholder.com/600x300?text=Welcome+Image'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), transparent); display:flex; align-items:flex-end; justify-content:center; padding-bottom:10px;">
+                                            <span style="color:white; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Change Greeting Image</span>
+                                        </div>
+                                    </div>
+                                    <input type="file" id="botWelcomeFile" style="display:none" onchange="previewImage(this, 'botWelcomePreview')">
+                                    <input type="hidden" id="setBotWelcome" value="${b.imgWelcome || ''}">
+                                </div>
+                            </div>
+
+                            <!-- Status Update Images -->
+                            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px;">
+                                <!-- Confirmed -->
+                                <div style="cursor:pointer;" onclick="document.getElementById('botConfirmedFile').click()">
+                                    <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
+                                        <img id="botConfirmedPreview" src="${b.imgConfirmed || 'https://via.placeholder.com/150?text=Confirmed'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(6,95,70,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">CONFIRMED</div>
+                                    </div>
+                                    <input type="file" id="botConfirmedFile" style="display:none" onchange="previewImage(this, 'botConfirmedPreview')">
+                                    <input type="hidden" id="setBotConfirmed" value="${b.imgConfirmed || ''}">
+                                </div>
+                                <!-- Preparing -->
+                                <div style="cursor:pointer;" onclick="document.getElementById('botPreparingFile').click()">
+                                    <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
+                                        <img id="botPreparingPreview" src="${b.imgPreparing || 'https://via.placeholder.com/150?text=Preparing'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(217,119,6,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">PREPARING</div>
+                                    </div>
+                                    <input type="file" id="botPreparingFile" style="display:none" onchange="previewImage(this, 'botPreparingPreview')">
+                                    <input type="hidden" id="setBotPreparing" value="${b.imgPreparing || ''}">
+                                </div>
+                                <!-- Cooked -->
+                                <div style="cursor:pointer;" onclick="document.getElementById('botCookedFile').click()">
+                                    <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
+                                        <img id="botCookedPreview" src="${b.imgCooked || 'https://via.placeholder.com/150?text=Cooked'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(31,41,55,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">COOKED</div>
+                                    </div>
+                                    <input type="file" id="botCookedFile" style="display:none" onchange="previewImage(this, 'botCookedPreview')">
+                                    <input type="hidden" id="setBotCooked" value="${b.imgCooked || ''}">
+                                </div>
+                                <!-- Out -->
+                                <div style="cursor:pointer;" onclick="document.getElementById('botOutFile').click()">
+                                    <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
+                                        <img id="botOutPreview" src="${b.imgOut || 'https://via.placeholder.com/150?text=Out'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(37,99,235,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">OUT FOR DEL.</div>
+                                    </div>
+                                    <input type="file" id="botOutFile" style="display:none" onchange="previewImage(this, 'botOutPreview')">
+                                    <input type="hidden" id="setBotOut" value="${b.imgOut || ''}">
+                                </div>
+                                <!-- Delivered -->
+                                <div style="cursor:pointer;" onclick="document.getElementById('botDeliveredFile').click()">
+                                    <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
+                                        <img id="botDeliveredPreview" src="${b.imgDelivered || 'https://via.placeholder.com/150?text=Delivered'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(5,150,105,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">DELIVERED</div>
+                                    </div>
+                                    <input type="file" id="botDeliveredFile" style="display:none" onchange="previewImage(this, 'botDeliveredPreview')">
+                                    <input type="hidden" id="setBotDelivered" value="${b.imgDelivered || ''}">
+                                </div>
+                                <!-- Feedback -->
+                                <div style="cursor:pointer;" onclick="document.getElementById('botFeedbackFile').click()">
+                                    <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
+                                        <img id="botFeedbackPreview" src="${b.imgFeedback || 'https://via.placeholder.com/150?text=Feedback'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(124,58,237,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">FEEDBACK</div>
+                                    </div>
+                                    <input type="file" id="botFeedbackFile" style="display:none" onchange="previewImage(this, 'botFeedbackPreview')">
+                                    <input type="hidden" id="setBotFeedback" value="${b.imgFeedback || ''}">
+                                </div>
+                                <!-- Cancelled -->
+                                <div style="cursor:pointer;" onclick="document.getElementById('botCancelledFile').click()">
+                                    <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
+                                        <img id="botCancelledPreview" src="${b.imgCancelled || 'https://via.placeholder.com/150?text=Cancelled'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(153,27,27,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">CANCELLED</div>
+                                    </div>
+                                    <input type="file" id="botCancelledFile" style="display:none" onchange="previewImage(this, 'botCancelledPreview')">
+                                    <input type="hidden" id="setBotCancelled" value="${b.imgCancelled || ''}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div style="margin-top: 50px; text-align: center; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 35px;">
                         <button onclick="saveSettings()" class="btn-primary" style="margin: 0 auto; width: 340px; justify-content: center; padding: 18px; border-radius: 18px; font-size: 16px; font-weight: 800; box-shadow: 0 15px 30px rgba(6,95,70,0.2); letter-spacing:0.5px;">
                             💾 SAVE SYSTEM CONFIGURATION
@@ -2478,7 +2627,10 @@ function loadSettings() {
                 </div>
             </div>
         `;
-    });
+    } catch (err) {
+        console.error("Load Settings Error:", err);
+        container.innerHTML = `<div style="text-align:center; padding:100px; color:var(--text-muted);">❌ Failed to load settings. Check console.</div>`;
+    }
 }
 
 window.saveSettings = async () => {
@@ -2489,6 +2641,8 @@ window.saveSettings = async () => {
     const whatsapp = document.getElementById("setConfigPhone").value;
     const status = document.getElementById("setConfigStatus").value;
     const masterOTP = document.getElementById("setConfigMasterOTP").value;
+    const lat = document.getElementById("setConfigLat").value;
+    const lng = document.getElementById("setConfigLng").value;
     
     let welcome = document.getElementById("setUIWelcome").value;
     let menu = document.getElementById("setUIMenu").value;
@@ -2505,19 +2659,45 @@ window.saveSettings = async () => {
 
     try {
         if (welcomeFile) {
-            const oldWelcome = welcome; // Snapshot before update
+            const oldWelcome = welcome;
             welcome = await uploadImage(welcomeFile, `banners/welcome_${Date.now()}`);
             if (oldWelcome && welcome !== oldWelcome) {
                 await deleteImage(oldWelcome);
             }
         }
         if (menuFile) {
-            const oldMenu = menu; // Snapshot before update
+            const oldMenu = menu;
             menu = await uploadImage(menuFile, `banners/menu_${Date.now()}`);
             if (oldMenu && menu !== oldMenu) {
                 await deleteImage(oldMenu);
             }
         }
+
+        const botImageKeys = [
+            { key: 'imgWelcome', fileId: 'botWelcomeFile', hiddenId: 'setBotWelcome' },
+            { key: 'imgConfirmed', fileId: 'botConfirmedFile', hiddenId: 'setBotConfirmed' },
+            { key: 'imgPreparing', fileId: 'botPreparingFile', hiddenId: 'setBotPreparing' },
+            { key: 'imgCooked', fileId: 'botCookedFile', hiddenId: 'setBotCooked' },
+            { key: 'imgOut', fileId: 'botOutFile', hiddenId: 'setBotOut' },
+            { key: 'imgDelivered', fileId: 'botDeliveredFile', hiddenId: 'setBotDelivered' },
+            { key: 'imgFeedback', fileId: 'botFeedbackFile', hiddenId: 'setBotFeedback' },
+            { key: 'imgCancelled', fileId: 'botCancelledFile', hiddenId: 'setBotCancelled' }
+        ];
+
+        const botSettings = {};
+        for (const item of botImageKeys) {
+            const hiddenInput = document.getElementById(item.hiddenId);
+            const fileInput = document.getElementById(item.fileId);
+            if (!hiddenInput || !fileInput) continue;
+
+            let val = hiddenInput.value;
+            const file = fileInput.files[0];
+            if (file) {
+                val = await uploadImage(file, `bot/${item.key}_${Date.now()}`);
+            }
+            botSettings[item.key] = val;
+        }
+        await Outlet.ref("settings/Bot").update(botSettings);
 
         await Outlet.ref("appConfig").update({ 
             shopName, 
@@ -2526,18 +2706,19 @@ window.saveSettings = async () => {
             address: addr, 
             whatsapp,
             status,
-            masterOTP 
+            masterOTP,
+            lat: lat ? Number(lat) : null,
+            lng: lng ? Number(lng) : null
         });
         await Outlet.ref("uiConfig").update({ welcomeImage: welcome, menuImage: menu });
         
-        // Update Header
         const sidebarHeader = document.querySelector(".sidebar-header");
         if (sidebarHeader) {
             sidebarHeader.innerText = shopName.split(" ")[0].toUpperCase() + " ERP";
         }
         
         alert("Settings updated successfully!");
-        loadSettings(); // Refresh previews and hidden values
+        loadSettings();
     } catch (e) {
         alert("Error saving settings: " + e.message);
     } finally {
@@ -2682,7 +2863,6 @@ window.saveDeliveredOrder = async (id, method) => {
     } catch (err) {
         console.error("[DeliveredSave Error]", err);
         window.showToast("Failed to finalize order: " + err.message, 'error');
-        // Re-enable buttons on error so user can retry
         buttons.forEach(btn => btn.disabled = false);
     }
 };
@@ -2691,17 +2871,14 @@ window.saveDeliveredOrder = async (id, method) => {
 window.assignRider = async (id, riderEmail) => {
     if (!riderEmail) return;
 
-    // Fetch master OTP for sync
     const configSnap = await db.ref("appConfig").once("value");
     const masterOTP = configSnap.val()?.masterOTP || "0000";
 
     Outlet.ref("orders/" + id).update({ 
         assignedRider: riderEmail,
         status: "Out for Delivery"
-        // Security logic: adminMasterOTP removed as per "no master bypass" policy
     });
 };
-// EXPORTS
 window.toggleWifiPass = () => {
     const passInput = document.getElementById('settingWifiPass');
     if (passInput.type === 'password') {
@@ -2779,27 +2956,102 @@ window.downloadPDF = () => {
         head: [['Date', 'Customer', 'Total', 'Method', 'Items']],
         body: tableData,
         theme: 'grid',
-        headStyles: { fillColor: [6, 95, 70] }, // Forest Green matching UI
+        headStyles: { fillColor: [6, 95, 70] },
         columnStyles: {
-            4: { cellWidth: 60 } // items column wider
+            4: { cellWidth: 60 }
         }
     });
-
     doc.save(`Sales_Report_${from}_to_${to}.pdf`);
 };
 
-// Utils
-// formatDate already defined at top of file
+async function loadLostSales() {
+    console.log("[Lost Sales] Loading records...");
+    const tbody = document.getElementById('lostSalesTableBody');
+    const revenueBadge = document.querySelector('#lostSalesTotalRevenue span');
+    if (!tbody) return;
 
-// =============================
-// WALK-IN / COUNTER SALE (POS)
-// =============================
+    try {
+        const snap = await Outlet.ref('lostSales').once('value');
+        const data = snap.val();
+        
+        tbody.innerHTML = '';
+        let totalLost = 0;
 
-// Cart state inherited from global scope at line 174
-// walkinCart, walkinPayMethod, activeWalkinCategory, allWalkinDishes are initialized there.
+        if (!data) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:80px; color:var(--text-muted);">
+                <div class="mb-14" style="font-size:32px;">🎯</div>
+                <strong>No lost sales found!</strong><br>All your customers are reaching the finish line.
+            </td></tr>`;
+            if (revenueBadge) revenueBadge.innerText = `₹0`;
+            return;
+        }
+
+        const sorted = Object.entries(data).sort((a, b) => (b[1].cancelledAt || 0) - (a[1].cancelledAt || 0));
+
+        sorted.forEach(([id, record]) => {
+            const val = record.total || 0;
+            totalLost += val;
+
+            const itemsStr = (record.items || []).map(i => `${i.name} (${i.size})`).join(', ');
+            const ts = formatDate(record.cancelledAt);
+            const source = record.sourceStep || 'Checkout';
+            
+            const phone = record.phone || 'N/A';
+            const whatsappLink = `https://wa.me/${phone.replace(/\D/g, '')}`;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="padding-left:25px;">
+                    <div class="font-bold text-main">${ts}</div>
+                    <div class="text-muted-small" style="font-size:10px;">ID: ...${id.slice(-6)}</div>
+                </td>
+                <td>
+                    <div class="flex-column">
+                        <span class="font-bold">${escapeHtml(record.customerName || 'Guest')}</span>
+                        <a href="${whatsappLink}" target="_blank" class="text-primary font-bold" style="font-size:12px;">📲 ${phone}</a>
+                    </div>
+                </td>
+                <td>
+                    <span class="status-pill" style="background:rgba(0,0,0,0.05); color:var(--text-dark); border:1px solid rgba(0,0,0,0.1); font-size:10px;">
+                        ${escapeHtml(source)}
+                    </span>
+                </td>
+                <td style="max-width:250px;">
+                    <div class="text-truncate-2" title="${escapeHtml(itemsStr)}">${escapeHtml(itemsStr)}</div>
+                </td>
+                <td style="padding-right:25px; text-align:right;">
+                    <span class="font-black" style="font-size:16px; color:var(--text-dark);">₹${val}</span>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        if (revenueBadge) revenueBadge.innerText = `₹${totalLost.toLocaleString()}`;
+
+    } catch (e) {
+        console.error("Load Lost Sales Error:", e);
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:red;">Error loading data. Check console.</td></tr>`;
+    }
+}
+
+async function clearLostSales() {
+    if (!confirm("⚠️ Are you sure you want to permanently delete all Lost Sales logs? This cannot be undone.")) return;
+
+    window.haptic(20);
+    try {
+        await Outlet.ref('lostSales').remove();
+        showToast("Logs cleared successfully", "success");
+        loadLostSales();
+    } catch (e) {
+        console.error("Clear Logs Error:", e);
+        showToast("Failed to clear logs", "error");
+    }
+}
+window.loadLostSales = loadLostSales;
+window.clearLostSales = clearLostSales;
+
 let cachedDishes = [];
 
-// Category emoji map for dish cards
 const catEmoji = {
     'pizza': '🍕', 'burger': '🍔', 'cake': '🎂', 'pastry': '🧁',
     'sandwich': '🥪', 'drink': '🥤', 'beverage': '🥤', 'juice': '🧃',
@@ -2913,7 +3165,7 @@ window.clearWalkinCart = () => {
     }
 };
 
-let pendingAddonsByDish = {}; // Stores selected addon names for each dish card
+let pendingAddonsByDish = {};
 
 function renderWalkinDishGrid(dishes) {
     const grid = document.getElementById('walkinDishGrid');
@@ -2980,12 +3232,10 @@ window.showAddonView = (dishId) => {
 
     if (!dishGrid || !addonGrid) return;
 
-    // Switch Views
     dishGrid.classList.add('hidden');
     addonGrid.classList.remove('hidden');
     if (searchBox) searchBox.classList.add('hidden');
     
-    // SAFE TITLE CONSTRUCTION (Prevent XSS)
     walkinTitle.innerHTML = ''; 
     const backBtn = document.createElement('button');
     backBtn.onclick = hideAddonView;
@@ -3003,7 +3253,6 @@ window.showAddonView = (dishId) => {
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
-    // Render Addons
     addonGrid.innerHTML = "";
     const cat = categories.find(c => c.name === dish.category);
     if (!cat || !cat.addons) {
@@ -3037,7 +3286,6 @@ window.showAddonView = (dishId) => {
         });
     }
 
-    // Add "Done" button
     const doneBtn = document.createElement('button');
     doneBtn.className = "btn-primary w-full mt-20";
     doneBtn.innerText = "Apply & Return";
@@ -3052,7 +3300,7 @@ window.hideAddonView = () => {
     const searchBox = document.getElementById('walkinDishSearch');
 
     if (dishGrid) dishGrid.classList.remove('hidden');
-    if (addonGrid) addonGrid.classList.add('hidden');
+    if (addonGrid) addonGrid.classList.remove('hidden');
     if (searchBox) searchBox.classList.remove('hidden');
     if (walkinTitle) walkinTitle.innerHTML = `🍽️ Select Items`;
 };
@@ -3183,9 +3431,6 @@ window.updateWalkinTotal = () => {
     const totalEl = document.getElementById('walkinTotal');
     if (subEl) subEl.textContent = '₹' + subtotal.toLocaleString();
     if (totalEl) totalEl.textContent = '₹' + total.toLocaleString();
-
-    // Mobile Summary Update is handled by updateMobileCartSummaryState()
-    // which is called by renderWalkinCart() immediately after this.
 };
 
 window.toggleMobileCart = (show) => {
@@ -3216,7 +3461,7 @@ window.submitWalkinSale = async () => {
     const custName = document.getElementById('walkinCustName')?.value.trim() || 'Walk-in Customer';
     const custPhoneRaw = document.getElementById('walkinCustPhone')?.value.trim() || '';
     let custPhone = custPhoneRaw.replace(/\D/g, '');
-    if (custPhone.length === 10) custPhone = '91' + custPhone; // Auto-format for India
+    if (custPhone.length === 10) custPhone = '91' + custPhone;
 
     const discount = Math.max(0, Number(document.getElementById('walkinDiscount')?.value) || 0);
 
@@ -3236,14 +3481,13 @@ window.submitWalkinSale = async () => {
 
     const total = Math.max(0, subtotal - discount);
     
-    // Get Sequenced ID (YYYYMMDD-####)
     const orderId = await generateNextOrderId();
 
     const orderData = {
         orderId,
         customerName: custName,
         phone: custPhone,
-        whatsappNumber: custPhone, // Added for bot compatibility
+        whatsappNumber: custPhone,
         customerNote: custNote,
 
         items,
@@ -3258,12 +3502,9 @@ window.submitWalkinSale = async () => {
         createdAt: Date.now()
     };
 
-
-
     try {
         await Outlet.ref('orders/' + orderId).set(orderData);
         
-        // Update customer LTV if phone provided
         if (custPhone) {
             const custRef = Outlet.ref(`customers/${custPhone}`);
             await custRef.transaction((current) => {
@@ -3286,13 +3527,11 @@ window.submitWalkinSale = async () => {
             });
         }
 
-        // --- NEW: Post-Sale Flux ---
         const confirmPrint = confirm('Sale Recorded Successfully!\n\nID: ' + orderId + '\nTotal: ₹' + total + '\n\nWould you like to PRINT the receipt?');
         if (confirmPrint) {
             printOrderReceipt(orderData);
         }
 
-        // Reset
         walkinCart = {};
         document.getElementById('walkinDiscount').value = 0;
         document.getElementById('walkinCustName').value = '';
@@ -3309,10 +3548,8 @@ window.submitWalkinSale = async () => {
 function standardizeOrderData(o) {
     if (!o) return null;
     
-    // Ensure ID consistent
     const orderId = o.orderId || o.id || (o.key ? o.key.slice(-8).toUpperCase() : "ORD-N/A");
     
-    // Items mapping (standardize unit price and name)
     const items = (o.items || []).map(i => ({
         name: i.name || "Unknown Item",
         size: i.size || "",
@@ -3347,7 +3584,6 @@ window.printReceiptById = async (orderId) => {
         if (snap.exists()) {
             snap.forEach(s => order = s.val());
         } else {
-            // Try by push key
             const snap2 = await Outlet.ref(`orders/${orderId}`).once("value");
             order = snap2.val();
         }
@@ -3357,13 +3593,11 @@ window.printReceiptById = async (orderId) => {
             return;
         }
 
-        // --- AUTOMATION: Dine-in Messaging Trigger ---
-        // If order type is Walk-in and it's not Delivered yet, mark as Delivered to trigger Bot Feedback/Promotion
         if (order.type === 'Walk-in' && order.status !== 'Delivered') {
             window.updateStatus(orderId, 'Delivered');
         }
 
-        printOrderReceipt(order, true); // true for 'Reprint' label if needed
+        printOrderReceipt(order, true);
 
     } catch (e) {
         console.error("Print Error:", e);
@@ -3375,7 +3609,6 @@ async function printOrderReceipt(rawOrder, isReprint = false) {
     const o = standardizeOrderData(rawOrder);
     if (!o) return;
 
-    // Load Store Settings for branding
     let store = { 
         entityName: "", storeName: window.currentOutlet === 'pizza' ? 'ROSHANI PIZZA' : 'ROSHANI CAKES',
         address: "", gstin: "", fssai: "", tagline: "THANK YOU", poweredBy: "Powered by Roshani ERP", 
@@ -3537,9 +3770,6 @@ async function printOrderReceipt(rawOrder, isReprint = false) {
     printWindow.document.close();
 }
 
-// =============================
-// DELIVERY SETTINGS
-// =============================
 window.addFeeSlab = (km = "", fee = "") => {
     const tbody = document.getElementById('feeSlabsTable');
     if (!tbody) return;
@@ -3554,14 +3784,12 @@ window.addFeeSlab = (km = "", fee = "") => {
 
 window.loadStoreSettings = async () => {
     try {
-        // Load Delivery Settings
         const delSnap = await db.ref("settings/Delivery").once("value");
         let delData = delSnap.val() || {
             coords: { lat: 25.887444, lng: 85.026889 },
             slabs: [{ km: 2, fee: 20 }, { km: 5, fee: 40 }, { km: 8, fee: 60 }]
         };
 
-        // Load Receipt / Store Info Settings
         const storeSnap = await db.ref("settings/Store").once("value");
         let storeData = storeSnap.val() || {
             entityName: "", storeName: "", address: "", gstin: "", fssai: "", tagline: "", poweredBy: "Powered by Roshani ERP",
@@ -3574,7 +3802,6 @@ window.loadStoreSettings = async () => {
             config: { showAddress: true, showGSTIN: false, showFSSAI: false, showTagline: true, showPoweredBy: true, showQR: false, showWifiInfo: false, showSocial: false }
         };
 
-        // Populate Delivery UI
         document.getElementById('settingLat').value = delData.coords.lat;
         document.getElementById('settingLng').value = delData.coords.lng;
         document.getElementById('displayCoords').innerText = `${delData.coords.lat}, ${delData.coords.lng}`;
@@ -3586,7 +3813,6 @@ window.loadStoreSettings = async () => {
             if (delData.slabs) delData.slabs.forEach(slab => window.addFeeSlab(slab.km, slab.fee));
         }
 
-        // Populate Store UI
         document.getElementById('settingEntityName').value = storeData.entityName || "";
         document.getElementById('settingStoreName').value = storeData.storeName || "";
         document.getElementById('settingStoreAddress').value = storeData.address || "";
@@ -3603,11 +3829,9 @@ window.loadStoreSettings = async () => {
         document.getElementById('settingInstagram').value = storeData.instagram || "";
         document.getElementById('settingFacebook').value = storeData.facebook || "";
         document.getElementById('settingReviewUrl').value = storeData.reviewUrl || "";
-        document.getElementById('settingFeedbackReason1').value = storeData.feedbackReason1 || "Taste & Quality";
-        document.getElementById('settingFeedbackReason2').value = storeData.feedbackReason2 || "Delivery Speed";
         document.getElementById('settingFeedbackReason3').value = storeData.feedbackReason3 || "Value for Money";
+        document.getElementById('settingDeliveryBackupCode').value = storeData.deliveryBackupCode || "";
         
-        // Toggles
         const config = storeData.config || {};
         document.getElementById('checkShowAddress').checked = config.showAddress !== false;
         document.getElementById('checkShowGSTIN').checked = !!config.showGSTIN;
@@ -3618,13 +3842,11 @@ window.loadStoreSettings = async () => {
         document.getElementById('checkShowWifiInfo').checked = !!config.showWifiInfo;
         document.getElementById('checkShowSocial').checked = !!config.showSocial;
 
-        // QR Preview
         if (storeData.qrUrl) {
             document.getElementById('qrPreview').src = storeData.qrUrl;
             document.getElementById('settingQRUrl').value = storeData.qrUrl;
         }
 
-        // WhatsApp Bot Aesthetics
         const botSnap = await db.ref("settings/Bot").once("value");
         const botData = botSnap.val() || {};
         
@@ -3661,7 +3883,6 @@ window.saveStoreSettings = async () => {
     btn.innerText = "Saving...";
 
     try {
-        // 1. Handle QR Upload if new file selected
         const qrFile = document.getElementById('settingQRFile').files[0];
         let qrUrl = document.getElementById('settingQRUrl').value;
 
@@ -3669,7 +3890,6 @@ window.saveStoreSettings = async () => {
             qrUrl = await uploadImage(qrFile, `settings/payment_qr_${Date.now()}`);
         }
 
-        // 2. Collect Delivery Data
         const lat = parseFloat(document.getElementById('settingLat').value);
         const lng = parseFloat(document.getElementById('settingLng').value);
         const notifyPhone = document.getElementById('settingAdminPhone').value.trim();
@@ -3681,7 +3901,6 @@ window.saveStoreSettings = async () => {
         })).filter(s => !isNaN(s.km) && !isNaN(s.fee));
         slabs.sort((a, b) => a.km - b.km);
 
-        // 3. Collect Store Data
         const storeData = {
             entityName: document.getElementById('settingEntityName').value.trim(),
             storeName: document.getElementById('settingStoreName').value.trim(),
@@ -3702,6 +3921,7 @@ window.saveStoreSettings = async () => {
             feedbackReason1: document.getElementById('settingFeedbackReason1').value.trim(),
             feedbackReason2: document.getElementById('settingFeedbackReason2').value.trim(),
             feedbackReason3: document.getElementById('settingFeedbackReason3').value.trim(),
+            deliveryBackupCode: document.getElementById('settingDeliveryBackupCode').value.trim(),
             qrUrl: qrUrl,
             config: {
                 showAddress: document.getElementById('checkShowAddress').checked,
@@ -4326,8 +4546,136 @@ async function runImageMigration() {
         } else {
             alert("No legacy images found to migrate.");
         }
+        }
     } catch (err) {
         console.error("Migration Failed:", err);
         alert("Critical Error: Migration failed. Check console for details.");
     }
 }
+
+// =============================
+// LOST SALES (ABANDONED CARTS)
+// =============================
+window.loadLostSales = async () => {
+    const tableBody = document.getElementById("lostSalesTableBody");
+    const revenueKPI = document.getElementById("lostSalesTotalRevenue");
+    if (!tableBody) return;
+
+    tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">🔄 Loading abandonment data...</td></tr>`;
+
+    try {
+        const snap = await Outlet.ref("lostSales").once("value");
+        let totalRevenue = 0;
+        const rows = [];
+
+        snap.forEach(child => {
+            const data = child.val();
+            totalRevenue += Number(data.total || 0);
+
+            const itemsStr = data.items ? data.items.map(i => `${i.name} x${i.quantity}`).join(', ') : 'Empty Cart';
+            const timeStr = data.cancelledAt ? new Date(data.cancelledAt).toLocaleString() : 'N/A';
+            const safePhone = data.phone ? data.phone.replace(/(\d{2})(\d{4})(\d{4})/, '$1-XXXX-$3') : 'N/A';
+
+            rows.push({
+                ...data,
+                id: child.key,
+                itemsStr,
+                timeStr,
+                safePhone
+            });
+        });
+
+        // Sort by newest first
+        rows.sort((a, b) => b.cancelledAt - a.cancelledAt);
+
+        if (revenueKPI) {
+            const span = revenueKPI.querySelector('span');
+            if (span) span.innerText = `₹${totalRevenue.toLocaleString()}`;
+        }
+
+        if (rows.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">No abandonment records found.</td></tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = rows.map(r => `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.02)">
+                <td data-label="Date & Time" style="font-size:12px; color:var(--text-muted)">${r.timeStr}</td>
+                <td data-label="Customer">
+                    <div style="font-weight:700; color:var(--text-main)">${escapeHtml(r.customerName || 'Guest')}</div>
+                    <div style="font-size:10px; color:var(--text-muted)">${escapeHtml(r.safePhone)}</div>
+                </td>
+                <td data-label="Abandonment Step">
+                    <span style="font-size:11px; font-weight:700; background:rgba(239, 68, 68, 0.1); color:#ef4444; padding:3px 8px; border-radius:12px; border:1px solid rgba(239, 68, 68, 0.1);">
+                        ${escapeHtml(r.sourceStep || 'Checkout')}
+                    </span>
+                </td>
+                <td data-label="Items Summary">
+                    <div style="max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; color:var(--text-muted)" title="${escapeHtml(r.itemsStr)}">
+                        ${escapeHtml(r.itemsStr)}
+                    </div>
+                    <a href="https://wa.me/${r.phone?.replace(/\D/g, '')}" target="_blank" style="font-size:10px; color:var(--primary); text-decoration:none; display:inline-block; margin-top:4px;">RECOVER ON WHATSAPP ➔</a>
+                </td>
+                <td data-label="Potential Value" style="text-align:right; font-weight:800; color:var(--action-green); padding-right:25px;">₹${Number(r.total || 0).toLocaleString()}</td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        console.error("Load Lost Sales Error:", err);
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">Failed to load data.</td></tr>`;
+    }
+};
+
+window.clearLostSales = async () => {
+    if (!confirm("Are you sure you want to clear all abandoned cart logs? This cannot be undone.")) return;
+    
+    try {
+        await Outlet.ref("lostSales").remove();
+        window.showToast("Lost sales logs cleared.", "success");
+        window.loadLostSales();
+    } catch (err) {
+        window.showToast("Failed to clear logs.", "error");
+    }
+};
+
+window.exportLostSalesData = async () => {
+    const snap = await Outlet.ref("lostSales").once("value");
+    if (!snap.exists()) {
+        alert("No data to export.");
+        return;
+    }
+
+    let csv = "Time,Customer,Phone,Abandoned At,Items,Potential Revenue\n";
+    snap.forEach(child => {
+        const d = child.val();
+        const items = d.items ? d.items.map(i => `${i.name} x${i.quantity}`).join(' | ') : '';
+        const row = [
+            `"${new Date(d.cancelledAt).toLocaleString()}"`,
+            `"${d.customerName || 'Guest'}"`,
+            `"${d.phone || ''}"`,
+            `"${d.sourceStep || 'Unknown'}"`,
+            `"${items}"`,
+            `"${d.total || 0}"`
+        ];
+        csv += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Lost_Sales_${window.currentOutlet}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+};
+
+// ALIAS for naming consistency in index.html
+window.saveStoreSettings = () => {
+    if (typeof window.saveSettings === 'function') {
+        window.saveSettings();
+    } else {
+        console.error("saveSettings function not found!");
+    }
+};
