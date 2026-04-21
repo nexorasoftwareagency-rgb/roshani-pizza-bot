@@ -47,6 +47,26 @@ if ('serviceWorker' in navigator) {
 let currentUser = null;
 let currentOrderId = null;
 window.activeOrders = {};
+window.riderLocation = null;
+
+// Haversine Distance Helper
+window.getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Radius of earth in KM
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // KM
+};
+
+// Track current location
+if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(pos => {
+        window.riderLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    }, err => console.warn("GPS error:", err), { enableHighAccuracy: true });
+}
 
 // XSS prevention helper
 }
@@ -328,12 +348,11 @@ auth.onAuthStateChanged(async user => {
         }
 
         // Set global outlet context
-        window.currentOutlet = riderProfile.outlet;
         currentUser = { ...user, profile: riderProfile, isSuper: (riderProfile.outlet === 'all') };
         
         // Handle Outlet Switcher for Super Users
         const switcher = document.getElementById('outletSwitcher');
-        if (isSuper && switcher) {
+        if (currentUser.isSuper && switcher) {
             switcher.classList.remove('hidden');
             switcher.innerHTML = `
                 <option value="all">🌍 All Outlets</option>
@@ -346,6 +365,8 @@ auth.onAuthStateChanged(async user => {
         } else {
             window.currentOutlet = riderProfile.outlet || "pizza";
         }
+
+        updateBranding();
 
         // Populate UI
         const pName = riderProfile.name || "Rider";
@@ -577,13 +598,13 @@ function initRealtimeListeners() {
 
     const orderCache = {}; // Global cache across all outlets
     
-    // 1. Listen to Global Stats
-    const statsPath = 'riderStats';
+    // 1. Listen to Global Stats for this rider only
+    const riderId = currentUser.profile.id;
+    const statsPath = resolvePath(`riderStats/${riderId}`);
     window._activeListeners.push(statsPath);
+    
     db.ref(statsPath).on('value', snap => {
-        const globalStats = snap.val() || {};
-        const riderId = currentUser.profile.id;
-        const myStats = globalStats[riderId] || { totalOrders: 0, avgDeliveryTime: 0, totalEarnings: 0 };
+        const myStats = snap.val() || { totalOrders: 0, avgDeliveryTime: 0, totalEarnings: 0 };
         renderStats(myStats);
     });
 
@@ -597,6 +618,23 @@ function initRealtimeListeners() {
             renderAllOrders(orderCache);
         });
     });
+
+    // 3. Listen to Outlet Configs for dynamic geofencing
+    window.outletConfigs = {};
+    outletsToListen.forEach(outletId => {
+        const configPath = `${outletId}/Config`;
+        window._activeListeners.push(configPath);
+        db.ref(configPath).on('value', snap => {
+            window.outletConfigs[outletId] = snap.val() || {};
+        });
+    });
+}
+
+function renderStats(stats) {
+    const eTotal = document.getElementById('e-total');
+    if (eTotal) {
+        eTotal.innerText = `₹${(stats.totalEarnings || 0).toLocaleString()}`;
+    }
 }
 
 function renderAllOrders(orderCache) {
@@ -626,6 +664,9 @@ function renderAllOrders(orderCache) {
     let activeOrderId = null;
 
     Object.keys(orderCache).forEach(outletId => {
+        // Filter: If we are in "Pizza Only" mode, don't render Cake orders
+        if (window.currentOutlet !== 'all' && outletId !== window.currentOutlet) return;
+
         const orders = orderCache[outletId];
         Object.keys(orders).forEach(id => {
             const o = orders[id];
@@ -640,7 +681,7 @@ function renderAllOrders(orderCache) {
             const isToday = orderDate === today;
 
             if (o.status === "Delivered" && o.assignedRider && o.assignedRider.toLowerCase() === myEmail) {
-                const commission = o.riderCommission || 40; 
+                const commission = Number(o.deliveryFee || 0); // User Request: Earnings = Delivery Fee
                 
                 if (outlet.includes("pizza")) {
                     stats.pizzaEarnings += commission;
@@ -669,6 +710,11 @@ function renderAllOrders(orderCache) {
                 activeOrderData.outletContext = outletId; // Store which outlet it belongs to
                 activeView.innerHTML = ''; 
                 activeView.appendChild(createOrderCard(id, o, "active", outletId));
+                
+                // Update map to customer location if available
+                if (o.lat && o.lng) {
+                    setTimeout(() => window.updateRiderMap(o.lat, o.lng), 500);
+                }
             }
         });
     });
@@ -733,14 +779,43 @@ function renderAllOrders(orderCache) {
     // Initialize Sliders
     document.querySelectorAll('.slide-action-container:not(.initialized)').forEach(slider => {
         const orderId = slider.id.replace('slider-', '');
-        // Find which outlet this order belongs to for completing it
         let oContext = 'pizza';
         Object.keys(orderCache).forEach(oId => { if (orderCache[oId][orderId]) oContext = oId; });
         
+        // SHOP GEOFENCING (400m)
+        const order = orderCache[oContext][orderId];
+        if (order.status === "Cooked" || order.status === "Ready") {
+            const config = window.outletConfigs ? window.outletConfigs[oContext] : null;
+            const shopCoords = (config && config.lat && config.lng) 
+                ? { lat: config.lat, lng: config.lng } 
+                : (oContext === 'pizza' ? { lat: 25.887944, lng: 85.026194 } : { lat: 25.887472, lng: 85.026861 });
+            const riderLoc = window.riderLocation;
+            const dist = riderLoc ? window.getDistance(riderLoc.lat, riderLoc.lng, shopCoords.lat, shopCoords.lng) : 999;
+            const isNear = dist <= 0.4; // 400 meters
+
+            if (!isNear && !order.manualBypass) {
+                slider.classList.add('geofenced');
+                const overlay = document.createElement('div');
+                overlay.className = 'geofence-warning';
+                overlay.innerHTML = `
+                    <p>📍 Too far from shop (${(dist * 1000).toFixed(0)}m)</p>
+                    <button class="btn-manual-bypass" onclick="window.manualBypass('${orderId}', '${oContext}')">I am at Shop</button>
+                `;
+                slider.appendChild(overlay);
+            }
+        }
+
         window.initSliderAction(slider.id, () => window.confirmDelivery(orderId, oContext));
         slider.classList.add('initialized');
     });
 }
+
+window.manualBypass = async (orderId, oContext) => {
+    if (confirm("GPS accuracy might be low. Verify you are at the shop and continue?")) {
+        await db.ref(resolvePath(`orders/${orderId}`, oContext)).update({ manualBypass: true });
+        showToast("Bypass activated. You can now pick up.", "success");
+    }
+};
 
 function createOrderCard(id, o, type, outletId) {
     const card = document.createElement('div');
@@ -794,7 +869,7 @@ function createOrderCard(id, o, type, outletId) {
             ${isAvailable ? `<button class="btn-primary btn-full" onclick="acceptOrder('${id}', '${outletId}')">START PICKUP</button>` : ''}
             ${isActive ? `
                 <div class="active-actions">
-                    <button class="btn-action btn-nav" onclick="navigateToCustomer('${id}', ${addressJson})">
+                    <button class="btn-action btn-nav" onclick="navigateToCustomer('${id}', ${addressJson}, ${o.lat || 'null'}, ${o.lng || 'null'})">
                         <i data-lucide="navigation"></i> NAVIGATE
                     </button>
                     <button class="btn-action btn-wa" onclick="contactCustomer('${safePhone}')">
@@ -824,6 +899,7 @@ window.acceptOrder = async (id, outletId) => {
             return {
                 ...current,
                 status: "Out for Delivery",
+                deliveryOTP: Math.floor(100000 + Math.random() * 900000).toString(),
                 assignedRider: currentUser.email.toLowerCase(),
                 acceptedAt: Date.now()
             };
@@ -838,11 +914,12 @@ window.acceptOrder = async (id, outletId) => {
     }
 };
 
-window.navigateToCustomer = (id, address) => {
+window.navigateToCustomer = (id, address, lat, lng) => {
     window.haptic(20);
-    // Use Google Maps Intent for best experience
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}&travelmode=driving`;
-    window.open(url, '_system'); // Use _system for PWA to trigger external app
+    // Use exact coordinates if available for pinpoint accuracy
+    const destination = (lat && lng) ? `${lat},${lng}` : address;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+    window.open(url, '_system');
 };
 
 window.contactCustomer = (phone) => {
@@ -894,9 +971,10 @@ window.emergencyOverride = async () => {
             const snap = await db.ref(orderPath).once('value');
             const order = snap.val();
             const riderId = currentUser.profile.id;
-            const commission = order.riderCommission || 40;
-            const statsRef = db.ref(`${outletId}/riderStats/${riderId}`);
-            await statsRef.transaction(current => {
+            const commission = Number(order.deliveryFee || 0); // User Request: Earnings = Delivery Fee
+            const statsPath = resolvePath(`riderStats/${riderId}`);
+            
+            await db.ref(statsPath).transaction(current => {
                 if (!current) return { totalOrders: 1, totalEarnings: commission };
                 return {
                     ...current,
@@ -930,23 +1008,30 @@ window.verifyOTP = async () => {
         const snap = await db.ref(orderPath).once('value');
         const order = snap.val();
         
-        // Only accept the OTP from the customer — no master bypass
-        // Bot writes deliveryOTP; fall back to otp for legacy orders
+        // Fetch Master Fallback Code from Store Settings
+        const settingsSnap = await db.ref(`${outletId}/settings/Store`).once('value');
+        const storeSettings = settingsSnap.val() || {};
+        const fallbackCode = storeSettings.deliveryBackupCode;
+
+        // Verify against Customer OTP OR Admin Fallback Code
         const storedOTP = order.deliveryOTP || order.otp;
-        if (String(otp).trim() === String(storedOTP).trim()) {
+        const matchesCustomer = String(otp).trim() === String(storedOTP).trim();
+        const matchesFallback = fallbackCode && String(otp).trim() === String(fallbackCode).trim();
+
+        if (matchesCustomer || matchesFallback) {
             await db.ref(orderPath).update({
                 status: "Delivered",
-                deliveredAt: firebase.database.ServerValue.TIMESTAMP
+                deliveredAt: firebase.database.ServerValue.TIMESTAMP,
+                verifiedBy: matchesFallback ? 'ADMIN_FALLBACK' : 'OTP'
             });
 
             // Update rider stats (totalOrders, totalEarnings)
             const riderId = currentUser.profile.id;
-            const commission = order.riderCommission || 40;
-            const statsRef = db.ref(`${outletId}/riderStats/${riderId}`);
-            await statsRef.transaction(current => {
-                if (!current) {
-                    return { totalOrders: 1, totalEarnings: commission, avgDeliveryTime: 0 };
-                }
+            const commission = Number(order.deliveryFee || 0); 
+            const statsPath = resolvePath(`riderStats/${riderId}`);
+
+            await db.ref(statsPath).transaction(current => {
+                if (!current) return { totalOrders: 1, totalEarnings: commission };
                 return {
                     ...current,
                     totalOrders: (current.totalOrders || 0) + 1,
@@ -956,11 +1041,38 @@ window.verifyOTP = async () => {
 
             closeOTPPanel();
             showSection('home');
+            showToast("Delivery successfully verified! ✅", "success");
         } else {
-            alert("Security code mismatch!");
+            alert("Security code mismatch! Please check again or contact Admin.");
         }
     } catch (e) {
-        alert("System error");
+        alert("System error during verification");
+    }
+};
+
+window.regenerateOTP = async () => {
+    if (!currentOrderId) return;
+    window.haptic(40);
+    const btn = document.getElementById('btnResendOTP');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Resending...";
+    }
+    
+    try {
+        const outletId = window._currentOrderOutlet || 'pizza';
+        const orderPath = `${outletId}/orders/${currentOrderId}`;
+        const newOTP = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        await db.ref(orderPath).update({ deliveryOTP: newOTP });
+        showToast("New OTP generated and sent to customer!", "success");
+    } catch (e) {
+        alert("Failed to regenerate OTP. Please try again.");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "📩 RESEND OTP TO CUSTOMER";
+        }
     }
 };
 /**
@@ -1041,4 +1153,43 @@ window.initSliderAction = (containerId, onComplete) => {
     thumb.addEventListener('mousedown', onStart);
     thumb.addEventListener('touchstart', onStart, {passive: true});
 };
+
+window.updateBranding = () => {
+    const outlet = window.currentOutlet || 'pizza';
+    document.body.classList.remove('theme-pizza', 'theme-cake', 'theme-all');
+    document.body.classList.add(`theme-${outlet}`);
+    
+    const brandTitle = document.querySelector('.sidebar-title');
+    if (brandTitle) {
+        if (outlet === 'pizza') brandTitle.innerText = "ROSHANI PIZZA";
+        else if (outlet === 'cake') brandTitle.innerText = "ROSHANI CAKES";
+        else brandTitle.innerText = "ERP RIDER";
+    }
+};
+
+window.switchOutlet = (val) => {
+    window.haptic(20);
+    window.currentOutlet = val;
+    localStorage.setItem('selectedOutlet', val);
+    updateBranding();
+    
+    if (typeof initRealtimeListeners === 'function') {
+        initRealtimeListeners();
+    }
+    
+    showToast(`Switched to ${val.toUpperCase()} view`, "success");
+};
+
+function showToast(msg, type = "info") {
+    const toast = document.createElement('div');
+    toast.style = `
+        position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+        background: ${type === 'success' ? '#10B981' : '#1e293b'};
+        color: white; padding: 12px 24px; border-radius: 30px; font-weight: 700;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999;
+    `;
+    toast.innerText = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+}
 
