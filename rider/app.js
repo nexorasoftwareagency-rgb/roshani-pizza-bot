@@ -58,8 +58,8 @@ window.activeOrders = {};
 function resolvePath(path, outlet = null) {
     if (!path) return "";
     
-    // Nodes that remain at the root level for all outlets
-    const sharedNodes = ['admins', 'migrationStatus', 'settings', 'logs', 'errorLogs'];
+    // Nodes that remain at the root level for all outlets (admins, shared riders)
+    const sharedNodes = ['admins', 'migrationStatus', 'riders', 'riderStats', 'logs', 'errorLogs'];
     const parts = path.split('/');
     const rootNode = parts[0];
 
@@ -308,23 +308,16 @@ auth.onAuthStateChanged(async user => {
         let riderProfile = foundAdmin;
         let foundOutlet = "all";
 
-        // 2. If not a super admin, search across ALL outlets for the rider
+        // 2. If not a super admin, search the global riders node
         if (!riderProfile) {
-            const migrationSnap = await db.ref("migrationStatus/multiOutlet/outlets").once("value");
-            const outlets = migrationSnap.val() || ['pizza']; // Default to pizza if not set
-
-            for (const outletId of outlets) {
-                const outletRidersSnap = await db.ref(`${outletId}/riders`).once("value");
-                if (outletRidersSnap.exists()) {
-                    outletRidersSnap.forEach(child => {
-                        const r = child.val();
-                        if (r.email && r.email.toLowerCase() === normalizedEmail) {
-                            riderProfile = { id: child.key, ...r, outlet: outletId };
-                            foundOutlet = outletId;
-                        }
-                    });
-                }
-                if (riderProfile) break; // Found the rider
+            const globalRidersSnap = await db.ref("riders").once("value");
+            if (globalRidersSnap.exists()) {
+                globalRidersSnap.forEach(child => {
+                    const r = child.val();
+                    if (r.email && r.email.toLowerCase() === normalizedEmail) {
+                        riderProfile = { id: child.key, ...r, outlet: "all" }; // Riders are now global
+                    }
+                });
             }
         }
 
@@ -573,8 +566,8 @@ window.updateRiderMap = (destLat, destLng) => {
  * 3. REALTIME DATA
  */
 function initRealtimeListeners() {
-    const userOutlet = window.currentOutlet || 'pizza';
-    const outletsToListen = userOutlet === 'all' ? ['pizza', 'cake'] : [userOutlet];
+    // Riders always listen to both outlets to receive any available order
+    const outletsToListen = ['pizza', 'cake'];
 
     // Clear old listeners
     if (window._activeListeners) {
@@ -583,8 +576,18 @@ function initRealtimeListeners() {
     window._activeListeners = [];
 
     const orderCache = {}; // Global cache across all outlets
-    const statsCache = {}; // Global cache for stats across outlets
+    
+    // 1. Listen to Global Stats
+    const statsPath = 'riderStats';
+    window._activeListeners.push(statsPath);
+    db.ref(statsPath).on('value', snap => {
+        const globalStats = snap.val() || {};
+        const riderId = currentUser.profile.id;
+        const myStats = globalStats[riderId] || { totalOrders: 0, avgDeliveryTime: 0, totalEarnings: 0 };
+        renderStats(myStats);
+    });
 
+    // 2. Listen to Orders from each outlet
     outletsToListen.forEach(outletId => {
         const orderPath = `${outletId}/orders`;
         window._activeListeners.push(orderPath);
@@ -592,13 +595,6 @@ function initRealtimeListeners() {
         db.ref(orderPath).on('value', snap => {
             orderCache[outletId] = snap.val() || {};
             renderAllOrders(orderCache);
-        });
-
-        // Also listen to riderStats for this outlet
-        const statsPath = `${outletId}/riderStats`;
-        window._activeListeners.push(statsPath);
-        db.ref(statsPath).on('value', snap => {
-            statsCache[outletId] = snap.val() || {};
         });
     });
 }
