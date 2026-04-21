@@ -149,8 +149,8 @@ const Outlet = {
     ref(path) {
         if (!path) return db.ref();
         
-        // Shared paths that stay at root level
-        const shared = ['admins', 'settings', 'uiConfig', 'appConfig', 'Menu', 'botStatus'];
+        // Shared paths that stay at root level (admins, shared riders)
+        const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'logs'];
         const rootPath = path.split('/')[0];
         
         // Special case: dishes was dishes/${outlet}, now ${outlet}/dishes
@@ -162,7 +162,7 @@ const Outlet = {
 
         if (shared.includes(rootPath)) return db.ref(path);
         
-        // Outlet-specific paths (orders, categories, riders, feedbacks, inventory, etc.)
+        // Outlet-specific paths (orders, categories, settings, etc.)
         return db.ref(`${this.current}/${path}`);
     }
 };
@@ -623,6 +623,11 @@ auth.onAuthStateChanged(async user => {
                 }
                 return; 
             }
+
+            // Sync Header Badges
+            const outletDisplay = window.currentOutlet === 'cake' ? 'CAKE BOUTIQUE' : 'PIZZA ERP';
+            const badges = [document.getElementById('outletBadge'), document.getElementById('mobileOutletBadge')];
+            badges.forEach(b => { if (b) b.innerText = outletDisplay; });
 
             userEmailDisplay.innerText = user.email;
             if (authOverlay) {
@@ -1726,7 +1731,7 @@ document.getElementById('saveDishBtn').onclick = async () => {
             addons: Object.keys(addons).length > 0 ? addons : null
         };
         
-        const ref = db.ref(`dishes/${window.currentOutlet}`);
+        const ref = Outlet.ref('dishes');
         
         if (editingDishId) {
             await ref.child(editingDishId).update(data);
@@ -1886,9 +1891,8 @@ function loadRiders() {
         ridersList = [];
         snap.forEach(child => {
             const val = child.val();
-            if(!val.outlet || val.outlet === window.currentOutlet) {
-                ridersList.push({ id: child.key, ...val });
-            }
+            // Same Rider for Both Outlets: No filtering needed anymore
+            ridersList.push({ id: child.key, ...val });
         });
         renderRiders();
     });
@@ -2366,9 +2370,9 @@ function loadSettings() {
     const container = document.getElementById('settingsContainer');
     if (!container) return;
 
-    db.ref("appConfig").once("value", async configSnap => {
+    Outlet.ref("appConfig").once("value", async configSnap => {
         const c = configSnap.val() || {};
-        const uiSnap = await db.ref("uiConfig").once("value");
+        const uiSnap = await Outlet.ref("uiConfig").once("value");
         const u = uiSnap.val() || {};
 
         container.innerHTML = `
@@ -2515,7 +2519,7 @@ window.saveSettings = async () => {
             }
         }
 
-        await db.ref("appConfig").update({ 
+        await Outlet.ref("appConfig").update({ 
             shopName, 
             deliveryFee: Number(fee), 
             minOrder: Number(minOrder),
@@ -2524,7 +2528,7 @@ window.saveSettings = async () => {
             status,
             masterOTP 
         });
-        await db.ref("uiConfig").update({ welcomeImage: welcome, menuImage: menu });
+        await Outlet.ref("uiConfig").update({ welcomeImage: welcome, menuImage: menu });
         
         // Update Header
         const sidebarHeader = document.querySelector(".sidebar-header");
