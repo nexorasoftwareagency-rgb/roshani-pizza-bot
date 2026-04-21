@@ -1,81 +1,119 @@
 {
   "rules": {
+    "admins": {
+      ".read": "auth != null && auth.token.admin === true",
+      ".write": "auth.token.admin === true"
+    },
+    "migrationStatus": {
+      ".read": "auth != null",
+      ".write": "auth.token.admin === true"
+    },
+    "settings": {
+      ".read": "auth != null",
+      ".write": "auth.token.admin === true"
+    },
+    "appConfig": {
+      ".read": "auth != null",
+      ".write": "auth.token.admin === true"
+    },
+    "uiConfig": {
+      ".read": "auth != null",
+      ".write": "auth.token.admin === true"
+    },
+    "botStatus": {
+      ".read": "auth != null",
+      ".write": "auth.token.admin === true"
+    },
+    "logs": {
+      ".read": "auth != null && auth.token.admin === true",
+      ".write": "auth != null"
+    },
+
+    "$outlet": {
+      // Basic validation: ensure the outlet key looks like a valid outlet (pizza, cake, etc)
+      // and isn't matching legacy root nodes if they still exist.
+      // Firebase specific: Wildcard matches if no other rule above it matches EXACTLY.
+      
+      "orders": {
+        ".read": "(auth != null && auth.token.admin === true) || (auth != null && query.orderByChild == 'assignedRider')",
+        "$orderId": {
+          ".read": "auth != null && (auth.token.admin === true || data.child('assignedRider').val() == auth.token.email || data.child('whatsappNumber').val() == auth.token.whatsapp)",
+          ".write": "auth != null && (auth.token.admin === true || !data.exists() || data.child('assignedRider').val() == auth.token.email)",
+          ".validate": "newData.hasChild('status')"
+        }
+      },
+      "categories": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+      },
+      "dishes": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+      },
+      "riders": {
+        ".read": "auth != null && auth.token.admin === true",
+        "$riderId": {
+          ".read": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
+          ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
+          ".validate": "newData.hasChildren(['name', 'email'])"
+        }
+      },
+      "riderStats": {
+        ".read": "auth != null",
+        "$riderId": {
+          ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)"
+        }
+      },
+      "feedbacks": {
+        ".read": "auth != null && auth.token.admin === true",
+        "$feedbackId": {
+          ".write": "auth != null && !data.exists()"
+        }
+      },
+      "inventory": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+      },
+      "liveTracker": {
+        "$riderId": {
+          ".read": "auth != null",
+          ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)"
+        }
+      },
+      "metadata": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true"
+      }
+    },
+
+    // LEGACY ROOT NODES (Keep temporarily during migration)
     "orders": {
       ".read": "(auth != null && auth.token.admin === true) || (auth != null && query.orderByChild == 'assignedRider')",
       "$orderId": {
         ".read": "auth != null && (auth.token.admin === true || data.child('assignedRider').val() == auth.token.email || data.child('whatsappNumber').val() == auth.token.whatsapp)",
-        ".write": "auth != null && (auth.token.admin === true || !data.exists())",
-        ".validate": "newData.hasChild('status')"
+        ".write": "auth != null && (auth.token.admin === true || !data.exists())"
       }
     },
     "dishes": {
       ".read": "auth != null",
       ".write": "auth.token.admin === true"
     },
-    "riderStats": {
-      ".read": "auth != null",
-      "$riderId": {
-        ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)"
-      }
-    },
     "riders": {
       ".read": "auth != null && auth.token.admin === true",
       "$riderId": {
         ".read": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
-        ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
-        ".validate": "newData.hasChildren(['name', 'email', 'outlet'])"
+        ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)"
       }
+    },
+    "categories": {
+      ".read": "auth != null",
+      ".write": "auth.token.admin === true"
     },
     "feedbacks": {
       ".read": "auth != null && auth.token.admin === true",
       "$feedbackId": {
         ".write": "auth != null && !data.exists()"
       }
-    },
-    "customers": {
-      ".read": "auth != null && auth.token.admin === true",
-      ".write": "auth.token.admin === true"
-    },
-    "appConfig": {
-        ".read": "auth != null",
-        ".write": "auth.token.admin === true"
-    },
-    "uiConfig": {
-        ".read": "auth != null",
-        ".write": "auth.token.admin === true"
-    },
-    "settings": {
-        ".read": "auth != null",
-        ".write": "auth.token.admin === true"
-    },
-    "admins": {
-        ".read": "auth != null && auth.token.admin === true",
-        ".write": "auth.token.admin === true"
-    },
-    "Menu": {
-        ".read": "auth != null",
-        ".write": "auth.token.admin === true"
-    },
-    "categories": {
-        ".read": "auth != null",
-        ".write": "auth.token.admin === true"
-    },
-    "inventory": {
-        ".read": "auth != null",
-        ".write": "auth.token.admin === true"
-    },
-    "liveTracker": {
-        ".read": "auth != null",
-        ".write": "auth.token.admin === true"
-    },
-    "metadata": {
-        ".read": "auth != null",
-        ".write": "auth.token.admin === true",
-        ".validate": "newData.hasChildren()"
-    },
-    "botStatus": {
-        ".read": "auth != null",
-        ".write": "auth.token.admin === true"
     }
   }
 }

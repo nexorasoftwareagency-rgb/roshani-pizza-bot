@@ -33,10 +33,10 @@ function cleanupSessions() {
 // =============================
 // RIDER RESOLUTION HELPER
 // =============================
-async function getRiderByEmail(email) {
+async function getRiderByEmail(email, outlet = 'pizza') {
     if (!email) return null;
     try {
-        const riders = await getData("riders");
+        const riders = await getData("riders", outlet);
         if (!riders) return null;
         for (const uid in riders) {
             if (riders[uid].email?.toLowerCase() === email.toLowerCase()) {
@@ -49,7 +49,7 @@ async function getRiderByEmail(email) {
     return null;
 }
 
-async function addInAppNotification(uid, title, message) {
+async function addInAppNotification(uid, title, message, outlet = 'pizza') {
     if (!uid) return;
     try {
         const notifId = "NOTIF" + Date.now();
@@ -59,7 +59,7 @@ async function addInAppNotification(uid, title, message) {
             message,
             timestamp: Date.now(),
             read: false
-        });
+        }, outlet);
     } catch (err) {
         console.error("Failed to add in-app notification:", err);
     }
@@ -206,22 +206,34 @@ function isShopOpen(openTime, closeTime) {
 async function sendDailyReport(sock) {
     try {
         const storeData = await getData("settings/Store") || {};
+        const migrationInfo = await getData("migrationStatus/multiOutlet") || {};
+        const outlets = migrationInfo.outlets || ['pizza', 'cake'];
+
         const recipients = [];
         if (storeData.reportPhone) recipients.push(storeData.reportPhone.replace(/\D/g, '') + "@s.whatsapp.net");
         if (storeData.developerPhone) recipients.push(storeData.developerPhone.replace(/\D/g, '') + "@s.whatsapp.net");
 
         if (recipients.length === 0) return;
 
-        // Fetch Today's Orders
+        // Fetch Today's Orders from all outlets
         const now = new Date();
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-        const orders = await getData("orders") || {};
-        const todayOrders = Object.values(orders).filter(o => {
-            const ts = o.createdAt ? new Date(o.createdAt).getTime() : 0;
-            return ts >= startOfDay;
-        });
+        
+        let allTodayOrders = [];
+        let revenueByOutlet = {};
 
-        if (todayOrders.length === 0) {
+        for (const outlet of outlets) {
+            const orders = await getData("orders", outlet) || {};
+            const todayOrders = Object.values(orders).filter(o => {
+                const ts = o.createdAt ? new Date(o.createdAt).getTime() : 0;
+                return ts >= startOfDay;
+            });
+            
+            allTodayOrders = allTodayOrders.concat(todayOrders);
+            revenueByOutlet[outlet] = todayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+        }
+
+        if (allTodayOrders.length === 0) {
             const emptyMsg = `📊 *DAILY SALES SUMMARY* 📊\n` +
                 `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
                 `📅 *Date:* ${new Date().toLocaleDateString()}\n` +
@@ -232,9 +244,7 @@ async function sendDailyReport(sock) {
             return;
         }
 
-        const totalRevenue = todayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-        const pizzaRevenue = todayOrders.filter(o => o.outlet?.includes('pizza')).reduce((sum, o) => sum + (o.total || 0), 0);
-        const cakeRevenue = todayOrders.filter(o => o.outlet?.includes('cake')).reduce((sum, o) => sum + (o.total || 0), 0);
+        const totalRevenue = allTodayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
 
         let reportMsg = `📊 *DAILY SALES SUMMARY* 📊\n`;
         reportMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -242,11 +252,24 @@ async function sendDailyReport(sock) {
         reportMsg += `🏪 *Store:* ${storeData.storeName || 'Roshani ERP'}\n`;
         reportMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
         reportMsg += `💰 *TOTAL REVENUE:* ₹${totalRevenue.toLocaleString()}\n`;
-        reportMsg += `📦 *TOTAL ORDERS:* ${todayOrders.length}\n\n`;
-        reportMsg += `🍕 *Pizza Sales:* ₹${pizzaRevenue.toLocaleString()}\n`;
-        reportMsg += `🎂 *Cake Sales:* ₹${cakeRevenue.toLocaleString()}\n`;
+        reportMsg += `📦 *TOTAL ORDERS:* ${allTodayOrders.length}\n\n`;
+        
+        for (const [outlet, rev] of Object.entries(revenueByOutlet)) {
+            const label = outlet.charAt(0).toUpperCase() + outlet.slice(1);
+            const emoji = outlet === 'pizza' ? '🍕' : '🎂';
+            reportMsg += `${emoji} *${label} Sales:* ₹${rev.toLocaleString()}\n`;
+        }
+        
         reportMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
         reportMsg += `_Generated automatically at closing time._`;
+
+        for (const jid of recipients) await sock.sendMessage(jid, { text: reportMsg });
+        await updateData('settings/Bot', { lastReportDate: now.toISOString().split('T')[0] });
+
+    } catch (err) {
+        console.error("Daily Report Error:", err);
+    }
+}
 
         for (const jid of recipients) {
             await sock.sendMessage(jid, { text: reportMsg });
@@ -398,14 +421,15 @@ async function sendGreeting(sock, sender, user) {
 // =============================
 // ORDER ID GENERATION (Shared daily sequence)
 // =============================
-async function generateOrderId() {
+async function generateOrderId(outlet = 'pizza') {
     const today = new Date();
     const y = today.getFullYear();
     const m = (today.getMonth() + 1).toString().padStart(2, '0');
     const d = today.getDate().toString().padStart(2, '0');
     const dateStr = `${y}${m}${d}`;
     
-    const seqRef = db.ref(`metadata/orderSequence/${dateStr}`);
+    // Sequence is now per-outlet
+    const seqRef = db.ref(`${outlet}/metadata/orderSequence/${dateStr}`);
     const result = await seqRef.transaction((current) => (current || 0) + 1);
     
     const seqNum = result.snapshot.val() || 1;
@@ -416,7 +440,8 @@ async function generateOrderId() {
 // CATEGORY
 // =============================
 async function sendCategories(sock, sender, user) {
-    const categoriesData = await getData(`categories`);
+    const currentOutlet = user.outlet || 'pizza';
+    const categoriesData = await getData(`categories`, currentOutlet);
     const settings = await getData(`settings`);
     const bannerFallback = settings?.bannerImage || "https://via.placeholder.com/600x400?text=Roshani+ERP";
 
@@ -426,15 +451,9 @@ async function sendCategories(sock, sender, user) {
         return sock.sendMessage(sender, { text: "❌ *No categories available.* \nPlease try again later." });
     }
 
-    // Filter by outlet (Robust matching, consistent with Admin)
-    user.categoryList = Object.entries(categoriesData)
-        .map(([id, val]) => ({ id, ...val }))
-        .filter(cat => {
-            const catOutlet = (cat.outlet || "pizza").toLowerCase();
-            const userOutlet = (user.outlet || "pizza").toLowerCase();
-            // Match exactly, or if one contains the other (e.g., "cake shop" includes "cake")
-            return catOutlet === userOutlet || catOutlet.includes(userOutlet) || userOutlet.includes(catOutlet);
-        });
+    // Data is already isolated by resolvePath, just map it
+    user.categoryList = Object.entries(categoriesData || {})
+        .map(([id, val]) => ({ id, ...val }));
 
     if (user.categoryList.length === 0) {
         user.step = "CATEGORY";
@@ -556,35 +575,41 @@ async function startBot() {
     sock.ev.on('creds.update', saveCreds);
 
     // =============================
-    // EVENT LISTENERS (Real-time)
+    // EVENT LISTENERS (Real-time, Multi-Outlet)
     // =============================
-    db.ref("orders").on("child_changed", async (snap) => {
-        const id = snap.key;
-        const order = snap.val();
-        if (order) handleOrderStatusUpdate(sock, id, order);
-    });
-
+    const migrationInfo = await getData("migrationStatus/multiOutlet") || {};
+    const outlets = migrationInfo.outlets || ['pizza', 'cake'];
     const botStartTime = Date.now();
-    db.ref("orders").on("child_added", async (snap) => {
-        const id = snap.key;
-        const order = snap.val();
-        if (order) {
-            // Fill cache silently for old orders on startup
-            if (Date.now() - botStartTime < 10000) {
-                processedStatus[id] = { status: order.status, timestamp: Date.now() };
-                if (order.deliveryOTP) processedOTP[id] = order.deliveryOTP;
-                return;
-            }
 
-            // [NEW] NOTIFY ADMIN IMMEDIATELY
-            try {
-                await notifyAdminNewOrder(sock, id, order);
-                // For NEW orders added while bot is running, trigger status logic
-                // This ensures POS (Walk-in) which starts as "Delivered" or Online which starts as "Confirmed" sends a message
-                await handleOrderStatusUpdate(sock, id, order, true); 
-            } catch (err) {
-                console.error("New Order Processing Error:", err);
-            }        }
+    outlets.forEach(outlet => {
+        const orderRef = db.ref(`${outlet}/orders`);
+        
+        orderRef.on("child_changed", async (snap) => {
+            const id = snap.key;
+            const order = snap.val();
+            if (order) handleOrderStatusUpdate(sock, id, order);
+        });
+
+        orderRef.on("child_added", async (snap) => {
+            const id = snap.key;
+            const order = snap.val();
+            if (order) {
+                // Fill cache silently for old orders on startup
+                if (Date.now() - botStartTime < 10000) {
+                    processedStatus[id] = { status: order.status, timestamp: Date.now() };
+                    if (order.deliveryOTP) processedOTP[id] = order.deliveryOTP;
+                    return;
+                }
+
+                // [NEW] NOTIFY ADMIN IMMEDIATELY
+                try {
+                    await notifyAdminNewOrder(sock, id, order);
+                    await handleOrderStatusUpdate(sock, id, order, true); 
+                } catch (err) {
+                    console.error(`New Order Processing Error (${outlet}):`, err);
+                }
+            }
+        });
     });
 
     async function notifyAdminNewOrder(sock, orderId, order) {
@@ -645,7 +670,7 @@ async function startBot() {
                 
                 // RIDER NOTIFICATION LOGIC
                 if (order.assignedRider) {
-                    const rider = await getRiderByEmail(order.assignedRider);
+                    const rider = await getRiderByEmail(order.assignedRider, order.outlet);
                     if (rider) {
                         const riderJid = rider.phone.replace(/\D/g, '') + "@s.whatsapp.net";
                         
@@ -1261,8 +1286,8 @@ async function startBot() {
 
             // CONFIRM
             if (user.step === "CONFIRM") {
-
-                const orderId = await generateOrderId();
+                const primaryOutlet = user.outlet || 'pizza';
+                const orderId = await generateOrderId(primaryOutlet);
                 const { subtotal } = formatCartSummary(user.cart);
                 const grandTotal = subtotal + user.deliveryFee;
 
@@ -1300,7 +1325,7 @@ async function startBot() {
                     paymentMethod: user.paymentMethod || "Cash/UPI",
                     createdAt: new Date().toISOString(),
                     items: orderItems
-                });
+                }, primaryOutlet);
 
                 const storeData = await getData("settings/Store") || {};
                 const delSettings = await getData("settings/Delivery") || {};

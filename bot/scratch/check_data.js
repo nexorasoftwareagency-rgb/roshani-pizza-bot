@@ -6,16 +6,10 @@ async function check() {
         const categories = await getData('categories') || {};
         console.log(JSON.stringify(categories, null, 2));
 
-        console.log("\n--- DISHES (ROOT) ---");
-        const dishesRoot = await getData('dishes') || {};
-        // Log keys to see if they are categories or dishes
-        for (const key in dishesRoot) {
-            const val = dishesRoot[key];
-            if (val && typeof val === 'object' && !val.name) {
-                console.log(`Node 'dishes/${key}' has children:`, Object.keys(val).slice(0, 5));
-            } else {
-                console.log(`Node 'dishes/${key}' is a dish:`, val.name);
-            }
+        const dishesPizza = await getData('dishes/pizza') || {};
+        console.log(`\n--- DISHES (PIZZA) ---`);
+        for (const id in dishesPizza) {
+            console.log(`- ${dishesPizza[id].name} (${dishesPizza[id].category})`);
         }
 
         process.exit(0);
