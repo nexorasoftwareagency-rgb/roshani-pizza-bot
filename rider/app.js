@@ -374,16 +374,18 @@ auth.onAuthStateChanged(async user => {
         let riderProfile = foundAdmin;
         let foundOutlet = "all";
 
-        // 2. If not a super admin, search the global riders node
+        // 2. If not a super admin, search the global riders node by UID first (optimized)
         if (!riderProfile) {
-            const globalRidersSnap = await db.ref("riders").once("value");
-            if (globalRidersSnap.exists()) {
-                globalRidersSnap.forEach(child => {
-                    const r = child.val();
-                    if (r.email && r.email.toLowerCase() === normalizedEmail) {
-                        riderProfile = { id: child.key, ...r, outlet: "all" }; // Riders are now global
-                    }
-                });
+            const directRiderSnap = await db.ref("riders/" + user.uid).once("value");
+            if (directRiderSnap.exists()) {
+                riderProfile = { id: directRiderSnap.key, ...directRiderSnap.val(), outlet: "all" };
+            } else {
+                // Fallback: search by email (legacy or mismatched UID)
+                const emailQuerySnap = await db.ref("riders").orderByChild("email").equalTo(normalizedEmail).once("value");
+                if (emailQuerySnap.exists()) {
+                    const firstMatch = Object.entries(emailQuerySnap.val())[0];
+                    riderProfile = { id: firstMatch[0], ...firstMatch[1], outlet: "all" };
+                }
             }
         }
 
@@ -693,11 +695,15 @@ window.updateRiderMap = (destLat, destLng) => {
  * 3. REALTIME DATA
  */
 function initRealtimeListeners() {
+    if (!currentUser || !currentUser.email) return;
+    const currentRiderEmail = currentUser.email.toLowerCase();
     const outletsToListen = ['pizza', 'cake'];
 
     // Clear old listeners
     if (window._activeListeners) {
-        window._activeListeners.forEach(path => db.ref(path).off());
+        window._activeListeners.forEach(path => {
+            try { db.ref(path).off(); } catch(e) {}
+        });
     }
     window._activeListeners = [];
 
@@ -705,13 +711,40 @@ function initRealtimeListeners() {
 
     outletsToListen.forEach(outletId => {
         const ordersPath = `${outletId}/orders`;
-        window._activeListeners.push(ordersPath);
+        orderCache[outletId] = {};
 
-        db.ref(ordersPath).on('value', snap => {
-            orderCache[outletId] = snap.val() || {};
+        const updateCacheAndRender = (data, filterType) => {
+            // Remove items of this type from cache to avoid stale data
+            Object.keys(orderCache[outletId]).forEach(id => {
+                const order = orderCache[outletId][id];
+                const isAssignedToMe = (order.assignedRider || "").toLowerCase() === currentRiderEmail;
+                
+                if (filterType === 'unassigned' && (!order.assignedRider)) {
+                    delete orderCache[outletId][id];
+                } else if (filterType === 'mine' && isAssignedToMe) {
+                    delete orderCache[outletId][id];
+                }
+            });
+
+            // Merge new data
+            Object.assign(orderCache[outletId], data);
             renderAllOrders(orderCache);
             renderStats(orderCache);
+        };
+
+        // Listener 1: Unassigned Orders (Hub)
+        const unassignedRef = db.ref(ordersPath).orderByChild('assignedRider').equalTo(null);
+        unassignedRef.on('value', snap => {
+            updateCacheAndRender(snap.val() || {}, 'unassigned');
         });
+
+        // Listener 2: Orders assigned to this rider
+        const myOrdersRef = db.ref(ordersPath).orderByChild('assignedRider').equalTo(currentRiderEmail);
+        myOrdersRef.on('value', snap => {
+            updateCacheAndRender(snap.val() || {}, 'mine');
+        });
+
+        window._activeListeners.push(ordersPath);
     });
 }
 
