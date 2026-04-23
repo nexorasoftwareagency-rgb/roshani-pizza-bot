@@ -5,10 +5,31 @@ const admin = require('firebase-admin');
 // =============================
 const FIREBASE_URL = "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com";
 
-if (!admin.apps.length) {
-    admin.initializeApp({
-        databaseURL: FIREBASE_URL
-    });
+// Try to load service account from file
+try {
+    const fs = require('fs');
+    const serviceAccountPath = './service-account.json';
+    if (fs.existsSync(serviceAccountPath)) {
+        const serviceAccount = require(serviceAccountPath);
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            databaseURL: FIREBASE_URL
+        });
+    } else {
+        // No service account file - use default
+        if (!admin.apps.length) {
+            admin.initializeApp({
+                databaseURL: FIREBASE_URL
+            });
+        }
+    }
+} catch (e) {
+    console.log("Firebase init:", e.message);
+    if (!admin.apps.length) {
+        admin.initializeApp({
+            databaseURL: FIREBASE_URL
+        });
+    }
 }
 
 const db = admin.database();
