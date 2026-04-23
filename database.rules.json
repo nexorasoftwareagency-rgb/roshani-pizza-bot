@@ -1,0 +1,30 @@
+{
+  "rules": {
+    "orders": {
+      ".read": "auth != null",
+      ".write": "auth != null && (!data.exists() || newData.exists())"
+    },
+    "riders": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "feedbacks": {
+      ".read": "auth != null",
+      ".write": true
+    },
+    "customers": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "appConfig": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+    },
+    "Settings": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+    },
+    ".read": false,
+    ".write": false
+  }
+}

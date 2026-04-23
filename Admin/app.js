@@ -7,6 +7,18 @@ const storage = firebase.storage();
 // =============================
 async function uploadImage(file, path) {
     if (!file) return null;
+    
+    // Validation: Only allow JPEG, PNG, WebP and size < 5MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+        alert("Invalid file type. Please upload JPEG, PNG, or WebP.");
+        return null;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        alert("File too large. Maximum size is 5MB.");
+        return null;
+    }
+
     const ref = storage.ref(path);
     await ref.put(file);
     return await ref.getDownloadURL();
@@ -41,12 +53,20 @@ function initSecondaryAuth() {
 initSecondaryAuth();
 
 let editingDishId = null;
+let categories = [];
+let isEditRiderMode = false;
+let currentEditingRiderId = null;
 
 window.showDishModal = async (dishId = null) => {
     editingDishId = dishId;
     const modal = document.getElementById('dishModal');
     if(modal) modal.style.display = 'flex';
-    
+
+    // Always refresh category dropdown when modal opens
+    if (categories.length === 0) loadCategories();
+    else updateActiveDishModalCategories();
+
+    document.getElementById('modalTitle').innerText = dishId ? 'Edit Dish' : 'Add New Dish';
     const statusLabel = document.getElementById('uploadStatus');
     if(statusLabel) statusLabel.style.display = 'none';
 
@@ -63,7 +83,15 @@ window.showDishModal = async (dishId = null) => {
         const d = snap.val();
         if(d) {
             document.getElementById('dishName').value = d.name || '';
-            document.getElementById('dishCategory').value = d.category || '';
+            const select = document.getElementById('dishCategory');
+            const catValue = d.category || '';
+            if (catValue && !Array.from(select.options).some(opt => opt.value === catValue)) {
+                const opt = document.createElement('option');
+                opt.value = catValue;
+                opt.innerText = catValue;
+                select.appendChild(opt);
+            }
+            select.value = catValue;
             document.getElementById('dishPriceBase').value = d.price || '';
             document.getElementById('dishImage').value = d.image || '';
             document.getElementById('dishPreview').src = d.image || "https://via.placeholder.com/100";
@@ -90,11 +118,18 @@ window.showDishModal = async (dishId = null) => {
 function updateActiveDishModalCategories() {
     const select = document.getElementById('dishCategory');
     if (!select) return;
-    select.innerHTML = '<option value="">Select Category</option>';
+
+    // Preserve currently selected value if any
+    const currentVal = select.value;
+
+    select.innerHTML = '<option value="">Choose Category...</option>';
     categories.forEach(cat => {
         const option = document.createElement('option');
-        option.value = cat.id; // Store ID
+        option.value = cat.name; // Store NAME so dishes display correctly
         option.innerText = cat.name;
+        if (cat.name === currentVal) {
+            option.selected = true;
+        }
         select.appendChild(option);
     });
 }
@@ -136,67 +171,144 @@ let _ordersValueCb = null;
 // =============================
 // AUTHENTICATION
 // =============================
-document.getElementById("loginBtn").onclick = () => {
-    const email = adminEmail.value;
+function doLogin() {
+    const email = adminEmail.value.trim();
     const pass = adminPassword.value;
+    if (!email || !pass) { authError.innerText = "Please enter email and password."; return; }
+    authError.innerText = "";
 
     auth.signInWithEmailAndPassword(email, pass)
         .catch(e => {
             authError.innerText = e.message;
         });
-};
+}
 
-window.userLogout = () => auth.signOut();
+document.getElementById("loginBtn").onclick = doLogin;
+
+// Enter key triggers login from both email and password fields
+adminEmail.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+adminPassword.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+
+window.userLogout = () => {
+    // Force UI reset immediately (don't rely only on onAuthStateChanged)
+    authOverlay.style.display = "flex";
+    document.querySelector(".layout").style.display = "none";
+    auth.signOut();
+};
 
 auth.onAuthStateChanged(async user => {
     if (!user) {
-        // Detach persistent listeners to prevent memory leaks on logout
+        // Detach persistent listeners
         if (_ordersChildCb) { db.ref("orders").off("child_added", _ordersChildCb); _ordersChildCb = null; }
         if (_ordersValueCb) { db.ref("orders").off("value", _ordersValueCb); _ordersValueCb = null; }
         db.ref("riderStats").off();
         db.ref("riders").off();
-        db.ref("Menu/Categories").off();
-        if (currentOutlet) db.ref(`dishes/${currentOutlet}`).off();
+        if (window.currentOutlet) db.ref(`dishes/${window.currentOutlet}`).off();
+        
         authOverlay.style.display = "flex";
         document.querySelector(".layout").style.display = "none";
         return;
     }
 
-    // Verify Admin Role Efficiently
-    db.ref("admins").once("value", snap => {
-        let isAdmin = false;
-        snap.forEach(a => {
-            if (a.val().email === user.email) {
-                currentOutlet = a.val().outlet;
-                document.getElementById("outletBadge").innerText = currentOutlet + " Store";
-                isAdmin = true;
+    try {
+        const adminSnap = await db.ref("admins").once("value");
+        let adminData = null;
+        const normalizedEmail = user.email.toLowerCase();
+
+        adminSnap.forEach(snap => {
+            if (snap.val().email.toLowerCase() === normalizedEmail) {
+                adminData = snap.val();
             }
         });
-        
-        // If still not found, check specific keys if they exist
-        if(!isAdmin) {
-             const pizzaEmail = "roshanipizza@gmail.com";
-             currentOutlet = user.email === pizzaEmail ? "pizza" : "cake";
-             document.getElementById("outletBadge").innerText = currentOutlet + " Store";
-             isAdmin = true;
-        }
 
-        if (!isAdmin) {
-            alert("SECURITY ALERT: Access Denied.");
+        if (!adminData) {
+            alert("ACCESS DENIED: Not recognized as an Admin.");
             auth.signOut();
             return;
         }
 
-        // If Admin, proceed
+        // Handle caching and switching for multi-outlet Support
+        const switcher = document.getElementById('outletSwitcher');
+        if (adminData.isSuper) {
+            if (switcher) {
+                switcher.classList.remove('hidden');
+                switcher.innerHTML = `
+                    <option value="pizza">🍕 Pizza ERP</option>
+                    <option value="cake">🎂 Cakes ERP</option>
+                `;
+                const savedOutlet = localStorage.getItem('adminSelectedOutlet') || adminData.outlet;
+                switcher.value = savedOutlet;
+                window.currentOutlet = savedOutlet;
+            }
+        } else {
+            window.currentOutlet = adminData.outlet;
+            if (switcher) switcher.classList.add('hidden');
+        }
+
         userEmailDisplay.innerText = user.email;
         authOverlay.style.display = "none";
         document.querySelector(".layout").style.display = "flex";
-        
-        loadRiders(); // Pre-load riders for dropdowns
+
+        updateBranding();
+        loadRiders(); 
         initRealtimeListeners();
         switchTab('dashboard');
-    });
+        
+    } catch (e) {
+        console.error("Auth Exception:", e);
+    }
 });
+
+function updateBranding() {
+    const badge = document.getElementById('outletBadge');
+    const sidebarBrand = document.getElementById('sidebarBrandText');
+    const isPizza = window.currentOutlet === 'pizza';
+
+    if (badge) {
+        badge.innerText = isPizza ? 'PIZZA OUTLET' : 'CAKES OUTLET';
+        badge.style.background = isPizza ? 'var(--primary-orange)' : '#EC4899';
+    }
+    if (sidebarBrand) {
+        sidebarBrand.innerText = isPizza ? 'ROSHANI PIZZA' : 'ROSHANI CAKES';
+    }
+    document.title = (isPizza ? 'Roshani Pizza' : 'Roshani Cakes') + ' | Admin Dashboard';
+
+    // Riders tab: only Pizza outlet admin can manage riders (unless Super)
+    const ridersMenu = document.getElementById("menu-riders");
+    if (ridersMenu) {
+        ridersMenu.style.display = (isPizza || (currentUser && currentUser.isSuper)) ? "" : "none";
+    }
+}
+
+window.switchOutlet = (val) => {
+    localStorage.setItem('adminSelectedOutlet', val);
+    window.currentOutlet = val;
+    
+    updateBranding();
+    initRealtimeListeners();
+    
+    // Refresh active tab
+    const activeTabId = document.querySelector('.nav-links li.active')?.id.replace('menu-', '') || 'dashboard';
+    switchTab(activeTabId);
+    console.log("Admin switched outlet to:", val);
+};
+
+// =============================
+// MOBILE SIDEBAR TOGGLE
+// =============================
+window.toggleMobileSidebar = () => {
+    const sidebar = document.getElementById('sidebarNav');
+    const overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('active');
+};
+
+function closeMobileSidebar() {
+    const sidebar = document.getElementById('sidebarNav');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.remove('mobile-open');
+    if (overlay) overlay.classList.remove('active');
+}
 
 // =============================
 // SIDEBAR & TAB MANAGEMENT
@@ -219,6 +331,8 @@ window.toggleSubmenu = (parentId) => {
 };
 
 window.switchTab = (tabId) => {
+    closeMobileSidebar(); // Auto-close sidebar on mobile
+
     // Update Sidebar Active States
     document.querySelectorAll('.sidebar li').forEach(li => li.classList.remove('active'));
     
@@ -241,24 +355,29 @@ window.switchTab = (tabId) => {
         'dashboard': 'Dashboard Overview',
         'orders': 'Order History',
         'live': '🔥 Live Operations',
+        'walkin': '🛒 Record Walk-in Sale',
         'menu': 'Dish Management',
         'categories': 'Category Management',
         'riders': 'Rider Management',
         'customers': 'Customer Database',
+        'inventory': 'Inventory Tracking (Coming Soon)',
         'payments': 'Payment Tracking',
-        'reports': 'Sales Reports',
-        'settings': 'Shop Settings'
+        'reports': 'Performance Analytics',
+        'feedback': '⭐ Customer Feedback & Ratings',
+        'settings': 'Delivery & Store Settings'
     };
     
-    document.getElementById('currentTabTitle').innerText = titles[tabId] || 'Management';
+    document.getElementById('currentTabTitle').innerText = titles[tabId] || 'Admin Dashboard';
 
-    // Section Specific Loaders
+    if (tabId === 'settings') window.loadStoreSettings();
+    if (tabId === 'dashboard') {}
+    if (tabId === 'walkin') loadWalkinMenu();
     if (tabId === 'menu') loadMenu();
     if (tabId === 'categories') loadCategories();
     if (tabId === 'riders') loadRiders();
     if (tabId === 'customers') loadCustomers();
+    if (tabId === 'feedback') loadFeedbacks();
     if (tabId === 'reports') loadReports();
-    if (tabId === 'settings') loadSettings();
 };
 
 // =============================
@@ -271,20 +390,24 @@ function initRealtimeListeners() {
 
     let firstLoad = true;
 
+    // Sound Notification logic (only for new orders after page load)
+    const loadTime = Date.now();
     _ordersChildCb = snap => {
         if (!firstLoad) {
             const order = snap.val();
-            order.id = snap.key;
-            if (order && (order.outlet === currentOutlet || !currentOutlet)) {
+            // Check if order is new (within last 1 minute and after page load)
+            const orderTime = typeof order.createdAt === 'number' ? order.createdAt : new Date(order.createdAt).getTime();
+            const isRecent = orderTime && (Date.now() - orderTime) < 60000;
+            const isPostLoad = orderTime && orderTime > loadTime - 5000;
+
+            if (order && (order.outlet === currentOutlet || !currentOutlet) && order.status === "Placed" && isRecent && isPostLoad) {
                 showAlert(order);
                 playSound();
-                // Delay highlight slightly to ensure row is rendered by the "value" listener
-                setTimeout(() => highlightOrder(order.id), 1000);
+                setTimeout(() => highlightOrder(snap.key), 1000);
             }
         }
     };
     db.ref("orders").on("child_added", _ordersChildCb);
-
     setTimeout(() => { firstLoad = false; }, 3000);
 
     _ordersValueCb = snap => { renderOrders(snap); };
@@ -307,13 +430,13 @@ let alertAudio;
 
 function playSound() {
     if (!alertAudio) {
-        alertAudio = new Audio('mixkit-bell-of-promise-930.wav');
+        alertAudio = new Audio('../assets/sounds/mixkit-bell-of-promise-930.wav');
         alertAudio.volume = 0.5;
     }
     alertAudio.currentTime = 0;
     alertAudio.play().catch(e => {
         // Fallback to alert.mp3 if premium file missing
-        new Audio("alert.mp3").play().catch(() => {});
+        new Audio("../assets/sounds/alert.mp3").play().catch(() => {});
     });
 }
 
@@ -323,8 +446,11 @@ function showAlert(order) {
     const div = document.createElement('div');
     div.className = 'alert-box';
     div.innerHTML = `
-        <div class="alert-title">🔔 New Order #${order.orderId || order.id.slice(-5)}</div>
-        <div class="alert-sub">₹${order.total} • ${order.items?.length || 1} item(s)</div>
+        <div class="alert-content">
+            <div class="alert-title">🔔 New Order #${order.orderId || order.id.slice(-5)}</div>
+            <div class="alert-sub">₹${order.total} • ${order.items?.length || 1} item(s)</div>
+        </div>
+        <button class="alert-print-btn" onclick="event.stopPropagation(); printOrderReceipt(JSON.parse('${JSON.stringify(order).replace(/'/g, "\\'")}'))">🖨️ Print</button>
     `;
 
     div.onclick = () => {
@@ -387,6 +513,9 @@ function validateUrl(url) {
 function renderOrders(snap) {
     let ordersCount = 0, revenue = 0, pending = 0, today = 0, liveCount = 0;
     const todayStr = new Date().toISOString().split('T')[0];
+    
+    // Reset item stats to prevent cumulative data in real-time updates
+    window.itemStats = {};
 
     if (ordersTable) ordersTable.innerHTML = "";
     if (document.getElementById("ordersTableFull")) document.getElementById("ordersTableFull").innerHTML = "";
@@ -428,14 +557,18 @@ function renderOrders(snap) {
         const safeStatusClass = escapeHtml(o.status?.replace(/ /g, ''));
         const safeAssignedRider = escapeHtml(o.assignedRider);
 
+        const displayPhone = o.phone ? o.phone.slice(0, 2) + "****" + o.phone.slice(-4) : "Guest";
+        const truncatedAddress = o.address ? (o.address.length > 30 ? o.address.substring(0, 30) + "..." : o.address) : "Counter Sale";
+
         const trHTML = `
             <td style="font-family: monospace; font-weight: 600;">#${safeOrderId}</td>
             <td>
                 ${safeCustomerName}<br>
-                <small style="color:var(--text-muted)">${safePhone}</small>
+                <small style="color:var(--text-muted)">${displayPhone}</small>
+                ${o.phone ? `<a href="https://wa.me/91${o.phone.replace(/\D/g,'')}?text=${encodeURIComponent('Hi ' + o.customerName + ', regarding your order #' + safeOrderId)}" target="_blank" style="margin-left:5px;text-decoration:none;font-size:14px;" title="Message on WhatsApp">💬</a>` : ''}
             </td>
             <td>
-                ${safeAddress}
+                <span title="${safeAddress}">${escapeHtml(truncatedAddress)}</span>
                 ${safeLocationLink ? `<br><a href="${safeLocationLink}" target="_blank" style="color:var(--primary); font-size:11px; text-decoration:none;">📍 Map</a>` : ""}
             </td>
             <td style="font-weight:700">₹${safeTotal}</td>
@@ -454,6 +587,7 @@ function renderOrders(snap) {
                     <option value="">Rider</option>
                     ${ridersList.map(r => `<option value="${escapeHtml(r.email)}" ${o.assignedRider === r.email ? "selected" : ""}>${escapeHtml(r.name)}</option>`).join("")}
                 </select>
+                <button onclick="window.printReceiptById('${o.orderId || id}')" class="btn-icon" style="margin-left: 5px; padding: 4px 8px; font-size: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; border-radius: 4px;" title="Print Receipt">🖨️</button>
             </td>
         `;
         
@@ -493,7 +627,6 @@ function renderOrders(snap) {
                 </td>
                 <td>
                     <button onclick="updateStatus('${id}', 'Delivered')" class="btn-primary" style="padding:4px 8px; font-size:11px;">Deliver</button>
-                    ${!["Confirmed", "Preparing", "Cooked", "Out for Delivery", "Delivered"].includes(safeStatus) ? `<button onclick="deleteOrder('${id}')" title="Delete" style="background:none; border:none; color:rgba(239,68,68,0.5); font-size:16px; cursor:pointer;">🗑️</button>` : ""}
                 </td>
             `;
             liveOrdersTable.appendChild(rowLive);
@@ -559,8 +692,8 @@ function calculateTopSpenders(snap) {
     list.innerHTML = sorted.map(([phone, data]) => `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:10px;">
             <div>
-                <div style="font-size:14px; font-weight:700; color:var(--text-main);">${data.name}</div>
-                <div style="font-size:11px; color:var(--text-muted)">${phone}</div>
+                <div style="font-size:14px; font-weight:700; color:var(--text-main);">${escapeHtml(data.name)}</div>
+                <div style="font-size:11px; color:var(--text-muted)">${phone.slice(0, 2) + "****" + phone.slice(-4)}</div>
             </div>
             <div style="text-align:right">
                 <div style="font-size:14px; font-weight:800; color:var(--action-green)">₹${data.total.toLocaleString()}</div>
@@ -579,11 +712,11 @@ function renderTopItems() {
         .slice(0, 5);
 
     list.innerHTML = sorted.map(([name, count]) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
-            <span style="font-size:14px; font-weight:500; color:white;">${name}</span>
-            <span style="font-size:12px; font-weight:700; background:rgba(34,197,94,0.2); color:#22c55e; padding:2px 8px; border-radius:10px;">${count} sold</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.05);">
+            <span style="font-size:14px; font-weight:600; color:var(--text-main);">${name}</span>
+            <span style="font-size:12px; font-weight:700; background:rgba(34,197,94,0.1); color:#16a34a; padding:3px 10px; border-radius:12px;">${count} sold</span>
         </div>
-    `).join('') || '<p style="font-size:12px; color:var(--text-muted);">No sales data yet.</p>';
+    `).join('') || '<p style="font-size:12px; color:var(--text-muted); text-align:center; padding:10px;">No sales data yet.</p>';
 }
 
 window.markAsPaid = (id) => {
@@ -591,16 +724,7 @@ window.markAsPaid = (id) => {
 };
 
 window.deleteOrder = (id) => {
-    // Check status before allowing delete
-    db.ref("orders/" + id).once("value", snap => {
-        const o = snap.val();
-        if (["Confirmed", "Preparing", "Cooked", "Out for Delivery", "Delivered"].includes(o.status)) {
-            return alert("Confirmed/Active orders cannot be deleted!");
-        }
-        if (confirm("Delete this order?")) {
-            db.ref("orders/" + id).remove();
-        }
-    });
+    alert("Sales records are permanent and cannot be deleted by anyone to maintain data integrity.");
 };
 
 // =============================
@@ -793,73 +917,122 @@ function loadMenu() {
         grid.innerHTML = "";
         snap.forEach(child => {
             const d = child.val();
-            const id = child.key;
-            
-            let priceDisplay = `₹${d.price}`;
-            if (d.sizes) {
-                const prices = Object.values(d.sizes);
-                priceDisplay = `₹${Math.min(...prices)}+`;
-            }
+            const dishId = child.key; // capture in block scope — safe for closures
 
             let sizesHtml = "";
             if (d.sizes) {
                 sizesHtml = `
                     <div style="margin:12px 0; padding:12px; background:rgba(0,0,0,0.02); border-radius:10px; border:1px solid rgba(0,0,0,0.03);">
-                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Sizes & Pricing</div>
+                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Sizes &amp; Pricing</div>
                         ${Object.entries(d.sizes).map(([size, price]) => `
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-size:13px;">
                                 <span style="color:var(--text-main)">${size}</span>
                                 <span style="font-weight:800; color:var(--action-green)">₹${price}</span>
                             </div>
                         `).join("")}
-                    </div>
-                `;
+                    </div>`;
             } else {
                 sizesHtml = `
                     <div style="margin:12px 0; display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-size:13px; color:var(--text-muted)">Standard Price</span>
                         <span style="font-size:18px; font-weight:800; color:var(--action-green)">₹${d.price || 0}</span>
-                    </div>
-                `;
+                    </div>`;
             }
 
-            grid.innerHTML += `
-                <div class="glass-card" style="padding:15px; transition: transform 0.2s; cursor:default;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
-                    <div style="position:relative; width:100%; height:160px; border-radius:12px; overflow:hidden; margin-bottom:15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                        <img src="${d.image || 'https://via.placeholder.com/150'}" style="width:100%; height:100%; object-fit:cover;">
-                        <div style="position:absolute; top:10px; right:10px; background:${d.stock ? 'rgba(6,95,70,0.9)' : 'rgba(220,38,38,0.9)'}; color:white; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700; backdrop-filter:blur(4px);">
-                            ${d.stock ? 'AVAILABLE' : 'OUT OF STOCK'}
-                        </div>
-                    </div>
-                    <div style="padding:0 5px;">
-                        <h4 style="margin:0; font-size:16px; color:var(--text-main); font-weight:700;">${d.name}</h4>
-                        <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${d.category}</div>
-                        
-                        ${sizesHtml}
-                        
-                        <div style="display:flex; gap:8px; margin-top:5px; pt-10">
-                            <button onclick="showDishModal('${id}')" class="btn-secondary" style="flex:1; font-size:12px; padding:8px 0; display:flex; align-items:center; justify-content:center; gap:5px;">
-                                ✏️ Edit
-                            </button>
-                            <button onclick="deleteDish('${id}')" class="btn-secondary" style="color:#ef4444; width:40px; padding:8px 0; display:flex; align-items:center; justify-content:center;">
-                                🗑️
-                            </button>
-                        </div>
+            // Build card via createElement to avoid innerHTML+= closure bug
+            const card = document.createElement('div');
+            card.className = 'glass-card';
+            card.style.cssText = 'padding:15px; transition:transform 0.2s; cursor:default;';
+            card.onmouseover = () => card.style.transform = 'translateY(-5px)';
+            card.onmouseout = () => card.style.transform = 'translateY(0)';
+            card.innerHTML = `
+                <div style="position:relative; width:100%; height:160px; border-radius:12px; overflow:hidden; margin-bottom:15px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                    <img src="${d.image || 'https://via.placeholder.com/150'}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://via.placeholder.com/150'">
+                    <div style="position:absolute; top:10px; right:10px; background:${d.stock ? 'rgba(6,95,70,0.9)' : 'rgba(220,38,38,0.9)'}; color:white; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700; backdrop-filter:blur(4px);">
+                        ${d.stock ? 'AVAILABLE' : 'OUT OF STOCK'}
                     </div>
                 </div>
-            `;
+                <div style="padding:0 5px;">
+                    <h4 style="margin:0; font-size:16px; color:var(--text-main); font-weight:700;">${d.name}</h4>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${d.category || ''}</div>
+                    ${sizesHtml}
+                    <div style="display:flex; gap:8px; margin-top:5px;">
+                        <button class="edit-btn btn-secondary" style="flex:1; font-size:12px; padding:8px 0; display:flex; align-items:center; justify-content:center; gap:5px;">✏️ Edit</button>
+                        <button class="delete-btn btn-secondary" style="color:#ef4444; width:40px; padding:8px 0; display:flex; align-items:center; justify-content:center;">🗑️</button>
+                    </div>
+                </div>`;
+
+            // Wire buttons using addEventListener — closures correctly capture dishId
+            card.querySelector('.edit-btn').addEventListener('click', () => window.showDishModal(dishId));
+            card.querySelector('.delete-btn').addEventListener('click', () => window.deleteDish(dishId));
+
+            grid.appendChild(card);
         });
+
+        if (snap.numChildren() === 0) {
+            grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted);">No dishes yet. Click + Add Dish to get started.</div>';
+        }
     });
 }
 
 window.toggleStock = (id, current) => db.ref(`dishes/${currentOutlet}/${id}`).update({ stock: !current });
-window.deleteDish = async (id) => {
-    if (confirm("Delete this dish?")) {
-        const snap = await db.ref(`dishes/${currentOutlet}/${id}`).once('value');
-        const img = snap.val()?.image;
-        if (img) await deleteImage(img);
-        db.ref(`dishes/${currentOutlet}/${id}`).remove();
-    }
+window.deleteDish = (dishId) => {
+    // Remove any existing confirm overlay
+    const existing = document.getElementById('deleteConfirmOverlay');
+    if (existing) existing.remove();
+
+    // Build a centered overlay modal so it's always visible (no scroll/viewport issues)
+    const overlay = document.createElement('div');
+    overlay.id = 'deleteConfirmOverlay';
+    overlay.style.cssText = [
+        'position:fixed', 'inset:0', 'z-index:99999',
+        'background:rgba(0,0,0,0.7)', 'backdrop-filter:blur(4px)',
+        'display:flex', 'align-items:center', 'justify-content:center'
+    ].join(';');
+
+    overlay.innerHTML = `
+        <div style="background:#1c1c1c; border:1px solid #ef4444; border-radius:20px;
+                    padding:32px 36px; max-width:360px; width:90%; text-align:center;
+                    box-shadow:0 20px 60px rgba(239,68,68,0.25);">
+            <div style="font-size:40px; margin-bottom:12px;">🗑️</div>
+            <h3 style="color:#fff; margin:0 0 8px; font-size:18px; font-weight:700;">Delete Dish?</h3>
+            <p style="color:#aaa; font-size:14px; margin:0 0 24px;">This action cannot be undone.</p>
+            <div style="display:flex; gap:12px; justify-content:center;">
+                <button id="confirmDeleteNo"
+                    style="flex:1; padding:12px; border-radius:12px; border:1px solid #333;
+                           background:transparent; color:#aaa; cursor:pointer; font-size:14px; font-weight:600;">
+                    Cancel
+                </button>
+                <button id="confirmDeleteYes"
+                    style="flex:1; padding:12px; border-radius:12px; border:none;
+                           background:#ef4444; color:#fff; cursor:pointer; font-size:14px; font-weight:700;">
+                    Delete
+                </button>
+            </div>
+        </div>`;
+
+    document.body.appendChild(overlay);
+
+    const cleanup = () => overlay.remove();
+
+    // Cancel button
+    overlay.querySelector('#confirmDeleteNo').onclick = cleanup;
+
+    // Click backdrop to cancel
+    overlay.onclick = (e) => { if (e.target === overlay) cleanup(); };
+
+    // Confirm delete
+    overlay.querySelector('#confirmDeleteYes').onclick = async () => {
+        cleanup();
+        try {
+            const snap = await db.ref(`dishes/${currentOutlet}/${dishId}`).once('value');
+            const img = snap.val()?.image;
+            if (img) await deleteImage(img);
+            await db.ref(`dishes/${currentOutlet}/${dishId}`).remove();
+        } catch(e) {
+            alert('Delete failed: ' + e.message);
+        }
+    };
 };
 
 // (Duplicate loadCategories, addCategory, deleteCategory removed — canonical versions above at loadCategories/line ~600)
@@ -891,7 +1064,7 @@ function loadRiders() {
 
 function renderRiders() {
     const table = document.getElementById("ridersTable");
-    const activeDashboard = document.getElementById("activeRidersDashboard");
+    const activeDashboard = document.getElementById("riderStatusList");
     
     if (table) table.innerHTML = "";
     if (activeDashboard) activeDashboard.innerHTML = "";
@@ -902,7 +1075,7 @@ function renderRiders() {
         
         // 1. Populate Management Table
         if (table) {
-            const portalUrl = window.location.origin + "/Rider/index.html";
+            const portalUrl = window.location.origin + "/rider/index.html";
             table.innerHTML += `
                 <tr style="border-bottom: 1px solid rgba(0,0,0,0.03)">
                     <td style="padding:15px">
@@ -949,117 +1122,18 @@ function renderRiders() {
     if (activeDashboard && activeDashboard.innerHTML === "") {
         activeDashboard.innerHTML = "<div style='color:var(--text-muted); font-size:12px; text-align:center; padding:20px;'>No riders online</div>";
     }
+
+    // Update Riders Online KPI on Dashboard
+    const onlineCount = ridersList.filter(r => r.status === "Online").length;
+    const ridersKPI = document.getElementById("statRidersActive");
+    if (ridersKPI) ridersKPI.innerText = onlineCount;
+    const onlineCountBadge = document.getElementById("onlineRiderCount");
+    if (onlineCountBadge) onlineCountBadge.innerText = onlineCount + " ON";
 }
 
 window.deleteRider = (id) => confirm("Remove this rider? This will NOT delete their login but will prevent them from accessing the shop.") && db.ref(`riders/${id}`).remove();
 
-// =============================
-// REPORTS & ANALYTICS
-// =============================
-function loadReports() {
-    // Default dates: Today
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('reportFrom').value = today;
-    document.getElementById('reportTo').value = today;
-    generateCustomReport();
-}
-
-function generateCustomReport() {
-    const fromDate = document.getElementById('reportFrom').value;
-    const toDate = document.getElementById('reportTo').value;
-    const tableBody = document.getElementById('reportTableBody');
-    if (!tableBody) return;
-
-    tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center'>Loading data...</td></tr>";
-
-    db.ref("orders").once("value", snap => {
-        salesData = [];
-        let totalRev = 0, totalOrders = 0;
-
-        snap.forEach(child => {
-            const o = child.val();
-            if (o.outlet !== currentOutlet) return;
-            
-            const orderDate = o.createdAt ? o.createdAt.split('T')[0] : "";
-            if (orderDate >= fromDate && orderDate <= toDate) {
-                salesData.push({ id: child.key, ...o });
-                if (o.status !== "Cancelled") {
-                    totalRev += Number(o.total || 0);
-                    totalOrders++;
-                }
-            }
-        });
-
-        document.getElementById('reportRevenue').innerText = `₹${totalRev.toLocaleString()}`;
-        document.getElementById('reportOrders').innerText = totalOrders;
-        document.getElementById('reportAvg').innerText = totalOrders > 0 ? `₹${Math.round(totalRev/totalOrders)}` : "₹0";
-
-        tableBody.innerHTML = salesData.map(o => `
-            <tr>
-                <td style="font-size:12px">${formatDate(o.createdAt)}</td>
-                <td>
-                    <div style="font-weight:600">${o.customerName}</div>
-                    <div style="font-size:10px; color:var(--text-muted)">${o.phone}</div>
-                </td>
-                <td style="font-weight:700">₹${o.total}</td>
-                <td><small>${o.paymentMethod || 'COD'}</small></td>
-                <td><small style="font-size:10px; color:var(--text-muted)">${o.items ? o.items.map(i => i.name).join(', ') : 'Items'}</small></td>
-            </tr>
-        `).join('') || "<tr><td colspan='5' style='text-align:center'>No data for this range</td></tr>";
-    });
-}
-
-window.downloadExcel = () => {
-    if (salesData.length === 0) return alert("No data to export");
-    
-    const preparedData = salesData.map(o => ({
-        "Order ID": o.orderId || o.id.slice(-5),
-        "Date": o.createdAt,
-        "Customer": o.customerName,
-        "Phone": o.phone,
-        "Address": o.address,
-        "Total Amount": o.total,
-        "Status": o.status,
-        "Method": o.paymentMethod || "COD",
-        "Items": o.items ? o.items.map(i => `${i.name} (${i.size})`).join('; ') : ""
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(preparedData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sales Report");
-    XLSX.writeFile(wb, `Sales_Report_${new Date().toLocaleDateString()}.xlsx`);
-};
-
-window.downloadPDF = () => {
-    if (salesData.length === 0) return alert("No data to export");
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text(`Sales Report (${currentOutlet})`, 14, 20);
-    doc.setFontSize(10);
-    doc.text(`Range: ${document.getElementById('reportFrom').value} to ${document.getElementById('reportTo').value}`, 14, 28);
-
-    const rows = salesData.map(o => [
-        formatDate(o.createdAt),
-        o.customerName,
-        o.phone,
-        o.total,
-        o.status,
-        o.items ? o.items.map(i => i.name).join(', ') : ""
-    ]);
-
-    doc.autoTable({
-        head: [['Date', 'Customer', 'Phone', 'Total', 'Status', 'Items']],
-        body: rows,
-        startY: 35,
-        theme: 'grid',
-        styles: { fontSize: 8 }
-    });
-
-    doc.save(`Sales_Report_${new Date().toLocaleDateString()}.pdf`);
-};
+// (Duplicate loadReports/generateCustomReport/download blocks removed — canonical versions below at ~L1207)
 window.showRiderModal = () => {
     isEditRiderMode = false;
     currentEditingRiderId = null;
@@ -1182,20 +1256,23 @@ function loadCustomers() {
             const orderCount = myOrders.length;
             const ltv = myOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
 
+            const displayPhone = phone.slice(0, 2) + "****" + phone.slice(-4);
+            const truncatedAddress = c.address ? (c.address.length > 30 ? c.address.substring(0, 30) + "..." : c.address) : "No address saved";
+
             table.innerHTML += `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.05)">
                     <td>
-                        <div style="font-weight:600; color:var(--text-main)">${c.name}</div>
+                        <div style="font-weight:600; color:var(--text-main)">${escapeHtml(c.name)}</div>
                         <small style="color:var(--text-muted); font-size:10px;">Joined: ${c.registeredAt ? new Date(c.registeredAt).toLocaleDateString() : 'N/A'}</small>
                     </td>
                     <td>
                         <a href="https://wa.me/${phone.replace(/\D/g, "")}" target="_blank" style="color:var(--primary); text-decoration:none; display:flex; align-items:center; gap:5px;">
-                            <i class="fab fa-whatsapp"></i> ${phone}
+                            <i class="fab fa-whatsapp"></i> ${displayPhone}
                         </a>
                     </td>
                     <td>
-                        <div style="font-size:12px; color:var(--text-main); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${c.address || ''}">
-                            ${c.address || 'No address saved'}
+                        <div style="font-size:12px; color:var(--text-main); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(c.address || '')}">
+                            ${escapeHtml(truncatedAddress)}
                         </div>
                         ${c.locationLink ? `<a href="${c.locationLink}" target="_blank" style="color:var(--primary); font-size:10px; text-decoration:none;">📍 Map Link</a>` : ""}
                     </td>
@@ -1492,8 +1569,8 @@ window.assignRider = async (id, riderEmail) => {
 
     db.ref("orders/" + id).update({ 
         assignedRider: riderEmail,
-        status: "Out for Delivery",
-        adminMasterOTP: masterOTP
+        status: "Out for Delivery"
+        // Security logic: adminMasterOTP removed as per "no master bypass" policy
     });
 };
 // EXPORTS
@@ -1571,5 +1648,792 @@ function formatDate(ts) {
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
+    });
+}
+
+// =============================
+// WALK-IN / COUNTER SALE (POS)
+// =============================
+
+// Cart state: { dishId: { name, price, qty } }
+let walkinCart = {};
+let walkinPayMethod = 'Cash';
+let activeWalkinCategory = 'All';
+let cachedDishes = [];
+
+// Category emoji map for dish cards
+const catEmoji = {
+    'pizza': '🍕', 'burger': '🍔', 'cake': '🎂', 'pastry': '🧁',
+    'sandwich': '🥪', 'drink': '🥤', 'beverage': '🥤', 'juice': '🧃',
+    'ice cream': '🍨', 'dessert': '🍰', 'pasta': '🍝', 'salad': '🥗',
+    'fries': '🍟', 'chicken': '🍗', 'noodles': '🍜', 'biryani': '🍛',
+    'thali': '🍽️', 'combo': '🎁', 'wrap': '🌯', 'coffee': '☕',
+    'shake': '🥛', 'mocktail': '🍹'
+};
+
+function getCatEmoji(category) {
+    if (!category) return '🍽️';
+    const lower = category.toLowerCase();
+    for (const [key, emoji] of Object.entries(catEmoji)) {
+        if (lower.includes(key)) return emoji;
+    }
+    return '🍽️';
+}
+
+function loadWalkinMenu() {
+    const grid = document.getElementById('walkinDishGrid');
+    if (!grid) return;
+
+    // Fetch Categories for Tabs
+    db.ref('Menu/Categories').once('value').then(catSnap => {
+        const catContainer = document.getElementById('walkinCategoryTabs');
+        if (catContainer) {
+            let catsHtml = `<div class="category-tab ${activeWalkinCategory === 'All' ? 'active' : ''}" onclick="filterWalkinByCategory('All')">All</div>`;
+            catSnap.forEach(child => {
+                const cat = child.val();
+                if (!cat.outlet || cat.outlet === currentOutlet) {
+                    catsHtml += `<div class="category-tab ${activeWalkinCategory === cat.name ? 'active' : ''}" onclick="filterWalkinByCategory('${escapeHtml(cat.name)}')">${escapeHtml(cat.name)}</div>`;
+                }
+            });
+            catContainer.innerHTML = catsHtml;
+        }
+    });
+
+    db.ref(`dishes/${currentOutlet}`).once('value').then(snap => {
+        cachedDishes = [];
+        snap.forEach(child => {
+            cachedDishes.push({ id: child.key, ...child.val() });
+        });
+
+        if (cachedDishes.length === 0) {
+            grid.innerHTML = '<p class="menu-loading-placeholder">No dishes found. Add dishes in Menu → Dishes first.</p>';
+            return;
+        }
+
+        applyWalkinFilters();
+
+        // Search filter
+        const search = document.getElementById('walkinDishSearch');
+        if (search) {
+            search.oninput = () => applyWalkinFilters();
+        }
+
+        // Customer Phone Auto-fill
+        const phoneInput = document.getElementById('walkinCustPhone');
+        if (phoneInput) {
+            phoneInput.oninput = () => {
+                const phone = phoneInput.value.trim();
+                if (phone.length === 10) checkWalkinCustomer(phone);
+            };
+        }
+    });
+}
+
+function filterWalkinByCategory(catName) {
+    activeWalkinCategory = catName;
+    const tabs = document.querySelectorAll('.category-tab');
+    tabs.forEach(tab => {
+        if (tab.textContent === catName) tab.classList.add('active');
+        else tab.classList.remove('active');
+    });
+    applyWalkinFilters();
+}
+
+function applyWalkinFilters() {
+    const search = document.getElementById('walkinDishSearch');
+    const term = search ? search.value.toLowerCase() : "";
+    
+    const filtered = cachedDishes.filter(d => {
+        const matchesSearch = d.name.toLowerCase().includes(term);
+        const matchesCat = activeWalkinCategory === 'All' || d.category === activeWalkinCategory;
+        return matchesSearch && matchesCat;
+    });
+
+    renderWalkinDishGrid(filtered);
+}
+
+async function checkWalkinCustomer(phone) {
+    try {
+        const snap = await db.ref(`customers/${currentOutlet}/${phone}`).once('value');
+        if (snap.exists()) {
+            const data = snap.val();
+            const nameInput = document.getElementById('walkinCustName');
+            if (nameInput) {
+                nameInput.value = data.name || "";
+                showAlert('✨ Returning Customer: ' + data.name, 'success');
+            }
+        }
+    } catch (e) { console.error(e); }
+}
+
+window.setDiscount = (val) => {
+    const el = document.getElementById('walkinDiscount');
+    if (el) {
+        el.value = val;
+        updateWalkinTotal();
+    }
+};
+
+window.setDiscountPct = (pct) => {
+    let subtotal = 0;
+    Object.values(walkinCart).forEach(item => subtotal += item.price * item.qty);
+    const val = Math.round(subtotal * (pct / 100));
+    window.setDiscount(val);
+};
+
+window.clearWalkinCart = () => {
+    if (Object.keys(walkinCart).length === 0) return;
+    if (confirm('Clear entire order?')) {
+        walkinCart = {};
+        document.getElementById('walkinDiscount').value = 0;
+        document.getElementById('walkinCustName').value = '';
+        document.getElementById('walkinCustPhone').value = '';
+        renderWalkinCart();
+    }
+};
+
+function renderWalkinDishGrid(dishes) {
+    const grid = document.getElementById('walkinDishGrid');
+    grid.innerHTML = '';
+
+    dishes.forEach(d => {
+        const hasSizes = d.sizes && Object.keys(d.sizes).length > 0;
+        const card = document.createElement('div');
+        card.className = 'walkin-dish-card' + (d.stock === false ? ' out-of-stock' : '');
+        
+        let cardContent = `
+            <div class="dish-emoji">${getCatEmoji(d.category)}</div>
+            <div class="dish-name" title="${escapeHtml(d.name)}">${escapeHtml(d.name)}</div>
+        `;
+
+        if (hasSizes) {
+            cardContent += `<div class="size-chip-container">`;
+            Object.entries(d.sizes).forEach(([size, price]) => {
+                cardContent += `
+                    <div class="size-chip" onclick="event.stopPropagation(); addToWalkinCart('${d.id}', '${escapeHtml(d.name)}', ${price}, '${escapeHtml(size)}')">
+                        <span>${escapeHtml(size)}</span>
+                        <span class="price">₹${price}</span>
+                    </div>
+                `;
+            });
+            cardContent += `</div>`;
+        } else {
+            cardContent += `<div class="dish-price">₹${d.price || 0}</div>`;
+        }
+
+        if (d.stock === false) {
+            cardContent += `<div style="font-size:10px; color:#ef4444; margin-top:4px;">Out of Stock</div>`;
+        }
+        
+        card.innerHTML = cardContent;
+
+        if (!hasSizes) {
+            card.addEventListener('click', () => {
+                if (d.stock === false) return;
+                addToWalkinCart(d.id, d.name, Number(d.price) || 0);
+            });
+        }
+        
+        grid.appendChild(card);
+    });
+}
+
+function addToWalkinCart(id, name, price, size = "Regular") {
+    const cartKey = id + "_" + size;
+    if (walkinCart[cartKey]) {
+        walkinCart[cartKey].qty++;
+    } else {
+        walkinCart[cartKey] = { id, name, price, qty: 1, size };
+    }
+    renderWalkinCart();
+}
+
+function removeFromWalkinCart(id) {
+    delete walkinCart[id];
+    renderWalkinCart();
+}
+
+window.walkinQtyChange = (id, delta) => {
+    if (!walkinCart[id]) return;
+    walkinCart[id].qty += delta;
+    if (walkinCart[id].qty <= 0) {
+        delete walkinCart[id];
+    }
+    renderWalkinCart();
+};
+
+window.walkinRemoveItem = (id) => removeFromWalkinCart(id);
+
+function renderWalkinCart() {
+    const container = document.getElementById('walkinCartItems');
+    if (!container) return;
+
+    const keys = Object.keys(walkinCart);
+    if (keys.length === 0) {
+        container.innerHTML = '<p id="walkinEmptyMsg" style="color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;">Tap dishes to add them here</p>';
+        updateWalkinTotal();
+        return;
+    }
+
+    container.innerHTML = keys.map(key => {
+        const item = walkinCart[key];
+        const displayName = item.size !== "Regular" ? `${item.name} (${item.size})` : item.name;
+        return `
+            <div class="walkin-cart-item">
+                <span class="item-name">${escapeHtml(displayName)}</span>
+                <div class="qty-controls">
+                    <button class="qty-btn" onclick="walkinQtyChange('${key}', -1)">−</button>
+                    <span class="qty-val">${item.qty}</span>
+                    <button class="qty-btn" onclick="walkinQtyChange('${key}', 1)">+</button>
+                </div>
+                <span class="item-price">₹${(item.price * item.qty).toLocaleString()}</span>
+                <button class="remove-btn" onclick="walkinRemoveItem('${key}')" title="Remove">✕</button>
+            </div>
+        `;
+    }).join('');
+
+    updateWalkinTotal();
+}
+
+window.updateWalkinTotal = () => {
+    let subtotal = 0;
+    Object.values(walkinCart).forEach(item => {
+        subtotal += item.price * item.qty;
+    });
+
+    const discount = Math.max(0, Number(document.getElementById('walkinDiscount')?.value) || 0);
+    const total = Math.max(0, subtotal - discount);
+
+    const subEl = document.getElementById('walkinSubtotal');
+    const totalEl = document.getElementById('walkinTotal');
+    if (subEl) subEl.textContent = '₹' + subtotal.toLocaleString();
+    if (totalEl) totalEl.textContent = '₹' + total.toLocaleString();
+};
+
+window.selectPayMethod = (btn) => {
+    document.querySelectorAll('.walkin-pay-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    walkinPayMethod = btn.dataset.method;
+};
+
+window.submitWalkinSale = async () => {
+    const keys = Object.keys(walkinCart);
+    if (keys.length === 0) {
+        return alert('Please add at least one item to the cart.');
+    }
+
+    const custName = document.getElementById('walkinCustName')?.value.trim() || 'Walk-in Customer';
+    const custPhone = document.getElementById('walkinCustPhone')?.value.trim() || '';
+    const discount = Math.max(0, Number(document.getElementById('walkinDiscount')?.value) || 0);
+
+    let subtotal = 0;
+    const items = keys.map(key => {
+        const item = walkinCart[key];
+        subtotal += item.price * item.qty;
+        return { 
+            dishId: item.id, 
+            name: item.name, 
+            price: item.price, 
+            quantity: item.qty,
+            size: item.size 
+        };
+    });
+
+    const total = Math.max(0, subtotal - discount);
+    const orderId = 'WALK-' + Date.now().toString().slice(-6);
+
+    const orderData = {
+        orderId,
+        customerName: custName,
+        phone: custPhone,
+        items,
+        subtotal,
+        discount,
+        total,
+        paymentMethod: walkinPayMethod,
+        paymentStatus: 'Paid',
+        status: 'Delivered',
+        type: 'Walk-in',
+        outlet: currentOutlet,
+        createdAt: firebase.database.ServerValue.TIMESTAMP
+    };
+
+    try {
+        await db.ref('orders/' + orderId).set(orderData);
+        
+        // Update customer LTV if phone provided
+        if (custPhone) {
+            const custRef = db.ref(`customers/${currentOutlet}/${custPhone}`);
+            const cSnap = await custRef.once('value');
+            const cData = cSnap.val() || { name: custName, orders: 0, ltv: 0, lastAddress: 'Walk-in' };
+            await custRef.update({
+                name: custName,
+                orders: (cData.orders || 0) + 1,
+                ltv: (cData.ltv || 0) + total,
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+
+        // --- NEW: Post-Sale Flux ---
+        const confirmPrint = confirm('Sale Recorded Successfully!\n\nID: ' + orderId + '\nTotal: ₹' + total + '\n\nWould you like to PRINT the receipt?');
+        if (confirmPrint) {
+            printOrderReceipt(orderData);
+        }
+
+        // Reset
+        walkinCart = {};
+        document.getElementById('walkinDiscount').value = 0;
+        document.getElementById('walkinCustName').value = '';
+        document.getElementById('walkinCustPhone').value = '';
+        renderWalkinCart();
+        showAlert('Sale Recorded successfully!', 'success');
+    } catch (e) {
+        alert('Error recording sale: ' + e.message);
+    }
+};
+
+function standardizeOrderData(o) {
+    if (!o) return null;
+    
+    // Ensure ID consistent
+    const orderId = o.orderId || o.id || (o.key ? o.key.slice(-8).toUpperCase() : "ORD-N/A");
+    
+    // Items mapping (standardize unit price and name)
+    const items = (o.items || []).map(i => ({
+        name: i.name || "Unknown Item",
+        size: i.size || "",
+        quantity: parseInt(i.quantity) || 1,
+        price: parseFloat(i.price || i.unitPrice || 0)
+    }));
+
+    return {
+        orderId: orderId,
+        date: o.createdAt ? new Date(o.createdAt).toLocaleString() : new Date().toLocaleString(),
+        customerName: o.customerName || "Walk-in Customer",
+        phone: o.phone || o.whatsappNumber || "",
+        address: o.address || "",
+        items: items,
+        subtotal: parseFloat(o.subtotal || o.itemTotal || 0),
+        discount: parseFloat(o.discount || 0),
+        deliveryFee: parseFloat(o.deliveryFee || 0),
+        total: parseFloat(o.total || 0),
+        paymentMethod: o.paymentMethod || "Cash",
+        type: o.type === "Walk-in" ? "Dine-in" : "Online Booked"
+    };
+}
+
+window.printReceiptById = async (orderId) => {
+    try {
+        const snap = await db.ref("orders").orderByChild("orderId").equalTo(orderId).once("value");
+        let order;
+        if (snap.exists()) {
+            snap.forEach(s => order = s.val());
+        } else {
+            // Try by push key
+            const snap2 = await db.ref(`orders/${orderId}`).once("value");
+            order = snap2.val();
+        }
+
+        if (!order) {
+            alert("Order not found!");
+            return;
+        }
+
+        printOrderReceipt(order, true); // true for 'Reprint' label if needed
+    } catch (e) {
+        console.error("Print Error:", e);
+        alert("Failed to fetch order for printing.");
+    }
+};
+
+async function printOrderReceipt(rawOrder, isReprint = false) {
+    const o = standardizeOrderData(rawOrder);
+    if (!o) return;
+
+    // Load Store Settings for branding
+    let store = { 
+        entityName: "", storeName: window.currentOutlet === 'pizza' ? 'ROSHANI PIZZA' : 'ROSHANI CAKES',
+        address: "", gstin: "", fssai: "", tagline: "THANK YOU", poweredBy: "Powered by Roshani ERP", 
+        config: { showAddress: true, showGSTIN: false, showFSSAI: false, showTagline: true, showPoweredBy: true, showQR: false }
+    };
+
+    try {
+        const storeSnap = await db.ref("Settings/Store").once("value");
+        if (storeSnap.exists()) store = storeSnap.val();
+    } catch(e) {}
+
+    const printWindow = window.open('', '_blank', 'width=450,height=800');
+    
+    const itemsHtml = o.items.map(i => `
+        <tr>
+            <td style="padding: 4px 0;">
+                ${escapeHtml(i.name)} ${i.size && i.size !== "Regular" ? `<br><small>(${escapeHtml(i.size)})</small>` : ""}
+            </td>
+            <td style="text-align:center;">${i.quantity}</td>
+            <td style="text-align:right;">${i.price.toFixed(2)}</td>
+            <td style="text-align:right;">${(i.price * i.quantity).toFixed(2)}</td>
+        </tr>
+    `).join('');
+
+    const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Bill - ${o.orderId}</title>
+            <style>
+                * { box-sizing: border-box; }
+                body { 
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                    width: 76mm; 
+                    margin: 0; 
+                    padding: 8mm 4mm;
+                    color: #000;
+                    line-height: 1.3;
+                }
+                .center { text-align: center; }
+                .bold { font-weight: bold; }
+                .mt-10 { margin-top: 10px; }
+                .hr { border-top: 1px dashed #000; margin: 8px 0; }
+                
+                .header-title { font-size: 1.4rem; font-weight: 900; margin: 0; }
+                .header-sub { font-size: 0.9rem; margin-bottom: 2px; }
+                .meta-text { font-size: 0.8rem; }
+                
+                table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 5px; }
+                th { border-bottom: 1px dashed #000; padding: 4px 0; border-top: 1px dashed #000; font-size: 0.75rem; }
+                
+                .summary { margin-top: 10px; font-size: 0.9rem; }
+                .summary-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+                .grand-total { font-size: 1.1rem; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 0; margin-top: 5px; }
+                
+                .qr-container { margin-top: 15px; text-align: center; }
+                .qr-img { width: 100px; height: 100px; border: 1px solid #eee; padding: 2px; }
+                .footer { font-size: 0.75rem; color: #555; margin-top: 20px; text-align: center; font-style: italic; }
+            </style>
+        </head>
+        <body onload="setTimeout(() => { window.print(); window.close(); }, 500);">
+            <div class="center">
+                ${store.entityName ? `<div class="header-sub bold">${store.entityName.toUpperCase()}</div>` : ''}
+                <h1 class="header-title">${store.storeName.toUpperCase()}</h1>
+                ${store.config.showAddress && store.address ? `<div class="meta-text mt-10">${store.address}</div>` : ''}
+                ${store.config.showGSTIN && store.gstin ? `<div class="meta-text bold">GSTIN: ${store.gstin}</div>` : ''}
+                ${store.config.showFSSAI && store.fssai ? `<div class="meta-text">FSSAI No: ${store.fssai}</div>` : ''}
+                
+                <div class="hr"></div>
+                ${isReprint ? `<div class="bold" style="font-size:0.8rem;">*** REPRINTED BILL ***</div>` : ''}
+                <div class="bold" style="font-size:1rem; margin: 4px 0;">${o.type.toUpperCase()}</div>
+                <div class="hr"></div>
+            </div>
+
+            <div class="meta-text">
+                <div class="summary-row"><span class="bold">Order ID:</span> <span>${o.orderId}</span></div>
+                <div class="summary-row"><span class="bold">Date:</span> <span>${o.date}</span></div>
+                <div class="summary-row"><span class="bold">Pay Mode:</span> <span>${o.paymentMethod}</span></div>
+            </div>
+            
+            <div class="hr"></div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align:left;">Item</th>
+                        <th style="text-align:center; width: 12%;">Qty</th>
+                        <th style="text-align:right; width: 22%;">Rate</th>
+                        <th style="text-align:right; width: 22%;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsHtml}
+                </tbody>
+            </table>
+
+            <div class="hr"></div>
+            
+            <div class="summary meta-text">
+                <div class="summary-row">
+                    <span>Total Items:</span>
+                    <span>${o.items.reduce((sum, i) => sum + i.quantity, 0)}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span>${o.subtotal.toFixed(2)}</span>
+                </div>
+                ${o.deliveryFee > 0 ? `<div class="summary-row"><span>Delivery Fee:</span> <span>${o.deliveryFee.toFixed(2)}</span></div>` : ''}
+                ${o.discount > 0 ? `<div class="summary-row"><span>Discount:</span> <span>-${o.discount.toFixed(2)}</span></div>` : ''}
+                
+                <div class="summary-row grand-total bold">
+                    <span>Grand Total:</span>
+                    <span>Rs ${o.total.toFixed(2)}</span>
+                </div>
+            </div>
+
+            <div class="mt-10 meta-text">
+                <div class="bold">Customer:</div>
+                <div>${o.customerName} ${o.phone ? `(${o.phone})` : ''}</div>
+                ${o.address && o.type === 'Online Booked' ? `<div style="font-size:0.75rem;">Addr: ${o.address}</div>` : ''}
+            </div>
+
+            ${store.config.showWifiInfo && store.wifiName ? `
+            <div class="hr"></div>
+            <div class="center meta-text" style="font-size: 0.8rem; margin-top: 5px;">
+                <span class="bold">📶 WiFi:</span> ${store.wifiName}
+                ${store.wifiPass ? `<br><span class="bold">Pwd:</span> ${store.wifiPass}` : ''}
+            </div>` : ''}
+
+            ${store.config.showSocial && (store.instagram || store.reviewUrl) ? `
+            <div class="hr"></div>
+            <div class="center meta-text" style="font-size: 0.8rem;">
+                ${store.instagram ? `<div>📸 Instagram: <span class="bold">${store.instagram}</span></div>` : ''}
+                ${store.reviewUrl ? `<div class="mt-4">⭐ Rate us: <span style="font-size: 0.7rem;">${store.reviewUrl}</span></div>` : ''}
+            </div>` : ''}
+
+            ${store.config.showQR && store.qrUrl ? `
+            <div class="qr-container">
+                <div class="meta-text bold mb-4">Scan to Pay</div>
+                <img src="${store.qrUrl}" class="qr-img">
+            </div>` : ''}
+
+            ${store.config.showTagline && store.tagline ? `
+            <div class="center bold mt-10" style="font-size: 0.85rem;">
+                ${store.tagline}
+            </div>` : ''}
+
+            ${store.config.showPoweredBy && store.poweredBy ? `
+            <div class="footer">
+                ${store.poweredBy}
+            </div>` : ''}
+            
+            <div style="height: 10mm;"></div>
+        </body>
+        </html>`;
+        
+    printWindow.document.write(html);
+    printWindow.document.close();
+}
+
+// =============================
+// DELIVERY SETTINGS
+// =============================
+window.addFeeSlab = (km = "", fee = "") => {
+    const tbody = document.getElementById('feeSlabsTable');
+    if (!tbody) return;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td style="padding: 8px;"><input type="number" class="slab-km form-input" value="${km}" placeholder="KM" style="padding: 6px 10px;"></td>
+        <td style="padding: 8px;"><input type="number" class="slab-fee form-input" value="${fee}" placeholder="₹" style="padding: 6px 10px;"></td>
+        <td style="padding: 8px;"><button onclick="this.parentElement.parentElement.remove()" class="btn-secondary btn-small" style="padding: 5px 8px;">🗑️</button></td>
+    `;
+    tbody.appendChild(tr);
+};
+
+window.loadStoreSettings = async () => {
+    try {
+        // Load Delivery Settings
+        const delSnap = await db.ref("Settings/Delivery").once("value");
+        let delData = delSnap.val() || {
+            coords: { lat: 25.887444, lng: 85.026889 },
+            slabs: [{ km: 2, fee: 20 }, { km: 5, fee: 40 }, { km: 8, fee: 60 }]
+        };
+
+        // Load Receipt / Store Info Settings
+        const storeSnap = await db.ref("Settings/Store").once("value");
+        let storeData = storeSnap.val() || {
+            entityName: "", storeName: "", address: "", gstin: "", fssai: "", tagline: "", poweredBy: "Powered by Roshani ERP",
+            developerPhone: "",
+            reportPhone: "",
+            shopOpenTime: "10:00",
+            shopCloseTime: "23:00",
+            wifiName: "", wifiPass: "", instagram: "", facebook: "", reviewUrl: "",
+            feedbackReason1: "Taste & Quality", feedbackReason2: "Delivery Speed", feedbackReason3: "Value for Money",
+            config: { showAddress: true, showGSTIN: false, showFSSAI: false, showTagline: true, showPoweredBy: true, showQR: false, showWifiInfo: false, showSocial: false }
+        };
+
+        // Populate Delivery UI
+        document.getElementById('settingLat').value = delData.coords.lat;
+        document.getElementById('settingLng').value = delData.coords.lng;
+        document.getElementById('displayCoords').innerText = `${delData.coords.lat}, ${delData.coords.lng}`;
+        if (delData.notifyPhone) document.getElementById('settingAdminPhone').value = delData.notifyPhone;
+
+        const slabContainer = document.getElementById('feeSlabsTable');
+        if (slabContainer) {
+            slabContainer.innerHTML = '';
+            if (delData.slabs) delData.slabs.forEach(slab => window.addFeeSlab(slab.km, slab.fee));
+        }
+
+        // Populate Store UI
+        document.getElementById('settingEntityName').value = storeData.entityName || "";
+        document.getElementById('settingStoreName').value = storeData.storeName || "";
+        document.getElementById('settingStoreAddress').value = storeData.address || "";
+        document.getElementById('settingGSTIN').value = storeData.gstin || "";
+        document.getElementById('settingFSSAI').value = storeData.fssai || "";
+        document.getElementById('settingTagline').value = storeData.tagline || "";
+        document.getElementById('settingPoweredBy').value = storeData.poweredBy || "";
+        document.getElementById('settingDevPhone').value = storeData.developerPhone || "";
+        document.getElementById('settingReportPhone').value = storeData.reportPhone || "";
+        document.getElementById('settingOpenTime').value = storeData.shopOpenTime || "10:00";
+        document.getElementById('settingCloseTime').value = storeData.shopCloseTime || "23:00";
+        document.getElementById('settingWifiName').value = storeData.wifiName || "";
+        document.getElementById('settingWifiPass').value = storeData.wifiPass || "";
+        document.getElementById('settingInstagram').value = storeData.instagram || "";
+        document.getElementById('settingFacebook').value = storeData.facebook || "";
+        document.getElementById('settingReviewUrl').value = storeData.reviewUrl || "";
+        document.getElementById('settingFeedbackReason1').value = storeData.feedbackReason1 || "Taste & Quality";
+        document.getElementById('settingFeedbackReason2').value = storeData.feedbackReason2 || "Delivery Speed";
+        document.getElementById('settingFeedbackReason3').value = storeData.feedbackReason3 || "Value for Money";
+        
+        // Toggles
+        const config = storeData.config || {};
+        document.getElementById('checkShowAddress').checked = config.showAddress !== false;
+        document.getElementById('checkShowGSTIN').checked = !!config.showGSTIN;
+        document.getElementById('checkShowFSSAI').checked = !!config.showFSSAI;
+        document.getElementById('checkShowTagline').checked = config.showTagline !== false;
+        document.getElementById('checkShowPoweredBy').checked = config.showPoweredBy !== false;
+        document.getElementById('checkShowQR').checked = !!config.showQR;
+        document.getElementById('checkShowWifiInfo').checked = !!config.showWifiInfo;
+        document.getElementById('checkShowSocial').checked = !!config.showSocial;
+
+        // QR Preview
+        if (storeData.qrUrl) {
+            document.getElementById('qrPreview').src = storeData.qrUrl;
+            document.getElementById('settingQRUrl').value = storeData.qrUrl;
+        }
+
+    } catch (e) {
+        console.error("Load Store Settings Error:", e);
+    }
+};
+
+window.saveStoreSettings = async () => {
+    const btn = document.querySelector("#tab-settings .btn-primary");
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = "Saving...";
+
+    try {
+        // 1. Handle QR Upload if new file selected
+        const qrFile = document.getElementById('settingQRFile').files[0];
+        let qrUrl = document.getElementById('settingQRUrl').value;
+
+        if (qrFile) {
+            qrUrl = await uploadImage(qrFile, `settings/payment_qr_${Date.now()}`);
+        }
+
+        // 2. Collect Delivery Data
+        const lat = parseFloat(document.getElementById('settingLat').value);
+        const lng = parseFloat(document.getElementById('settingLng').value);
+        const notifyPhone = document.getElementById('settingAdminPhone').value.trim();
+
+        const slabRows = document.querySelectorAll('#feeSlabsTable tr');
+        const slabs = Array.from(slabRows).map(row => ({
+            km: parseFloat(row.querySelector('.slab-km').value),
+            fee: parseFloat(row.querySelector('.slab-fee').value)
+        })).filter(s => !isNaN(s.km) && !isNaN(s.fee));
+        slabs.sort((a, b) => a.km - b.km);
+
+        // 3. Collect Store Data
+        const storeData = {
+            entityName: document.getElementById('settingEntityName').value.trim(),
+            storeName: document.getElementById('settingStoreName').value.trim(),
+            address: document.getElementById('settingStoreAddress').value.trim(),
+            gstin: document.getElementById('settingGSTIN').value.trim(),
+            fssai: document.getElementById('settingFSSAI').value.trim(),
+            tagline: document.getElementById('settingTagline').value.trim(),
+            poweredBy: document.getElementById('settingPoweredBy').value.trim(),
+            developerPhone: document.getElementById('settingDevPhone').value.trim(),
+            reportPhone: document.getElementById('settingReportPhone').value.trim(),
+            shopOpenTime: document.getElementById('settingOpenTime').value,
+            shopCloseTime: document.getElementById('settingCloseTime').value,
+            wifiName: document.getElementById('settingWifiName').value.trim(),
+            wifiPass: document.getElementById('settingWifiPass').value.trim(),
+            instagram: document.getElementById('settingInstagram').value.trim(),
+            facebook: document.getElementById('settingFacebook').value.trim(),
+            reviewUrl: document.getElementById('settingReviewUrl').value.trim(),
+            feedbackReason1: document.getElementById('settingFeedbackReason1').value.trim(),
+            feedbackReason2: document.getElementById('settingFeedbackReason2').value.trim(),
+            feedbackReason3: document.getElementById('settingFeedbackReason3').value.trim(),
+            qrUrl: qrUrl,
+            config: {
+                showAddress: document.getElementById('checkShowAddress').checked,
+                showGSTIN: document.getElementById('checkShowGSTIN').checked,
+                showFSSAI: document.getElementById('checkShowFSSAI').checked,
+                showTagline: document.getElementById('checkShowTagline').checked,
+                showPoweredBy: document.getElementById('checkShowPoweredBy').checked,
+                showQR: document.getElementById('checkShowQR').checked,
+                showWifiInfo: document.getElementById('checkShowWifiInfo').checked,
+                showSocial: document.getElementById('checkShowSocial').checked
+            }
+        };
+
+        // 4. Update Firebase
+        await Promise.all([
+            db.ref("Settings/Delivery").set({ coords: { lat, lng }, notifyPhone, slabs }),
+            db.ref("Settings/Store").set(storeData)
+        ]);
+
+        document.getElementById('displayCoords').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        if (qrUrl) document.getElementById('settingQRUrl').value = qrUrl;
+
+        // Success Alert
+        const alertContainer = document.getElementById('alertContainer');
+        if (alertContainer) {
+            const div = document.createElement('div');
+            div.className = 'alert-box';
+            div.style.borderLeftColor = '#22c55e';
+            div.innerHTML = `
+                <div class="alert-title">✅ Settings Saved</div>
+                <div class="alert-sub">Store profile and delivery rules updated.</div>
+            `;
+            alertContainer.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+    } catch (e) {
+        alert("Failed to save: " + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
+};
+
+function loadFeedbacks() {
+    const tableBody = document.getElementById("feedbackTableBody");
+    if (!tableBody) return;
+
+    db.ref("feedbacks").off();
+    db.ref("feedbacks").on("value", snap => {
+        tableBody.innerHTML = "";
+        const feedbacks = [];
+        snap.forEach(child => {
+            feedbacks.push({ id: child.key, ...child.val() });
+        });
+
+        // Sort by date (desc)
+        feedbacks.sort((a,b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+
+        if (feedbacks.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">No feedback received yet.</td></tr>`;
+            return;
+        }
+
+        feedbacks.forEach(f => {
+            const stars = "⭐".repeat(f.rating || 0);
+            const dateStr = f.timestamp ? new Date(f.timestamp).toLocaleString() : "N/A";
+            
+            tableBody.innerHTML += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.03)">
+                    <td style="padding:15px; font-size:12px;">${dateStr}</td>
+                    <td style="padding:15px; font-family:monospace; font-weight:700;">#${escapeHtml(f.orderId || 'N/A')}</td>
+                    <td style="padding:15px">
+                        <div style="font-weight:700;">${escapeHtml(f.customerName || 'Guest')}</div>
+                        <small style="color:var(--text-muted);">${escapeHtml(f.phone || '')}</small>
+                    </td>
+                    <td style="padding:15px; font-size:14px;">${stars}</td>
+                    <td style="padding:15px">
+                        <div style="font-weight:600; color:var(--text-main);">${escapeHtml(f.reason || f.feedback || '')}</div>
+                        ${f.comment ? `<div style="font-size:12px; color:var(--text-muted); margin-top:4px; font-style:italic;">"${escapeHtml(f.comment)}"</div>` : ''}
+                    </td>
+                </tr>
+            `;
+        });
     });
 }
