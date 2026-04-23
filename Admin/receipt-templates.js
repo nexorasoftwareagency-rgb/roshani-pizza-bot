@@ -15,13 +15,17 @@ window.ReceiptTemplates = {
         const itemsHtml = order.items.map(i => `
             <tr>
                 <td style="padding: 4px 0;">
-                    ${this.escapeHtml(i.name)} ${i.size && i.size !== "Regular" ? `<br><small>(${this.escapeHtml(i.size)})</small>` : ""}
+                    ${this.escapeHtml(i.name)} ${i.size && i.size !== "Regular" ? `<br><small style="font-size:0.7rem; opacity:0.8;">(${this.escapeHtml(i.size)})</small>` : ""}
                 </td>
                 <td style="text-align:center;">${i.quantity}</td>
-                <td style="text-align:right;">${i.price.toFixed(2)}</td>
                 <td style="text-align:right;">${(i.price * i.quantity).toFixed(2)}</td>
             </tr>
         `).join('');
+
+        // Generate dynamic feedback link using base URL from settings or default
+        const baseUrl = store.reviewUrl || `https://roshanipizza.web.app/feedback`;
+        const feedbackUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}order=${order.orderId}&outlet=${window.currentOutlet || 'default'}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(feedbackUrl)}`;
 
         return `
             <!DOCTYPE html>
@@ -29,58 +33,70 @@ window.ReceiptTemplates = {
             <head>
                 <title>Bill - ${order.orderId}</title>
                 <style>
-                    * { box-sizing: border-box; }
+                    @page { margin: 0; }
+                    * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
                     body { 
-                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                        width: 76mm; 
-                        margin: 0; 
-                        padding: 8mm 4mm;
+                        font-family: 'Courier New', Courier, monospace; 
+                        width: 100%; 
+                        max-width: 80mm; 
+                        margin: 0 auto; 
+                        padding: 5mm 3mm;
                         color: #000;
-                        line-height: 1.3;
+                        line-height: 1.2;
+                        font-size: 12px;
                     }
                     .center { text-align: center; }
                     .bold { font-weight: bold; }
+                    .mt-5 { margin-top: 5px; }
                     .mt-10 { margin-top: 10px; }
-                    .hr { border-top: 1px dashed #000; margin: 8px 0; }
+                    .mb-5 { margin-bottom: 5px; }
+                    .hr { border-top: 1px dashed #000; margin: 6px 0; }
                     
-                    .header-title { font-size: 1.4rem; font-weight: 900; margin: 0; }
-                    .header-sub { font-size: 0.9rem; margin-bottom: 2px; }
-                    .meta-text { font-size: 0.8rem; }
+                    .store-name { font-size: 1.5rem; font-weight: 900; margin: 0; letter-spacing: 1px; }
+                    .store-entity { font-size: 0.8rem; text-transform: uppercase; margin-bottom: 2px; }
+                    .address-text { font-size: 0.75rem; margin: 5px 0; max-width: 90%; margin-left: auto; margin-right: auto; }
                     
-                    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 5px; }
-                    th { border-bottom: 1px dashed #000; padding: 4px 0; border-top: 1px dashed #000; font-size: 0.75rem; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+                    th { border-bottom: 1px dashed #000; padding: 5px 0; border-top: 1px dashed #000; font-size: 0.7rem; text-transform: uppercase; }
+                    td { vertical-align: top; font-size: 0.85rem; }
                     
-                    .summary { margin-top: 10px; font-size: 0.9rem; }
-                    .summary-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
-                    .grand-total { font-size: 1.1rem; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 0; margin-top: 5px; }
-                    
-                    .qr-container { margin-top: 15px; text-align: center; }
-                    .qr-img { width: 100px; height: 100px; border: 1px solid #eee; padding: 2px; }
-                    .footer { font-size: 0.75rem; color: #555; margin-top: 20px; text-align: center; font-style: italic; }
-                    @media print {
-                        body { width: 76mm; margin: 0; padding: 0; }
-                        @page { margin: 0; }
+                    .summary { margin-top: 8px; }
+                    .summary-row { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 0.9rem; }
+                    .grand-total { 
+                        font-size: 1.2rem; 
+                        border-top: 1px double #000; 
+                        border-bottom: 1px double #000; 
+                        padding: 6px 0; 
+                        margin-top: 8px;
+                        font-weight: 900;
                     }
+                    
+                    .qr-section { margin-top: 20px; border: 1px solid #000; padding: 10px; border-radius: 8px; }
+                    .qr-code { width: 120px; height: 120px; margin-bottom: 5px; }
+                    .qr-text { font-size: 0.7rem; font-weight: bold; }
+                    
+                    .footer { font-size: 0.75rem; margin-top: 20px; border-top: 1px dashed #000; padding-top: 10px; }
+                    .reprint-tag { background: #000; color: #fff; padding: 2px 8px; font-size: 0.7rem; display: inline-block; margin-bottom: 5px; }
                 </style>
             </head>
-            <body onload="setTimeout(() => { window.print(); window.close(); }, 500);">
+            <body onload="setTimeout(() => { window.print(); window.close(); }, 800);">
                 <div class="center">
-                    ${store.entityName ? `<div class="header-sub bold">${store.entityName.toUpperCase()}</div>` : ''}
-                    <h1 class="header-title">${store.storeName.toUpperCase()}</h1>
-                    ${store.config.showAddress && store.address ? `<div class="meta-text mt-10">${store.address}</div>` : ''}
-                    ${store.config.showGSTIN && store.gstin ? `<div class="meta-text bold">GSTIN: ${store.gstin}</div>` : ''}
-                    ${store.config.showFSSAI && store.fssai ? `<div class="meta-text">FSSAI No: ${store.fssai}</div>` : ''}
+                    ${isReprint ? `<div class="reprint-tag bold">REPRINTED BILL</div>` : ''}
+                    ${store.entityName ? `<div class="store-entity bold">${store.entityName}</div>` : ''}
+                    <h1 class="store-name">${store.storeName}</h1>
+                    <div class="address-text">${store.address || ''}</div>
+                    
+                    ${store.gstin ? `<div class="bold" style="font-size:0.75rem;">GSTIN: ${store.gstin}</div>` : ''}
+                    ${store.fssai ? `<div style="font-size:0.7rem;">FSSAI: ${store.fssai}</div>` : ''}
                     
                     <div class="hr"></div>
-                    ${isReprint ? `<div class="bold" style="font-size:0.8rem;">*** REPRINTED BILL ***</div>` : ''}
-                    <div class="bold" style="font-size:1rem; margin: 4px 0;">${order.type.toUpperCase()}</div>
+                    <div class="bold" style="font-size:1.1rem; letter-spacing: 2px;">${order.type === 'walkin' ? 'CASH MEMO' : 'ORDER INVOICE'}</div>
                     <div class="hr"></div>
                 </div>
 
-                <div class="meta-text">
-                    <div class="summary-row"><span class="bold">Order ID:</span> <span>${order.orderId}</span></div>
-                    <div class="summary-row"><span class="bold">Date & Time:</span> <span>${order.date} ${order.time}</span></div>
-                    <div class="summary-row"><span class="bold">Pay Mode:</span> <span>${order.paymentMethod}</span></div>
+                <div style="font-size: 0.8rem;">
+                    <div class="summary-row"><span>ORDER: #${order.orderId.slice(-6).toUpperCase()}</span> <span>${order.time}</span></div>
+                    <div class="summary-row"><span>DATE: ${order.date}</span> <span>${order.paymentMethod}</span></div>
                 </div>
                 
                 <div class="hr"></div>
@@ -88,10 +104,9 @@ window.ReceiptTemplates = {
                 <table>
                     <thead>
                         <tr>
-                            <th style="text-align:left;">Item</th>
-                            <th style="text-align:center; width: 12%;">Qty</th>
-                            <th style="text-align:right; width: 22%;">Rate</th>
-                            <th style="text-align:right; width: 22%;">Total</th>
+                            <th style="text-align:left;">Item Description</th>
+                            <th style="text-align:center; width: 15%;">Qty</th>
+                            <th style="text-align:right; width: 25%;">Amount</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -101,33 +116,48 @@ window.ReceiptTemplates = {
 
                 <div class="hr"></div>
                 
-                <div class="summary meta-text">
+                <div class="summary">
                     <div class="summary-row">
-                        <span>Total Items:</span>
+                        <span>Items Count:</span>
                         <span>${order.items.reduce((sum, i) => sum + i.quantity, 0)}</span>
                     </div>
                     <div class="summary-row">
                         <span>Subtotal:</span>
-                        <span>${order.subtotal.toFixed(2)}</span>
+                        <span>₹${order.subtotal.toFixed(2)}</span>
                     </div>
-                    ${order.deliveryFee > 0 ? `<div class="summary-row"><span>Delivery Fee:</span> <span>${order.deliveryFee.toFixed(2)}</span></div>` : ''}
-                    ${order.discount > 0 ? `<div class="summary-row"><span>Discount:</span> <span>-${order.discount.toFixed(2)}</span></div>` : ''}
+                    ${order.deliveryFee > 0 ? `<div class="summary-row"><span>Delivery:</span> <span>₹${order.deliveryFee.toFixed(2)}</span></div>` : ''}
+                    ${order.discount > 0 ? `<div class="summary-row"><span>Discount:</span> <span style="color:#000;">-₹${order.discount.toFixed(2)}</span></div>` : ''}
                     
-                    <div class="summary-row grand-total bold">
-                        <span>Grand Total:</span>
-                        <span>Rs ${order.total.toFixed(2)}</span>
+                    <div class="summary-row grand-total">
+                        <span>NET PAYABLE</span>
+                        <span>₹${order.total.toFixed(2)}</span>
                     </div>
                 </div>
 
-                <div class="mt-10 meta-text">
+                <div class="mt-10" style="font-size: 0.85rem;">
                     <div class="bold">Customer: ${this.escapeHtml(order.customerName)}</div>
-                    ${order.phone ? `<div>Phone: ${this.escapeHtml(order.phone)}</div>` : ''}
-                    ${order.customerNote ? `<div style="margin-top:5px; padding: 5px; border: 1px dashed #000; font-size: 0.75rem;"><strong>Note:</strong> ${this.escapeHtml(order.customerNote)}</div>` : ''}
+                    ${order.phone ? `<div>Contact: ${this.escapeHtml(order.phone)}</div>` : ''}
+                    ${order.customerNote ? `<div style="margin-top:8px; padding: 8px; border: 1px solid #000; font-size: 0.7rem; line-height:1.4;"><strong>NOTE:</strong> ${this.escapeHtml(order.customerNote)}</div>` : ''}
                 </div>
 
-                <div class="footer">
-                    ${store.config.showTagline && store.tagline ? `<div>${store.tagline}</div>` : ''}
-                    ${store.config.showPoweredBy && store.poweredBy ? `<div style="margin-top:5px; opacity:0.6;">${store.poweredBy}</div>` : ''}
+                ${isReprint ? `
+                <div class="center bold" style="border: 1px solid #000; padding: 4px; margin: 10px 0; font-size: 1.1rem;">
+                    DUPLICATE / REPRINT
+                </div>` : ''}
+
+                ${(store.config && store.config.showFeedbackQR !== false) ? `
+                <div class="qr-section center">
+                    <img class="qr-code" src="${qrUrl}" alt="Feedback QR">
+                    <div class="qr-text">SCAN TO GIVE FEEDBACK</div>
+                    <div style="font-size:0.6rem; margin-top:2px;">Win a surprise on your next visit!</div>
+                </div>` : ''}
+
+                <div class="footer center">
+                    <div class="bold">${store.tagline || 'Thank You! Visit Again'}</div>
+                    <div style="margin-top:5px; font-size: 0.65rem; opacity:0.7;">
+                        ${store.poweredBy || 'Powered by Prasant ERP'}
+                    </div>
+                    <div style="font-size: 0.6rem; margin-top:5px;">*** This is a computer generated bill ***</div>
                 </div>
             </body>
             </html>

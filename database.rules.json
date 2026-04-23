@@ -1,102 +1,92 @@
 {
   "rules": {
     "admins": {
-      ".read": "auth != null && auth.token.admin === true",
-      ".write": "auth.token.admin === true"
+      ".indexOn": ["email"],
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
     },
     "migrationStatus": {
       ".read": "auth != null",
-      ".write": "auth.token.admin === true"
+      ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
     },
     "riders": {
-      ".read": "auth != null",
+      ".indexOn": ["email"],
+      ".read": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
       "$riderId": {
-        ".read": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
-        ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)",
+        ".read": "auth != null && (auth.uid == $riderId || data.child('email').val() == auth.token.email || root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
+        ".write": "auth != null && (auth.uid == $riderId || root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
         ".validate": "newData.hasChildren(['name', 'email'])"
       }
     },
     "riderStats": {
       ".read": "auth != null",
       "$riderId": {
-        ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)"
+        ".write": "auth != null && (auth.uid == $riderId || root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
       }
     },
     "botStatus": {
       ".read": "auth != null",
-      ".write": "auth.token.admin === true"
+      ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
     },
     "logs": {
-      ".read": "auth != null && auth.token.admin === true",
+      ".read": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
       ".write": "auth != null"
     },
 
     "$outlet": {
       "settings": {
         ".read": "auth != null",
-        ".write": "auth.token.admin === true"
+        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
       },
       "appConfig": {
         ".read": "auth != null",
-        ".write": "auth.token.admin === true"
+        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
       },
       "uiConfig": {
         ".read": "auth != null",
-        ".write": "auth.token.admin === true"
+        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
       },
       "orders": {
-        ".read": "(auth != null && auth.token.admin === true) || (auth != null && query.orderByChild == 'assignedRider')",
+        ".indexOn": ["assignedRider", "status", "whatsappNumber"],
+        ".read": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email || query.orderByChild == 'assignedRider' && query.equalTo == auth.token.email || query.orderByChild == 'status')",
         "$orderId": {
-          ".read": "auth != null && (auth.token.admin === true || data.child('assignedRider').val() == auth.token.email || data.child('whatsappNumber').val() == auth.token.whatsapp)",
-          ".write": "auth != null && (auth.token.admin === true || !data.exists() || data.child('assignedRider').val() == auth.token.email)",
+          ".read": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email || !data.child('assignedRider').exists() || data.child('assignedRider').val() == auth.token.email || data.child('whatsappNumber').val() == auth.token.whatsapp)",
+          ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email || !data.exists() || data.child('assignedRider').val() == auth.token.email || !data.child('assignedRider').exists())",
           ".validate": "newData.hasChild('status')"
         }
       },
       "categories": {
         ".read": "auth != null",
-        ".write": "auth.token.admin === true"
+        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
       },
       "dishes": {
         ".read": "auth != null",
-        ".write": "auth.token.admin === true"
+        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
       },
       "feedbacks": {
-        ".read": "auth != null && auth.token.admin === true",
+        ".read": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
         "$feedbackId": {
           ".write": "auth != null && !data.exists()"
         }
       },
       "inventory": {
         ".read": "auth != null",
-        ".write": "auth.token.admin === true"
+        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
       },
       "liveTracker": {
         "$riderId": {
           ".read": "auth != null",
-          ".write": "auth != null && (auth.token.admin === true || auth.uid == $riderId)"
+          ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email || auth.uid == $riderId)"
         }
       },
       "metadata": {
         ".read": "auth != null",
-        ".write": "auth.token.admin === true"
+        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
       },
       "lostSales": {
-        ".read": "auth != null && auth.token.admin === true",
+        ".read": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
         ".write": "auth != null"
       }
-    },
-
-    
-    "settings": { ".read": "auth != null", ".write": "auth.token.admin === true" },
-    "appConfig": { ".read": "auth != null", ".write": "auth.token.admin === true" },
-    "uiConfig": { ".read": "auth != null", ".write": "auth.token.admin === true" },
-    "orders": {
-      ".read": "(auth != null && auth.token.admin === true) || (auth != null && query.orderByChild == 'assignedRider')",
-      "$orderId": {
-        ".read": "auth != null && (auth.token.admin === true || data.child('assignedRider').val() == auth.token.email || data.child('whatsappNumber').val() == auth.token.whatsapp)",
-        ".write": "auth != null && (auth.token.admin === true || !data.exists())"
-      }
-    },
-    "categories": { ".read": "auth != null", ".write": "auth.token.admin === true" }
+    }
   }
 }
