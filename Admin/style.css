@@ -45,7 +45,7 @@
 
     /* HEADER & SPACING */
     --header-height: 80px;
-    --header-offset: 110px;
+    --header-offset: 180px;
 
     /* SURFACES */
     --glass-surface: rgba(255, 255, 255, 0.4);
@@ -1075,7 +1075,7 @@ tr:hover td {
 .menu-grid {
     display: grid;
     gap: 20px;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     margin-top: 20px;
 }
 
