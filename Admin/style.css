@@ -35,8 +35,8 @@
     --glass-edge: rgba(0, 0, 0, 0.04);
 
     /* ADDITIONAL BRANDING */
-    --primary-orange: #F97316;
-    --text-dark: #0F172A;
+    --primary-orange: var(--primary);
+    --text-dark: var(--text-main);
     --shadow-sm: 0 1px 4px rgba(0,0,0,0.04);
 
     --sidebar-width: 260px;
@@ -48,6 +48,18 @@
 
     /* SURFACES */
     --glass-surface: rgba(255, 255, 255, 0.4);
+
+    /* SAFE AREAS */
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-bottom {
+    padding-bottom: var(--safe-bottom) !important;
+}
+
+.padding-safe {
+    padding: 20px;
+    padding-bottom: calc(20px + var(--safe-bottom));
 }
 
 #authOverlay.hidden {
