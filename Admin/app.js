@@ -1099,6 +1099,13 @@ window.switchTab = (tabId) => {
         if (posTab) posTab.classList.remove('pos-fullscreen');
     }
 
+    // Handle Reports Fullscreen/Immersive
+    if (tabId === 'reports') {
+        body.classList.add('reports-immersive');
+    } else {
+        body.classList.remove('reports-immersive');
+    }
+
     // Update Sidebar Navigation Active State
     document.querySelectorAll('.sidebar li').forEach(li => li.classList.remove('active'));
     const mainItem = document.getElementById(`menu-${tabId}`);
@@ -1635,17 +1642,17 @@ function calculateTopSpenders(snap) {
         .slice(0, 5);
 
     list.innerHTML = sorted.map(([phone, data]) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:10px;">
-            <div>
-                <div style="font-size:14px; font-weight:700; color:var(--text-main);">${escapeHtml(data.name)}</div>
-                <div style="font-size:11px; color:var(--text-muted)">${phone}</div>
+        <div class="top-spender-card">
+            <div class="flex-col">
+                <div class="spender-name">${escapeHtml(data.name)}</div>
+                <div class="spender-phone">${phone}</div>
             </div>
-            <div style="text-align:right">
-                <div style="font-size:14px; font-weight:800; color:var(--action-green)">₹${data.total.toLocaleString()}</div>
-                <div style="font-size:10px; color:var(--text-muted); font-weight:600;">${data.count} VISITS</div>
+            <div class="text-right">
+                <div class="spender-total">₹${data.total.toLocaleString()}</div>
+                <div class="spender-meta">${data.count} VISITS</div>
             </div>
         </div>
-    `).join('') || '<p style="font-size:12px; color:var(--text-muted); text-align:center; padding:20px;">Waiting for first delivery...</p>';
+    `).join('') || '<p class="text-center py-20 text-muted fs-12">Waiting for first delivery...</p>';
 }
 
 function renderTopItems() {
@@ -1660,17 +1667,17 @@ function renderTopItems() {
         .slice(0, 5);
 
     list.innerHTML = sorted.map(([name, count], index) => `
-        <div style="display:flex; align-items:center; gap:12px; padding:10px; background:rgba(0,0,0,0.02); border-radius:10px; margin-bottom:8px; border: 1px solid rgba(0,0,0,0.03);">
-            <div style="font-size:14px; font-weight:800; color:var(--primary); width:20px;">${index + 1}</div>
-            <div style="flex:1">
-                <div style="font-size:13px; font-weight:600; color:var(--text-main)">${name}</div>
-                <div style="font-size:11px; color:var(--text-muted)">${count} sold</div>
+        <div class="top-item-card">
+            <div class="top-item-rank">${index + 1}</div>
+            <div class="flex-1">
+                <div class="top-item-name">${name}</div>
+                <div class="top-item-count">${count} sold</div>
             </div>
-            <div style="height:4px; width:40px; background:rgba(0,0,0,0.05); border-radius:2px; overflow:hidden;">
-                <div style="height:100%; width:${Math.min(100, (count / sorted[0][1]) * 100)}%; background:var(--primary);"></div>
+            <div class="top-item-bar-bg">
+                <div class="top-item-bar-fill" style="width:${Math.min(100, (count / sorted[0][1]) * 100)}%;"></div>
             </div>
         </div>
-    `).join("") || '<p style="font-size:12px; color:var(--text-muted); text-align:center; padding:10px;">No sales data yet.</p>';
+    `).join("") || '<p class="text-center py-10 text-muted fs-12">No sales data yet.</p>';
 }
 
 window.markAsPaid = (id) => {
@@ -2434,21 +2441,21 @@ window.generateCustomReport = () => {
 
         // Render Table
         tableBody.innerHTML = salesData.map(o => `
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.03)">
-                <td data-label="Date" style="padding:15px; font-family:monospace; font-size:12px;">${formatDate(o.createdAt)}</td>
-                <td data-label="Customer" style="padding:15px;">
-                    <div style="font-weight:700; color:var(--text-main)">${o.customerName || 'Guest'}</div>
-                    <div style="font-size:11px; color:var(--text-muted)">${o.phone || ''}</div>
+            <tr class="report-row-bordered">
+                <td data-label="Date" class="report-cell report-date-cell">${formatDate(o.createdAt)}</td>
+                <td data-label="Customer" class="report-cell">
+                    <div class="report-cust-name">${o.customerName || 'Guest'}</div>
+                    <div class="report-cust-phone">${o.phone || ''}</div>
                 </td>
-                <td data-label="Total" style="padding:15px; font-weight:800; color:var(--action-green)">₹${o.total || 0}</td>
-                <td data-label="Method" style="padding:15px;"><small>${o.paymentMethod || 'COD'}</small></td>
-                <td data-label="Items" style="padding:15px;">
-                    <div style="max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--text-muted)" title="${o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : ''}">
+                <td data-label="Total" class="report-cell report-total-cell">₹${o.total || 0}</td>
+                <td data-label="Method" class="report-cell"><span class="badge badge-secondary">${o.paymentMethod || 'COD'}</span></td>
+                <td data-label="Items" class="report-cell">
+                    <div class="text-muted-small text-truncate" style="max-width:250px;" title="${o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : ''}">
                         ${o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : 'Empty'}
                     </div>
                 </td>
             </tr>
-        `).join('') || "<tr><td colspan='5' style='text-align:center; padding:30px; color:var(--text-muted)'>No orders found for this range</td></tr>";
+        `).join('') || "<tr><td colspan='5' class='report-cell text-center py-30 text-muted'>No orders found for this range</td></tr>";
 
         // Render visual chart
         renderRevenueChart(salesData);
@@ -2470,6 +2477,10 @@ function renderRevenueChart(data) {
     const values = labels.map(l => dailyData[l]);
 
     if (revenueChart) revenueChart.destroy();
+
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    const tickColor = isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)';
+    const gridColor = isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
 
     revenueChart = new Chart(ctx, {
         type: 'line',
@@ -2493,12 +2504,12 @@ function renderRevenueChart(data) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } }
+                    grid: { color: gridColor },
+                    ticks: { color: tickColor, font: { size: 10 } }
                 },
                 x: {
                     grid: { display: false },
-                    ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } }
+                    ticks: { color: tickColor, font: { size: 10 } }
                 }
             },
             plugins: {
@@ -3586,6 +3597,24 @@ window.submitWalkinSale = async () => {
         createdAt: Date.now()
     };
 
+    // Generate and save receipt HTML for persistence
+    try {
+        let store = {
+            entityName: "", storeName: window.currentOutlet === 'pizza' ? 'ROSHANI PIZZA' : 'ROSHANI CAKES',
+            address: "", gstin: "", fssai: "", tagline: "THANK YOU", poweredBy: "Powered by Roshani ERP",
+            config: { showAddress: true, showGSTIN: false, showFSSAI: false, showTagline: true, showPoweredBy: true, showQR: true, showFeedbackQR: true }
+        };
+        const storeSnap = await Outlet.ref("settings/Store").once("value");
+        if (storeSnap.exists()) {
+            store = { ...store, ...storeSnap.val() };
+        }
+        
+        const stdData = standardizeOrderData(orderData);
+        orderData.receiptHtml = window.ReceiptTemplates.generateThermalReceipt(stdData, store, false);
+    } catch (e) {
+        console.error("Error generating receipt HTML for storage:", e);
+    }
+
     try {
         await Outlet.ref('orders/' + orderId).set(orderData);
 
@@ -3693,15 +3722,27 @@ async function printOrderReceipt(rawOrder, isReprint = false) {
     const o = standardizeOrderData(rawOrder);
     if (!o) return;
 
+    // If it's the original print and we have saved HTML, use it
+    if (!isReprint && rawOrder.receiptHtml) {
+        const printWindow = window.open('', '_blank', 'width=450,height=800');
+        if (printWindow) {
+            printWindow.document.write(rawOrder.receiptHtml);
+            printWindow.document.close();
+            return;
+        }
+    }
+
     let store = {
         entityName: "", storeName: window.currentOutlet === 'pizza' ? 'ROSHANI PIZZA' : 'ROSHANI CAKES',
         address: "", gstin: "", fssai: "", tagline: "THANK YOU", poweredBy: "Powered by Roshani ERP",
-        config: { showAddress: true, showGSTIN: false, showFSSAI: false, showTagline: true, showPoweredBy: true, showQR: false }
+        config: { showAddress: true, showGSTIN: false, showFSSAI: false, showTagline: true, showPoweredBy: true, showQR: true, showFeedbackQR: true }
     };
 
     try {
         const storeSnap = await Outlet.ref("settings/Store").once("value");
-        if (storeSnap.exists()) store = storeSnap.val();
+        if (storeSnap.exists()) {
+            store = { ...store, ...storeSnap.val() };
+        }
     } catch (e) { }
 
     const printWindow = window.open('', '_blank', 'width=450,height=800');
@@ -3797,6 +3838,7 @@ window.loadStoreSettings = async () => {
         document.getElementById('checkShowQR').checked = !!config.showQR;
         document.getElementById('checkShowWifiInfo').checked = !!config.showWifiInfo;
         document.getElementById('checkShowSocial').checked = !!config.showSocial;
+        document.getElementById('checkShowFeedbackQR').checked = config.showFeedbackQR !== false;
 
         if (storeData.qrUrl) {
             document.getElementById('qrPreview').src = storeData.qrUrl;
@@ -3890,7 +3932,8 @@ window.saveStoreSettings = async () => {
                 showPoweredBy: document.getElementById('checkShowPoweredBy').checked,
                 showQR: document.getElementById('checkShowQR').checked,
                 showWifiInfo: document.getElementById('checkShowWifiInfo').checked,
-                showSocial: document.getElementById('checkShowSocial').checked
+                showSocial: document.getElementById('checkShowSocial').checked,
+                showFeedbackQR: document.getElementById('checkShowFeedbackQR').checked
             }
         };
 

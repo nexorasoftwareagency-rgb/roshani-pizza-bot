@@ -214,15 +214,14 @@
                         </div>
 
                         <div class="panel">
-                            <div class="card-header flex-row flex-between">
-                                <h3 class="card-title">All Categories</h3>
-                                <button onclick="migrateAddonsToCategories()" class="btn-text-primary-sm" title="Synchronize existing dish add-ons to categories">
-                                    <i class="fas fa-sync"></i> Migrate Dish Add-ons
+                            <div class="panel-header flex-row flex-between flex-center">
+                                <h3 class="panel-title">🚚 Rider Status</h3>
+                                <button onclick="switchTab('riders')" class="btn-text-primary-sm" title="Manage Delivery Staff and Status">
+                                    Manage <i data-lucide="chevron-right"></i>
                                 </button>
                             </div>
-                            <span id="onlineRiderCount" class="badge badge-ready">0 ON</span>
-                            </div>
-                            <div id="riderStatusList">
+                            <div class="mb-10"><span id="onlineRiderCount" class="badge badge-ready">0 ON</span></div>
+                            <div id="riderStatusList" class="scroll-y" style="max-height: 300px;">
                                 <!-- Dynamic -->
                             </div>
                         </div>
@@ -566,8 +565,9 @@
 
                                     <div class="flex-row flex-gap-12 mb-14">
                                         <div class="flex-1">
-                                            <label class="form-label-small">Google Review / Feedback URL</label>
-                                            <input type="text" id="settingReviewUrl" class="form-input" placeholder="Short URL to review page">
+                                            <label class="form-label-small">Receipt Feedback URL (Base)</label>
+                                            <input type="text" id="settingReviewUrl" class="form-input" placeholder="https://yourwebsite.com/feedback">
+                                            <small style="font-size: 0.65rem; color: var(--text-muted);">This URL will be used for the Receipt QR. Order details will be appended automatically.</small>
                                         </div>
                                     </div>
 
@@ -605,7 +605,10 @@
                                             <input type="checkbox" id="checkShowWifiInfo"> <span>Show WiFi Info</span>
                                         </label>
                                         <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
-                                            <input type="checkbox" id="checkShowSocial"> <span>Show Social/Feedback</span>
+                                            <input type="checkbox" id="checkShowSocial"> <span>Show Social Handles</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small" title="Toggle Feedback QR display on thermal receipts">
+                                            <input type="checkbox" id="checkShowFeedbackQR" checked> <span>Show Feedback QR (Receipt)</span>
                                         </label>
                                     </div>
 
@@ -822,8 +825,9 @@
                     </div>
                 </div>
                 
-                <!-- KPI TOP ROW -->
-                <div class="kpi-row mb-24">
+                <div class="reports-container-fluid w-full">
+                    <!-- KPI TOP ROW -->
+                    <div class="kpi-row mb-24">
                     <div class="kpi-card">
                         <div class="kpi-icon-box green"><i data-lucide="indian-rupee"></i></div>
                         <div class="kpi-info">
@@ -892,6 +896,7 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
                 <div id="reportsContainer" class="hidden"></div>
             </div>
