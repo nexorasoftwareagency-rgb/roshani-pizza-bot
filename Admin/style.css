@@ -401,8 +401,24 @@ body {
     display: grid;
     gap: 24px;
     grid-template-columns: 2fr 1fr;
-    /* 2/3 and 1/3 */
+    margin-top: 24px;
 }
+
+.dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Utilities */
+.mt-24 { margin-top: 24px !important; }
+.mt-20 { margin-top: 20px !important; }
 
 /* REPORTS GRID */
 .reports-grid {
@@ -583,23 +599,9 @@ tr:hover td {
 }
 
 /* STATUS BADGES */
-.dashboard-layout {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 25px;
-    align-items: flex-start;
-}
-
-.dashboard-main {
-    flex: 1;
-    min-width: 600px;
-}
-
-.dashboard-sidebar {
-    width: 350px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+/* DASHBOARD COMPONENTS */
+.dashboard-sidebar .panel {
+    margin-bottom: 0;
 }
 
 @media (max-width: 1100px) {
@@ -2414,12 +2416,7 @@ body {
 }
 
 /* PRIORITY QUEUE */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 24px;
-    margin-top: 24px;
-}
+/* PRIORITY QUEUE */
 
 @media (max-width: 1024px) {
 

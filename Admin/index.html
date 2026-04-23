@@ -169,31 +169,33 @@
 
                 <div class="dashboard-grid">
                     <!-- MAIN: Recent Orders -->
-                    <div class="priority-section">
-                        <div class="flex-row justify-between flex-center mb-15">
-                            <h3 class="section-title"><i data-lucide="alert-circle" class="icon-fixed-sm"></i> Priority Orders (Action Required)</h3>
-                            <button class="btn-text-primary-sm" onclick="switchTab('orders')">View All</button>
+                    <div class="dashboard-main">
+                        <div class="priority-section">
+                            <div class="flex-row justify-between flex-center mb-15">
+                                <h3 class="section-title"><i data-lucide="alert-circle" class="icon-fixed-sm"></i> Priority Orders (Action Required)</h3>
+                                <button class="btn-text-primary-sm" onclick="switchTab('orders')">View All</button>
+                            </div>
+                            <div id="priorityOrderList" class="priority-order-list">
+                                <div class="loading-placeholder">Scanning for pending orders...</div>
+                            </div>
                         </div>
-                        <div id="priorityOrderList" class="priority-order-list">
-                            <div class="loading-placeholder">Scanning for pending orders...</div>
-                        </div>
-                    </div>
 
-                    <div class="recent-section">
-                        <h3 class="section-title">Recent Order History</h3>
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Customer</th>
-                                        <th>Total</th>
-                                        <th>Payment</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="ordersTable"></tbody>
-                            </table>
+                        <div class="recent-section mt-24">
+                            <h3 class="section-title">Recent Order History</h3>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Customer</th>
+                                            <th>Total</th>
+                                            <th>Payment</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ordersTable"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
