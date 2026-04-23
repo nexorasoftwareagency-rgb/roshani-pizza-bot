@@ -399,26 +399,26 @@ body {
 /* DASHBOARD GRID */
 .dashboard-grid {
     display: grid;
-    gap: 24px;
+    gap: 18px;
     grid-template-columns: 2fr 1fr;
-    margin-top: 24px;
+    margin-top: 18px;
 }
 
 .dashboard-main {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 18px;
 }
 
 .dashboard-sidebar {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 18px;
 }
 
 /* Utilities */
-.mt-24 { margin-top: 24px !important; }
-.mt-20 { margin-top: 20px !important; }
+.mt-24 { margin-top: 18px !important; }
+.mt-20 { margin-top: 15px !important; }
 
 /* REPORTS GRID */
 .reports-grid {
@@ -439,20 +439,20 @@ body {
 /* KPI CARDS */
 .kpi-row {
     display: grid;
-    gap: 20px;
+    gap: 16px;
     grid-template-columns: repeat(4, 1fr);
-    margin-bottom: 25px;
+    margin-bottom: 20px;
 }
 
 .kpi-card {
     align-items: center;
     background: var(--bg-primary);
     border: 1px solid var(--glass-border);
-    border-radius: 24px;
+    border-radius: 20px;
     box-shadow: var(--shadow-medium);
     display: flex;
-    gap: 16px;
-    padding: 24px;
+    gap: 14px;
+    padding: 18px;
     position: relative;
     overflow: hidden;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -543,10 +543,10 @@ body {
     -webkit-backdrop-filter: blur(var(--glass-blur));
     backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
-    border-radius: 20px;
+    border-radius: 18px;
     box-shadow: var(--shadow-medium);
-    margin-bottom: 24px;
-    padding: 28px;
+    margin-bottom: 18px;
+    padding: 22px;
     width: 100%;
     /* Ensure panels always fill the available width */
 }
@@ -602,6 +602,16 @@ tr:hover td {
 /* DASHBOARD COMPONENTS */
 .dashboard-sidebar .panel {
     margin-bottom: 0;
+}
+
+.empty-priority {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+    background: rgba(0,0,0,0.02);
+    border-radius: 12px;
+    border: 1px dashed var(--glass-border);
 }
 
 @media (max-width: 1100px) {
@@ -1020,11 +1030,11 @@ tr:hover td {
 }
 
 .mb-15 {
-    margin-bottom: 15px;
+    margin-bottom: 12px;
 }
 
 .mb-24 {
-    margin-bottom: 24px;
+    margin-bottom: 18px;
 }
 
 .p-10 {
@@ -2437,7 +2447,7 @@ body {
 .priority-order-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     max-height: 500px;
     overflow-y: auto;
 }
