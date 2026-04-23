@@ -73,6 +73,12 @@ async function addInAppNotification(uid, title, body, type = 'info', icon = 'bel
 // =============================
 // HELPERS
 // =============================
+function formatJid(phone) {
+    if (!phone) return null;
+    let clean = String(phone).replace(/\D/g, '');
+    if (clean.length === 10) clean = '91' + clean;
+    return (clean.length >= 10) ? (clean + "@s.whatsapp.net") : null;
+}
 
 // =============================
 // GLOBAL STATE
@@ -113,7 +119,8 @@ async function notifyDeveloper(sock, errorMsg) {
         const devPhone = storeData?.developerPhone;
         if (!devPhone) return;
 
-        const adminJid = devPhone.replace(/\D/g, '') + "@s.whatsapp.net";
+        const adminJid = formatJid(devPhone);
+        if (!adminJid) return;
 
         // Sanitize & Truncate to prevent leaking user data or long stack traces
         const safeError = String(errorMsg)
@@ -212,48 +219,46 @@ async function sendDailyReport(sock, targetOutlet = null) {
         const migrationInfo = await getData("migrationStatus/multiOutlet") || {};
         const outlets = targetOutlet ? [targetOutlet] : (migrationInfo.outlets || ['pizza', 'cake']);
         
-        // Always use root store data for report contacts
-        const storeData = await getData("settings/Store") || {};
+        // Always use target outlet settings for report contacts if possible, otherwise fallback to default
+        const reportSettingsOutlet = targetOutlet || 'pizza';
+        const storeData = await getData("settings/Store", reportSettingsOutlet) || {};
         const recipients = [];
-        if (storeData.reportPhone) recipients.push(storeData.reportPhone.replace(/\D/g, '') + "@s.whatsapp.net");
-        if (storeData.developerPhone) recipients.push(storeData.developerPhone.replace(/\D/g, '') + "@s.whatsapp.net");
+        
+        const adminJid = formatJid(storeData.reportPhone);
+        const devJid = formatJid(storeData.developerPhone);
+        
+        if (adminJid) recipients.push(adminJid);
+        if (devJid) recipients.push(devJid);
 
-        if (recipients.length === 0) return;
+        if (recipients.length === 0) {
+            console.log(`[Report] No recipients configured for ${reportSettingsOutlet}.`);
+            return;
+        }
 
-        // Fetch Today's Orders
-        const now = new Date();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-        const todayStr = now.toISOString().split('T')[0];
+        // Fetch Today's Orders (IST Based)
+        const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
         
         let allTodayOrders = [];
         let revenueByOutlet = {};
 
         for (const outlet of outlets) {
             const orders = await getData("orders", outlet) || {};
-            const todayOrders = Object.values(orders).filter(o => {
-                const ts = o.createdAt ? new Date(o.createdAt).getTime() : 0;
-                return ts >= startOfDay;
-            });
+            const todayOrders = Object.values(orders).filter(o => o.createdAt && o.createdAt.startsWith(todayStr));
             
             allTodayOrders = allTodayOrders.concat(todayOrders);
-            revenueByOutlet[outlet] = todayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+            revenueByOutlet[outlet] = todayOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
         }
 
-        if (allTodayOrders.length === 0 && targetOutlet) {
-            const emptyMsg = `📊 *DAILY SALES SUMMARY* 📊\n` +
-                `` +
-                `🏪 *Store:* ${targetOutlet.toUpperCase()}\n` +
-                `📅 *Date:* ${new Date().toLocaleDateString()}\n` +
-                `🚫 No orders were placed today.\n` +
-                `━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-            for (const jid of recipients) await sock.sendMessage(jid, { text: emptyMsg });
-            await updateData('settings/Bot', { lastReportDate: todayStr }, targetOutlet);
+        // Skip if no orders found
+        if (allTodayOrders.length === 0) {
+            console.log(`[Report] No orders found for ${targetOutlet || 'all outlets'} on ${todayStr}. Skipping.`);
+            for (const outlet of outlets) {
+                await updateData('settings/Bot', { lastReportDate: todayStr }, outlet);
+            }
             return;
         }
 
-        if (allTodayOrders.length === 0) return; // Don't send global empty report if not targeted
-
-        const totalRevenue = allTodayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+        const totalRevenue = allTodayOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
         let reportMsg = `📊 *DAILY SALES SUMMARY* 📊\n`;
         reportMsg += ``;
@@ -520,7 +525,7 @@ async function startBot() {
         try {
             const migrationInfo = await getData("migrationStatus/multiOutlet") || {};
             const outlets = migrationInfo.outlets || ['pizza', 'cake'];
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
 
             for (const outlet of outlets) {
                 const storeSettings = await getData("settings/Store", outlet);
@@ -615,7 +620,7 @@ async function startBot() {
 
                 // [NEW] NOTIFY ADMIN IMMEDIATELY
                 try {
-                    await notifyAdminNewOrder(sock, id, order);
+                    await notifyAdmin(sock, id, order, 'NEW');
                     await handleOrderStatusUpdate(sock, id, order, true); 
                 } catch (err) {
                     console.error(`New Order Processing Error (${outlet}):`, err);
@@ -634,7 +639,8 @@ async function startBot() {
             const rawPhone = delSettings?.notifyPhone || storeSettings?.developerPhone;
             if (!rawPhone) return;
 
-            const adminNumber = rawPhone.replace(/\D/g, '') + "@s.whatsapp.net";
+            const adminNumber = formatJid(rawPhone);
+            if (!adminNumber) return;
             
             let itemsText = "";
             if (order.items) {
@@ -703,9 +709,8 @@ async function startBot() {
 
     async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
         try {
-            const phone = order.whatsappNumber || order.phone;
-            if (!phone) return;
-            const number = phone + "@s.whatsapp.net";
+            const number = formatJid(order.whatsappNumber || order.phone);
+            if (!number) return;
 
             // 1. STATUS UPDATE LOGIC
             if (!processedStatus[id] || processedStatus[id].status !== order.status || isNew) {
@@ -715,7 +720,8 @@ async function startBot() {
                 if (order.assignedRider) {
                     const rider = await getRiderByEmail(order.assignedRider, order.outlet);
                     if (rider) {
-                        const riderJid = rider.phone.replace(/\D/g, '') + "@s.whatsapp.net";
+                        const riderJid = formatJid(rider.phone);
+                        if (!riderJid) return;
                         
                         if (order.status === "Cooked") {
                             const rMsg = `🍳 *ORDER READY: COOKED*\n` +
@@ -753,8 +759,8 @@ async function startBot() {
                             for (const rid in ridersSnap) {
                                 const rider = ridersSnap[rid];
                                 if (rider.status === "Online") {
-                                    const riderJid = (rider.phone || "").replace(/\D/g, '') + "@s.whatsapp.net";
-                                    if (riderJid.length > 15) { // Basic JID validation
+                                    const riderJid = formatJid(rider.phone);
+                                    if (riderJid) {
                                         const broadcastMsg = `🔔 *NEW ORDER AVAILABLE*\n` +
                                             `` +
                                             `📦 *Order:* #${id}\n` +
