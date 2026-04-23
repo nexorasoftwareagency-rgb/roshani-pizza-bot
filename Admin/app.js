@@ -220,6 +220,8 @@ async function deleteImage(url) {
     }
 }
 
+window.AdminApp = window.AdminApp || {};
+
 // =============================
 // GLOBAL STATE & LOOKUPS
 // =============================
