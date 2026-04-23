@@ -49,14 +49,16 @@ async function getRiderByEmail(email, outlet = 'pizza') {
     return null;
 }
 
-async function addInAppNotification(uid, title, message, outlet = 'pizza') {
+async function addInAppNotification(uid, title, body, type = 'info', icon = 'bell', outlet = 'pizza') {
     if (!uid) return;
     try {
         const notifId = "NOTIF" + Date.now();
         await setData(`riders/${uid}/notifications/${notifId}`, {
             id: notifId,
             title,
-            message,
+            body,
+            type,
+            icon,
             timestamp: Date.now(),
             read: false
         }, outlet);
@@ -120,10 +122,10 @@ async function notifyDeveloper(sock, errorMsg) {
             .substring(0, 500);
 
         const alertMsg = `🛑 *CRITICAL BOT ALERT* 🛑\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `` +
             `⚠️ *Error:* ${safeError}\n` +
             `⏰ *Time:* ${new Date().toLocaleString()}\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `` +
             `_Check logs for details._`;
 
         await sock.sendMessage(adminJid, { text: alertMsg });
@@ -172,7 +174,9 @@ function parseTime(timeStr) {
     return hours * 60 + minutes;
 }
 
-function isShopOpen(openTime, closeTime) {
+function isShopOpen(openTime, closeTime, statusOverride) {
+    if (statusOverride === 'FORCE_OPEN') return true;
+    if (statusOverride === 'FORCE_CLOSED') return false;
     if (!openTime || !closeTime) return true; // Default to open if not set
 
     // FORCE IST (Asia/Kolkata) Timezone
@@ -237,7 +241,7 @@ async function sendDailyReport(sock, targetOutlet = null) {
 
         if (allTodayOrders.length === 0 && targetOutlet) {
             const emptyMsg = `📊 *DAILY SALES SUMMARY* 📊\n` +
-                `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `` +
                 `🏪 *Store:* ${targetOutlet.toUpperCase()}\n` +
                 `📅 *Date:* ${new Date().toLocaleDateString()}\n` +
                 `🚫 No orders were placed today.\n` +
@@ -252,14 +256,14 @@ async function sendDailyReport(sock, targetOutlet = null) {
         const totalRevenue = allTodayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
 
         let reportMsg = `📊 *DAILY SALES SUMMARY* 📊\n`;
-        reportMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        reportMsg += ``;
         reportMsg += `📅 *Date:* ${new Date().toLocaleDateString()}\n`;
         if (targetOutlet) {
             reportMsg += `🏪 *Store:* ${targetOutlet.toUpperCase()}\n`;
         } else {
             reportMsg += `🏪 *Store:* ALL OUTLETS\n`;
         }
-        reportMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        reportMsg += `\n`;
         reportMsg += `💰 *TOTAL REVENUE:* ₹${totalRevenue.toLocaleString()}\n`;
         reportMsg += `📦 *TOTAL ORDERS:* ${allTodayOrders.length}\n\n`;
         
@@ -269,7 +273,7 @@ async function sendDailyReport(sock, targetOutlet = null) {
             reportMsg += `${emoji} *${label} Sales:* ₹${rev.toLocaleString()}\n`;
         }
         
-        reportMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        reportMsg += ``;
         reportMsg += `_Generated automatically at closing time._`;
 
         for (const jid of recipients) await sock.sendMessage(jid, { text: reportMsg });
@@ -322,25 +326,25 @@ function formatOrderInvoice(orderId, order) {
     const greeting = name ? `Hello *${name}*! 👋\n\n` : "";
 
     let msg = `${greeting}🧾 *ORDER SUMMARY*\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += ``;
     msg += `🆔 *Order ID:* #${displayId}\n`;
     msg += `📍 *Type:* ${type}\n`;
     msg += `👤 *Customer:* ${order.customerName || "Guest"}\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += ``;
     msg += `📦 *ITEMS:*\n${itemsText || 'No items listed'}\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += ``;
     msg += `💰 *BILLING:*\n`;
     msg += `Subtotal: ₹${order.subtotal || order.itemTotal || 0}\n`;
     if (order.discount) msg += `Discount: ₹${order.discount}\n`;
     msg += `*TOTAL AMOUNT: ₹${order.total || 0}*\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += ``;
     return msg;
 }
 
 function formatCompactSummary(order) {
     if (!order.items) return "";
     let items = order.items.map(item => `• *${item.name}* (${item.size}) x${item.quantity || 1}`).join("\n");
-    return `📦 *ORDER ITEMS:*\n${items}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    return `📦 *ORDER ITEMS:*\n${items}\n`;
 }
 
 // =============================
@@ -394,7 +398,7 @@ function getFoodFunnyProgress(status, name = "") {
     const quip = statusQuips[Math.floor(Math.random() * statusQuips.length)];
     const bar = bars[status] || "⬜⬜⬜⬜⬜";
 
-    return `\n*Progress:* [ ${bar} ]\n\n_${quip}_\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    return `\n*Progress:* [ ${bar} ]\n\n_${quip}_\n`;
 }
 
 // =============================
@@ -406,7 +410,7 @@ async function sendGreeting(sock, sender, user) {
     const greeting = name ? `Hello *${name}*! 👋\n` : "";
 
     let msg = `${greeting}✨ *WELCOME TO ROSHANI PIZZA & CAKE* 🍕🎂\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += ``;
     msg += `Delicious food, delivered fast to your doorstep! 🚀\n\n`;
     msg += `Please select an outlet to view the menu:\n\n`;
     msg += `1️⃣ *Pizza Outlet* 🍕\n`;
@@ -478,7 +482,7 @@ async function sendCategories(sock, sender, user) {
     }
 
     msg += `📂 *SELECT CATEGORY - ${outletName.toUpperCase()}* ${outletEmoji}\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    msg += `\n`;
     user.categoryList.forEach((c, i) => {
         msg += `${i + 1}️⃣  ${c.name}\n`;
     });
@@ -650,14 +654,14 @@ async function startBot() {
             } else if (type === 'ABANDONED') {
                 adminMsg = `🚨 *CHECKOUT CANCELLED* 🚨\n`;
                 adminMsg += `🚫 _(Customer dropped off at Checkout)_ \n`;
-                adminMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
-                adminMsg += `🔗 *FOLLOW UP:* https://wa.me/${order.phone.replace(/\D/g, '')}\n`;
-                adminMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+                adminMsg += ``;
+                adminMsg += `🔗 *FOLLOW UP:* https://wa.me/91${order.phone.replace(/\D/g, '').slice(-10)}\n`;
+                adminMsg += ``;
             } else {
                 adminMsg = `📢 *ORDER UPDATE* 📢\n`;
             }
 
-            adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            adminMsg += ``;
             adminMsg += `🏪 *Outlet:* ${outletId.toUpperCase()}\n`;
             const safeOrderId = String(order.orderId || orderId || "");
             adminMsg += `🆔 *Order ID:* #${safeOrderId && safeOrderId !== 'N/A' ? safeOrderId.slice(-5) : "Draft"}\n`;
@@ -671,9 +675,9 @@ async function startBot() {
                 }
             }
 
-            adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            adminMsg += ``;
             adminMsg += `📦 *ITEMS:*\n${itemsText || 'No items listed'}\n`;
-            adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            adminMsg += ``;
             const safeTotal = order.total !== undefined ? Number(order.total) : 0;
             adminMsg += `💰 *TOTAL:* ₹${!isNaN(safeTotal) ? safeTotal : "N/A"}\n`;
             
@@ -687,7 +691,7 @@ async function startBot() {
             if (order.specialInstructions) {
                 adminMsg += `📝 *Note:* ${order.specialInstructions}\n`;
             }
-            adminMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            adminMsg += ``;
             adminMsg += `_Time: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}_`;
 
             await sock.sendMessage(adminNumber, { text: adminMsg });
@@ -713,24 +717,58 @@ async function startBot() {
                     if (rider) {
                         const riderJid = rider.phone.replace(/\D/g, '') + "@s.whatsapp.net";
                         
-                        if (order.status === "Out for Delivery") {
+                        if (order.status === "Cooked") {
+                            const rMsg = `🍳 *ORDER READY: COOKED*\n` +
+                                `` +
+                                `📦 *Order:* #${id}\n` +
+                                `👤 *Customer:* ${order.customerName}\n` +
+                                `🏠 *Address:* ${order.address}\n\n` +
+                                `_The order is cooked and ready for pickup! Please reach the outlet if you aren't already there._`;
+                            await sock.sendMessage(riderJid, { text: rMsg });
+                            await addInAppNotification(rider.uid, "🍳 Order Cooked", `Order #${id} is ready for pickup.`, 'warning', 'flame');
+                        } else if (order.status === "Out for Delivery") {
                             const rMsg = `🚚 *NEW ASSIGNMENT: OUT FOR DELIVERY*\n` +
-                                `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                                `` +
                                 `📦 *Order:* #${id}\n` +
                                 `👤 *Customer:* ${order.customerName}\n` +
                                 `🏠 *Address:* ${order.address}\n\n` +
                                 `_Please proceed for delivery immediately. Use the Rider App for navigation._`;
                             await sock.sendMessage(riderJid, { text: rMsg });
-                            await addInAppNotification(rider.uid, "🚀 Out for Delivery", `Order #${id} is now on your active trip.`);
+                            await addInAppNotification(rider.uid, "🚀 Out for Delivery", `Order #${id} is now on your active trip.`, 'success', 'truck');
                         } else if (order.status === "Delivered") {
                             const rMsg = `✅ *ORDER DELIVERED SUCCESSFULLY*\n` +
-                                `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                                `` +
                                 `Great job! Order *#${id}* for *${order.customerName}* has been marked as delivered.\n\n` +
                                 `💰 *Estimated Earnings:* ₹${order.riderCommission || 40}\n` +
                                 `_Your wallet balance has been updated._`;
                             await sock.sendMessage(riderJid, { text: rMsg });
-                            await addInAppNotification(rider.uid, "✅ Delivered", `Order #${id} completed successfully.`);
+                            await addInAppNotification(rider.uid, "✅ Delivered", `Order #${id} completed successfully.`, 'success', 'check-circle');
                         }
+                    }
+                } else if (order.status === "Cooked") {
+                    // BROADCAST TO ALL ONLINE RIDERS if no rider is assigned yet
+                    try {
+                        const ridersSnap = await getData("riders"); // Riders are global
+                        if (ridersSnap) {
+                            for (const rid in ridersSnap) {
+                                const rider = ridersSnap[rid];
+                                if (rider.status === "Online") {
+                                    const riderJid = (rider.phone || "").replace(/\D/g, '') + "@s.whatsapp.net";
+                                    if (riderJid.length > 15) { // Basic JID validation
+                                        const broadcastMsg = `🔔 *NEW ORDER AVAILABLE*\n` +
+                                            `` +
+                                            `📦 *Order:* #${id}\n` +
+                                            `🏪 *Outlet:* ${(order.outlet || 'pizza').toUpperCase()}\n` +
+                                            `📍 *Destination:* ${order.address || '---'}\n\n` +
+                                            `_This order is now COOKED and ready for pickup. Open your Rider App to accept!_`;
+                                        await sock.sendMessage(riderJid, { text: broadcastMsg });
+                                        await addInAppNotification(rid, "🔔 New Order Available", `Order #${id} is cooked and waiting for a rider.`, 'info', 'package');
+                                    }
+                                }
+                            }
+                        }
+                    } catch (broadcastErr) {
+                        console.error("Rider broadcast error:", broadcastErr);
                     }
                 }
 
@@ -748,13 +786,13 @@ async function startBot() {
                 else if (order.status === "Preparing") {
                     const summary = formatCompactSummary(order);
                     const progress = getFoodFunnyProgress("Preparing", order.customerName);
-                    msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n👨‍🍳 *CHEF IS COOKING!*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order:* #${id.slice(-5)}\n${summary}${progress}`;
+                    msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n👨‍🍳 *CHEF IS COOKING!*\n🆔 *Order:* #${id.slice(-5)}\n${summary}${progress}`;
                     statusImg = botSettings.imgPreparing;
                 }
                 else if (order.status === "Cooked") {
                     const summary = formatCompactSummary(order);
                     const progress = getFoodFunnyProgress("Cooked", order.customerName);
-                    msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n🍱 *READY & GETTING PACKED*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order:* #${id.slice(-5)}\n${summary}${progress}`;
+                    msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n🍱 *READY & GETTING PACKED*\n🆔 *Order:* #${id.slice(-5)}\n${summary}${progress}`;
                     statusImg = botSettings.imgCooked;
                 }
                 else if (order.status === "Out for Delivery") {
@@ -762,9 +800,9 @@ async function startBot() {
                     const progress = getFoodFunnyProgress("Out for Delivery", order.customerName);
                     let addrText = "";
                     if (order.address && order.type !== 'Walk-in') {
-                        addrText = `🏠 *To:* ${order.address}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        addrText = `🏠 *To:* ${order.address}\n`;
                     }
-                    msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n🚀 *OUT FOR DELIVERY*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order:* #${id.slice(-5)}\n${addrText}${summary}${progress}\n💵 *Payment:* ${order.paymentMethod || 'Cash/UPI'} (₹${order.total || 0})`;
+                    msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n🚀 *OUT FOR DELIVERY*\n🆔 *Order:* #${id.slice(-5)}\n${addrText}${summary}${progress}\n💵 *Payment:* ${order.paymentMethod || 'Cash/UPI'} (₹${order.total || 0})`;
                     statusImg = botSettings.imgOut;
                 }
                 else if (order.status === "Delivered") {
@@ -774,7 +812,7 @@ async function startBot() {
 
                     // 1. Send Invoice & Payment Confirmation
                     const invoice = formatOrderInvoice(id, order);
-                    let deliveryMsg = `Hello *${order.customerName || "Guest"}*! 👋\n\n✅ *ORDER DELIVERED SUCCESSFULLY!* 🍕\n\n${invoice}\n🤝 *Payment done via:* ${order.paymentMethod || 'Cash/UPI'}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    let deliveryMsg = `Hello *${order.customerName || "Guest"}*! 👋\n\n✅ *ORDER DELIVERED SUCCESSFULLY!* 🍕\n\n${invoice}\n🤝 *Payment done via:* ${order.paymentMethod || 'Cash/UPI'}\n`;
                     
                     await sock.sendMessage(number, { text: deliveryMsg });
 
@@ -783,7 +821,7 @@ async function startBot() {
 
                     // 2. Send Promotional Message + Funny Joke + Feedback Request
                     let promoMsg = `🌟 *WE HOPE YOU ENJOYED YOUR MEAL!* 🌟\n`;
-                    promoMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    promoMsg += ``;
                     promoMsg += `_${getFunnyFoodJoke()}_\n\n`;
                     promoMsg += `Your order from *${(brands.storeName || "Roshani Pizza & Cake").toUpperCase()}* is complete. We'd love to hear from you!\n\n`;
 
@@ -814,7 +852,7 @@ async function startBot() {
                     return;
                 }
                 else if (order.status === "Cancelled") {
-                    msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n❌ *ORDER CANCELLED*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nWe're sorry, but your order *#${id.slice(-5)}* has been cancelled. If you have any questions, please contact our support team. We hope to serve you again soon! 🍕🎂`;
+                    msg = `Hello *${order.customerName || "Guest"}*! 👋\n\n❌ *ORDER CANCELLED*\nWe're sorry, but your order *#${id.slice(-5)}* has been cancelled. If you have any questions, please contact our support team. We hope to serve you again soon! 🍕🎂`;
                     statusImg = botSettings.imgCancelled;
                 }
 
@@ -877,7 +915,7 @@ async function startBot() {
             // CHECK SHOP HOURS (Only after outlet is selected)
             if (user.outlet && !user.step?.startsWith("FEEDBACK")) {
                 const storeData = await getData("settings/Store", user.outlet) || {};
-                if (!isShopOpen(storeData.shopOpenTime, storeData.shopCloseTime)) {
+                if (!isShopOpen(storeData.shopOpenTime, storeData.shopCloseTime, storeData.shopStatus)) {
                     return sock.sendMessage(sender, {
                         text: `🌙 *WE ARE CURRENTLY CLOSED*\n\nThank you for reaching out! Our *${user.outlet.toUpperCase()}* shop is currently closed. We look forward to serving you during our opening hours:\n\n☀️ *Opening Time:* ${storeData.shopOpenTime || '10:00'}\n\nSee you soon! 🍕🎂`
                     });
@@ -898,7 +936,7 @@ async function startBot() {
 
                 let msg = name ? `Thanks *${name}*! 👋\n\n` : "";
                 msg += `✨ *THANK YOU FOR YOUR RATING!* ✨\n`;
-                msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                msg += ``;
                 msg += `What did you enjoy the most about your experience?\n\n`;
                 msg += `1️⃣  ${storeData.feedbackReason1 || 'Delicious Taste'}\n`;
                 msg += `2️⃣  ${storeData.feedbackReason2 || 'Lightning Fast Delivery'}\n`;
@@ -996,7 +1034,7 @@ async function startBot() {
                 }
 
                 let msgText = `🍽️  *SELECT DISH: ${cat.name.toUpperCase()}*\n`;
-                msgText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+                msgText += `\n`;
 
                 user.dishList.forEach((d, i) => {
                     msgText += `${i + 1}️⃣  ${d.name}\n`;
@@ -1033,7 +1071,7 @@ async function startBot() {
                 }
 
                 let msgText = `📏  *SELECT SIZE: ${dish.name.toUpperCase()}*\n`;
-                msgText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+                msgText += `\n`;
 
                 user.sizeList.forEach(([s, p], i) => {
                     msgText += `${i + 1}️⃣  ${s} — ₹${p}\n`;
@@ -1051,7 +1089,7 @@ async function startBot() {
                     // Go back to dish list
                     user.step = "DISH";
                     let msgText = `🍽️  *SELECT DISH*\n`;
-                    msgText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+                    msgText += `\n`;
                     user.dishList.forEach((d, i) => {
                         msgText += `${i + 1}️⃣  ${d.name}\n`;
                     });
@@ -1073,7 +1111,7 @@ async function startBot() {
                 if (user.addonList.length > 0) {
                     // Show add-ons selection
                     let msgText = `🧀 *ADD-ONS / EXTRAS*\n`;
-                    msgText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    msgText += ``;
                     msgText += `🍽️ ${user.current.dish.name} (${size} — ₹${price})\n\n`;
                     msgText += `*Choose your extras:*\n\n`;
 
@@ -1089,7 +1127,7 @@ async function startBot() {
                     // No addons → go directly to quantity
                     user.step = "QUANTITY";
                     return sock.sendMessage(sender, {
-                        text: `🔢 *HOW MANY?*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🍽️ ${user.current.dish.name} (${size} — ₹${price})\n\n*Enter quantity:*\n\n_Example: 1, 2, 3..._`
+                        text: `🔢 *HOW MANY?*\n🍽️ ${user.current.dish.name} (${size} — ₹${price})\n\n*Enter quantity:*\n\n_Example: 1, 2, 3..._`
                     });
                 }
             }
@@ -1111,7 +1149,7 @@ async function startBot() {
 
                     user.step = "QUANTITY";
                     const name = user.name || user.pushName || "";
-                    let qtyMsg = `🔢 *HOW MANY?*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🍽️ ${user.current.dish.name} (${user.current.size} — ₹${user.current.unitPrice})${selectedAddons}\n💰 *Per unit: ₹${totalPerUnit}*\n\n*Enter quantity:*\n_Example: 1, 2, 3..._`;
+                    let qtyMsg = `🔢 *HOW MANY?*\n🍽️ ${user.current.dish.name} (${user.current.size} — ₹${user.current.unitPrice})${selectedAddons}\n💰 *Per unit: ₹${totalPerUnit}*\n\n*Enter quantity:*\n_Example: 1, 2, 3..._`;
                     if (name) qtyMsg = `Excellent choice, *${name}*! 👋\n\n` + qtyMsg;
                     return sock.sendMessage(sender, { text: qtyMsg });
                 }
@@ -1135,8 +1173,22 @@ async function startBot() {
                 user.current.addons.forEach(a => {
                     confirmMsg += `  • ${a.name} (+₹${a.price})\n`;
                 });
-                confirmMsg += `\n*Want more?* Pick another number\n`;
-                confirmMsg += `0️⃣ *Done selecting* ✅`;
+                
+                let remainingAddons = [];
+                user.addonList.forEach((a, i) => {
+                    if (!user.current.addons.some(ad => ad.name === a[0])) {
+                        remainingAddons.push(`${i + 1}️⃣  ${a[0]} (+₹${a[1]})`);
+                    }
+                });
+
+                if (remainingAddons.length > 0) {
+                    confirmMsg += `\n*Want more?* Pick another number:\n`;
+                    confirmMsg += remainingAddons.join('\n') + `\n\n`;
+                    confirmMsg += `0️⃣ *Done selecting* ✅`;
+                } else {
+                    confirmMsg += `\n*No more extras available.*\n`;
+                    confirmMsg += `0️⃣ *Done selecting* ✅`;
+                }
 
                 return sock.sendMessage(sender, { text: confirmMsg });
             }
@@ -1165,31 +1217,42 @@ async function startBot() {
                     outlet: user.outlet
                 });
 
-                // Show CART_VIEW
-                return sendCartView(sock, sender, user);
+                // Instead of sendCartView, show ADDED_TO_CART prompt
+                user.step = "ADDED_TO_CART";
+                let itemName = user.current.dish.name;
+                if (user.current.size && user.current.size !== 'Regular') itemName += ` (${user.current.size})`;
+                
+                let addedMsg = `✅ *${itemName}* added to cart!\n`;
+                addedMsg += ``;
+                addedMsg += `1️⃣ Add more items 🛒\n`;
+                addedMsg += `2️⃣ View Cart & Checkout 🧾`;
+                
+                return sock.sendMessage(sender, { text: addedMsg });
+            }
+
+            // ADDED_TO_CART
+            if (user.step === "ADDED_TO_CART") {
+                if (text === "1") {
+                    return sendCategories(sock, sender, user);
+                } else if (text === "2") {
+                    return sendCartView(sock, sender, user);
+                } else {
+                    return sock.sendMessage(sender, { text: "⚠️ Please reply *1* to add more items, or *2* to View Cart & Checkout." });
+                }
             }
 
             // CART_VIEW
             if (user.step === "CART_VIEW") {
                 if (text === "1") {
-                    // Add more items → go back to outlet selection
-                    user.current = {};
-                    user.step = "OUTLET";
-                    let msg = `🛒 Cart: ${user.cart.length} item${user.cart.length > 1 ? 's' : ''}\n\n`;
-                    msg += `*Select an outlet to add more:*\n\n`;
-                    msg += `1️⃣ *Pizza Outlet* 🍕\n`;
-                    msg += `2️⃣ *Cake Outlet* 🎂\n`;
-                    return sock.sendMessage(sender, { text: msg });
-                } else if (text === "2") {
-                    // Checkout → collect customer details
+                    // Proceed to Checkout → collect customer details
                     user.step = "NAME";
                     return sock.sendMessage(sender, { text: "👤 *What is your full name?*\n\n_Example: Nilesh Shah_" });
-                } else if (text === "3") {
+                } else if (text === "2") {
                     // Cancel order
                     sessions[sender] = { step: "START", current: {}, cart: [] };
-                    return sock.sendMessage(sender, { text: "❌ *Order Cancelled.* Cart cleared.\nReply any message to start a new order." });
+                    return sock.sendMessage(sender, { text: "❌ *Cart Cleared.* \nReply any message to start a new order." });
                 }
-                return sock.sendMessage(sender, { text: "⚠️ Please reply *1*, *2*, or *3*." });
+                return sock.sendMessage(sender, { text: "⚠️ Please reply *1* to Proceed to Checkout, or *2* to Clear Cart." });
             }
 
             // NAME
@@ -1206,7 +1269,7 @@ async function startBot() {
                 if (cleaned.length < 10) {
                     return sock.sendMessage(sender, { text: "⚠️ *Invalid Number!* Please enter a valid 10-digit mobile number.\n\n_Example: 9876543210_" });
                 }
-                user.phone = "+91" + cleaned;
+                user.phone = cleaned;
                 user.step = "ADDRESS_TEXT";
                 return sock.sendMessage(sender, { text: `Got it, *${user.name}*! 👍\n\n🏠 *Please provide your full Delivery Address:*\n\n_Include House No, Building Name, and nearby Landmark._` });
             }
@@ -1262,15 +1325,15 @@ async function startBot() {
                 user.step = "ORDER_CONFIRM_PRE_PAY";
 
                 let summary = `🧾 *YOUR FULL INVOICE*\n`;
-                summary += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+                summary += `\n`;
                 summary += `📦 *ITEMS:*\n`;
                 summary += lines;
-                summary += `\n━━━━━━━━━━━━━━━━━━━━\n`;
+                summary += `\n`;
                 summary += `💰 *Subtotal:* ₹${subtotal}\n`;
                 summary += `🚚 *Delivery:* ₹${deliveryFee} (${user.distance} km)\n`;
-                summary += `━━━━━━━━━━━━━━━━━━━━\n`;
+                summary += ``;
                 summary += `💵 *GRAND TOTAL: ₹${grandTotal}*\n`;
-                summary += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+                summary += `\n`;
                 summary += `👤 *NAME:* ${user.name}\n`;
                 summary += `🏠 *ADDRESS:* ${user.address}\n\n`;
                 summary += `1️⃣  *Confirm Order* ✅\n`;
@@ -1308,7 +1371,7 @@ async function startBot() {
                 }
                 if (text === "1") {
                     let payMsg = `💳 *SELECT PAYMENT METHOD*\n`;
-                    payMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+                    payMsg += ``;
                     payMsg += `1️⃣  *Cash on Delivery*\n`;
                     payMsg += `2️⃣  *UPI / Online* (Pay on Delivery)\n`;
                     payMsg += `3️⃣  *Any / Flexible*\n\n`;
@@ -1403,11 +1466,11 @@ async function startBot() {
                 const shopName = storeData.storeName || "Roshani Pizza & Cake";
 
                 let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY, ${user.name.toUpperCase()}!* 🎉\n`;
-                successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                successMsg += ``;
                 successMsg += `🆔 *Order ID:* #${orderId.slice(-5)}\n`;
                 successMsg += `🏪 *Shop:* ${shopName}\n`;
                 successMsg += `📞 *Admin:* ${adminPhone}\n`;
-                successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+                successMsg += `\n`;
                 successMsg += `_${getFunnyFoodJoke()}_\n\n`;
                 successMsg += `*Please wait for a while as the admin is confirming your order.* ⏳\n\n`;
                 successMsg += `Thank you for choosing us! 🍕🎂`;
@@ -1432,20 +1495,16 @@ async function startBot() {
 // =============================
 async function sendCartView(sock, sender, user) {
     const { lines, subtotal } = formatCartSummary(user.cart);
-    const name = user.name || user.pushName || "";
 
-    let msg = name ? `Hi *${name}*! 👋\n\n` : "";
-    msg += `🛒 *YOUR CART*\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    let msg = `🧾 *YOUR ORDER SUMMARY*\n`;
+    msg += `\n`;
     msg += lines;
-    msg += `\n━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `💰 *Subtotal: ₹${subtotal}*\n`;
-    msg += `🚚 _Delivery charges calculated at checkout_\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-    msg += `*What would you like to do?*\n\n`;
-    msg += `1️⃣  ➕ *Add More Items*\n`;
-    msg += `2️⃣  🛍️ *Checkout*\n`;
-    msg += `3️⃣  ❌ *Cancel Order*\n\n`;
+    msg += ``;
+    msg += `💰 *Subtotal:* ₹${subtotal}\n`;
+    msg += `🚚 _Shipping calculated at checkout_\n`;
+    msg += `\n`;
+    msg += `1️⃣  *Proceed to Checkout* 🚀\n`;
+    msg += `2️⃣  *Clear Cart* 🗑️\n\n`;
     msg += `_Reply with a number_`;
 
     user.step = "CART_VIEW";

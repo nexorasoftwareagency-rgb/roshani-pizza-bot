@@ -42,17 +42,22 @@
             if (navigator.vibrate) navigator.vibrate(pattern);
         };
     </script>
+    <!-- Haptic Interaction Helper -->
+    <script>
+        window.haptic = (pattern = 10) => {
+            if (navigator.vibrate) navigator.vibrate(pattern);
+        };
+    </script>
 </head>
 <body>
     <!-- Premium Background Layers -->
-    </div>
 
     <!-- Auth Guard -->
     <script>
         // Check local storage or temporary session for direct speed
         if (!localStorage.getItem('rider_authenticated')) {
             // Quick local check before Firebase loads
-            // window.location.href = 'login.html';
+            window.location.href = 'login.html';
         }
     </script>
 
@@ -85,22 +90,22 @@
                 <h3 class="sidebar-title">ROSHANI RIDER</h3>
             </div>
             <ul class="nav-links">
-                <li class="active" onclick="showSection('home')" data-section="home" title="View Dashboard Home">
+                <li class="active" onclick="showSection('home')" onkeydown="if(event.key==='Enter'||event.key===' ') showSection('home')" tabindex="0" role="button" aria-label="Home" data-section="home">
                     <i data-lucide="layout-dashboard"></i> <span>Home</span>
                 </li>
-                <li onclick="showSection('available')" data-section="available" title="View Available Pickup Orders">
+                <li onclick="showSection('available')" onkeydown="if(event.key==='Enter'||event.key===' ') showSection('available')" tabindex="0" role="button" aria-label="Pickup Orders" data-section="available">
                     <i data-lucide="shopping-bag"></i> <span>Pickup Orders</span>
                 </li>
-                <li onclick="showSection('active')" data-section="active" title="View Active Delivery Map">
+                <li onclick="showSection('active')" onkeydown="if(event.key==='Enter'||event.key===' ') showSection('active')" tabindex="0" role="button" aria-label="Live Delivery" data-section="active">
                     <i data-lucide="map-pin"></i> <span>Live Delivery</span>
                 </li>
-                <li onclick="showSection('completed')" data-section="completed" title="View Trip History">
+                <li onclick="showSection('completed')" onkeydown="if(event.key==='Enter'||event.key===' ') showSection('completed')" tabindex="0" role="button" aria-label="My History" data-section="completed">
                     <i data-lucide="history"></i> <span>My History</span>
                 </li>
-                <li onclick="showSection('earnings')" data-section="earnings" title="View My Earnings and Wallet">
+                <li onclick="showSection('earnings')" onkeydown="if(event.key==='Enter'||event.key===' ') showSection('earnings')" tabindex="0" role="button" aria-label="My Wallet" data-section="earnings">
                     <i data-lucide="wallet"></i> <span>My Wallet</span>
                 </li>
-                <li onclick="showSection('profile')" data-section="profile" title="View Profile and Settings">
+                <li onclick="showSection('profile')" onkeydown="if(event.key==='Enter'||event.key===' ') showSection('profile')" tabindex="0" role="button" aria-label="Settings" data-section="profile">
                     <i data-lucide="settings-2"></i> <span>Settings</span>
                 </li>
                 <li id="menu-downloadapp" onclick="window.installPWA()" class="pwa-download-item hidden" title="Download Rider App">
@@ -179,9 +184,13 @@
             <!-- SECTION: ACTIVE DELIVERY -->
             <section id="sec-active" class="view-section">
                 <h2 class="section-heading">Live Trip Details</h2>
+                
+                <!-- Full Map Background -->
                 <div id="activeTripMap" class="trip-map-container glass-panel"></div>
+                
+                <!-- Empty State (no active order) -->
                 <div id="activeOrderView">
-                    <div class="empty-state">No active trip currently.</div>
+                    <div class="glass-panel empty-state-glass"><p>No active trip currently.</p></div>
                 </div>
             </section>
 
@@ -223,6 +232,22 @@
                     <h3 id="profileName" class="profile-name">Loading...</h3>
                     <p id="profilePhone" class="profile-phone">---</p>
                     
+                    <!-- Performance Stats Row (new) -->
+                    <div class="profile-stats-row">
+                        <div class="profile-stat-card">
+                            <span class="stat-val" id="profile-total-orders">0</span>
+                            <span class="stat-lbl">Total Deliveries</span>
+                        </div>
+                        <div class="profile-stat-card">
+                            <span class="stat-val" id="profile-total-earnings">₹0</span>
+                            <span class="stat-lbl">Lifetime Earnings</span>
+                        </div>
+                        <div class="profile-stat-card">
+                            <span class="stat-val" id="profile-avg-time">0m</span>
+                            <span class="stat-lbl">Avg Delivery Time</span>
+                        </div>
+                    </div>
+                    
                     <div class="profile-details-grid">
                         <div class="detail-item">
                             <span class="detail-label">Father's Name</span>
@@ -248,13 +273,29 @@
                             <span class="detail-label">Gmail ID</span>
                             <span class="detail-value" id="r-email">---</span>
                         </div>
+                        <div class="detail-item full-width">
+                            <span class="detail-label">Assigned Outlet</span>
+                            <span class="detail-value" id="r-outlet">---</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <span class="detail-label">Rider ID</span>
+                            <span class="detail-value" id="r-rider-id">---</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <span class="detail-label">Join Date</span>
+                            <span class="detail-value" id="r-join-date">---</span>
+                        </div>
                     </div>
 
                     <div class="aadhar-image-section mt-20">
-                        <span class="detail-label mb-8">Professional ID (Aadhar Card)</span>
-                        <div class="aadhar-img-container">
-                            <img id="r-aadhar-img" src="https://via.placeholder.com/300x180" alt="Aadhar Card" class="aadhar-card-display">
+                        <div style="display:flex; justify-content:space-between; align-items:center;" class="mb-8">
+                            <span class="detail-label">Professional ID (Aadhar Card)</span>
+                            <button class="btn-ghost btn-xs" onclick="toggleAadharView()" id="btn-toggle-aadhar">SHOW</button>
                         </div>
+                        <div class="aadhar-img-container" id="aadhar-container" style="display:none;">
+                            <img id="r-aadhar-img-tag" src="" alt="Aadhar Card" class="aadhar-card-display">
+                        </div>
+                        <p class="text-xtra-small text-muted italic mt-8">Note: Handling of this ID must comply with Aadhar Act policies.</p>
                     </div>
 
                     <div class="profile-actions">
@@ -309,17 +350,21 @@
     <script src="app.js"></script>
     <script>
         lucide.createIcons();
-        function togglePass() {
-            const p = document.getElementById('password');
-            const icon = document.getElementById('eyeIcon');
-            if (p.type === 'password') {
-                p.type = 'text';
-                icon.setAttribute('data-lucide', 'eye-off');
+        function toggleAadharView() {
+            const container = document.getElementById('aadhar-container');
+            const img = document.getElementById('r-aadhar-img-tag');
+            const btn = document.getElementById('btn-toggle-aadhar');
+            const isHidden = container.style.display === 'none';
+            
+            if (isHidden) {
+                container.style.display = 'block';
+                img.src = currentUser.profile.aadharPhoto || 'https://via.placeholder.com/300x180?text=No+Image';
+                btn.innerText = 'HIDE';
             } else {
-                p.type = 'password';
-                icon.setAttribute('data-lucide', 'eye');
+                container.style.display = 'none';
+                img.src = '';
+                btn.innerText = 'SHOW';
             }
-            lucide.createIcons();
         }
     </script>
 </body>
