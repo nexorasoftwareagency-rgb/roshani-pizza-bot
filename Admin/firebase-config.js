@@ -7,7 +7,7 @@ window.firebaseConfig = {
   authDomain: "prashant-pizza-e86e4.firebaseapp.com",
   databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
   projectId: "prashant-pizza-e86e4",
-// storageBucket: "prashant-pizza-e86e4.firebasestorage.app",
+  // storageBucket: removed (Project migrated to database-only Base64 image storage),
   messagingSenderId: "857471482885",
   appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c"
 };
