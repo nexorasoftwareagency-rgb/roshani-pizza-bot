@@ -899,7 +899,7 @@ function updateNotificationSettingsUI() {
         btn.classList.replace('btn-primary', 'btn-secondary');
         btn.disabled = true;
     } else if (Notification.permission === "denied") {
-        statusText.innerText = "Permission: Blocked âŒ";
+        statusText.innerText = "Permission: Blocked ❌";
         btn.innerText = "Blocked in Settings";
         btn.disabled = true;
     } else {
@@ -2715,7 +2715,7 @@ window.loadSettings = async () => {
         `;
     } catch (err) {
         console.error("Load Settings Error:", err);
-        container.innerHTML = `<div style="text-align:center; padding:100px; color:var(--text-muted);">âŒ Failed to load settings. Check console.</div>`;
+        container.innerHTML = `<div style="text-align:center; padding:100px; color:var(--text-muted);">❌ Failed to load settings. Check console.</div>`;
     }
 }
 
