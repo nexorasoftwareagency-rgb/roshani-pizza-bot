@@ -1648,18 +1648,27 @@ function calculateTopSpenders(snap) {
 
 function renderTopItems() {
     const list = document.getElementById('topItemsList');
-    if (!list || !window.itemStats) return;
+    if (!list || !window.itemStats || Object.keys(window.itemStats).length === 0) {
+        if (list) list.innerHTML = "<div style='color:var(--text-muted); font-size:12px; text-align:center; padding:20px;'>No sales data yet</div>";
+        return;
+    }
 
     const sorted = Object.entries(window.itemStats)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5);
 
-    list.innerHTML = sorted.map(([name, count]) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.05);">
-            <span style="font-size:14px; font-weight:600; color:var(--text-main);">${name}</span>
-            <span style="font-size:12px; font-weight:700; background:rgba(34,197,94,0.1); color:#16a34a; padding:3px 10px; border-radius:12px;">${count} sold</span>
+    list.innerHTML = sorted.map(([name, count], index) => `
+        <div style="display:flex; align-items:center; gap:12px; padding:10px; background:rgba(0,0,0,0.02); border-radius:10px; margin-bottom:8px; border: 1px solid rgba(0,0,0,0.03);">
+            <div style="font-size:14px; font-weight:800; color:var(--primary); width:20px;">${index + 1}</div>
+            <div style="flex:1">
+                <div style="font-size:13px; font-weight:600; color:var(--text-main)">${name}</div>
+                <div style="font-size:11px; color:var(--text-muted)">${count} sold</div>
+            </div>
+            <div style="height:4px; width:40px; background:rgba(0,0,0,0.05); border-radius:2px; overflow:hidden;">
+                <div style="height:100%; width:${Math.min(100, (count / sorted[0][1]) * 100)}%; background:var(--primary);"></div>
+            </div>
         </div>
-    `).join('') || '<p style="font-size:12px; color:var(--text-muted); text-align:center; padding:10px;">No sales data yet.</p>';
+    `).join("") || '<p style="font-size:12px; color:var(--text-muted); text-align:center; padding:10px;">No sales data yet.</p>';
 }
 
 window.markAsPaid = (id) => {
@@ -2408,7 +2417,12 @@ window.generateCustomReport = () => {
             }
         });
 
-        // Update KPI Cards
+        // Update KPI Cards & Period
+        const fromDate = from ? formatDate(new Date(from).getTime()) : "Start";
+        const toDate = to ? formatDate(new Date(to).getTime()) : "Today";
+        const periodEl = document.getElementById("reportPeriod");
+        if (periodEl) periodEl.innerText = `${fromDate} to ${toDate}`;
+
         document.getElementById("reportRevenue").innerText = "₹" + totalRev.toLocaleString();
         document.getElementById("reportOrders").innerText = totalOrd;
         document.getElementById("reportAvg").innerText = "₹" + (totalOrd > 0 ? Math.round(totalRev / totalOrd) : 0);
@@ -2491,6 +2505,73 @@ function renderRevenueChart(data) {
         }
     });
 }
+
+window.downloadExcel = () => {
+    if (salesData.length === 0) {
+        alert("No data available to export. Generate a report first.");
+        return;
+    }
+
+    const data = salesData.map(o => ({
+        Date: formatDate(o.createdAt),
+        "Order ID": o.orderId || o.id,
+        Customer: o.customerName || 'Guest',
+        Phone: o.phone || '',
+        Total: o.total || 0,
+        Method: o.paymentMethod || 'COD',
+        Status: o.status,
+        Items: o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sales Report");
+    XLSX.writeFile(wb, `Sales_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+};
+
+window.downloadPDF = () => {
+    if (salesData.length === 0) {
+        alert("No data available to export. Generate a report first.");
+        return;
+    }
+
+    if (!window.jspdf) {
+        alert("PDF export library not ready. Please refresh and try again.");
+        return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(20);
+    doc.text("Sales Report", 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+
+    const from = document.getElementById("reportFrom").value;
+    const to = document.getElementById("reportTo").value;
+    doc.text(`Period: ${from} to ${to}`, 14, 30);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 36);
+
+    const tableData = salesData.map(o => [
+        formatDate(o.createdAt),
+        o.customerName || 'Guest',
+        `Rs. ${o.total}`,
+        o.paymentMethod || 'COD',
+        o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : ''
+    ]);
+
+    doc.autoTable({
+        startY: 45,
+        head: [['Date', 'Customer', 'Total', 'Method', 'Items']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [6, 95, 70] },
+        columnStyles: {
+            4: { cellWidth: 60 }
+        }
+    });
+    doc.save(`Sales_Report_${from}_to_${to}.pdf`);
+};
 
 // SETTINGS
 window.loadSettings = async () => {
@@ -2816,32 +2897,6 @@ window.saveSettings = async () => {
 };
 
 // DASHBOARD HELPERS
-function renderTopItems() {
-    const container = document.getElementById("topItemsDashboard");
-    if (!container) return;
-
-    if (!window.itemStats || Object.keys(window.itemStats).length === 0) {
-        container.innerHTML = "<div style='color:var(--text-muted); font-size:12px; text-align:center; padding:20px;'>No sales data yet</div>";
-        return;
-    }
-
-    const sorted = Object.entries(window.itemStats)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5);
-
-    container.innerHTML = sorted.map(([name, count], index) => `
-        <div style="display:flex; align-items:center; gap:12px; padding:10px; background:rgba(255,255,255,0.03); border-radius:10px; margin-bottom:8px; border: 1px solid rgba(255,255,255,0.05);">
-            <div style="font-size:16px; font-weight:800; color:var(--primary); width:20px;">${index + 1}</div>
-            <div style="flex:1">
-                <div style="font-size:13px; font-weight:600; color:var(--text-main)">${name}</div>
-                <div style="font-size:11px; color:var(--text-muted)">${count} sold</div>
-            </div>
-            <div style="height:4px; width:40px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;">
-                <div style="height:100%; width:${Math.min(100, (count / sorted[0][1]) * 100)}%; background:var(--primary);"></div>
-            </div>
-        </div>
-    `).join("");
-}
 
 // ACTIONS
 window.updateStatus = (id, status) => {
@@ -2882,29 +2937,29 @@ window.openPaymentModal = (id) => {
     `;
 
     modal.innerHTML = `
-        <div style="background: white; width: 90%; max-width: 400px; border-radius: 24px; padding: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.3); overflow: hidden; position: relative;">
+        <div class="payment-modal-card">
             <div style="text-align: center; margin-bottom: 25px;">
-                <div style="font-size: 12px; font-weight: 800; color: var(--primary); letter-spacing: 2px; margin-bottom: 8px; text-transform: uppercase;">Payment Settlement</div>
-                <h2 style="font-size: 24px; font-weight: 900; color: #1a1a1a; margin: 0;">₹${total}</h2>
+                <div class="payment-modal-badge">Payment Settlement</div>
+                <h2 class="payment-modal-total">₹${total}</h2>
                 <p style="color: #666; font-size: 14px; margin-top: 5px;">Select payment method used for this delivery</p>
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button onclick="saveDeliveredOrder('${id}', 'Cash')" class="pay-option-btn" style="background: #f0fdf4; border: 2px solid #bbf7d0; color: #166534;">
+                <button onclick="saveDeliveredOrder('${id}', 'Cash')" class="pay-option-btn cash">
                     <span style="font-size: 24px;">💵</span>
                     <div style="text-align: left;">
                         <div style="font-weight: 800; font-size: 16px;">Cash</div>
                         <div style="font-size: 11px; opacity: 0.7;">Received by Hand</div>
                     </div>
                 </button>
-                <button onclick="saveDeliveredOrder('${id}', 'UPI')" class="pay-option-btn" style="background: #eff6ff; border: 2px solid #bfdbfe; color: #1e40af;">
+                <button onclick="saveDeliveredOrder('${id}', 'UPI')" class="pay-option-btn upi">
                     <span style="font-size: 24px;">📱</span>
                     <div style="text-align: left;">
                         <div style="font-weight: 800; font-size: 16px;">UPI / Online</div>
                         <div style="font-size: 11px; opacity: 0.7;">GPay, PhonePe, etc.</div>
                     </div>
                 </button>
-                <button onclick="saveDeliveredOrder('${id}', 'Card')" class="pay-option-btn" style="background: #faf5ff; border: 2px solid #e9d5ff; color: #6b21a8;">
+                <button onclick="saveDeliveredOrder('${id}', 'Card')" class="pay-option-btn card">
                     <span style="font-size: 24px;">💳</span>
                     <div style="text-align: left;">
                         <div style="font-weight: 800; font-size: 16px;">Card</div>
@@ -2913,18 +2968,8 @@ window.openPaymentModal = (id) => {
                 </button>
             </div>
 
-            <button onclick="document.getElementById('paymentModal').remove()" style="width: 100%; margin-top: 20px; background: none; border: none; color: #999; font-weight: 700; cursor: pointer; padding: 10px; font-size: 13px;">CANCEL</button>
+            <button onclick="document.getElementById('paymentModal').remove()" class="payment-modal-cancel">CANCEL</button>
         </div>
-        <style>
-            .pay-option-btn {
-                display: flex; align-items: center; gap: 15px; padding: 15px 20px;
-                border-radius: 16px; cursor: pointer; transition: all 0.2s ease;
-                text-align: left; width: 100%;
-            }
-            .pay-option-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-            .pay-option-btn:active { transform: scale(0.98); }
-            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        </style>
     `;
 
     document.body.appendChild(modal);
@@ -2955,15 +3000,28 @@ window.saveDeliveredOrder = async (id, method) => {
 
 
 window.assignRider = async (id, riderEmail) => {
-    if (!riderEmail) return;
+    if (!id || !riderEmail) {
+        showToast('Invalid order ID or rider selection.', 'error');
+        return;
+    }
 
-    const configSnap = await db.ref("appConfig").once("value");
-    const masterOTP = configSnap.val()?.masterOTP || "0000";
+    try {
+        // Verify the order exists before attempting assignment
+        const orderSnap = await Outlet.ref('orders/' + id).once('value');
+        if (!orderSnap.exists()) {
+            showToast('Order not found.', 'error');
+            return;
+        }
 
-    Outlet.ref("orders/" + id).update({
-        assignedRider: riderEmail,
-        status: "Out for Delivery"
-    });
+        await Outlet.ref('orders/' + id).update({
+            assignedRider: riderEmail,
+            status: 'Out for Delivery'
+        });
+        showToast('Rider assigned successfully.', 'success');
+    } catch (err) {
+        console.error('[assignRider] Error:', err);
+        showToast('Failed to assign rider. Please try again.', 'error');
+    }
 };
 window.toggleWifiPass = () => {
     const passInput = document.getElementById('settingWifiPass');
@@ -2981,73 +3039,6 @@ window.toggleRiderPass = () => {
     } else {
         passInput.type = 'password';
     }
-};
-
-window.downloadExcel = () => {
-    if (salesData.length === 0) {
-        alert("No data available to export. Generate a report first.");
-        return;
-    }
-
-    const data = salesData.map(o => ({
-        Date: formatDate(o.createdAt),
-        "Order ID": o.orderId || o.id,
-        Customer: o.customerName || 'Guest',
-        Phone: o.phone || '',
-        Total: o.total || 0,
-        Method: o.paymentMethod || 'COD',
-        Status: o.status,
-        Items: o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : ''
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sales Report");
-    XLSX.writeFile(wb, `Sales_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
-};
-
-window.downloadPDF = () => {
-    if (salesData.length === 0) {
-        alert("No data available to export. Generate a report first.");
-        return;
-    }
-
-    if (!window.jspdf) {
-        alert("PDF export library not ready. Please refresh and try again.");
-        return;
-    }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    doc.setFontSize(20);
-    doc.text("Sales Report", 14, 22);
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-
-    const from = document.getElementById("reportFrom").value;
-    const to = document.getElementById("reportTo").value;
-    doc.text(`Period: ${from} to ${to}`, 14, 30);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 36);
-
-    const tableData = salesData.map(o => [
-        formatDate(o.createdAt),
-        o.customerName || 'Guest',
-        `Rs. ${o.total}`,
-        o.paymentMethod || 'COD',
-        o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : ''
-    ]);
-
-    doc.autoTable({
-        startY: 45,
-        head: [['Date', 'Customer', 'Total', 'Method', 'Items']],
-        body: tableData,
-        theme: 'grid',
-        headStyles: { fillColor: [6, 95, 70] },
-        columnStyles: {
-            4: { cellWidth: 60 }
-        }
-    });
-    doc.save(`Sales_Report_${from}_to_${to}.pdf`);
 };
 
 async function loadLostSales() {
@@ -3188,13 +3179,18 @@ function loadWalkinMenu() {
     });
 }
 
-function filterWalkinByCategory(catName) {
+function filterWalkinByCategory(catName, el) {
     activeWalkinCategory = catName;
-    const tabs = document.querySelectorAll('.category-tab');
-    tabs.forEach(tab => {
-        if (tab.textContent === catName) tab.classList.add('active');
-        else tab.classList.remove('active');
-    });
+    // Update active tab styling
+    document.querySelectorAll('.category-tab').forEach(tab => tab.classList.remove('active'));
+    if (el) {
+        el.classList.add('active');
+    } else {
+        // Fallback: match by text content if no element reference passed
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            if (tab.textContent.trim() === catName) tab.classList.add('active');
+        });
+    }
     applyWalkinFilters();
 }
 
@@ -3707,154 +3703,19 @@ async function printOrderReceipt(rawOrder, isReprint = false) {
     } catch (e) { }
 
     const printWindow = window.open('', '_blank', 'width=450,height=800');
+    if (!printWindow) {
+        showToast("Popup blocked! Please allow popups to print receipts.", "error");
+        return;
+    }
 
-    const itemsHtml = o.items.map(i => `
-        <tr>
-            <td style="padding: 4px 0;">
-                ${escapeHtml(i.name)} ${i.size && i.size !== "Regular" ? `<br><small>(${escapeHtml(i.size)})</small>` : ""}
-            </td>
-            <td style="text-align:center;">${i.quantity}</td>
-            <td style="text-align:right;">${i.price.toFixed(2)}</td>
-            <td style="text-align:right;">${(i.price * i.quantity).toFixed(2)}</td>
-        </tr>
-    `).join('');
-
-    const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Bill - ${o.orderId}</title>
-            <style>
-                * { box-sizing: border-box; }
-                body { 
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                    width: 76mm; 
-                    margin: 0; 
-                    padding: 8mm 4mm;
-                    color: #000;
-                    line-height: 1.3;
-                }
-                .center { text-align: center; }
-                .bold { font-weight: bold; }
-                .mt-10 { margin-top: 10px; }
-                .hr { border-top: 1px dashed #000; margin: 8px 0; }
-                
-                .header-title { font-size: 1.4rem; font-weight: 900; margin: 0; }
-                .header-sub { font-size: 0.9rem; margin-bottom: 2px; }
-                .meta-text { font-size: 0.8rem; }
-                
-                table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 5px; }
-                th { border-bottom: 1px dashed #000; padding: 4px 0; border-top: 1px dashed #000; font-size: 0.75rem; }
-                
-                .summary { margin-top: 10px; font-size: 0.9rem; }
-                .summary-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
-                .grand-total { font-size: 1.1rem; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 0; margin-top: 5px; }
-                
-                .qr-container { margin-top: 15px; text-align: center; }
-                .qr-img { width: 100px; height: 100px; border: 1px solid #eee; padding: 2px; }
-                .footer { font-size: 0.75rem; color: #555; margin-top: 20px; text-align: center; font-style: italic; }
-            </style>
-        </head>
-        <body onload="setTimeout(() => { window.print(); window.close(); }, 500);">
-            <div class="center">
-                ${store.entityName ? `<div class="header-sub bold">${store.entityName.toUpperCase()}</div>` : ''}
-                <h1 class="header-title">${store.storeName.toUpperCase()}</h1>
-                ${store.config.showAddress && store.address ? `<div class="meta-text mt-10">${store.address}</div>` : ''}
-                ${store.config.showGSTIN && store.gstin ? `<div class="meta-text bold">GSTIN: ${store.gstin}</div>` : ''}
-                ${store.config.showFSSAI && store.fssai ? `<div class="meta-text">FSSAI No: ${store.fssai}</div>` : ''}
-                
-                <div class="hr"></div>
-                ${isReprint ? `<div class="bold" style="font-size:0.8rem;">*** REPRINTED BILL ***</div>` : ''}
-                <div class="bold" style="font-size:1rem; margin: 4px 0;">${o.type.toUpperCase()}</div>
-                <div class="hr"></div>
-            </div>
-
-            <div class="meta-text">
-                <div class="summary-row"><span class="bold">Order ID:</span> <span>${o.orderId}</span></div>
-                <div class="summary-row"><span class="bold">Date & Time:</span> <span>${o.date} ${o.time}</span></div>
-                <div class="summary-row"><span class="bold">Pay Mode:</span> <span>${o.paymentMethod}</span></div>
-            </div>
-            
-            <div class="hr"></div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th style="text-align:left;">Item</th>
-                        <th style="text-align:center; width: 12%;">Qty</th>
-                        <th style="text-align:right; width: 22%;">Rate</th>
-                        <th style="text-align:right; width: 22%;">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${itemsHtml}
-                </tbody>
-            </table>
-
-            <div class="hr"></div>
-            
-            <div class="summary meta-text">
-                <div class="summary-row">
-                    <span>Total Items:</span>
-                    <span>${o.items.reduce((sum, i) => sum + i.quantity, 0)}</span>
-                </div>
-                <div class="summary-row">
-                    <span>Subtotal:</span>
-                    <span>${o.subtotal.toFixed(2)}</span>
-                </div>
-                ${o.deliveryFee > 0 ? `<div class="summary-row"><span>Delivery Fee:</span> <span>${o.deliveryFee.toFixed(2)}</span></div>` : ''}
-                ${o.discount > 0 ? `<div class="summary-row"><span>Discount:</span> <span>-${o.discount.toFixed(2)}</span></div>` : ''}
-                
-                <div class="summary-row grand-total bold">
-                    <span>Grand Total:</span>
-                    <span>Rs ${o.total.toFixed(2)}</span>
-                </div>
-            </div>
-
-            <div class="mt-10 meta-text">
-                <div class="bold">Customer: ${escapeHtml(o.customerName)}</div>
-                ${o.phone ? `<div>Phone: ${escapeHtml(o.phone)}</div>` : ''}
-                ${o.customerNote ? `<div style="margin-top:5px; padding: 5px; border: 1px dashed #000; font-size: 0.75rem;"><strong>Note:</strong> ${escapeHtml(o.customerNote)}</div>` : ''}
-                ${o.address && o.type === 'Online Booked' ? `<div style="font-size:0.75rem; margin-top:3px;">Addr: ${escapeHtml(o.address)}</div>` : ''}
-            </div>
-
-            ${store.config.showWifiInfo && store.wifiName ? `
-            <div class="hr"></div>
-            <div class="center meta-text" style="font-size: 0.8rem; margin-top: 5px;">
-                <span class="bold">📶 WiFi:</span> ${store.wifiName}
-                ${store.wifiPass ? `<br><span class="bold">Pwd:</span> ${store.wifiPass}` : ''}
-            </div>` : ''}
-
-            ${store.config.showSocial && (store.instagram || store.reviewUrl) ? `
-            <div class="hr"></div>
-            <div class="center meta-text" style="font-size: 0.8rem;">
-                ${store.instagram ? `<div>📸 Instagram: <span class="bold">${store.instagram}</span></div>` : ''}
-                ${store.reviewUrl ? `<div class="mt-4">⭐ Rate us: <span style="font-size: 0.7rem;">${store.reviewUrl}</span></div>` : ''}
-            </div>` : ''}
-
-            ${store.config.showQR && store.qrUrl ? `
-            <div class="qr-container">
-                <div class="meta-text bold mb-4">Scan to Pay</div>
-                <img src="${store.qrUrl}" class="qr-img">
-            </div>` : ''}
-
-            ${store.config.showTagline && store.tagline ? `
-            <div class="center bold mt-10" style="font-size: 0.85rem;">
-                ${store.tagline}
-            </div>` : ''}
-
-            ${store.config.showPoweredBy && store.poweredBy ? `
-            <div class="footer">
-                ${store.poweredBy}
-            </div>` : ''}
-            
-            <div style="height: 10mm;"></div>
-        </body>
-        </html>`;
-
+    const html = window.ReceiptTemplates.generateThermalReceipt(o, store, isReprint);
     printWindow.document.write(html);
     printWindow.document.close();
 }
+
+
+
+
 
 window.addFeeSlab = (km = "", fee = "") => {
     const tbody = document.getElementById('feeSlabsTable');
@@ -4524,17 +4385,6 @@ function renderWalkinCategoryTabs() {
     });
 }
 
-function filterWalkinByCategory(catName, el) {
-    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-    if (el) el.classList.add('active');
-
-    if (catName === 'All') {
-        renderWalkinDishGrid(allWalkinDishes);
-    } else {
-        const filtered = allWalkinDishes.filter(d => d.category === catName);
-        renderWalkinDishGrid(filtered);
-    }
-}
 // =============================
 // IMAGE STORAGE MIGRATION
 // =============================
