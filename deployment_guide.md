@@ -15,9 +15,12 @@ Before pulling new code, ensure your local environment is clean and backed up.
 
 ### 🛡️ Safeguards
 ```bash
+set -e # Exit on any error
+
 # Define your deployment directory
-DEPLOY_DIR="/path/to/Roshani-Pizza-ERP"
-cd $DEPLOY_DIR
+DEPLOY_DIR="c:/Prasant-Pizza-ERP"
+cd $DEPLOY_DIR || { echo "❌ Error: Could not enter deployment directory"; exit 1; }
+echo "✅ Directory found"
 
 # 1. Check for uncommitted local changes
 if [[ $(git status --porcelain) ]]; then
@@ -27,11 +30,24 @@ fi
 
 # 2. Create a timestamped backup
 BACKUP_NAME="backup_$(date +%Y%m%d_%H%M%S)"
-cp -r $DEPLOY_DIR ../$BACKUP_NAME
+# Verify writability and space (example check)
+if [ ! -w ".." ]; then echo "❌ Error: Parent directory not writable"; exit 1; fi
+# Use rsync for safety (excludes .git)
+if command -v rsync >/dev/null 2>&1; then
+  rsync -a --exclude='.git' $DEPLOY_DIR/ ../$BACKUP_NAME/
+else
+  cp -r $DEPLOY_DIR ../$BACKUP_NAME
+fi
 echo "✅ Backup created at ../$BACKUP_NAME"
 
 # 3. Pull latest changes
-git pull origin main
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$CURRENT_BRANCH" != "main" ]; then
+  echo "❌ Error: Not on 'main' branch (Current: $CURRENT_BRANCH). Aborting."
+  exit 1
+fi
+git pull origin main || { echo "❌ Error: git pull failed"; exit 1; }
+echo "✅ Code synchronized successfully"
 ```
 
 ---
@@ -48,7 +64,7 @@ cd bot
 npm install
 
 # Targeted restart (Avoids 'pm2 restart all')
-pm2 restart roshani-bot
+pm2 reload roshani-bot || pm2 start index.js --name roshani-bot
 
 # Post-deploy verification
 pm2 logs roshani-bot --lines 20
@@ -73,11 +89,48 @@ firebase deploy --only hosting,database
 
 ---
 
+## 4. WhatsApp Authentication (QR Rescan)
+If the bot disconnects or you want to link a new phone, follow these steps to reset the session.
+
+### 🧹 Reset Procedure
+```bash
+cd bot
+
+# 1. Stop the bot
+pm2 stop roshani-bot
+
+# 2. Backup and delete old session
+if [ -d "session_data" ]; then
+    echo "📦 Backing up session data..."
+    tar -czf "session_data_backup_$(date +%Y%m%d_%H%M%S).tar.gz" session_data
+    rm -rf session_data
+    echo "✅ Session cleared (backup created)"
+else
+    echo "ℹ️ No session data to clear"
+fi
+
+# 3. Start the bot in the foreground to see the QR code
+node index.js
+```
+
+### 📸 Authentication
+1. Scan the **QR Code** that appears in the terminal with your phone.
+2. Wait for `✅ WHATSAPP BOT ONLINE`.
+3. Press `CTRL + C` to exit the foreground process.
+
+### 🔄 Resume Service
+```bash
+pm2 start ecosystem.config.js --only roshani-bot
+pm2 logs roshani-bot --lines 20
+```
+
+---
+
 ## 🔄 Rollback Strategy
 If the deployment fails or bugs are detected:
 1. **Code Rollback**: `git reset --hard HEAD@{1}`
-2. **Manual Restore**: Delete the current directory and restore from the `backup_timestamp` folder created in Step 1.
-3. **Redeploy**: Repeat the deploy steps above.
+2. **Manual Restore**: Delete the current directory and restore from the `backup_<timestamp>` folder created in Step 1.
+3. **Redeploy**: Ensure the repo is checked out to the rollback commit/tag (DO NOT run `git pull origin main`), then run build/restart steps.
 
 ---
 

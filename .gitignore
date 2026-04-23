@@ -5,3 +5,5 @@ bot/session_data/
 bot/service-account.json
 .env
 .firebase/
+graphify-out/
+scratch/

@@ -101,6 +101,9 @@
                             <i data-lucide="bell"></i>
                             <span id="notifBadge" class="notif-badge hidden"></span>
                         </div>
+                        <select id="outletSwitcherMobile" class="outlet-switcher-admin hidden" onchange="switchOutlet(this.value)" title="Switch Active Outlet">
+                            <!-- Populated via JS -->
+                        </select>
                         <span id="mobileOutletBadge" class="outlet-badge" title="Active Store Location">...</span>
                     </div>
                 </div>
@@ -511,6 +514,24 @@
                                             <label class="form-label-small">Shop Closing Time (Report Time)</label>
                                             <input type="time" id="settingCloseTime" class="form-input" value="23:00" title="Closing Time">
                                         </div>
+                                    </div>
+
+                                    <div class="outlet-status-control glass-card p-16 mb-14">
+                                        <div class="flex-between flex-center mb-10">
+                                            <div class="flex-row flex-center flex-gap-10">
+                                                <label class="form-label-small mb-0" style="font-weight:700;">🔌 Outlet Status</label>
+                                                <span id="outletStatusPill" class="outlet-status-pill status-auto" title="Current outlet status">AUTO</span>
+                                            </div>
+                                            <button type="button" onclick="quickToggleOutletStatus()" class="btn-primary btn-small flex-center flex-gap-6" title="Instantly apply this status to Firebase" style="padding:6px 14px;">
+                                                <i data-lucide="zap" class="icon-fixed-sm"></i> Apply Now
+                                            </button>
+                                        </div>
+                                        <select id="settingShopStatus" class="form-input" onchange="previewOutletStatus(this.value)">
+                                            <option value="AUTO">⏰ Auto (Time Based)</option>
+                                            <option value="FORCE_OPEN">✅ Force Open — Accept Orders</option>
+                                            <option value="FORCE_CLOSED">🌙 Force Closed — Reject Orders</option>
+                                        </select>
+                                        <p class="text-secondary-small mt-6" id="outletStatusHint">Status will follow your opening/closing hours.</p>
                                     </div>
 
                                     <h5 class="mb-12 text-muted-small text-upper ls-sm">Marketing & Connectivity</h5>
