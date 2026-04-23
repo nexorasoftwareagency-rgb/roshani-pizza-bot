@@ -44,7 +44,7 @@
 
     /* HEADER & SPACING */
     --header-height: 80px;
-    --header-offset: 180px;
+    --header-offset: 280px;
 
     /* SURFACES */
     --glass-surface: rgba(255, 255, 255, 0.4);
@@ -1896,7 +1896,7 @@ html, body {
         flex: 1;
         margin-left: 0 !important;
         width: calc(100% - var(--sidebar-width)) !important;
-        padding: calc(var(--header-height) + 20px) 30px 30px !important;
+        padding: calc(var(--header-height) + 120px) 30px 30px !important;
         min-width: 0;
         transition: padding 0.3s ease;
         display: flex;
