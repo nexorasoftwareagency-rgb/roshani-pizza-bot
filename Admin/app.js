@@ -21,7 +21,7 @@ window.showToast = (msg, type = 'success') => {
     toast.innerHTML = `
         <div class="toast-indicator"></div>
         <div class="toast-content">
-            <span class="toast-icon">${type === 'success' ? 'âœ“' : 'âœ•'}</span>
+            <span class="toast-icon">${type === 'success' ? '✔' : '✕'}</span>
             <span class="toast-msg">${escapeHtml(msg)}</span>
         </div>
     `;
@@ -408,7 +408,7 @@ window.openOrderDrawer = (id) => {
                 <div class="font-bold text-main">${escapeHtml(item.name)}</div>
                 <div class="text-muted-small">${escapeHtml(item.size)} x ${item.qty || 1}</div>
             </div>
-            <div class="font-black text-primary">â‚¹${item.price * (item.qty || 1)}</div>
+            <div class="font-black text-primary">₹${item.price * (item.qty || 1)}</div>
         </div>
     `).join('');
 
@@ -422,7 +422,7 @@ window.openOrderDrawer = (id) => {
             ${itemsHtml}
             <div style="display:flex; justify-content:space-between; margin-top:10px; padding-top:12px; border-top:2px solid white;">
                 <span style="font-weight:800; font-size:14px;">TOTAL AMOUNT</span>
-                <span style="font-weight:900; font-size:20px; color:var(--primary);">â‚¹${safeTotal}</span>
+                <span style="font-weight:900; font-size:20px; color:var(--primary);">₹${safeTotal}</span>
             </div>
         </div>
 
@@ -595,8 +595,8 @@ auth.onAuthStateChanged(async user => {
         const switcherMobile = document.getElementById('outletSwitcherMobile');
         if (adminData.isSuper) {
             const outletOptionsHtml = `
-                <option value="pizza">ðŸ• Pizza ERP</option>
-                <option value="cake">ðŸŽ‚ Cakes ERP</option>
+            <option value="pizza">🍕 Pizza ERP</option>
+                <option value="cake">🎂 Cakes ERP</option>
             `;
             const savedOutlet = sessionStorage.getItem('adminSelectedOutlet') || adminData.outlet;
             window.currentOutlet = (savedOutlet || 'pizza').toLowerCase();
@@ -731,8 +731,8 @@ window.previewOutletStatus = (val) => {
     if (hint) {
         const hints = {
             'AUTO': 'Status will follow your opening/closing hours.',
-            'FORCE_OPEN': 'âš¡ Shop will accept orders regardless of time.',
-            'FORCE_CLOSED': 'ðŸ”’ Shop will reject all incoming orders.'
+            'FORCE_OPEN': '⚡ Shop will accept orders regardless of time.',
+            'FORCE_CLOSED': '🔔 Shop will reject all incoming orders.'
         };
         hint.innerText = hints[val] || '';
     }
@@ -745,11 +745,11 @@ window.updateOutletStatusIndicator = (status) => {
     switch (status) {
         case 'FORCE_OPEN':
             pill.classList.add('status-open');
-            pill.innerText = 'â— OPEN';
+            pill.innerText = '● OPEN';
             break;
         case 'FORCE_CLOSED':
             pill.classList.add('status-closed');
-            pill.innerText = 'â— CLOSED';
+            pill.innerText = '● CLOSED';
             break;
         default:
             pill.classList.add('status-auto');
@@ -774,7 +774,7 @@ window.quickToggleOutletStatus = async () => {
             div.className = 'alert-box';
             const colorMap = { 'FORCE_OPEN': '#22c55e', 'FORCE_CLOSED': '#ef4444', 'AUTO': '#3b82f6' };
             div.style.borderLeftColor = colorMap[newStatus] || '#3b82f6';
-            const labelMap = { 'FORCE_OPEN': 'âœ… Outlet is now FORCE OPEN', 'FORCE_CLOSED': 'ðŸŒ™ Outlet is now FORCE CLOSED', 'AUTO': 'â° Outlet set to AUTO (time-based)' };
+            const labelMap = { 'FORCE_OPEN': '✔ Outlet is now FORCE OPEN', 'FORCE_CLOSED': '🌙 Outlet is now FORCE CLOSED', 'AUTO': '⏰ Outlet set to AUTO (time-based)' };
             div.innerHTML = `
                 <div class="alert-title">${labelMap[newStatus] || 'Status Updated'}</div>
                 <div class="alert-sub">WhatsApp bot will respect this status immediately.</div>
@@ -863,7 +863,7 @@ function addNotification(title, sub, type = 'info') {
     }
 }
 
-// ðŸ”” NATIVE NOTIFICATIONS ENGINE
+// 🔔 NATIVE NOTIFICATIONS ENGINE
 window.requestNotificationPermission = async () => {
     if (!("Notification" in window)) {
         showAlert({ total: "N/A", items: "Browser doesn't support notifications." }, 'error');
@@ -874,7 +874,7 @@ window.requestNotificationPermission = async () => {
     updateNotificationSettingsUI();
 
     if (permission === "granted") {
-        new Notification("âœ… Notifications Enabled", {
+        new Notification("✔ Notifications Enabled", {
             body: "You will now receive instant alerts for new orders.",
             icon: window.currentOutlet === 'cake' ? 'icon-cake.png' : 'icon-pizza.png'
         });
@@ -894,7 +894,7 @@ function updateNotificationSettingsUI() {
     }
 
     if (Notification.permission === "granted") {
-        statusText.innerText = "Permission: Active âœ…";
+        statusText.innerText = "Permission: Active ✔";
         btn.innerHTML = '<i data-lucide="check-circle"></i> <span>Enabled</span>';
         btn.classList.replace('btn-primary', 'btn-secondary');
         btn.disabled = true;
@@ -903,7 +903,7 @@ function updateNotificationSettingsUI() {
         btn.innerText = "Blocked in Settings";
         btn.disabled = true;
     } else {
-        statusText.innerText = "Permission: Required ðŸ””";
+        statusText.innerText = "Permission: Required 🔔";
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -912,7 +912,7 @@ function showNativeNotification(title, body) {
     if (Notification.permission !== "granted") return;
 
     // Use current outlet branding
-    const brandPrefix = window.currentOutlet === 'cake' ? 'ðŸ° CAKE: ' : 'ðŸ• PIZZA: ';
+    const brandPrefix = window.currentOutlet === 'cake' ? '🍰 CAKE: ' : '🍕 PIZZA: ';
     const icon = window.currentOutlet === 'cake' ? 'icon-cake.png' : 'icon-pizza.png';
 
     const options = {
@@ -1200,7 +1200,7 @@ function updateMobileCartSummaryState() {
         if (countEl) countEl.innerText = `${totalQty} Items`;
         if (totalEl) {
             const total = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
-            totalEl.innerText = `â‚¹${total.toLocaleString()}`;
+            totalEl.innerText = `₹${total.toLocaleString()}`;
         }
     } else {
         cartSummary.classList.add('hidden');
@@ -1229,7 +1229,7 @@ function initRealtimeListeners() {
 
             if (order && (order.outlet === window.currentOutlet || !window.currentOutlet) && order.status === "Placed" && isRecent && isPostLoad) {
                 showAlert(order);
-                addNotification(`New Order #${snap.key.slice(-5)}`, `Order for â‚¹${order.total} is placed.`, 'new');
+                addNotification(`New Order #${snap.key.slice(-5)}`, `Order for ₹${order.total} is placed.`, 'new');
                 setTimeout(() => highlightOrder(snap.key), 1000);
             }
         }
@@ -1241,7 +1241,7 @@ function initRealtimeListeners() {
         const order = snap.val();
         if (order && (order.outlet === window.currentOutlet || !window.currentOutlet)) {
             if (order.status === "Delivered") {
-                addNotification(`Order Delivered (#${snap.key.slice(-5)})`, `Customer: ${order.customer?.name || 'Walk-in'} â€¢ â‚¹${order.total}`, 'delivered');
+                addNotification(`Order Delivered (#${snap.key.slice(-5)})`, `Customer: ${order.customer?.name || 'Walk-in'} • ₹${order.total}`, 'delivered');
             }
         }
     };
@@ -1303,7 +1303,7 @@ function showAlert(data, type = 'info') {
     if (typeof data === 'string') {
         div.innerHTML = `
             <div class="alert-content">
-                <div class="alert-title">${type === 'success' ? 'âœ…' : 'â„¹ï¸'} Message</div>
+    <div class="alert-title">${type === "success" ? "✔" : "ℹ️"} Message</div>
                 <div class="alert-sub">${escapeHtml(data)}</div>
             </div>
         `;
@@ -1314,10 +1314,10 @@ function showAlert(data, type = 'info') {
 
         div.innerHTML = `
             <div class="alert-content">
-                <div class="alert-title">ðŸ”” New Order #${escapeHtml((order.orderId || order.id).slice(-5))}</div>
-                <div class="alert-sub">â‚¹${escapeHtml(order.total)} â€¢ ${(order.items || []).length} item(s)</div>
+                <div class="alert-title">🔔 New Order #${escapeHtml((order.orderId || order.id).slice(-5))}</div>
+                <div class="alert-sub">₹${escapeHtml(order.total)} • ${(order.items || []).length} item(s)</div>
             </div>
-            <button class="alert-print-btn" data-order-id="${escapeHtml(orderKey)}">ðŸ–¨ï¸ Print</button>
+            <button class="alert-print-btn" data-order-id="${escapeHtml(orderKey)}">🖨️ Print</button>
         `;
 
         const printBtn = div.querySelector('.alert-print-btn');
@@ -1459,13 +1459,13 @@ function renderOrders(snap) {
             <td data-label="Customer">
                 ${safeCustomerName}<br>
                 <small style="color:var(--text-muted)">${displayPhone}</small>
-                ${o.phone ? `<button onclick="event.stopPropagation(); window.chatOnWhatsapp('${id}')" class="btn-chat" title="Message on WhatsApp">ðŸ’¬</button>` : ''}
+                ${o.phone ? `<button onclick="event.stopPropagation(); window.chatOnWhatsapp('${id}')" class="btn-chat" title="Message on WhatsApp">💬</button>` : ''}
             </td>
             <td data-label="Address">
                 <span title="${safeAddress}">${escapeHtml(truncatedAddress)}</span>
-                ${safeLocationLink ? `<br><a href="${safeLocationLink}" target="_blank" style="color:var(--primary); font-size:11px; text-decoration:none;">ðŸ“ Map</a>` : ""}
+    ${safeLocationLink ? `<br><a href="${safeLocationLink}" target="_blank" style="color:var(--primary); font-size:11px; text-decoration:none;">📍 Map</a>` : ""}
             </td>
-            <td data-label="Total" style="font-weight:700">â‚¹${safeTotal}</td>
+            <td data-label="Total" style="font-weight:700">₹${safeTotal}</td>
             <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
             <td data-label="Actions">
                 <div class="flex-row flex-gap-5">
@@ -1478,7 +1478,7 @@ function renderOrders(snap) {
                         <option value="Delivered" ${safeStatus === "Delivered" ? "selected" : ""}>Delivered</option>
                         <option value="Cancelled" ${safeStatus === "Cancelled" ? "selected" : ""}>Cancelled X</option>
                     </select>
-                    <button onclick="event.stopPropagation(); window.printReceiptById('${o.orderId || id}')" class="btn-icon" style="padding: 4px 8px; font-size: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; border-radius: 4px;" title="Print Receipt">ðŸ–¨ï¸</button>
+        <button onclick="event.stopPropagation(); window.printReceiptById('${o.orderId || id}')" class="btn-icon" style="padding: 4px 8px; font-size: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; border-radius: 4px;" title="Print Receipt">🖨️</button>
                 </div>
                 <div class="mt-5">
                     <select onchange="event.stopPropagation(); assignRider('${id}', this.value)" onclick="event.stopPropagation()" style="width:100%; max-width:145px;">
@@ -1522,7 +1522,7 @@ function renderOrders(snap) {
                         ${safeItemsHTML}
                     </small>
                 </td>
-                <td data-label="Total" style="font-weight:700">â‚¹${safeTotal}</td>
+                <td data-label="Total" style="font-weight:700">₹${safeTotal}</td>
                 <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
                 <td data-label="Rider">
                     <select onchange="event.stopPropagation(); assignRider('${id}', this.value)" onclick="event.stopPropagation()" style="width:120px">
@@ -1547,10 +1547,10 @@ function renderOrders(snap) {
                 <td data-label="Order ID" style="font-family: monospace;">#${safeOrderId}</td>
                 <td data-label="Customer">${safeCustomerName}</td>
                 <td data-label="Method">${safePMethod}</td>
-                <td data-label="Total" style="font-weight:700">â‚¹${safeTotal}</td>
+                <td data-label="Total" style="font-weight:700">₹${safeTotal}</td>
                 <td data-label="Status"><span class="status-${safePStatusClass}">${safePStatus}</span></td>
                 <td data-label="Action">
-                    ${safePStatus === 'Pending' ? `<button onclick="event.stopPropagation(); markAsPaid('${id}')" class="btn-secondary" style="padding:4px 8px; font-size:11px;">Mark Paid</button>` : 'âœ…'}
+                    ${safePStatus === 'Pending' ? `<button onclick="event.stopPropagation(); markAsPaid('${id}')" class="btn-secondary" style="padding:4px 8px; font-size:11px;">Mark Paid</button>` : '✔'}
                 </td>
             `;
             paymentsTable.appendChild(rowPay);
@@ -1565,7 +1565,7 @@ function renderOrders(snap) {
     }
 
     if (document.getElementById("statOrders")) document.getElementById("statOrders").innerText = liveCount;
-    if (document.getElementById("statRevenue")) document.getElementById("statRevenue").innerText = "â‚¹" + revenue.toLocaleString();
+    if (document.getElementById("statRevenue")) document.getElementById("statRevenue").innerText = "₹" + revenue.toLocaleString();
     if (document.getElementById("statPending")) document.getElementById("statPending").innerText = pending;
 
     // RENDER PRIORITY TABLE
@@ -1600,7 +1600,7 @@ function renderPriorityTable(sortedOrders) {
                 </div>
                 <div class="p-body">
                     <div class="p-cust">${escapeHtml(o.customerName)}</div>
-                    <div class="p-meta">â‚¹${escapeHtml(o.total)} â€¢ ${o.items?.length || 0} items</div>
+                    <div class="p-meta">₹${escapeHtml(o.total)} • ${o.items?.length || 0} items</div>
                 </div>
                 <div class="p-footer">
                     <span class="p-time">${o.createdAt ? new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
@@ -1639,7 +1639,7 @@ function calculateTopSpenders(snap) {
                 <div style="font-size:11px; color:var(--text-muted)">${phone}</div>
             </div>
             <div style="text-align:right">
-                <div style="font-size:14px; font-weight:800; color:var(--action-green)">â‚¹${data.total.toLocaleString()}</div>
+                <div style="font-size:14px; font-weight:800; color:var(--action-green)">₹${data.total.toLocaleString()}</div>
                 <div style="font-size:10px; color:var(--text-muted); font-weight:600;">${data.count} VISITS</div>
             </div>
         </div>
@@ -1768,7 +1768,7 @@ window.addSizeField = (name = "", price = "") => {
     div.innerHTML = `
         <input placeholder="Size (e.g. Small)" value="${name}" class="form-input" style="flex:2; margin-bottom:0">
         <input type="number" placeholder="Price" value="${price}" class="form-input" style="flex:1; margin-bottom:0">
-        <button onclick="this.parentElement.remove()" style="background:none; border:none; color:red; cursor:pointer;">Ã—</button>
+        <button onclick="this.parentElement.remove()" style="background:none; border:none; color:red; cursor:pointer;">×</button>
     `;
     container.appendChild(div);
 };
@@ -1781,7 +1781,7 @@ window.addNewAddonField = (name = "", price = "") => {
     div.innerHTML = `
         <input placeholder="Addon (e.g. Extra Cheese)" value="${name}" class="form-input" style="flex:2; margin-bottom:0">
         <input type="number" placeholder="Price" value="${price}" class="form-input" style="flex:1; margin-bottom:0">
-        <button onclick="this.parentElement.remove()" style="background:none; border:none; color:red; cursor:pointer;">Ã—</button>
+        <button onclick="this.parentElement.remove()" style="background:none; border:none; color:red; cursor:pointer;">×</button>
     `;
     container.appendChild(div);
 };
@@ -1881,7 +1881,7 @@ function loadMenu() {
         grid.innerHTML = "";
         snap.forEach(child => {
             const d = child.val();
-            const dishId = child.key; // capture in block scope â€” safe for closures
+            const dishId = child.key; // capture in block scope — safe for closures
 
             let sizesHtml = "";
             if (d.sizes) {
@@ -1891,7 +1891,7 @@ function loadMenu() {
                         ${Object.entries(d.sizes).map(([size, price]) => `
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-size:13px;">
                                 <span style="color:var(--text-main)">${size}</span>
-                                <span style="font-weight:800; color:var(--action-green)">â‚¹${price}</span>
+                                <span style="font-weight:800; color:var(--action-green)">₹${price}</span>
                             </div>
                         `).join("")}
                     </div>`;
@@ -1899,7 +1899,7 @@ function loadMenu() {
                 sizesHtml = `
                     <div style="margin:12px 0; display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-size:13px; color:var(--text-muted)">Standard Price</span>
-                        <span style="font-size:18px; font-weight:800; color:var(--action-green)">â‚¹${d.price || 0}</span>
+                        <span style="font-size:18px; font-weight:800; color:var(--action-green)">₹${d.price || 0}</span>
                     </div>`;
             }
 
@@ -1921,12 +1921,12 @@ function loadMenu() {
                     <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${d.category || ''}</div>
                     ${sizesHtml}
                     <div style="display:flex; gap:8px; margin-top:5px;">
-                        <button class="edit-btn btn-secondary" style="flex:1; font-size:12px; padding:8px 0; display:flex; align-items:center; justify-content:center; gap:5px;">âœï¸ Edit</button>
-                        <button class="delete-btn btn-secondary" style="color:#ef4444; width:40px; padding:8px 0; display:flex; align-items:center; justify-content:center;">ðŸ—‘ï¸</button>
+                        <button class="edit-btn btn-secondary" style="flex:1; font-size:12px; padding:8px 0; display:flex; align-items:center; justify-content:center; gap:5px;">✔ï¸ Edit</button>
+            <button class="delete-btn btn-secondary" style="color:#ef4444; width:40px; padding:8px 0; display:flex; align-items:center; justify-content:center;">🗑️</button>
                     </div>
                 </div>`;
 
-            // Wire buttons using addEventListener â€” closures correctly capture dishId
+            // Wire buttons using addEventListener — closures correctly capture dishId
             card.querySelector('.edit-btn').addEventListener('click', () => window.showDishModal(dishId));
             card.querySelector('.delete-btn').addEventListener('click', () => window.deleteDish(dishId));
 
@@ -1958,7 +1958,7 @@ window.deleteDish = (dishId) => {
         <div style="background:#1c1c1c; border:1px solid #ef4444; border-radius:20px;
                     padding:32px 36px; max-width:360px; width:90%; text-align:center;
                     box-shadow:0 20px 60px rgba(239,68,68,0.25);">
-            <div style="font-size:40px; margin-bottom:12px;">ðŸ—‘ï¸</div>
+        <div style="font-size:40px; margin-bottom:12px;">🗑️</div>
             <h3 style="color:#fff; margin:0 0 8px; font-size:18px; font-weight:700;">Delete Dish?</h3>
             <p style="color:#aaa; font-size:14px; margin:0 0 24px;">This action cannot be undone.</p>
             <div style="display:flex; gap:12px; justify-content:center;">
@@ -1999,7 +1999,7 @@ window.deleteDish = (dishId) => {
     };
 };
 
-// (Duplicate loadCategories, addCategory, deleteCategory removed â€” canonical versions above at loadCategories/line ~600)
+// (Duplicate loadCategories, addCategory, deleteCategory removed — canonical versions above at loadCategories/line ~600)
 
 // RIDERS
 let riderStatsData = {};
@@ -2047,21 +2047,21 @@ function renderRiders() {
                     </td>
                     <td data-label="Credentials" style="padding:15px">
                          <div style="font-size:11px; margin-bottom:4px;"><span style="color:var(--text-muted)">User:</span> <strong>${r.email}</strong></div>
-                         <div style="font-size:11px;"><span style="color:var(--text-muted)">Password:</span> <span style="font-family:monospace; background:rgba(0,0,0,0.05); padding:2px 5px; border-radius:4px; font-weight:700; color:var(--action-green)">â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢</span></div>
+                         <div style="font-size:11px;"><span style="color:var(--text-muted)">Password:</span> <span style="font-family:monospace; background:rgba(0,0,0,0.05); padding:2px 5px; border-radius:4px; font-weight:700; color:var(--action-green)">••••••••</span></div>
                     </td>
                     <td data-label="Status" style="padding:15px"><span class="status ${statusClass}" style="${r.status === 'Offline' ? 'background:rgba(0,0,0,0.1); color:gray' : ''}">${r.status || 'Active'}</span></td>
                     <td data-label="Portal" style="padding:15px">
                         <a href="${portalUrl}" target="_blank" style="font-size:10px; font-weight:800; color:var(--action-green); text-decoration:none; border:2px solid var(--action-green); padding:5px 10px; border-radius:8px; display:inline-block; transition:all 0.2s;" onmouseover="this.style.background='var(--action-green)'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='var(--action-green)';">
-                            ðŸš€ DASHBOARD
+                            🚀 DASHBOARD
                         </a>
                     </td>
                     <td data-label="Stats" style="padding:15px">
                         <div style="font-size:11px;"><strong>${stats.totalOrders}</strong> Orders</div>
-                        <div style="font-size:11px; color:var(--action-green); font-weight:700;">â‚¹${stats.totalEarnings.toLocaleString()}</div>
+                        <div style="font-size:11px; color:var(--action-green); font-weight:700;">₹${stats.totalEarnings.toLocaleString()}</div>
                     </td>
                     <td data-label="Actions" style="padding:15px; display:flex; gap:10px; align-items:center;">
                         <button onclick="editRider('${r.id}')" title="Edit Rider" style="background:var(--action-green); color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:600;">Edit</button>
-                        <button onclick="resetRiderPassword('${r.email}')" title="Reset Password" style="background:none; border:none; color:var(--action-green); cursor:pointer; font-size:18px;">ðŸ”‘</button>
+                        <button onclick="resetRiderPassword('${r.email}')" title="Reset Password" style="background:none; border:none; color:var(--action-green); cursor:pointer; font-size:18px;">🔔</button>
                         <button onclick="deleteRider('${r.id}')" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer; text-decoration:underline; font-weight:600;">Remove</button>
                     </td>
                 </tr>
@@ -2096,7 +2096,7 @@ function renderRiders() {
 
 window.deleteRider = (id) => confirm("Remove this rider? This will NOT delete their login but will prevent them from accessing the shop.") && Outlet.ref(`riders/${id}`).remove();
 
-// (Duplicate loadReports/generateCustomReport/download blocks removed â€” canonical versions below at ~L1207)
+// (Duplicate loadReports/generateCustomReport/download blocks removed — canonical versions below at ~L1207)
 // UTILITY: Image Preview to Base64
 window.previewImage = (input, previewId) => {
     if (input.files && input.files[0]) {
@@ -2348,10 +2348,10 @@ function loadCustomers() {
                         <div style="font-size:12px; color:var(--text-main); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(c.address || '')}">
                             ${escapeHtml(truncatedAddress)}
                         </div>
-                        ${c.locationLink ? `<a href="${c.locationLink}" target="_blank" style="color:var(--primary); font-size:10px; text-decoration:none;">ðŸ“ Map Link</a>` : ""}
+    ${c.locationLink ? `<a href="${c.locationLink}" target="_blank" style="color:var(--primary); font-size:10px; text-decoration:none;">📍 Map Link</a>` : ""}
                     </td>
                     <td data-label="Orders" style="font-weight:600; color:var(--vibrant-orange)">${orderCount}</td>
-                    <td data-label="LTV" style="font-weight:700; color:var(--warm-yellow)">â‚¹${ltv.toLocaleString()}</td>
+                    <td data-label="LTV" style="font-weight:700; color:var(--warm-yellow)">₹${ltv.toLocaleString()}</td>
                 </tr>
             `;
         });
@@ -2382,7 +2382,7 @@ window.generateCustomReport = () => {
 
     if (!tableBody) return;
 
-    tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px;'>ðŸ”„ Collecting sales data...</td></tr>";
+    tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px;'>🔔 Collecting sales data...</td></tr>";
 
     Outlet.ref("orders").once("value", snap => {
         let totalRev = 0;
@@ -2409,9 +2409,9 @@ window.generateCustomReport = () => {
         });
 
         // Update KPI Cards
-        document.getElementById("reportRevenue").innerText = "â‚¹" + totalRev.toLocaleString();
+        document.getElementById("reportRevenue").innerText = "₹" + totalRev.toLocaleString();
         document.getElementById("reportOrders").innerText = totalOrd;
-        document.getElementById("reportAvg").innerText = "â‚¹" + (totalOrd > 0 ? Math.round(totalRev / totalOrd) : 0);
+        document.getElementById("reportAvg").innerText = "₹" + (totalOrd > 0 ? Math.round(totalRev / totalOrd) : 0);
 
         // Sort by date descending
         salesData.sort((a, b) => b.createdAt - a.createdAt);
@@ -2424,7 +2424,7 @@ window.generateCustomReport = () => {
                     <div style="font-weight:700; color:var(--text-main)">${o.customerName || 'Guest'}</div>
                     <div style="font-size:11px; color:var(--text-muted)">${o.phone || ''}</div>
                 </td>
-                <td data-label="Total" style="padding:15px; font-weight:800; color:var(--action-green)">â‚¹${o.total || 0}</td>
+                <td data-label="Total" style="padding:15px; font-weight:800; color:var(--action-green)">₹${o.total || 0}</td>
                 <td data-label="Method" style="padding:15px;"><small>${o.paymentMethod || 'COD'}</small></td>
                 <td data-label="Items" style="padding:15px;">
                     <div style="max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--text-muted)" title="${o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : ''}">
@@ -2498,7 +2498,7 @@ window.loadSettings = async () => {
     if (!container) return;
 
     try {
-        container.innerHTML = `<div style="text-align:center; padding:100px; color:var(--text-muted);">ðŸ”„ Loading shop settings...</div>`;
+        container.innerHTML = `<div style="text-align:center; padding:100px; color:var(--text-muted);">🔔 Loading shop settings...</div>`;
 
         const [appSnap, uiSnap, botSnap] = await Promise.all([
             Outlet.ref("appConfig").once("value"),
@@ -2519,7 +2519,7 @@ window.loadSettings = async () => {
                 <div style="position:relative; z-index:1;">
                     <div style="display:flex; align-items:center; gap:20px; margin-bottom:40px;">
                         <div style="background:var(--action-green); width:64px; height:64px; border-radius:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 20px rgba(6,95,70,0.2);">
-                            <span style="font-size:28px;">âš™ï¸</span>
+            <span style="font-size:28px;">⚙️</span>
                         </div>
                         <div>
                             <h2 style="font-size:28px; font-weight:800; color:var(--text-main); margin:0; letter-spacing:-0.5px;">Shop Configuration</h2>
@@ -2547,8 +2547,8 @@ window.loadSettings = async () => {
                                     <div>
                                         <label class="form-label" style="font-size:13px; font-weight:600;">Store Status</label>
                                         <select id="setConfigStatus" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:600;">
-                                            <option value="Open" ${c.status === 'Open' ? 'selected' : ''}>ðŸŸ¢ Open</option>
-                                            <option value="Closed" ${c.status === 'Closed' ? 'selected' : ''}>ðŸ”´ Closed</option>
+                                            <option value="Open" ${c.status === 'Open' ? 'selected' : ''}>🟢 Open</option>
+                                            <option value="Closed" ${c.status === 'Closed' ? 'selected' : ''}>🔴 Closed</option>
                                         </select>
                                     </div>
                                     <div>
@@ -2577,11 +2577,11 @@ window.loadSettings = async () => {
                                 
                                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
                                     <div>
-                                        <label class="form-label" style="font-size:13px; font-weight:600;">Delivery Fee (â‚¹)</label>
+                                        <label class="form-label" style="font-size:13px; font-weight:600;">Delivery Fee (₹)</label>
                                         <input type="number" id="setConfigFee" value="${c.deliveryFee || 0}" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:700;">
                                     </div>
                                     <div>
-                                        <label class="form-label" style="font-size:13px; font-weight:600;">Min. Order (â‚¹)</label>
+                                        <label class="form-label" style="font-size:13px; font-weight:600;">Min. Order (₹)</label>
                                         <input type="number" id="setConfigMinOrder" value="${c.minOrder || 0}" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:700;">
                                     </div>
                                 </div>
@@ -2707,7 +2707,7 @@ window.loadSettings = async () => {
 
                     <div style="margin-top: 50px; text-align: center; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 35px;">
                         <button onclick="saveSettings()" class="btn-primary" style="margin: 0 auto; width: 340px; justify-content: center; padding: 18px; border-radius: 18px; font-size: 16px; font-weight: 800; box-shadow: 0 15px 30px rgba(6,95,70,0.2); letter-spacing:0.5px;">
-                            ðŸ’¾ SAVE SYSTEM CONFIGURATION
+                            💾 SAVE SYSTEM CONFIGURATION
                         </button>
                     </div>
                 </div>
@@ -2885,27 +2885,27 @@ window.openPaymentModal = (id) => {
         <div style="background: white; width: 90%; max-width: 400px; border-radius: 24px; padding: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.3); overflow: hidden; position: relative;">
             <div style="text-align: center; margin-bottom: 25px;">
                 <div style="font-size: 12px; font-weight: 800; color: var(--primary); letter-spacing: 2px; margin-bottom: 8px; text-transform: uppercase;">Payment Settlement</div>
-                <h2 style="font-size: 24px; font-weight: 900; color: #1a1a1a; margin: 0;">â‚¹${total}</h2>
+                <h2 style="font-size: 24px; font-weight: 900; color: #1a1a1a; margin: 0;">₹${total}</h2>
                 <p style="color: #666; font-size: 14px; margin-top: 5px;">Select payment method used for this delivery</p>
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 <button onclick="saveDeliveredOrder('${id}', 'Cash')" class="pay-option-btn" style="background: #f0fdf4; border: 2px solid #bbf7d0; color: #166534;">
-                    <span style="font-size: 24px;">ðŸ’µ</span>
+                    <span style="font-size: 24px;">💵</span>
                     <div style="text-align: left;">
                         <div style="font-weight: 800; font-size: 16px;">Cash</div>
                         <div style="font-size: 11px; opacity: 0.7;">Received by Hand</div>
                     </div>
                 </button>
                 <button onclick="saveDeliveredOrder('${id}', 'UPI')" class="pay-option-btn" style="background: #eff6ff; border: 2px solid #bfdbfe; color: #1e40af;">
-                    <span style="font-size: 24px;">ðŸ“±</span>
+                    <span style="font-size: 24px;">📱</span>
                     <div style="text-align: left;">
                         <div style="font-weight: 800; font-size: 16px;">UPI / Online</div>
                         <div style="font-size: 11px; opacity: 0.7;">GPay, PhonePe, etc.</div>
                     </div>
                 </button>
                 <button onclick="saveDeliveredOrder('${id}', 'Card')" class="pay-option-btn" style="background: #faf5ff; border: 2px solid #e9d5ff; color: #6b21a8;">
-                    <span style="font-size: 24px;">ðŸ’³</span>
+                    <span style="font-size: 24px;">💳</span>
                     <div style="text-align: left;">
                         <div style="font-weight: 800; font-size: 16px;">Card</div>
                         <div style="font-size: 11px; opacity: 0.7;">Debit / Credit Card</div>
@@ -3065,10 +3065,10 @@ async function loadLostSales() {
 
         if (!data) {
             tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:80px; color:var(--text-muted);">
-                <div class="mb-14" style="font-size:32px;">ðŸŽ¯</div>
+                <div class="mb-14" style="font-size:32px;">🎁</div>
                 <strong>No lost sales found!</strong><br>All your customers are reaching the finish line.
             </td></tr>`;
-            if (revenueBadge) revenueBadge.innerText = `â‚¹0`;
+            if (revenueBadge) revenueBadge.innerText = `₹0`;
             return;
         }
 
@@ -3094,7 +3094,7 @@ async function loadLostSales() {
                 <td>
                     <div class="flex-column">
                         <span class="font-bold">${escapeHtml(record.customerName || 'Guest')}</span>
-                        <a href="${whatsappLink}" target="_blank" class="text-primary font-bold" style="font-size:12px;">ðŸ“² ${phone}</a>
+                        <a href="${whatsappLink}" target="_blank" class="text-primary font-bold" style="font-size:12px;">📲 ${phone}</a>
                     </div>
                 </td>
                 <td>
@@ -3106,13 +3106,13 @@ async function loadLostSales() {
                     <div class="text-truncate-2" title="${escapeHtml(itemsStr)}">${escapeHtml(itemsStr)}</div>
                 </td>
                 <td style="padding-right:25px; text-align:right;">
-                    <span class="font-black" style="font-size:16px; color:var(--text-dark);">â‚¹${val}</span>
+                    <span class="font-black" style="font-size:16px; color:var(--text-dark);">₹${val}</span>
                 </td>
             `;
             tbody.appendChild(tr);
         });
 
-        if (revenueBadge) revenueBadge.innerText = `â‚¹${totalLost.toLocaleString()}`;
+        if (revenueBadge) revenueBadge.innerText = `₹${totalLost.toLocaleString()}`;
 
     } catch (e) {
         console.error("Load Lost Sales Error:", e);
@@ -3121,7 +3121,7 @@ async function loadLostSales() {
 }
 
 async function clearLostSales() {
-    if (!confirm("âš ï¸ Are you sure you want to permanently delete all Lost Sales logs? This cannot be undone.")) return;
+    if (!confirm("⚠️ Are you sure you want to permanently delete all Lost Sales logs? This cannot be undone.")) return;
 
     window.haptic(20);
     try {
@@ -3139,21 +3139,21 @@ window.clearLostSales = clearLostSales;
 let cachedDishes = [];
 
 const catEmoji = {
-    'pizza': 'ðŸ•', 'burger': 'ðŸ”', 'cake': 'ðŸŽ‚', 'pastry': 'ðŸ§',
-    'sandwich': 'ðŸ¥ª', 'drink': 'ðŸ¥¤', 'beverage': 'ðŸ¥¤', 'juice': 'ðŸ§ƒ',
-    'ice cream': 'ðŸ¨', 'dessert': 'ðŸ°', 'pasta': 'ðŸ', 'salad': 'ðŸ¥—',
-    'fries': 'ðŸŸ', 'chicken': 'ðŸ—', 'noodles': 'ðŸœ', 'biryani': 'ðŸ›',
-    'thali': 'ðŸ½ï¸', 'combo': 'ðŸŽ', 'wrap': 'ðŸŒ¯', 'coffee': 'â˜•',
-    'shake': 'ðŸ¥›', 'mocktail': 'ðŸ¹'
+    'pizza': '🍕', 'burger': '🍔', 'cake': '🎂', 'pastry': '🍰',
+    'sandwich': '🥪', 'drink': '🥤', 'beverage': '🥤', 'juice': '🧃',
+    'ice cream': '🍦', 'dessert': '🍰', 'pasta': '🍝', 'salad': '🥗',
+    'fries': '🍟', 'chicken': '🍗', 'noodles': '🍜', 'biryani': '🍛',
+    'thali': '🍽️', 'combo': '🎁', 'wrap': '🌯', 'coffee': '☕',
+    'shake': '🥛', 'mocktail': '🍹'
 };
 
 function getCatEmoji(category) {
-    if (!category) return 'ðŸ½ï¸';
+    if (!category) return '🍽️';
     const lower = category.toLowerCase();
     for (const [key, emoji] of Object.entries(catEmoji)) {
         if (lower.includes(key)) return emoji;
     }
-    return 'ðŸ½ï¸';
+    return '🍽️';
 }
 
 function loadWalkinMenu() {
@@ -3169,7 +3169,7 @@ function loadWalkinMenu() {
         });
 
         if (allWalkinDishes.length === 0) {
-            grid.innerHTML = '<p class="menu-loading-placeholder">No dishes found. Add dishes in Menu â†’ Dishes first.</p>';
+            grid.innerHTML = '<p class="menu-loading-placeholder">No dishes found. Add dishes in Menu → Dishes first.</p>';
             return;
         }
 
@@ -3219,7 +3219,7 @@ async function checkWalkinCustomer(phone) {
             const nameInput = document.getElementById('walkinCustName');
             if (nameInput) {
                 nameInput.value = data.name || "";
-                showAlert('âœ¨ Returning Customer: ' + data.name, 'success');
+                showAlert('✔ Returning Customer: ' + data.name, 'success');
             }
         }
     } catch (e) { console.error(e); }
@@ -3270,7 +3270,7 @@ function renderWalkinDishGrid(dishes) {
         }
 
         const sizeOptions = Object.entries(sizes).map(([name, price]) =>
-            `<option value="${escapeHtml(name)}" data-price="${price}">${escapeHtml(name)} - â‚¹${price}</option>`
+            `<option value="${escapeHtml(name)}" data-price="${price}">${escapeHtml(name)} - ₹${price}</option>`
         ).join('');
 
         card.innerHTML = `
@@ -3290,7 +3290,7 @@ function renderWalkinDishGrid(dishes) {
                 
                 <div class="dish-action-row">
                     <button class="btn-card-add" onclick="addToWalkinCartFromCard('${dishId}')">ADD</button>
-                    <button class="btn-card-addon" onclick="showAddonView('${dishId}')" title="Configure Add-ons">âœš</button>
+                    <button class="btn-card-addon" onclick="showAddonView('${dishId}')" title="Configure Add-ons">⚙️</button>
                 </div>
             </div>
         `;
@@ -3353,7 +3353,7 @@ window.showAddonView = (dishId) => {
                     <input type="checkbox" ${isSelected ? 'checked' : ''} style="pointer-events:none;">
                     <span class="fs-12 font-weight-700">${escapeHtml(name)}</span>
                 </div>
-                <span class="fs-12 font-weight-800 color-green">â‚¹${price}</span>
+                <span class="fs-12 font-weight-800 color-green">₹${price}</span>
             `;
             item.onclick = (e) => {
                 if (!pendingAddonsByDish[dishId]) pendingAddonsByDish[dishId] = [];
@@ -3388,7 +3388,7 @@ window.hideAddonView = () => {
     if (dishGrid) dishGrid.classList.remove('hidden');
     if (addonGrid) addonGrid.classList.remove('hidden');
     if (searchBox) searchBox.classList.remove('hidden');
-    if (walkinTitle) walkinTitle.innerHTML = `ðŸ½ï¸ Select Items`;
+    if (walkinTitle) walkinTitle.innerHTML = `🍽️ Select Items`;
 };
 
 window.addToWalkinCartFromCard = (dishId) => {
@@ -3429,7 +3429,7 @@ window.addToWalkinCartFromCard = (dishId) => {
 
     renderWalkinCart();
     haptic(20);
-    showAlert(`âœ… Added ${qty}x ${dish.name}`, 'success');
+    showAlert(`✔ Added ${qty}x ${dish.name}`, 'success');
 };
 
 function addToWalkinCart(id, name, price, size = "Regular") {
@@ -3483,7 +3483,7 @@ function renderWalkinCart() {
             <div class="item-info">
                 <div class="item-main">
                     <div class="item-name">${escapeHtml(item.name)}</div>
-                    <div class="item-variant">${escapeHtml(item.size)} - â‚¹${item.price}</div>
+                    <div class="item-variant">${escapeHtml(item.size)} - ₹${item.price}</div>
                 </div>
                 ${addonsText}
                 <button class="btn-text-primary small-btn mt-4" onclick="openCartAddonPicker('${key}')">+ Addons</button>
@@ -3515,8 +3515,8 @@ window.updateWalkinTotal = () => {
 
     const subEl = document.getElementById('walkinSubtotal');
     const totalEl = document.getElementById('walkinTotal');
-    if (subEl) subEl.textContent = 'â‚¹' + subtotal.toLocaleString();
-    if (totalEl) totalEl.textContent = 'â‚¹' + total.toLocaleString();
+    if (subEl) subEl.textContent = '₹' + subtotal.toLocaleString();
+    if (totalEl) totalEl.textContent = '₹' + total.toLocaleString();
 };
 
 window.toggleMobileCart = (show) => {
@@ -3613,7 +3613,7 @@ window.submitWalkinSale = async () => {
             });
         }
 
-        const confirmPrint = confirm('Sale Recorded Successfully!\n\nID: ' + orderId + '\nTotal: â‚¹' + total + '\n\nWould you like to PRINT the receipt?');
+        const confirmPrint = confirm('Sale Recorded Successfully!\n\nID: ' + orderId + '\nTotal: ₹' + total + '\n\nWould you like to PRINT the receipt?');
         if (confirmPrint) {
             printOrderReceipt(orderData);
         }
@@ -3821,15 +3821,15 @@ async function printOrderReceipt(rawOrder, isReprint = false) {
             ${store.config.showWifiInfo && store.wifiName ? `
             <div class="hr"></div>
             <div class="center meta-text" style="font-size: 0.8rem; margin-top: 5px;">
-                <span class="bold">ðŸ“¶ WiFi:</span> ${store.wifiName}
+                <span class="bold">📶 WiFi:</span> ${store.wifiName}
                 ${store.wifiPass ? `<br><span class="bold">Pwd:</span> ${store.wifiPass}` : ''}
             </div>` : ''}
 
             ${store.config.showSocial && (store.instagram || store.reviewUrl) ? `
             <div class="hr"></div>
             <div class="center meta-text" style="font-size: 0.8rem;">
-                ${store.instagram ? `<div>ðŸ“¸ Instagram: <span class="bold">${store.instagram}</span></div>` : ''}
-                ${store.reviewUrl ? `<div class="mt-4">â­ Rate us: <span style="font-size: 0.7rem;">${store.reviewUrl}</span></div>` : ''}
+                ${store.instagram ? `<div>📸 Instagram: <span class="bold">${store.instagram}</span></div>` : ''}
+                ${store.reviewUrl ? `<div class="mt-4">⭐ Rate us: <span style="font-size: 0.7rem;">${store.reviewUrl}</span></div>` : ''}
             </div>` : ''}
 
             ${store.config.showQR && store.qrUrl ? `
@@ -3862,8 +3862,8 @@ window.addFeeSlab = (km = "", fee = "") => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
         <td style="padding: 8px;"><input type="number" class="slab-km form-input" value="${km}" placeholder="KM" style="padding: 6px 10px;"></td>
-        <td style="padding: 8px;"><input type="number" class="slab-fee form-input" value="${fee}" placeholder="â‚¹" style="padding: 6px 10px;"></td>
-        <td style="padding: 8px;"><button onclick="this.parentElement.parentElement.remove()" class="btn-secondary btn-small" style="padding: 5px 8px;">ðŸ—‘ï¸</button></td>
+        <td style="padding: 8px;"><input type="number" class="slab-fee form-input" value="${fee}" placeholder="₹" style="padding: 6px 10px;"></td>
+        <td style="padding: 8px;"><button onclick="this.parentElement.parentElement.remove()" class="btn-secondary btn-small" style="padding: 5px 8px;">🗑️</button></td>
     `;
     tbody.appendChild(tr);
 };
@@ -4073,7 +4073,7 @@ window.saveStoreSettings = async () => {
             div.className = 'alert-box';
             div.style.borderLeftColor = '#22c55e';
             div.innerHTML = `
-                <div class="alert-title">âœ… Settings Saved</div>
+                <div class="alert-title">✔ Settings Saved</div>
                 <div class="alert-sub">Store profile and delivery rules updated.</div>
             `;
             alertContainer.appendChild(div);
@@ -4113,7 +4113,7 @@ function loadFeedbacks() {
         }
 
         feedbacks.forEach(f => {
-            const stars = "â­".repeat(f.rating || 0);
+            const stars = "⭐".repeat(f.rating || 0);
             const dateStr = f.timestamp ? new Date(f.timestamp).toLocaleString() : "N/A";
 
             tableBody.innerHTML += `
@@ -4236,7 +4236,7 @@ window.addNewCategoryAddonField = (name = "", price = "") => {
     div.className = "addon-row-small";
     div.innerHTML = `
         <input placeholder="Addon" value="${name}" class="form-input flex-2">
-        <input type="number" placeholder="â‚¹" value="${price}" class="form-input flex-1">
+        <input type="number" placeholder="₹" value="${price}" class="form-input flex-1">
         <button onclick="this.parentElement.remove()" class="btn-text-danger" style="font-size:18px;">&times;</button>
     `;
     container.appendChild(div);
@@ -4272,7 +4272,7 @@ window.openPOSSelectionModal = async (dishId) => {
         card.innerHTML = `
             <div class="size-chip-box">
                 <span class="size-name">${name}</span>
-                <span class="size-price">â‚¹${price}</span>
+                <span class="size-price">₹${price}</span>
             </div>
         `;
         card.onclick = () => selectPOSSize(name, price, card);
@@ -4296,7 +4296,7 @@ window.openPOSSelectionModal = async (dishId) => {
                     <input type="checkbox" onchange="togglePOSAddon('${name}', ${price}, this)">
                     <span class="fs-13 font-weight-600">${name}</span>
                 </div>
-                <span class="text-muted-small font-weight-700">+â‚¹${price}</span>
+                <span class="text-muted-small font-weight-700">+₹${price}</span>
             `;
             addonsList.appendChild(item);
         });
@@ -4338,7 +4338,7 @@ function updatePOSModalTotal() {
     let base = currentPOSModalSize ? currentPOSModalSize.price : 0;
     let addonsTotal = Object.values(currentPOSModalAddons).reduce((a, b) => a + b, 0);
     let total = (Number(base) + addonsTotal) * currentPOSModalQty;
-    document.getElementById('posModalTotal').innerText = `â‚¹${total}`;
+    document.getElementById('posModalTotal').innerText = `₹${total}`;
 }
 
 window.addToWalkinCartFromModal = () => {
@@ -4413,7 +4413,7 @@ window.openCartAddonPicker = async (cartKey) => {
                     <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="togglePOSAddon('${name}', ${price}, this)">
                     <span class="fs-13 font-weight-600">${name}</span>
                 </div>
-                <span class="text-muted-small font-weight-700">+â‚¹${price}</span>
+                <span class="text-muted-small font-weight-700">+₹${price}</span>
             `;
             addonsList.appendChild(itemDiv);
         });
@@ -4422,7 +4422,7 @@ window.openCartAddonPicker = async (cartKey) => {
     // Change the "Add to Cart" button to "Update Item"
     const submitBtn = document.getElementById('posModalSubmitBtn');
     const originalText = submitBtn.innerText;
-    submitBtn.innerText = "ðŸ’¾ Update Selection";
+    submitBtn.innerText = "💾 Update Selection";
 
     // Temporarily replace the click handler
     const originalHandler = window.addToWalkinCartFromModal;
@@ -4492,7 +4492,7 @@ window.migrateAddonsToCategories = async () => {
 
         if (Object.keys(updates).length > 0) {
             await db.ref().update(updates);
-            console.log("âœ… Migration complete!", updates);
+            console.log("✔ Migration complete!", updates);
             alert("Success: Add-ons migrated to categories!");
         } else {
             console.log("No add-ons found to migrate.");
@@ -4542,7 +4542,7 @@ async function runImageMigration() {
     if (!confirm("This will convert all Firebase Storage images to Base64 text in the database. This process might take a minute depending on the number of items. Proceed?")) return;
 
     try {
-        console.log("ðŸš€ Starting Image Migration...");
+        console.log("🚀 Starting Image Migration...");
         const updates = {};
 
         // Helper to download image and convert to Base64
@@ -4640,7 +4640,7 @@ async function runImageMigration() {
 
         if (Object.keys(updates).length > 0) {
             await db.ref().update(updates);
-            console.log("âœ… Image Migration Complete!", updates);
+            console.log("✔ Image Migration Complete!", updates);
             alert("Success: All images migrated to Base64 text!");
             location.reload();
         } else {
