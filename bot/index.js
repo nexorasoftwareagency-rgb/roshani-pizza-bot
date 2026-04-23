@@ -249,13 +249,9 @@ async function sendDailyReport(sock, targetOutlet = null) {
             revenueByOutlet[outlet] = todayOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
         }
 
-        // Skip if no orders found
+        // Handle zero orders case gracefully
         if (allTodayOrders.length === 0) {
-            console.log(`[Report] No orders found for ${targetOutlet || 'all outlets'} on ${todayStr}. Skipping.`);
-            for (const outlet of outlets) {
-                await updateData('settings/Bot', { lastReportDate: todayStr }, outlet);
-            }
-            return;
+            console.log(`[Report] Zero orders found for ${targetOutlet || 'all outlets'} on ${todayStr}. Sending Zero Sales report.`);
         }
 
         const totalRevenue = allTodayOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
@@ -550,7 +546,11 @@ async function startBot() {
                     const closeTimeMinutes = parseTime(storeSettings.shopCloseTime);
                     const currentTimeMinutes = curH * 60 + curM;
 
-                    if (currentTimeMinutes >= closeTimeMinutes) {
+                    const isAutoClosed = currentTimeMinutes >= closeTimeMinutes;
+                    const isManuallyClosed = storeSettings.statusOverride === 'FORCE_CLOSED';
+
+                    if (isAutoClosed || isManuallyClosed) {
+                        console.log(`[Scheduler] Triggering report for ${outlet} (${isManuallyClosed ? 'Manual' : 'Auto'} Close)`);
                         // Pass specific outlet to reporter
                         await sendDailyReport(sock, outlet);
                     }
