@@ -812,77 +812,88 @@
 
             <!-- REPORTS TAB -->
             <div id="tab-reports" class="tab-content hidden">
-                <div class="panel">
-                    <div class="panel-header">
-                        <h3>📊 Sales Analytics & Reports</h3>
-                        <div class="flex-row flex-gap-10 flex-center">
-                            <input type="date" id="reportFrom" class="form-input report-date-input" title="From Date">
-                            <span class="text-muted-small">to</span>
-                            <input type="date" id="reportTo" class="form-input report-date-input" title="To Date">
-                            <button onclick="generateCustomReport()" class="btn-primary report-gen-btn" title="Generate Sales Statistics for the selected dates">Generate</button>
+                <div class="flex-row justify-between flex-center mb-20" style="padding: 0 10px;">
+                    <h2 class="section-title" style="font-size: 24px; margin: 0;">📊 Sales Analytics & Reports</h2>
+                    <div class="flex-row flex-gap-10 flex-center glass-card" style="padding: 10px 20px; border-radius: 12px;">
+                        <input type="date" id="reportFrom" class="form-input report-date-input" title="From Date">
+                        <span class="text-muted-small">to</span>
+                        <input type="date" id="reportTo" class="form-input report-date-input" title="To Date">
+                        <button onclick="generateCustomReport()" class="btn-primary report-gen-btn" title="Generate Sales Statistics for the selected dates">Generate</button>
+                    </div>
+                </div>
+                
+                <!-- KPI TOP ROW -->
+                <div class="kpi-row mb-24">
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box green"><i data-lucide="indian-rupee"></i></div>
+                        <div class="kpi-info">
+                            <span class="val" id="reportRevenue">₹0</span>
+                            <span class="lbl">Total Revenue</span>
                         </div>
                     </div>
-                    
-                    <div class="dashboard-grid">
-                        <!-- Left: Detailed Table -->
-                        <div class="flex-col">
-                            <div class="glass-card mb-20 p-20">
-                                <h4 class="panel-title mb-15">Detailed Sales Data</h4>
-                                <div class="flex-row flex-gap-10 mb-14">
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box blue"><i data-lucide="shopping-bag"></i></div>
+                        <div class="kpi-info">
+                            <span class="val" id="reportOrders">0</span>
+                            <span class="lbl">Total Orders</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box orange"><i data-lucide="trending-up"></i></div>
+                        <div class="kpi-info">
+                            <span class="val" id="reportAvg">₹0</span>
+                            <span class="lbl">Avg. Ticket Size</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box pink"><i data-lucide="calendar"></i></div>
+                        <div class="kpi-info">
+                            <span class="val" id="reportPeriod">Selected Period</span>
+                            <span class="lbl">Report Duration</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reports-grid">
+                    <!-- Left: Detailed Table -->
+                    <div class="flex-col">
+                        <div class="glass-card mb-20 p-24" style="min-height: 400px;">
+                            <div class="flex-row justify-between flex-center mb-20">
+                                <h4 class="panel-title" style="margin: 0;">Detailed Sales Data</h4>
+                                <div class="flex-row flex-gap-10">
                                     <button onclick="downloadExcel()" class="btn-secondary btn-small excel-btn" title="Export current sales report to Excel">📥 Excel</button>
                                     <button onclick="downloadPDF()" class="btn-secondary btn-small pdf-btn" title="Export current sales report to PDF">📥 PDF</button>
                                 </div>
-                                <div class="scroll-x report-table-wrapper">
-                                    <table class="w-full">
-                                        <thead>
-                                            <tr>
-                                                <th>Date</th>
-                                                <th>Customer</th>
-                                                <th>Total (₹)</th>
-                                                <th>Method</th>
-                                                <th>Items</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="reportTableBody"></tbody>
-                                    </table>
-                                </div>
                             </div>
-                        </div>
-
-                        <!-- Right: Trends & KPIs -->
-                        <div class="flex-col">
-                             <div class="glass-card mb-20 p-20">
-                                <h4 class="panel-title mb-15">Revenue Trends</h4>
-                                <div class="w-full h-250">
-                                    <canvas id="revenueChart"></canvas>
-                                </div>
-                            </div>
-
-                            <div class="kpi-row grid-cols-1">
-                                <div class="kpi-card mb-12">
-                                    <div class="kpi-info">
-                                        <span class="val" id="reportRevenue">₹0</span>
-                                        <span class="lbl">Total Revenue</span>
-                                    </div>
-                                </div>
-                                <div class="kpi-card mb-12">
-                                    <div class="kpi-info">
-                                        <span class="val" id="reportOrders">0</span>
-                                        <span class="lbl">Total Orders</span>
-                                    </div>
-                                </div>
-                                <div class="kpi-card">
-                                    <div class="kpi-info">
-                                        <span class="val" id="reportAvg">₹0</span>
-                                        <span class="lbl">Avg. Ticket Size</span>
-                                    </div>
-                                </div>
+                            <div class="scroll-x report-table-wrapper">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Customer</th>
+                                            <th>Total (₹)</th>
+                                            <th>Method</th>
+                                            <th>Items</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reportTableBody"></tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
 
-                    <div id="reportsContainer" class="hidden"></div>
+                    <!-- Right: Trends -->
+                    <div class="flex-col">
+                         <div class="glass-card mb-20 p-24">
+                            <h4 class="panel-title mb-15">Revenue Trends</h4>
+                            <div class="w-full h-300">
+                                <canvas id="revenueChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                <div id="reportsContainer" class="hidden"></div>
             </div>
 
             <!-- INVENTORY TAB (COMING SOON) -->
@@ -1295,6 +1306,7 @@
     </div> <!-- END LAYOUT -->
 
 
+    <script src="receipt-templates.js?v=3.1.0"></script>
     <script src="app.js?v=3.1.0"></script>
     <script>
         // Ensure Lucide icons are rendered
