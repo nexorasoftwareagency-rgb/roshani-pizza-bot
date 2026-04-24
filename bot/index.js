@@ -243,7 +243,11 @@ async function sendDailyReport(sock, targetOutlet = null) {
 
         for (const outlet of outlets) {
             const orders = await getData("orders", outlet) || {};
-            const todayOrders = Object.values(orders).filter(o => o.createdAt && o.createdAt.startsWith(todayStr));
+            const todayOrders = Object.values(orders).filter(o => {
+                if (!o.createdAt) return false;
+                const dateStr = typeof o.createdAt === 'string' ? o.createdAt : new Date(o.createdAt).toISOString();
+                return dateStr.startsWith(todayStr);
+            });
             
             allTodayOrders = allTodayOrders.concat(todayOrders);
             revenueByOutlet[outlet] = todayOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
