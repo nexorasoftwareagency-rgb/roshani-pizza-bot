@@ -555,12 +555,12 @@ body {
     align-items: center;
     display: flex;
     justify-content: space-between;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .panel-title {
     color: var(--text-main);
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 800;
 }
 
@@ -579,19 +579,21 @@ table {
 th {
     border-bottom: 1px solid var(--glass-border);
     color: var(--primary-orange);
-    font-size: 11px;
-    padding: 16px 12px;
+    font-size: 10px;
+    padding: 12px 14px;
     text-align: left;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.2px;
     font-weight: 800;
+    background: rgba(0,0,0,0.02);
 }
 
 td {
-    padding: 16px 20px;
+    padding: 12px 14px;
     border-bottom: 1px solid var(--glass-border);
     vertical-align: middle;
     color: var(--text-main);
+    font-size: 13px;
 }
 
 tr:hover td {
@@ -624,43 +626,106 @@ tr:hover td {
 }
 
 .status {
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
 }
 
 .status.Confirmed {
-    background: rgba(16, 185, 129, 0.15);
-    color: #065F46;
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .status.Preparing {
-    background: rgba(245, 158, 11, 0.15);
-    color: #92400E;
+    background: rgba(245, 158, 11, 0.12);
+    color: #D97706;
+    border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 .status.Ready,
 .status.Cooked {
-    background: rgba(59, 130, 246, 0.15);
-    color: #1E40AF;
-}
-
-.status.OutforDelivery {
-    background: rgba(139, 92, 246, 0.15);
-    color: #5B21B6;
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563EB;
+    border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .status.Delivered {
-    background: rgba(34, 197, 94, 0.1);
-    color: #15803D;
+    background: rgba(107, 114, 128, 0.1);
+    color: #4B5563;
+    border: 1px solid rgba(107, 114, 128, 0.2);
 }
 
-.status.Cancelled {
-    background: rgba(239, 68, 68, 0.1);
-    color: #991B1B;
+.status-select, .rider-select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.status-select:hover, .rider-select:hover {
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-table-icon {
+    padding: 4px 8px;
+    font-size: 14px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.05);
+    color: var(--text-main);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.btn-table-icon:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: var(--primary);
+}
+
+.btn-table-action {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.btn-table-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+.btn-chat {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.btn-chat:hover {
+    background: rgba(37, 211, 102, 0.1);
 }
 
 .badge {

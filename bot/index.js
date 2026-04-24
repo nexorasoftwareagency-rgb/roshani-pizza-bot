@@ -311,7 +311,8 @@ function formatOrderInvoice(orderId, order) {
     if (order.items) {
         order.items.forEach((item, i) => {
             const qty = item.quantity || 1;
-            const itemTotal = (item.total || 0) * qty;
+            const price = item.price || item.unitPrice || 0;
+            const itemTotal = item.lineTotal || (price * qty);
             itemsText += `• *${item.name}* (${item.size}) x ${qty} - ₹${itemTotal}\n`;
             if (item.addons && item.addons.length > 0) {
                 itemsText += `  _Addons: ${item.addons.map(a => a.name).join(", ")}_\n`;

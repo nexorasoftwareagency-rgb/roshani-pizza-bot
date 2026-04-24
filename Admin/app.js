@@ -1478,7 +1478,7 @@ function renderOrders(snap) {
             <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
             <td data-label="Actions">
                 <div class="flex-row flex-gap-5">
-                    <select onchange="event.stopPropagation(); updateStatus('${id}', this.value)" onclick="event.stopPropagation()" style="width:100px">
+                    <select onchange="event.stopPropagation(); updateStatus('${id}', this.value)" onclick="event.stopPropagation()" class="status-select">
                         <option value="">Status</option>
                         <option value="Confirmed" ${safeStatus === "Confirmed" ? "selected" : ""}>Confirm</option>
                         <option value="Preparing" ${safeStatus === "Preparing" ? "selected" : ""}>Preparing</option>
@@ -1487,10 +1487,10 @@ function renderOrders(snap) {
                         <option value="Delivered" ${safeStatus === "Delivered" ? "selected" : ""}>Delivered</option>
                         <option value="Cancelled" ${safeStatus === "Cancelled" ? "selected" : ""}>Cancelled X</option>
                     </select>
-        <button onclick="event.stopPropagation(); window.printReceiptById('${o.orderId || id}')" class="btn-icon" style="padding: 4px 8px; font-size: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; border-radius: 4px;" title="Print Receipt">🖨️</button>
+        <button onclick="event.stopPropagation(); window.printReceiptById('${o.orderId || id}')" class="btn-table-icon" title="Print Receipt">🖨️</button>
                 </div>
                 <div class="mt-5">
-                    <select onchange="event.stopPropagation(); assignRider('${id}', this.value)" onclick="event.stopPropagation()" style="width:100%; max-width:145px;">
+                    <select onchange="event.stopPropagation(); assignRider('${id}', this.value)" onclick="event.stopPropagation()" class="rider-select" style="width: 100%;">
                         <option value="">Assign Rider</option>
                         ${ridersList.map(r => `<option value="${escapeHtml(r.email)}" ${o.assignedRider === r.email ? "selected" : ""}>${escapeHtml(r.name)}</option>`).join("")}
                     </select>
@@ -1534,13 +1534,13 @@ function renderOrders(snap) {
                 <td data-label="Total" style="font-weight:700">₹${safeTotal}</td>
                 <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
                 <td data-label="Rider">
-                    <select onchange="event.stopPropagation(); assignRider('${id}', this.value)" onclick="event.stopPropagation()" style="width:120px">
+                    <select onchange="event.stopPropagation(); assignRider('${id}', this.value)" onclick="event.stopPropagation()" class="rider-select">
                         <option value="">Select Rider</option>
                         ${ridersList.map(r => `<option value="${escapeHtml(r.email)}" ${o.assignedRider === r.email ? "selected" : ""}>${escapeHtml(r.name)}</option>`).join("")}
                     </select>
                 </td>
                 <td data-label="Action">
-                    <button onclick="event.stopPropagation(); updateStatus('${id}', 'Delivered')" class="btn-primary" style="padding:4px 8px; font-size:11px;">Deliver</button>
+                    <button onclick="event.stopPropagation(); updateStatus('${id}', 'Delivered')" class="btn-table-action">Deliver</button>
                 </td>
             `;
             liveOrdersTable.appendChild(rowLive);
@@ -3594,7 +3594,7 @@ window.submitWalkinSale = async () => {
         status: 'Delivered',
         type: 'Walk-in',
         outlet: window.currentOutlet,
-        createdAt: Date.now()
+        createdAt: new Date().toISOString()
     };
 
     // Generate and save receipt HTML for persistence
