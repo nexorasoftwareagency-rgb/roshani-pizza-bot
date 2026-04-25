@@ -428,17 +428,21 @@ button, input {
 }
 
 /* MODALS */
-.modal-overlay {
+.modal {
+    display: none; /* Ensure hidden by default */
     position: fixed;
     inset: 0;
     background: rgba(15, 23, 42, 0.4);
     -webkit-backdrop-filter: blur(0.625rem);
     backdrop-filter: blur(0.625rem);
     z-index: 5000;
-    display: flex;
     align-items: center;
     justify-content: center;
     padding: 1.25rem;
+}
+
+.modal.active {
+    display: flex;
 }
 
 .modal-card {
@@ -450,6 +454,18 @@ button, input {
     text-align: center;
     box-shadow: var(--shadow-lg);
     animation: modalFadeIn 0.3s ease-out;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    justify-content: center;
+}
+
+.modal-actions button {
+    flex: 1;
+    min-width: 0;
 }
 
 @keyframes modalFadeIn {
