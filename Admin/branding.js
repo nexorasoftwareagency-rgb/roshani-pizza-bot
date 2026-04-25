@@ -21,13 +21,13 @@
     const config = {
         pizza: {
             manifest: 'manifest-pizza.json',
-            icon: 'icon-pizza.png',
+            icon: 'icon-pizza.webp',
             theme: '#FF6B00',
             title: 'Roshani Pizza | Admin'
         },
         cake: {
             manifest: 'manifest-cake.json',
-            icon: 'icon-cake.png',
+            icon: 'icon-cake.webp',
             theme: '#fbcfe8',
             title: 'Roshani Cake Boutique | Admin'
         }

@@ -1,0 +1,121 @@
+
+/* ==========================================================================
+   PHASE 2: MOBILE RESPONSIVENESS & TOUCH OPTIMIZATION (Audit 1.35 & 1.36)
+   ========================================================================== */
+
+@media screen and (max-width: 600px) {
+    /* 1. TABLE TO CARD TRANSFORMATION */
+    /* Target all main data tables (Orders, Customers, Riders) */
+    .orders-table-container table,
+    .customers-table-container table,
+    .riders-table-container table,
+    #ordersTableFull,
+    #ridersTable {
+        border: 0;
+    }
+
+    .orders-table-container thead,
+    .customers-table-container thead,
+    .riders-table-container thead,
+    #ordersTableFull thead,
+    #ridersTable thead {
+        display: none; /* Hide headers on small screens */
+    }
+
+    .orders-table-container tr,
+    .customers-table-container tr,
+    .riders-table-container tr,
+    #ordersTableFull tr,
+    #ridersTable tr {
+        display: block;
+        margin-bottom: 1rem;
+        background: #fff;
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+
+    .orders-table-container td,
+    .customers-table-container td,
+    .riders-table-container td,
+    #ordersTableFull td,
+    #ridersTable td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(0,0,0,0.03);
+        font-size: 13px;
+        text-align: right;
+    }
+
+    .orders-table-container td:last-child,
+    .customers-table-container td:last-child,
+    .riders-table-container td:last-child,
+    #ordersTableFull td:last-child,
+    #ridersTable td:last-child {
+        border-bottom: 0;
+        justify-content: center;
+        padding-top: 12px;
+    }
+
+    /* Add pseudo-labels for context where possible */
+    .orders-table-container td::before,
+    #ordersTableFull td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 10px;
+        color: var(--text-muted);
+        float: left;
+        margin-right: 10px;
+    }
+
+    /* 2. POS (WALKIN) MOBILE REFINEMENT */
+    #tab-walkin .walkin-layout {
+        flex-direction: column !important; /* Stack menu and cart on very small screens */
+    }
+
+    #tab-walkin .walkin-picker {
+        flex: none !important;
+        width: 100% !important;
+        height: auto !important;
+        max-height: 250px;
+        border-right: none;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        display: flex;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    #tab-walkin .walkin-dish-grid {
+        display: flex !important;
+        flex-direction: row !important;
+        padding: 10px;
+        gap: 12px;
+    }
+
+    #tab-walkin .walkin-dish-card {
+        flex: 0 0 100px;
+        min-height: 100px;
+    }
+
+    #tab-walkin .walkin-cart {
+        height: calc(100vh - 350px);
+    }
+
+    /* 3. TOUCH TARGETS (Audit 1.35) */
+    .nav-btn, 
+    .btn-primary, 
+    .btn-outline, 
+    .action-btn,
+    .qty-btn,
+    .remove-btn {
+        min-height: 44px;
+        min-width: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+}

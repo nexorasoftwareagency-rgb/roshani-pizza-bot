@@ -8,9 +8,9 @@
   "theme_color": "#fbcfe8",
   "icons": [
     {
-      "src": "icon-cake.png",
+      "src": "icon-cake.webp",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/webp",
       "purpose": "any maskable"
     }
   ]

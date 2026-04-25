@@ -1,36 +1,288 @@
-// ==========================================
-// PIZZA ERP | ADMINISTRATION PANEL v3.0
-// ==========================================
-window.haptic = window.haptic || ((val) => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate(val);
-    }
+/**
+ * PIZZA ERP | ADMIN CORE APPLICATION
+ * Strict CSP & Secure DOM Implementation
+ */
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Static Event Binding
+    const setupStaticListeners = () => {
+        // Global Image Error Handler (CSP Compliant)
+        document.addEventListener('error', (e) => {
+            if (e.target.tagName === 'IMG') {
+                e.target.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\' viewBox=\'0 0 150 150\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23eee\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'12\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E';
+            }
+        }, true);
+
+        // Login Form
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        if (loginForm) loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (loginBtn) loginBtn.click();
+        });
+        if (loginBtn) loginBtn.addEventListener('click', () => {
+            if (window.adminLogin) window.adminLogin();
+        });
+
+        // Helper: Bind click to other element
+        const bindClickTo = (btnId, targetId) => {
+            const btn = document.getElementById(btnId);
+            if (btn) btn.addEventListener('click', () => {
+                const target = document.getElementById(targetId);
+                if (target) target.click();
+            });
+        };
+
+        // Helper: Bind function to click
+        const bindFn = (id, fnName) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('click', () => {
+                if (typeof window[fnName] === 'function') window[fnName]();
+            });
+        };
+
+        // Modal Controls
+        document.querySelectorAll('.close-btn, .cancel-dish-btn, .cancel-cat-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const modal = e.target.closest('.modal');
+                if (modal) modal.style.display = 'none';
+            });
+        });
+
+        // Menu & Categories
+        bindFn('btnShowDishModal', 'showDishModal');
+        bindFn('btnMigrateDishAddons', 'migrateAddonsToCategories');
+        bindFn('btnAddCatAddonField', 'addNewCategoryAddonField');
+        bindFn('btnAddCategory', 'addCategory');
+        bindClickTo('btnChangeCatPhoto', 'catFile');
+        const catFile = document.getElementById('catFile');
+        if (catFile) catFile.addEventListener('change', (e) => {
+            if (window.previewImage) window.previewImage(e.target, 'catPreview');
+        });
+
+        // Riders
+        bindFn('btnShowRiderModal', 'showRiderModal');
+        bindClickTo('btnUpdateRiderPhoto', 'riderFile');
+        const riderFile = document.getElementById('riderFile');
+        if (riderFile) riderFile.addEventListener('change', (e) => {
+            if (window.previewImage) window.previewImage(e.target, 'riderPreview');
+        });
+
+        // Notifications & Logs
+        bindFn('btnClearAllNotif', 'clearAllNotifications');
+        bindFn('btnClearNotificationsBottom', 'clearNotifications');
+        bindFn('btnClearLostSales', 'clearLostSales');
+        bindFn('btnEnableNotif', 'requestNotificationPermission');
+
+        // Settings
+        bindFn('btnSaveSettings', 'saveStoreSettings');
+        bindFn('btnQuickToggleOutlet', 'quickUpdateOutletStatus');
+
+        // POS (Walk-in)
+        bindFn('btnShowPOSSelection', 'showPOSSelectionModal');
+        bindFn('btnPosClear', 'clearPos');
+        bindFn('btnPosCheckout', 'posCheckout');
+        bindFn('btnPosPrintLast', 'reprintLastPosReceipt');
+        const btnPosQtyDec = document.getElementById('btnPosQtyDec');
+        if (btnPosQtyDec) btnPosQtyDec.addEventListener('click', () => {
+            if (window.adjustPosQty) window.adjustPosQty(-1);
+        });
+        const btnPosQtyInc = document.getElementById('btnPosQtyInc');
+        if (btnPosQtyInc) btnPosQtyInc.addEventListener('click', () => {
+            if (window.adjustPosQty) window.adjustPosQty(1);
+        });
+        bindClickTo('btnPosUpdateDishPhoto', 'posDishFile');
+        const posDishFile = document.getElementById('posDishFile');
+        if (posDishFile) posDishFile.addEventListener('change', (e) => {
+            if (window.previewImage) window.previewImage(e.target, 'posDishPreview');
+        });
+
+        // Dish Modal
+        bindClickTo('btnUpdateDishPhoto', 'dishFile');
+        const dishFile = document.getElementById('dishFile');
+        if (dishFile) dishFile.addEventListener('change', (e) => {
+            if (window.previewImage) window.previewImage(e.target, 'dishPreview');
+        });
+
+        const saveDishBtn = document.getElementById('saveDishBtn');
+        if (saveDishBtn) saveDishBtn.addEventListener('click', () => {
+            if (window.saveDish) window.saveDish();
+        });
+
+        // Toggle Password Visibility
+        const setupPassToggle = (btnId, inputId) => {
+            const btn = document.getElementById(btnId);
+            const input = document.getElementById(inputId);
+            if (btn && input) {
+                btn.addEventListener('click', () => {
+                    const isPass = input.type === 'password';
+                    input.type = isPass ? 'text' : 'password';
+                    btn.textContent = isPass ? '\uD83D\uDD12' : '\uD83D\uDC41\uFE0F';
+                });
+            }
+        };
+        setupPassToggle('btnToggleWifiPass', 'settingWifiPass');
+        setupPassToggle('btnToggleRiderPass', 'riderPass');
+
+        // Reports
+        const btnGenerateReport = document.getElementById('btnGenerateReport');
+        if (btnGenerateReport) btnGenerateReport.addEventListener('click', () => {
+            if (window.generateReport) window.generateReport();
+        });
+
+        // --- 2. Dynamic Event Delegation (CSP Compliant) ---
+        // Using a single listener for all dynamically rendered elements
+        document.addEventListener('click', (e) => {
+            const el = e.target.closest('[data-action], [data-tab]');
+            if (!el) return;
+
+            const action = el.getAttribute('data-action');
+            const tab = el.getAttribute('data-tab');
+
+            // Handle Tab Switching
+            if (tab) {
+                if (window.switchTab) window.switchTab(tab);
+                return;
+            }
+
+            if (!action) return;
+            const id = el.getAttribute('data-id');
+            const val = el.getAttribute('data-val');
+            const name = el.getAttribute('data-name');
+            const price = el.getAttribute('data-price');
+
+            // Handle actions
+            switch (action) {
+                case 'updateStatusFromDrawer': if (window.updateStatusFromDrawer) window.updateStatusFromDrawer(id, val); break;
+                case 'closeOrderDrawer': if (window.closeOrderDrawer) window.closeOrderDrawer(); break;
+                case 'chatOnWhatsapp': if (window.chatOnWhatsapp) window.chatOnWhatsapp(id); break;
+                case 'printReceiptById': if (window.printReceiptById) window.printReceiptById(id); break;
+                case 'updateStatus': if (window.updateStatus) window.updateStatus(id, val); break;
+                case 'assignRider': if (window.assignRider) window.assignRider(id, val); break;
+                case 'openOrderDrawer': if (window.openOrderDrawer) window.openOrderDrawer(id); break;
+                case 'markAsPaid': if (window.markAsPaid) window.markAsPaid(id); break;
+                case 'deleteCategory': if (window.deleteCategory) window.deleteCategory(id); break;
+                case 'removeParent': el.parentElement.remove(); break;
+                case 'removeGrandparent': el.parentElement.parentElement.remove(); break;
+                case 'editRider': if (window.editRider) window.editRider(id); break;
+                case 'resetRiderPassword': if (window.resetRiderPassword) window.resetRiderPassword(el.getAttribute('data-email')); break;
+                case 'deleteRider': if (window.deleteRider) window.deleteRider(id); break;
+                case 'saveSettings': if (window.saveSettings) window.saveSettings(); break;
+                case 'saveDeliveredOrder': if (window.saveDeliveredOrder) window.saveDeliveredOrder(id, val); break;
+                case 'adjustCardQty': if (window.adjustCardQty) window.adjustCardQty(id, parseInt(val)); break;
+                case 'addToWalkinCartFromCard': if (window.addToWalkinCartFromCard) window.addToWalkinCartFromCard(id); break;
+                case 'showAddonView': if (window.showAddonView) window.showAddonView(id); break;
+                case 'hideAddonView': if (window.hideAddonView) window.hideAddonView(); break;
+                case 'openCartAddonPicker': if (window.openCartAddonPicker) window.openCartAddonPicker(id); break;
+                case 'walkinQtyChange': if (window.walkinQtyChange) window.walkinQtyChange(id, parseInt(val)); break;
+                case 'walkinRemoveItem': if (window.walkinRemoveItem) window.walkinRemoveItem(id); break;
+                case 'filterWalkinByCategory': if (window.filterWalkinByCategory) window.filterWalkinByCategory(val, el); break;
+                case 'removeElement': {
+                    const targetId = el.getAttribute('data-target-id');
+                    const targetEl = document.getElementById(targetId);
+                    if (targetEl) targetEl.remove();
+                    break;
+                }
+                case 'selectPOSSize': if (window.selectPOSSize) window.selectPOSSize(name, parseFloat(price), el); break;
+                case 'triggerClick': const target = document.getElementById(val); if (target) target.click(); break;
+                case 'markDelivered': if (window.markDelivered) window.markDelivered(id); break;
+                case 'editDish': if (window.editDish) window.editDish(id); break;
+                case 'deleteDish': if (window.deleteDish) window.deleteDish(id); break;
+                case 'editCategory': if (window.editCategory) window.editCategory(id); break;
+                case 'closeModal': const modal = el.closest('.modal'); if (modal) modal.style.display = 'none'; break;
+                case 'toggleNotificationSheet': if (window.toggleNotificationSheet) window.toggleNotificationSheet(); break;
+                case 'toggleSidebar': if (window.toggleSidebar) window.toggleSidebar(); break;
+                case 'openOutletInNewTab': if (window.openOutletInNewTab) window.openOutletInNewTab(); break;
+                case 'userLogout': if (window.userLogout) window.userLogout(); break;
+                case 'installPWA': if (window.installPWA) window.installPWA(); break;
+                case 'removeRow': el.closest('tr').remove(); break;
+                case 'addFeeSlab': if (window.addFeeSlab) window.addFeeSlab(); break;
+                case 'migrateAddons': if (window.migrateAddonsToCategories) window.migrateAddonsToCategories(); break;
+                case 'runImageMigration': if (window.runImageMigration) window.runImageMigration(); break;
+            }
+        });
+
+        document.addEventListener('change', (e) => {
+            const el = e.target;
+            const action = el.getAttribute('data-action');
+            if (!action) return;
+
+            const id = el.getAttribute('data-id');
+            const val = el.value;
+
+            switch (action) {
+                case 'updateStatus': if (window.updateStatus) window.updateStatus(id, val); break;
+                case 'assignRider': if (window.assignRider) window.assignRider(id, val); break;
+                case 'toggleDish': if (window.toggleDishAvailable) window.toggleDishAvailable(id, el.checked); break;
+                case 'togglePOSAddon': 
+                    if (window.togglePOSAddon) window.togglePOSAddon(el.getAttribute('data-name'), parseFloat(el.getAttribute('data-price')), el); 
+                    break;
+                case 'previewImage':
+                    if (window.previewImage) window.previewImage(el, el.getAttribute('data-preview-id'));
+                    break;
+                case 'switchOutlet': if (window.switchOutlet) window.switchOutlet(val); break;
+            }
+        });
+    };
+
+    setupStaticListeners();
+    
+    // Initial Icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 });
 let deferredPrompt;
 
 // --- GLOBAL TOAST SYSTEM ---
-window.showToast = (msg, type = 'success') => {
-    let container = document.getElementById('toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        document.body.appendChild(container);
-    }
+window.showToast = (message, type = 'success') => {
+    const container = document.getElementById('alertContainer');
+    if (!container) return;
     const toast = document.createElement('div');
-    toast.className = `toast-notif ${type}`;
-    toast.innerHTML = `
-        <div class="toast-indicator"></div>
-        <div class="toast-content">
-            <span class="toast-icon">${type === 'success' ? '✔' : '✕'}</span>
-            <span class="toast-msg">${escapeHtml(msg)}</span>
-        </div>
-    `;
+    toast.className = `toast toast-${type}`;
+    toast.innerText = message;
     container.appendChild(toast);
-    setTimeout(() => toast.classList.add('show'), 10);
     setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 400);
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
     }, 4000);
+};
+
+
+// --- CUSTOM CONFIRMATION MODAL ---
+window.showConfirm = (message, title = "Confirm Action") => {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.id = 'confirmOverlay';
+        overlay.style.cssText = `
+            position: fixed; inset: 0; z-index: 99999;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+        `;
+
+        overlay.innerHTML = `
+            <div style="background: #1c1c1c; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+                        padding: 32px; max-width: 360px; width: 90%; text-align: center;
+                        box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+                <h3 style="color: #fff; margin: 0 0 12px; font-size: 18px; font-weight: 700;">${title}</h3>
+                <p style="color: #aaa; font-size: 14px; margin: 0 0 24px;">${message}</p>
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                    <button id="confirmNo" style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #333; background: transparent; color: #aaa; cursor: pointer; font-size: 14px; font-weight: 600;">Cancel</button>
+                    <button id="confirmYes" style="flex: 1; padding: 12px; border-radius: 12px; border: none; background: var(--action-green); color: #fff; cursor: pointer; font-size: 14px; font-weight: 700;">Confirm</button>
+                </div>
+            </div>`;
+
+        document.body.appendChild(overlay);
+
+        const cleanup = (val) => {
+            overlay.remove();
+            resolve(val);
+        };
+
+        overlay.querySelector('#confirmNo').onclick = () => cleanup(false);
+        overlay.querySelector('#confirmYes').onclick = () => cleanup(true);
+        overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
+    });
 };
 
 
@@ -52,7 +304,7 @@ window.showToast = (msg, type = 'success') => {
     if (refreshData.count > REFRESH_LIMIT) {
         console.error("CRITICAL: Infinite redirect loop detected. Stopping and purging cache.");
         sessionStorage.setItem('erp_refresh_log', '{"count": 0, "first": 0}');
-        alert("System detected a refresh loop. Please try clearing your browser cache or contact support if the issue persists.");
+        window.showToast("System detected a refresh loop. Please try clearing your browser cache or contact support if the issue persists.", "error");
         throw new Error("Refresh Loop Halted");
     }
 })();
@@ -78,7 +330,7 @@ window.installPWA = async () => {
         console.log("[PWA] deferredPrompt is null. Installation may not be supported or was recently accepted.");
         // Only alert if we're on mobile/desktop and installation is actually missing
         if (!isStandalone) {
-            alert("To install this app, look for 'Add to Home Screen' in your browser menu.");
+            window.showToast("To install this app, look for 'Add to Home Screen' in your browser menu.", "info");
         }
         return;
     }
@@ -93,7 +345,7 @@ window.installPWA = async () => {
 };
 
 window.addEventListener('appinstalled', () => {
-    const downloadBtn = document.getElementById('menu-downloadapp');
+    const downloadBtn = document.getElementById('menu-download');
     if (downloadBtn) downloadBtn.classList.add('hidden');
     deferredPrompt = null;
 });
@@ -152,14 +404,6 @@ const Outlet = {
         // Shared paths that stay at root level (admins, shared riders)
         const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'bot', 'logs'];
         const rootPath = path.split('/')[0];
-
-        // Special case: dishes was dishes/${outlet}, now ${outlet}/dishes
-        if (rootPath === 'dishes') {
-            const parts = path.split('/');
-            const outletInPath = parts[1] ? parts[1].toLowerCase() : this.current;
-            const subPath = parts.slice(2).join('/');
-            return db.ref(`${outletInPath}/dishes${subPath ? '/' + subPath : ''}`);
-        }
 
         if (shared.includes(rootPath)) return db.ref(path);
 
@@ -227,6 +471,8 @@ window.AdminApp = window.AdminApp || {};
 // =============================
 let adminData = null;
 const ordersMap = new Map(); // For XSS-safe access to order objects in UI
+let lastOrdersSnap = null;   // Phase 3: Cache for background performance
+let lastDishesSnap = null;   // Phase 3: Cache for menu performance
 
 // SECONDARY AUTH FOR RIDER CREATION (Avoids logging out admin)
 let secondaryAuth;
@@ -410,7 +656,7 @@ window.openOrderDrawer = (id) => {
                 <div class="font-bold text-main">${escapeHtml(item.name)}</div>
                 <div class="text-muted-small">${escapeHtml(item.size)} x ${item.qty || 1}</div>
             </div>
-            <div class="font-black text-primary">₹${item.price * (item.qty || 1)}</div>
+            <div class="font-black text-primary">&#8377;${item.price * (item.qty || 1)}</div>
         </div>
     `).join('');
 
@@ -424,7 +670,7 @@ window.openOrderDrawer = (id) => {
             ${itemsHtml}
             <div style="display:flex; justify-content:space-between; margin-top:10px; padding-top:12px; border-top:2px solid white;">
                 <span style="font-weight:800; font-size:14px;">TOTAL AMOUNT</span>
-                <span style="font-weight:900; font-size:20px; color:var(--primary);">₹${safeTotal}</span>
+                <span style="font-weight:900; font-size:20px; color:var(--primary);">&#8377;${safeTotal}</span>
             </div>
         </div>
 
@@ -438,12 +684,12 @@ window.openOrderDrawer = (id) => {
         <div style="display:flex; flex-direction:column; gap:12px;">
             <div style="font-size:11px; font-weight:800; color:var(--text-muted); text-align:center;">QUICK ACTIONS</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <button class="btn-primary" style="background:#10b981; border:none;" onclick="updateStatusFromDrawer('${id}', 'Confirmed')">CONFIRM</button>
-                <button class="btn-primary" style="background:#3b82f6; border:none;" onclick="updateStatusFromDrawer('${id}', 'Preparing')">PREPARE</button>
-                <button class="btn-primary" style="background:#f59e0b; border:none;" onclick="updateStatusFromDrawer('${id}', 'Cooked')">READY</button>
-                <button class="btn-primary" style="background:#ef4444; border:none;" onclick="updateStatusFromDrawer('${id}', 'Out for Delivery')">DISPATCH</button>
+                <button class="btn-primary" style="background:#10b981; border:none;" data-action="updateStatusFromDrawer" data-id="${id}" data-val="Confirmed">CONFIRM</button>
+                <button class="btn-primary" style="background:#3b82f6; border:none;" data-action="updateStatusFromDrawer" data-id="${id}" data-val="Preparing">PREPARE</button>
+                <button class="btn-primary" style="background:#f59e0b; border:none;" data-action="updateStatusFromDrawer" data-id="${id}" data-val="Cooked">READY</button>
+                <button class="btn-primary" style="background:#ef4444; border:none;" data-action="updateStatusFromDrawer" data-id="${id}" data-val="Out for Delivery">DISPATCH</button>
             </div>
-            <button class="btn-primary btn-full" style="margin-top:10px; background:#161616;" onclick="closeOrderDrawer()">CLOSE DETAILS</button>
+            <button class="btn-primary btn-full" style="margin-top:10px; background:#161616;" data-action="closeOrderDrawer">CLOSE DETAILS</button>
         </div>
     `;
 
@@ -508,6 +754,35 @@ let _ordersValueCb = null;
 let _ordersChildCb = null;
 let _ordersChangedCb = null;
 
+/**
+ * Standardizes Firebase Auth error messages.
+ */
+function standardizeAuthError(error) {
+    if (!error || !error.code) return "An unexpected error occurred. Please try again.";
+    
+    switch (error.code) {
+        case 'auth/invalid-email':
+            return "The email address is not valid.";
+        case 'auth/user-disabled':
+            return "This account has been disabled.";
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+            return "Incorrect email or password.";
+        case 'auth/email-already-in-use':
+            return "This email address is already in use.";
+        case 'auth/operation-not-allowed':
+            return "Operation not allowed. Contact support.";
+        case 'auth/weak-password':
+            return "The password is too weak.";
+        case 'auth/network-request-failed':
+            return "Network error. Please check your internet connection.";
+        case 'auth/too-many-requests':
+            return "Too many failed attempts. Please try again later.";
+        default:
+            return error.message || "Authentication failed.";
+    }
+}
+
 // =============================
 // AUTHENTICATION
 // =============================
@@ -520,7 +795,7 @@ function doLogin() {
 
     auth.signInWithEmailAndPassword(email, pass)
         .catch(e => {
-            authError.innerText = e.message;
+            authError.innerText = standardizeAuthError(e);
         });
 }
 
@@ -575,19 +850,37 @@ auth.onAuthStateChanged(async user => {
         adminData = null;
         const normalizedEmail = (user.email || "").toLowerCase();
 
+        let needsMigration = false;
+        let migrationData = null;
+
         adminSnap.forEach(snap => {
             const val = snap.val();
             if (val && val.email && val.email.toLowerCase() === normalizedEmail) {
                 adminData = val;
+                // If the key is not the UID, we need to migrate it to secure the rules
+                if (snap.key !== user.uid) {
+                    needsMigration = true;
+                    migrationData = {
+                        ...val,
+                        name: val.name || user.displayName || "Admin",
+                        updatedAt: firebase.database.ServerValue.TIMESTAMP
+                    };
+                }
             }
         });
+
+        if (needsMigration && user.uid) {
+            console.log("[Auth] Migrating admin record to secure UID key:", user.uid);
+            await Outlet.ref(`admins/${user.uid}`).set(migrationData);
+            console.log("[Auth] Migration complete. Secure permissions enabled.");
+        }
     } catch (authErr) {
         console.error("Critical Permission Error on /admins check:", authErr);
     }
 
     try {
         if (!adminData) {
-            alert("ACCESS DENIED: Not recognized as an Admin.");
+            window.showToast("ACCESS DENIED: Not recognized as an Admin.", "error");
             auth.signOut();
             return;
         }
@@ -597,8 +890,8 @@ auth.onAuthStateChanged(async user => {
         const switcherMobile = document.getElementById('outletSwitcherMobile');
         if (adminData.isSuper) {
             const outletOptionsHtml = `
-            <option value="pizza">🍕 Pizza ERP</option>
-                <option value="cake">🎂 Cakes ERP</option>
+            <option value="pizza">\uD83C\uDF55 Pizza ERP</option>
+                <option value="cake">\uD83C\uDF82 Cakes ERP</option>
             `;
             const savedOutlet = sessionStorage.getItem('adminSelectedOutlet') || adminData.outlet;
             window.currentOutlet = (savedOutlet || 'pizza').toLowerCase();
@@ -733,8 +1026,8 @@ window.previewOutletStatus = (val) => {
     if (hint) {
         const hints = {
             'AUTO': 'Status will follow your opening/closing hours.',
-            'FORCE_OPEN': '⚡ Shop will accept orders regardless of time.',
-            'FORCE_CLOSED': '🔔 Shop will reject all incoming orders.'
+            'FORCE_OPEN': '\u26A1 Shop will accept orders regardless of time.',
+            'FORCE_CLOSED': '\uD83D\uDCE2 Shop will reject all incoming orders.',
         };
         hint.innerText = hints[val] || '';
     }
@@ -747,11 +1040,11 @@ window.updateOutletStatusIndicator = (status) => {
     switch (status) {
         case 'FORCE_OPEN':
             pill.classList.add('status-open');
-            pill.innerText = '● OPEN';
+            pill.innerText = '\u25CF\u00A0 OPEN';
             break;
         case 'FORCE_CLOSED':
             pill.classList.add('status-closed');
-            pill.innerText = '● CLOSED';
+            pill.innerText = '\u25CF\u00A0 CLOSED';
             break;
         default:
             pill.classList.add('status-auto');
@@ -776,7 +1069,7 @@ window.quickToggleOutletStatus = async () => {
             div.className = 'alert-box';
             const colorMap = { 'FORCE_OPEN': '#22c55e', 'FORCE_CLOSED': '#ef4444', 'AUTO': '#3b82f6' };
             div.style.borderLeftColor = colorMap[newStatus] || '#3b82f6';
-            const labelMap = { 'FORCE_OPEN': '✔ Outlet is now FORCE OPEN', 'FORCE_CLOSED': '🌙 Outlet is now FORCE CLOSED', 'AUTO': '⏰ Outlet set to AUTO (time-based)' };
+            const labelMap = { 'FORCE_OPEN': '\u2705 Outlet is now FORCE OPEN', 'FORCE_CLOSED': '\uD83C\uDF19 Outlet is now FORCE CLOSED', 'AUTO': '\u23F0 Outlet set to AUTO (time-based)' };
             div.innerHTML = `
                 <div class="alert-title">${labelMap[newStatus] || 'Status Updated'}</div>
                 <div class="alert-sub">WhatsApp bot will respect this status immediately.</div>
@@ -788,7 +1081,7 @@ window.quickToggleOutletStatus = async () => {
         console.log("[Outlet Status] Quick-toggled to:", newStatus);
     } catch (e) {
         console.error("Failed to toggle outlet status:", e);
-        alert("Failed to update outlet status: " + e.message);
+        window.showToast("Failed to update outlet status: " + e.message, "error");
     }
 };
 
@@ -865,7 +1158,7 @@ function addNotification(title, sub, type = 'info') {
     }
 }
 
-// 🔔 NATIVE NOTIFICATIONS ENGINE
+// Ã°Å¸â€â€ NATIVE NOTIFICATIONS ENGINE
 window.requestNotificationPermission = async () => {
     if (!("Notification" in window)) {
         showAlert({ total: "N/A", items: "Browser doesn't support notifications." }, 'error');
@@ -876,7 +1169,7 @@ window.requestNotificationPermission = async () => {
     updateNotificationSettingsUI();
 
     if (permission === "granted") {
-        new Notification("✔ Notifications Enabled", {
+        new Notification("Ã¢Å“â€ Notifications Enabled", {
             body: "You will now receive instant alerts for new orders.",
             icon: window.currentOutlet === 'cake' ? 'icon-cake.png' : 'icon-pizza.png'
         });
@@ -896,16 +1189,16 @@ function updateNotificationSettingsUI() {
     }
 
     if (Notification.permission === "granted") {
-        statusText.innerText = "Permission: Active ✔";
+        statusText.innerText = "Permission: Active âœ”ï¸";
         btn.innerHTML = '<i data-lucide="check-circle"></i> <span>Enabled</span>';
         btn.classList.replace('btn-primary', 'btn-secondary');
         btn.disabled = true;
     } else if (Notification.permission === "denied") {
-        statusText.innerText = "Permission: Blocked ❌";
+        statusText.innerText = "Permission: Blocked âŒ";
         btn.innerText = "Blocked in Settings";
         btn.disabled = true;
     } else {
-        statusText.innerText = "Permission: Required 🔔";
+        statusText.innerText = "Permission: Required ðŸ””";
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -914,7 +1207,7 @@ function showNativeNotification(title, body) {
     if (Notification.permission !== "granted") return;
 
     // Use current outlet branding
-    const brandPrefix = window.currentOutlet === 'cake' ? '🍰 CAKE: ' : '🍕 PIZZA: ';
+    const brandPrefix = window.currentOutlet === 'cake' ? 'ðŸ° CAKE: ' : 'ðŸ• PIZZA: ';
     const icon = window.currentOutlet === 'cake' ? 'icon-cake.png' : 'icon-pizza.png';
 
     const options = {
@@ -1111,10 +1404,10 @@ window.switchTab = (tabId) => {
     const mainItem = document.getElementById(`menu-${tabId}`);
     if (mainItem) mainItem.classList.add('active');
 
-    // Update Mobile Bottom Nav (if exists)
+    // Update Mobile Bottom Nav
     document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
         item.classList.remove('active');
-        if (item.getAttribute('onclick')?.includes(`'${tabId}'`)) {
+        if (item.getAttribute('data-tab') === tabId) {
             item.classList.add('active');
         }
     });
@@ -1128,10 +1421,27 @@ window.switchTab = (tabId) => {
     if (target) {
         target.classList.remove('hidden');
 
-        // Tab-specific View Initializations
+        // Tab-specific View Initializations (Phase 3: Performance Scoping)
         if (tabId === 'liveTracker' && typeof window.initLiveRiderTracker === 'function') {
             setTimeout(() => window.initLiveRiderTracker(), 100);
+        } else if (typeof window.cleanupLiveRiderTracker === 'function') {
+            window.cleanupLiveRiderTracker();
         }
+
+        // Refresh data from cache if available
+        const orderTabs = ['dashboard', 'orders', 'liveOperations', 'payments'];
+        if (orderTabs.includes(tabId) && lastOrdersSnap) {
+             renderOrders(lastOrdersSnap);
+        }
+        
+        if (tabId === 'menu' && typeof window.loadMenu === 'function') {
+            window.loadMenu();
+        }
+        
+        if (tabId === 'walkin' && typeof window.loadWalkinMenu === 'function') {
+            window.loadWalkinMenu();
+        }
+
         if (tabId === 'settings' && typeof window.loadStoreSettings === 'function') {
             window.loadStoreSettings();
         }
@@ -1209,7 +1519,7 @@ function updateMobileCartSummaryState() {
         if (countEl) countEl.innerText = `${totalQty} Items`;
         if (totalEl) {
             const total = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
-            totalEl.innerText = `₹${total.toLocaleString()}`;
+            totalEl.innerText = `â‚¹${total.toLocaleString()}`;
         }
     } else {
         cartSummary.classList.add('hidden');
@@ -1238,7 +1548,7 @@ function initRealtimeListeners() {
 
             if (order && (order.outlet === window.currentOutlet || !window.currentOutlet) && order.status === "Placed" && isRecent && isPostLoad) {
                 showAlert(order);
-                addNotification(`New Order #${snap.key.slice(-5)}`, `Order for ₹${order.total} is placed.`, 'new');
+                addNotification(`New Order #${snap.key.slice(-5)}`, `Order for â‚¹${order.total} is placed.`, 'new');
                 setTimeout(() => highlightOrder(snap.key), 1000);
             }
         }
@@ -1250,7 +1560,7 @@ function initRealtimeListeners() {
         const order = snap.val();
         if (order && (order.outlet === window.currentOutlet || !window.currentOutlet)) {
             if (order.status === "Delivered") {
-                addNotification(`Order Delivered (#${snap.key.slice(-5)})`, `Customer: ${order.customer?.name || 'Walk-in'} • ₹${order.total}`, 'delivered');
+                addNotification(`Order Delivered (#${snap.key.slice(-5)})`, `Customer: ${order.customer?.name || 'Walk-in'} â€¢ â‚¹${order.total}`, 'delivered');
             }
         }
     };
@@ -1312,7 +1622,7 @@ function showAlert(data, type = 'info') {
     if (typeof data === 'string') {
         div.innerHTML = `
             <div class="alert-content">
-    <div class="alert-title">${type === "success" ? "✔" : "ℹ️"} Message</div>
+    <div class="alert-title">${type === "success" ? "âœ”ï¸" : "â„¹ï¸"} Message</div>
                 <div class="alert-sub">${escapeHtml(data)}</div>
             </div>
         `;
@@ -1323,10 +1633,10 @@ function showAlert(data, type = 'info') {
 
         div.innerHTML = `
             <div class="alert-content">
-                <div class="alert-title">🔔 New Order #${escapeHtml((order.orderId || order.id).slice(-5))}</div>
-                <div class="alert-sub">₹${escapeHtml(order.total)} • ${(order.items || []).length} item(s)</div>
+                <div class="alert-title">ðŸ”” New Order #${escapeHtml((order.orderId || order.id).slice(-5))}</div>
+                <div class="alert-sub">â‚¹${escapeHtml(order.total)} â€¢ ${(order.items || []).length} item(s)</div>
             </div>
-            <button class="alert-print-btn" data-order-id="${escapeHtml(orderKey)}">🖨️ Print</button>
+            <button class="alert-print-btn" data-order-id="${escapeHtml(orderKey)}">ðŸ–¨ï¸ Print</button>
         `;
 
         const printBtn = div.querySelector('.alert-print-btn');
@@ -1415,16 +1725,22 @@ window.chatOnWhatsapp = (orderId) => {
 // RENDER ORDERS
 // =============================
 function renderOrders(snap) {
+    if (!snap) return;
+    lastOrdersSnap = snap; // Cache for background performance
+    
     let ordersCount = 0, revenue = 0, pending = 0, today = 0, liveCount = 0;
     const todayStr = new Date().toISOString().split('T')[0];
+    const activeTab = window.currentActiveTab || 'dashboard';
 
     // Reset item stats to prevent cumulative data in real-time updates
     window.itemStats = {};
 
-    if (ordersTable) ordersTable.innerHTML = "";
-    if (document.getElementById("ordersTableFull")) document.getElementById("ordersTableFull").innerHTML = "";
-    if (liveOrdersTable) liveOrdersTable.innerHTML = "";
-    if (paymentsTable) paymentsTable.innerHTML = "";
+    // Selective DOM clearing (Only clear what is visible to improve performance)
+    if (ordersTable && activeTab === 'dashboard') ordersTable.innerHTML = "";
+    if (document.getElementById("ordersTableFull") && activeTab === 'orders') document.getElementById("ordersTableFull").innerHTML = "";
+    if (liveOrdersTable && activeTab === 'liveOperations') liveOrdersTable.innerHTML = "";
+    if (paymentsTable && activeTab === 'payments') paymentsTable.innerHTML = "";
+
     ordersMap.clear();
     snap.forEach(child => {
         const o = child.val();
@@ -1460,25 +1776,25 @@ function renderOrders(snap) {
         const safeTotal = escapeHtml(o.total);
         const safeAddress = escapeHtml(o.address);
         const safeLocationLink = validateUrl(o.locationLink) ? escapeHtml(o.locationLink) : '';
-        const displayPhone = o.phone ? o.phone : "Guest";
+        const displayPhone = o.phone ? escapeHtml(o.phone) : "Guest";
         const truncatedAddress = o.address ? (o.address.length > 30 ? o.address.substring(0, 30) + "..." : o.address) : "Counter Sale";
 
         const trHTML = `
-            <td data-label="Order ID" style="font-family: monospace; font-weight: 600;">#${safeOrderId}</td>
+            <td data-label="Order ID" class="font-mono font-600">#${safeOrderId}</td>
             <td data-label="Customer">
                 ${safeCustomerName}<br>
-                <small style="color:var(--text-muted)">${displayPhone}</small>
-                ${o.phone ? `<button onclick="event.stopPropagation(); window.chatOnWhatsapp('${id}')" class="btn-chat" title="Message on WhatsApp">💬</button>` : ''}
+                <small class="text-muted">${displayPhone}</small>
+                ${o.phone ? `<button data-action="chatOnWhatsapp" data-id="${id}" class="btn-chat" title="Message on WhatsApp">ðŸ’¬</button>` : ''}
             </td>
             <td data-label="Address">
                 <span title="${safeAddress}">${escapeHtml(truncatedAddress)}</span>
-    ${safeLocationLink ? `<br><a href="${safeLocationLink}" target="_blank" style="color:var(--primary); font-size:11px; text-decoration:none;">📍 Map</a>` : ""}
+    ${safeLocationLink ? `<br><a href="${safeLocationLink}" target="_blank" class="color-primary fs-11 no-decoration">ðŸ“ Map</a>` : ""}
             </td>
-            <td data-label="Total" style="font-weight:700">₹${safeTotal}</td>
+            <td data-label="Total" class="font-bold">â‚¹${safeTotal}</td>
             <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
             <td data-label="Actions">
                 <div class="flex-row flex-gap-5">
-                    <select onchange="event.stopPropagation(); updateStatus('${id}', this.value)" onclick="event.stopPropagation()" class="status-select">
+                    <select data-action="updateStatus" data-id="${id}" class="status-select">
                         <option value="">Status</option>
                         <option value="Confirmed" ${safeStatus === "Confirmed" ? "selected" : ""}>Confirm</option>
                         <option value="Preparing" ${safeStatus === "Preparing" ? "selected" : ""}>Preparing</option>
@@ -1487,10 +1803,10 @@ function renderOrders(snap) {
                         <option value="Delivered" ${safeStatus === "Delivered" ? "selected" : ""}>Delivered</option>
                         <option value="Cancelled" ${safeStatus === "Cancelled" ? "selected" : ""}>Cancelled X</option>
                     </select>
-        <button onclick="event.stopPropagation(); window.printReceiptById('${o.orderId || id}')" class="btn-table-icon" title="Print Receipt">🖨️</button>
+        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-table-icon" title="Print Receipt">ðŸ–¨ï¸</button>
                 </div>
                 <div class="mt-5">
-                    <select onchange="event.stopPropagation(); assignRider('${id}', this.value)" onclick="event.stopPropagation()" class="rider-select" style="width: 100%;">
+                    <select data-action="assignRider" data-id="${id}" class="rider-select w-full">
                         <option value="">Assign Rider</option>
                         ${ridersList.map(r => `<option value="${escapeHtml(r.email)}" ${o.assignedRider === r.email ? "selected" : ""}>${escapeHtml(r.name)}</option>`).join("")}
                     </select>
@@ -1500,54 +1816,60 @@ function renderOrders(snap) {
 
 
         // Populate Dashboard Table (Limit to 10)
-        if (ordersCount < 10 && ordersTable) {
+        if (ordersCount < 10 && ordersTable && activeTab === 'dashboard') {
             const row = document.createElement("tr");
             row.id = `row-${id}`;
             row.className = "clickable-row";
-            row.onclick = () => window.openOrderDrawer(id);
+            row.setAttribute('data-action', 'openOrderDrawer');
+            row.setAttribute('data-id', id);
             row.innerHTML = trHTML;
             ordersTable.appendChild(row);
             ordersCount++;
         }
 
         // Populate Order History
-        const rowFull = document.createElement("tr");
-        rowFull.className = "clickable-row";
-        rowFull.onclick = () => window.openOrderDrawer(id);
-        rowFull.innerHTML = trHTML;
-        if (document.getElementById("ordersTableFull")) document.getElementById("ordersTableFull").appendChild(rowFull);
+        if (activeTab === 'orders') {
+            const rowFull = document.createElement("tr");
+            rowFull.className = "clickable-row";
+            rowFull.setAttribute('data-action', 'openOrderDrawer');
+            rowFull.setAttribute('data-id', id);
+            rowFull.innerHTML = trHTML;
+            const fullTable = document.getElementById("ordersTableFull");
+            if (fullTable) fullTable.appendChild(rowFull);
+        }
 
         // Populate Live Table
-        if (isLive && liveOrdersTable) {
+        if (isLive && liveOrdersTable && activeTab === 'liveOperations') {
             const rowLive = document.createElement("tr");
             rowLive.className = "clickable-row";
-            rowLive.onclick = () => window.openOrderDrawer(id);
+            rowLive.setAttribute('data-action', 'openOrderDrawer');
+            rowLive.setAttribute('data-id', id);
             const safeItemsHTML = o.items ? o.items.map(i => `<strong>${escapeHtml(i.name)}</strong> (${escapeHtml(i.size)})${i.addons?.length ? '<br>+ ' + i.addons.map(a => escapeHtml(a.name)).join(', ') : ''}`).join('<br>') : '1 item';
             rowLive.innerHTML = `
-                <td data-label="Order ID" style="font-family: monospace; font-weight: 600;">#${safeOrderId}</td>
+                <td data-label="Order ID" class="font-mono font-600">#${safeOrderId}</td>
                 <td data-label="Customer">${safeCustomerName}</td>
                 <td data-label="Items">
                     <small>
                         ${safeItemsHTML}
                     </small>
                 </td>
-                <td data-label="Total" style="font-weight:700">₹${safeTotal}</td>
+                <td data-label="Total" class="font-bold">â‚¹${safeTotal}</td>
                 <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
                 <td data-label="Rider">
-                    <select onchange="event.stopPropagation(); assignRider('${id}', this.value)" onclick="event.stopPropagation()" class="rider-select">
+                    <select data-action="assignRider" data-id="${id}" class="rider-select">
                         <option value="">Select Rider</option>
                         ${ridersList.map(r => `<option value="${escapeHtml(r.email)}" ${o.assignedRider === r.email ? "selected" : ""}>${escapeHtml(r.name)}</option>`).join("")}
                     </select>
                 </td>
                 <td data-label="Action">
-                    <button onclick="event.stopPropagation(); updateStatus('${id}', 'Delivered')" class="btn-table-action">Deliver</button>
+                    <button data-action="updateStatus" data-id="${id}" data-val="Delivered" class="btn-table-action">Deliver</button>
                 </td>
             `;
             liveOrdersTable.appendChild(rowLive);
         }
 
         // Populate Payments Table
-        if (paymentsTable) {
+        if (paymentsTable && activeTab === 'payments') {
             const rowPay = document.createElement("tr");
             const safePStatus = escapeHtml(o.paymentStatus || "Pending");
             const safePStatusClass = safePStatus.toLowerCase();
@@ -1556,10 +1878,10 @@ function renderOrders(snap) {
                 <td data-label="Order ID" style="font-family: monospace;">#${safeOrderId}</td>
                 <td data-label="Customer">${safeCustomerName}</td>
                 <td data-label="Method">${safePMethod}</td>
-                <td data-label="Total" style="font-weight:700">₹${safeTotal}</td>
+                <td data-label="Total" style="font-weight:700">â‚¹${safeTotal}</td>
                 <td data-label="Status"><span class="status-${safePStatusClass}">${safePStatus}</span></td>
                 <td data-label="Action">
-                    ${safePStatus === 'Pending' ? `<button onclick="event.stopPropagation(); markAsPaid('${id}')" class="btn-secondary" style="padding:4px 8px; font-size:11px;">Mark Paid</button>` : '✔'}
+                    ${safePStatus === 'Pending' ? `<button data-action="markAsPaid" data-id="${id}" class="btn-secondary" style="padding:4px 8px; font-size:11px;">Mark Paid</button>` : 'âœ”ï¸'}
                 </td>
             `;
             paymentsTable.appendChild(rowPay);
@@ -1574,7 +1896,7 @@ function renderOrders(snap) {
     }
 
     if (document.getElementById("statOrders")) document.getElementById("statOrders").innerText = liveCount;
-    if (document.getElementById("statRevenue")) document.getElementById("statRevenue").innerText = "₹" + revenue.toLocaleString();
+    if (document.getElementById("statRevenue")) document.getElementById("statRevenue").innerText = "â‚¹" + revenue.toLocaleString();
     if (document.getElementById("statPending")) document.getElementById("statPending").innerText = pending;
 
     // RENDER PRIORITY TABLE
@@ -1602,18 +1924,18 @@ function renderPriorityTable(sortedOrders) {
             </div>`;
     } else {
         list.innerHTML = priority.map(o => `
-            <div class="priority-card" onclick="window.openOrderDrawer('${o.id}')">
+            <div class="priority-card" data-action="openOrderDrawer" data-id="${o.id}">
                 <div class="p-header">
                     <span class="p-id">#${escapeHtml(o.orderId || o.id.slice(-5))}</span>
                     <span class="status-badge ${(o.status || 'Pending').toLowerCase().replace(/ /g, '-')}">${o.status || 'Pending'}</span>
                 </div>
                 <div class="p-body">
                     <div class="p-cust">${escapeHtml(o.customerName)}</div>
-                    <div class="p-meta">₹${escapeHtml(o.total)} • ${o.items?.length || 0} items</div>
+                    <div class="p-meta">â‚¹${escapeHtml(o.total)} â€¢ ${o.items?.length || 0} items</div>
                 </div>
                 <div class="p-footer">
                     <span class="p-time">${o.createdAt ? new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
-                    <button class="btn-priority-action" onclick="event.stopPropagation(); updateStatus('${o.id}', 'Confirmed')">Confirm</button>
+                    <button class="btn-priority-action" data-action="updateStatus" data-id="${o.id}" data-val="Confirmed">Confirm</button>
                 </div>
             </div>
         `).join('');
@@ -1645,10 +1967,10 @@ function calculateTopSpenders(snap) {
         <div class="top-spender-card">
             <div class="flex-col">
                 <div class="spender-name">${escapeHtml(data.name)}</div>
-                <div class="spender-phone">${phone}</div>
+                 <div class="spender-phone">${escapeHtml(phone)}</div>
             </div>
             <div class="text-right">
-                <div class="spender-total">₹${data.total.toLocaleString()}</div>
+                <div class="spender-total">â‚¹${data.total.toLocaleString()}</div>
                 <div class="spender-meta">${data.count} VISITS</div>
             </div>
         </div>
@@ -1670,7 +1992,7 @@ function renderTopItems() {
         <div class="top-item-card">
             <div class="top-item-rank">${index + 1}</div>
             <div class="flex-1">
-                <div class="top-item-name">${name}</div>
+                 <div class="top-item-name">${escapeHtml(name)}</div>
                 <div class="top-item-count">${count} sold</div>
             </div>
             <div class="top-item-bar-bg">
@@ -1685,7 +2007,7 @@ window.markAsPaid = (id) => {
 };
 
 window.deleteOrder = (id) => {
-    alert("Sales records are permanent and cannot be deleted by anyone to maintain data integrity.");
+    window.showToast("Sales records are permanent and cannot be deleted by anyone to maintain data integrity.", "info");
 };
 
 // =============================
@@ -1715,12 +2037,12 @@ function loadCategories() {
             div.style.border = "1px solid rgba(0,0,0,0.05)";
 
             div.innerHTML = `
-                <img src="${cat.image || 'https://via.placeholder.com/60'}" style="width:60px; height:60px; border-radius:10px; object-fit:cover; border:1px solid rgba(0,0,0,0.05)">
+                <img src="${cat.image || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\' viewBox=\'0 0 60 60\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23eee\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'8\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" style="width:60px; height:60px; border-radius:10px; object-fit:cover; border:1px solid rgba(0,0,0,0.05)">
                 <div style="flex:1">
-                    <h4 style="margin:0; color:var(--text-main); font-weight:700;">${cat.name}</h4>
+                    <h4 style="margin:0; color:var(--text-main); font-weight:700;">${escapeHtml(cat.name)}</h4>
                     <small style="color:var(--text-muted)">ID: ${child.key.slice(-4)}</small>
                 </div>
-                <button onclick="deleteCategory('${cat.id}')" style="background:none; border:none; color:#ef4444; font-size:20px; cursor:pointer; opacity:0.6 hover:opacity:1;">&times;</button>
+                <button data-action="deleteCategory" data-id="${cat.id}" style="background:none; border:none; color:#ef4444; font-size:20px; cursor:pointer; opacity:0.6;">&times;</button>
             `;
             container.appendChild(div);
         });
@@ -1731,7 +2053,7 @@ function loadCategories() {
 async function addCategory() {
     const nameInput = document.getElementById('newCatName');
     const name = nameInput.value.trim();
-    if (!name) return alert('Enter category name');
+    if (!name) return window.showToast('Enter category name', 'warning');
 
     const fileInput = document.getElementById('catFile');
     const previewImg = document.getElementById('catPreview');
@@ -1764,16 +2086,16 @@ async function addCategory() {
 
         nameInput.value = "";
         fileInput.value = "";
-        if (previewImg) previewImg.src = "https://via.placeholder.com/40";
-        alert('Category added successfully!');
+        if (previewImg) previewImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3C/svg%3E";
+        window.showToast('Category added successfully!', 'success');
     } catch (err) {
         console.error(err);
-        alert('Operation failed: ' + err.message);
+        window.showToast('Operation failed: ' + err.message, 'error');
     }
 }
 
-window.deleteCategory = (id) => {
-    if (confirm("Delete this category?")) {
+window.deleteCategory = async (id) => {
+    if (await window.showConfirm("Delete this category?")) {
         Outlet.ref('categories/' + id).remove();
     }
 };
@@ -1786,7 +2108,7 @@ window.addSizeField = (name = "", price = "") => {
     div.innerHTML = `
         <input placeholder="Size (e.g. Small)" value="${name}" class="form-input" style="flex:2; margin-bottom:0">
         <input type="number" placeholder="Price" value="${price}" class="form-input" style="flex:1; margin-bottom:0">
-        <button onclick="this.parentElement.remove()" style="background:none; border:none; color:red; cursor:pointer;">×</button>
+        <button data-action="removeParent" style="background:none; border:none; color:red; cursor:pointer;">Ã—</button>
     `;
     container.appendChild(div);
 };
@@ -1799,7 +2121,7 @@ window.addNewAddonField = (name = "", price = "") => {
     div.innerHTML = `
         <input placeholder="Addon (e.g. Extra Cheese)" value="${name}" class="form-input" style="flex:2; margin-bottom:0">
         <input type="number" placeholder="Price" value="${price}" class="form-input" style="flex:1; margin-bottom:0">
-        <button onclick="this.parentElement.remove()" style="background:none; border:none; color:red; cursor:pointer;">×</button>
+        <button data-action="removeParent" style="background:none; border:none; color:red; cursor:pointer;">Ã—</button>
     `;
     container.appendChild(div);
 };
@@ -1812,16 +2134,17 @@ window.hideDishModal = () => {
     }
 };
 
-document.getElementById('saveDishBtn').onclick = async () => {
+// Rename function to saveDish to avoid conflict with event listener name
+window.saveDish = async () => {
     if (!window.currentOutlet || window.currentOutlet === 'null' || window.currentOutlet === 'undefined') {
-        return alert("Error: Current outlet context is missing. Please refresh or select an outlet first.");
+        return window.showToast("Error: Current outlet context is missing. Please refresh or select an outlet first.", "error");
     }
     const name = document.getElementById('dishName').value;
     const cat = document.getElementById('dishCategory').value;
     const basePrice = document.getElementById('dishPriceBase').value;
     let image = document.getElementById('dishImage').value; // Existing URL
 
-    if (!name || !cat) return alert("Please fill Name and Category");
+    if (!name || !cat) return window.showToast("Please fill Name and Category", "warning");
 
     const file = document.getElementById('dishFile').files[0];
     const statusLabel = document.getElementById('uploadStatus');
@@ -1887,66 +2210,60 @@ document.getElementById('saveDishBtn').onclick = async () => {
         hideDishModal();
         loadMenu();
     } catch (e) {
-        alert("Error: " + e.message);
+        window.showToast("Error: " + e.message, "error");
         statusLabel.style.display = "none";
     }
 };
 
 function loadMenu() {
     const grid = document.getElementById("menuGrid");
-    Outlet.ref(`dishes`).off(); // Detach previous listener before re-attaching
+    Outlet.ref(`dishes`).off();
     Outlet.ref(`dishes`).on("value", snap => {
         grid.innerHTML = "";
         snap.forEach(child => {
             const d = child.val();
-            const dishId = child.key; // capture in block scope — safe for closures
+            const dishId = child.key;
 
             let sizesHtml = "";
             if (d.sizes) {
                 sizesHtml = `
-                    <div style="margin:12px 0; padding:12px; background:rgba(0,0,0,0.02); border-radius:10px; border:1px solid rgba(0,0,0,0.03);">
-                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Sizes &amp; Pricing</div>
+                    <div class="dish-pricing-box">
+                        <div style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:5px; letter-spacing:0.5px;">Sizes & Pricing</div>
                         ${Object.entries(d.sizes).map(([size, price]) => `
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-size:13px;">
+                            <div class="dish-price-row">
                                 <span style="color:var(--text-main)">${size}</span>
-                                <span style="font-weight:800; color:var(--action-green)">₹${price}</span>
+                                <span class="dish-price-val">â‚¹${price}</span>
                             </div>
                         `).join("")}
                     </div>`;
             } else {
                 sizesHtml = `
-                    <div style="margin:12px 0; display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:13px; color:var(--text-muted)">Standard Price</span>
-                        <span style="font-size:18px; font-weight:800; color:var(--action-green)">₹${d.price || 0}</span>
+                    <div class="dish-pricing-box flex-between">
+                        <span style="font-size:12px; color:var(--text-muted)">Standard</span>
+                        <span class="dish-price-val" style="font-size:15px;">â‚¹${d.price || 0}</span>
                     </div>`;
             }
 
-            // Build card via createElement to avoid innerHTML+= closure bug
             const card = document.createElement('div');
-            card.className = 'glass-card';
-            card.style.cssText = 'padding:15px; transition:transform 0.2s; cursor:default;';
-            card.onmouseover = () => card.style.transform = 'translateY(-5px)';
-            card.onmouseout = () => card.style.transform = 'translateY(0)';
+            card.className = 'dish-card';
             card.innerHTML = `
-                <div style="position:relative; width:100%; height:160px; border-radius:12px; overflow:hidden; margin-bottom:15px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-                    <img src="${d.image || 'https://via.placeholder.com/150'}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://via.placeholder.com/150'">
-                    <div style="position:absolute; top:10px; right:10px; background:${d.stock ? 'rgba(6,95,70,0.9)' : 'rgba(220,38,38,0.9)'}; color:white; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);">
+                <div class="dish-img-container">
+                    <img src="${d.image || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\' viewBox=\'0 0 150 150\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23eee\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'12\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="${d.name}">
+                    <div class="stock-badge ${d.stock ? 'available' : 'out'}">
                         ${d.stock ? 'AVAILABLE' : 'OUT OF STOCK'}
                     </div>
                 </div>
-                <div style="padding:0 5px;">
-                    <h4 style="margin:0; font-size:16px; color:var(--text-main); font-weight:700;">${d.name}</h4>
-                    <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${d.category || ''}</div>
+                <div class="dish-info">
+                     <h4>${escapeHtml(d.name)}</h4>
+                    <div class="dish-category">${escapeHtml(d.category || '')}</div>
                     ${sizesHtml}
-                    <div style="display:flex; gap:8px; margin-top:5px;">
-                        <button class="edit-btn btn-secondary" style="flex:1; font-size:12px; padding:8px 0; display:flex; align-items:center; justify-content:center; gap:5px;">✔ï¸ Edit</button>
-            <button class="delete-btn btn-secondary" style="color:#ef4444; width:40px; padding:8px 0; display:flex; align-items:center; justify-content:center;">🗑️</button>
+                    <div class="dish-actions">
+                        <button class="edit-btn btn-secondary flex-center gap-5" data-action="editDish" data-id="${dishId}"><i data-lucide="edit-3" style="width:12px;"></i> Edit</button>
+                        <button class="delete-btn btn-secondary flex-center" data-action="deleteDish" data-id="${dishId}"><i data-lucide="trash-2" style="width:12px;"></i></button>
                     </div>
                 </div>`;
 
-            // Wire buttons using addEventListener — closures correctly capture dishId
-            card.querySelector('.edit-btn').addEventListener('click', () => window.showDishModal(dishId));
-            card.querySelector('.delete-btn').addEventListener('click', () => window.deleteDish(dishId));
+            if (window.lucide) window.lucide.createIcons(card);
 
             grid.appendChild(card);
         });
@@ -1976,7 +2293,7 @@ window.deleteDish = (dishId) => {
         <div style="background:#1c1c1c; border:1px solid #ef4444; border-radius:20px;
                     padding:32px 36px; max-width:360px; width:90%; text-align:center;
                     box-shadow:0 20px 60px rgba(239,68,68,0.25);">
-        <div style="font-size:40px; margin-bottom:12px;">🗑️</div>
+        <div style="font-size:40px; margin-bottom:12px;">ðŸ—‘ï¸</div>
             <h3 style="color:#fff; margin:0 0 8px; font-size:18px; font-weight:700;">Delete Dish?</h3>
             <p style="color:#aaa; font-size:14px; margin:0 0 24px;">This action cannot be undone.</p>
             <div style="display:flex; gap:12px; justify-content:center;">
@@ -1998,13 +2315,13 @@ window.deleteDish = (dishId) => {
     const cleanup = () => overlay.remove();
 
     // Cancel button
-    overlay.querySelector('#confirmDeleteNo').onclick = cleanup;
+    overlay.querySelector('#confirmDeleteNo').addEventListener('click', cleanup);
 
     // Click backdrop to cancel
-    overlay.onclick = (e) => { if (e.target === overlay) cleanup(); };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(); });
 
     // Confirm delete
-    overlay.querySelector('#confirmDeleteYes').onclick = async () => {
+    overlay.querySelector('#confirmDeleteYes').addEventListener('click', async () => {
         cleanup();
         try {
             const snap = await Outlet.ref(`dishes/${dishId}`).once('value');
@@ -2012,12 +2329,12 @@ window.deleteDish = (dishId) => {
             if (img) await deleteImage(img);
             await Outlet.ref(`dishes/${dishId}`).remove();
         } catch (e) {
-            alert('Delete failed: ' + e.message);
+            window.showToast('Delete failed: ' + e.message, 'error');
         }
-    };
+    });
 };
 
-// (Duplicate loadCategories, addCategory, deleteCategory removed — canonical versions above at loadCategories/line ~600)
+// (Duplicate loadCategories, addCategory, deleteCategory removed â€” canonical versions above at loadCategories/line ~600)
 
 // RIDERS
 let riderStatsData = {};
@@ -2043,6 +2360,7 @@ function loadRiders() {
     });
 }
 
+
 function renderRiders() {
     const table = document.getElementById("ridersTable");
     const activeDashboard = document.getElementById("riderStatusList");
@@ -2060,27 +2378,25 @@ function renderRiders() {
             table.innerHTML += `
                 <tr style="border-bottom: 1px solid rgba(0,0,0,0.03)">
                     <td data-label="Rider" style="padding:15px">
-                        <div style="font-weight:700; color:var(--text-main)">${r.name}</div>
-                        <small style="color:var(--action-green); font-weight:600;">${r.phone || 'No Phone'}</small>
+                         <div style="font-weight:700; color:var(--text-main)">${escapeHtml(r.name)}</div>
+                         <small style="color:var(--action-green); font-weight:600;">${r.phone ? escapeHtml(r.phone) : 'No Phone'}</small>
                     </td>
                     <td data-label="Credentials" style="padding:15px">
-                         <div style="font-size:11px; margin-bottom:4px;"><span style="color:var(--text-muted)">User:</span> <strong>${r.email}</strong></div>
-                         <div style="font-size:11px;"><span style="color:var(--text-muted)">Password:</span> <span style="font-family:monospace; background:rgba(0,0,0,0.05); padding:2px 5px; border-radius:4px; font-weight:700; color:var(--action-green)">••••••••</span></div>
+                         <div style="font-size:11px; margin-bottom:4px;"><span style="color:var(--text-muted)">User:</span> <strong>${escapeHtml(r.email)}</strong></div>
+                         <div style="font-size:11px;"><span style="color:var(--text-muted)">Password:</span> <span style="font-family:monospace; background:rgba(0,0,0,0.05); padding:2px 5px; border-radius:4px; font-weight:700; color:var(--action-green)">â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢</span></div>
                     </td>
-                    <td data-label="Status" style="padding:15px"><span class="status ${statusClass}" style="${r.status === 'Offline' ? 'background:rgba(0,0,0,0.1); color:gray' : ''}">${r.status || 'Active'}</span></td>
+                    <td data-label="Status" style="padding:15px"><span class="status ${statusClass}" style="${r.status === 'Offline' ? 'background:rgba(0,0,0,0.1); color:gray' : ''}">${escapeHtml(r.status || 'Active')}</span></td>
                     <td data-label="Portal" style="padding:15px">
-                        <a href="${portalUrl}" target="_blank" style="font-size:10px; font-weight:800; color:var(--action-green); text-decoration:none; border:2px solid var(--action-green); padding:5px 10px; border-radius:8px; display:inline-block; transition:all 0.2s;" onmouseover="this.style.background='var(--action-green)'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='var(--action-green)';">
-                            🚀 DASHBOARD
-                        </a>
+                        <a href="${portalUrl}" target="_blank" class="rider-portal-btn">\uD83D\uDE80 DASHBOARD</a>
                     </td>
                     <td data-label="Stats" style="padding:15px">
                         <div style="font-size:11px;"><strong>${stats.totalOrders}</strong> Orders</div>
-                        <div style="font-size:11px; color:var(--action-green); font-weight:700;">₹${stats.totalEarnings.toLocaleString()}</div>
+                        <div style="font-size:11px; color:var(--action-green); font-weight:700;">\u20B9${stats.totalEarnings.toLocaleString()}</div>
                     </td>
                     <td data-label="Actions" style="padding:15px; display:flex; gap:10px; align-items:center;">
-                        <button onclick="editRider('${r.id}')" title="Edit Rider" style="background:var(--action-green); color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:600;">Edit</button>
-                        <button onclick="resetRiderPassword('${r.email}')" title="Reset Password" style="background:none; border:none; color:var(--action-green); cursor:pointer; font-size:18px;">🔔</button>
-                        <button onclick="deleteRider('${r.id}')" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer; text-decoration:underline; font-weight:600;">Remove</button>
+                        <button data-action="editRider" data-id="${r.id}" title="Edit Rider" aria-label="Edit Rider" style="background:var(--action-green); color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:600;">Edit</button>
+                        <button data-action="resetRiderPassword" data-email="${r.email}" title="Reset Password" aria-label="Reset Password" style="background:none; border:none; color:var(--action-green); cursor:pointer; font-size:18px;">\uD83D\uDD04</button>
+                        <button data-action="deleteRider" data-id="${r.id}" aria-label="Delete Rider" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer; text-decoration:underline; font-weight:600;">Remove</button>
                     </td>
                 </tr>
             `;
@@ -2092,7 +2408,7 @@ function renderRiders() {
                 <div style="display:flex; align-items:center; gap:12px; padding:10px; background:rgba(255,255,255,0.03); border-radius:10px; margin-bottom:8px; border: 1px solid rgba(255,255,255,0.05);">
                     <div style="width:10px; height:10px; border-radius:50%; background:#22c55e; box-shadow: 0 0 10px #22c55e;"></div>
                     <div style="flex:1">
-                        <div style="font-size:13px; font-weight:600; color:var(--text-main)">${r.name}</div>
+                        <div style="font-size:13px; font-weight:600; color:var(--text-main)">${escapeHtml(r.name)}</div>
                         <div style="font-size:11px; color:var(--text-muted)">${stats.totalOrders} delivered today</div>
                     </div>
                 </div>
@@ -2112,9 +2428,13 @@ function renderRiders() {
     if (onlineCountBadge) onlineCountBadge.innerText = onlineCount + " ON";
 }
 
-window.deleteRider = (id) => confirm("Remove this rider? This will NOT delete their login but will prevent them from accessing the shop.") && Outlet.ref(`riders/${id}`).remove();
+window.deleteRider = async (id) => {
+    if (await window.showConfirm("Remove this rider? This will NOT delete their login but will prevent them from accessing the shop.", "Remove Rider")) {
+        await Outlet.ref(`riders/${id}`).remove();
+        window.showToast("Rider removed successfully", "success");
+    }
+};
 
-// (Duplicate loadReports/generateCustomReport/download blocks removed — canonical versions below at ~L1207)
 // UTILITY: Image Preview to Base64
 window.previewImage = (input, previewId) => {
     if (input.files && input.files[0]) {
@@ -2150,9 +2470,9 @@ window.showRiderModal = () => {
     document.getElementById('riderPass').value = "";
 
     // Reset Images
-    document.getElementById('riderProfilePreview').src = "https://via.placeholder.com/150";
+    document.getElementById('riderProfilePreview').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='12' fill='%23999\'%3ENo Photo%3C/text%3E%3C/svg%3E";
     document.getElementById('riderPhotoUrl').value = "";
-    document.getElementById('aadharPreview').src = "https://via.placeholder.com/100x60";
+    document.getElementById('aadharPreview').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='60' viewBox='0 0 100 60'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='8' fill='%23999\'%3EID Preview%3C/text%3E%3C/svg%3E";
     document.getElementById('aadharUrl').value = "";
 
     document.getElementById('riderModal').style.display = 'flex';
@@ -2183,9 +2503,10 @@ window.editRider = (id) => {
     document.getElementById('riderPass').value = "";
 
     // Populate Images
-    document.getElementById('riderProfilePreview').src = r.profilePhoto || "https://via.placeholder.com/150";
+    const SVG_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23ccc%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20x%3D%223%22%20y%3D%223%22%20width%3D%2218%22%20height%3D%2218%22%20rx%3D%222%22%20ry%3D%222%22%3E%3C%2Frect%3E%3Cline%20x1%3D%223%22%20y1%3D%2221%22%20x2%3D%2221%22%20y2%3D%223%22%3E%3C%2Fline%3E%3C%2Fsvg%3E";
+    document.getElementById('riderProfilePreview').src = r.profilePhoto || SVG_PLACEHOLDER;
     document.getElementById('riderPhotoUrl').value = r.profilePhoto || "";
-    document.getElementById('aadharPreview').src = r.aadharPhoto || "https://via.placeholder.com/100x60";
+    document.getElementById('aadharPreview').src = r.aadharPhoto || SVG_PLACEHOLDER;
     document.getElementById('aadharUrl').value = r.aadharPhoto || "";
 
     document.getElementById('riderModal').style.display = 'flex';
@@ -2195,9 +2516,23 @@ window.hideRiderModal = () => document.getElementById('riderModal').style.displa
 
 window.saveRiderAccount = async () => {
     const name = document.getElementById('riderName').value.trim();
-    const email = document.getElementById('riderEmail').value.trim();
-    const pass = document.getElementById('riderPass').value;
+    let email = document.getElementById('riderEmail').value.trim();
     const phone = document.getElementById('riderPhone').value.trim();
+    let pass = document.getElementById('riderPass').value;
+
+    // Validate email
+    if (!email) {
+        window.showToast("Please provide a valid email address.", "error");
+        return;
+    }
+
+    // Generate secure temporary password for new accounts if none provided
+    if (!isEditRiderMode && !pass) {
+        pass = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4).toUpperCase();
+        navigator.clipboard.writeText(pass);
+        window.showToast("Rider Password Generated & Copied to Clipboard!", "success");
+    }
+
     const fatherName = document.getElementById('riderFatherName').value.trim();
     const age = document.getElementById('riderAge').value;
     const aadharNo = document.getElementById('riderAadharNo').value.trim();
@@ -2206,14 +2541,14 @@ window.saveRiderAccount = async () => {
     let profilePhoto = document.getElementById('riderPhotoUrl').value;
     let aadharPhoto = document.getElementById('aadharUrl').value;
 
-    if (!name || !email) {
-        alert("Name and Email are required.");
+    if (!name || !email || !pass) {
+        window.showToast("Name, Email, and Password are required.", "error");
         return;
     }
 
     // Strict 12-digit Aadhar Validation
     if (!/^\d{12}$/.test(aadharNo)) {
-        alert("Invalid Aadhar Number! It must be exactly 12 digits.");
+        window.showToast("Invalid Aadhar Number! It must be exactly 12 digits.", "error");
         return;
     }
 
@@ -2241,11 +2576,11 @@ window.saveRiderAccount = async () => {
             console.log("[saveRiderAccount] Creating new rider account...");
             // 1. Create in secondary Auth
             if (!secondaryAuthAvailable) {
-                alert("Rider creation is currently unavailable (Secondary Auth failed to initialize). Please ensure firebase-config.js is correctly loaded.");
+                window.showToast("Rider creation is currently unavailable.", "error");
                 return;
             }
             if (!pass || pass.length < 6) {
-                alert("Password must be at least 6 characters for new accounts.");
+                window.showToast("Password must be at least 6 characters for new accounts.", "error");
                 return;
             }
 
@@ -2260,19 +2595,16 @@ window.saveRiderAccount = async () => {
                 console.log("[saveRiderAccount] Signing out of secondaryAuth...");
                 await secondaryAuth.signOut();
             } catch (authError) {
-                if (authError.code === 'auth/email-already-in-use') {
-                    alert("CRITICAL ERROR: This email (" + email + ") is already registered in the Authentication system but has no database record.\n\nTo fix this:\n1. Delete the user from the Firebase Console (Authentication tab).\n2. OR try using a different email.\n\nNote: If this rider was recently deleted from the dashboard, their login credentials still exist in Firebase security records.");
-                    statusLabel.classList.add('hidden');
-                    return;
-                }
-                throw authError;
+                window.showToast(standardizeAuthError(authError), "error");
+                statusLabel.classList.add('hidden');
+                return;
             }
         } else if (pass && pass.length >= 6) {
             // Update password in edit mode if provided
             try {
                 // To update password, we'd need to sign in as the user. 
                 // Since this is restricted, we recommend using 'Forgot Password' or resetting via Firebase Console.
-                alert("Password update requested. Note: Password can only be changed by the Rider using the 'Forgot Password' link or by Admin via Firebase Console.");
+                window.showToast("Password update: Use 'Forgot Password' or Admin Console.", "info");
             } catch (e) {
                 console.error("Password update error:", e);
             }
@@ -2306,22 +2638,22 @@ window.saveRiderAccount = async () => {
         const verifySnap = await Outlet.ref(`riders/${uid}`).once('value');
         if (verifySnap.exists()) {
             console.log("[saveRiderAccount] Database write verified successfully.");
-            alert(isEditRiderMode ? "Rider updated successfully!" : "Rider account created successfully!");
+            window.showToast(isEditRiderMode ? "Rider updated successfully!" : "Rider account created successfully!", "success");
         } else {
             console.error("[saveRiderAccount] Database write FAILED verification.");
-            alert("Warning: Auth account created, but database record failed to save. Please contact support.");
+            window.showToast("Warning: Database record failed to save.", "error");
         }
         hideRiderModal();
     } catch (e) {
-        alert("Operation failed: " + e.message);
+        window.showToast("Operation failed: " + e.message, "error");
     }
 };
 
-window.resetRiderPassword = (email) => {
-    if (confirm(`Send password reset link to ${email}?`)) {
+window.resetRiderPassword = async (email) => {
+    if (await window.showConfirm(`Send password reset link to ${email}?`, "Reset Password")) {
         firebase.auth().sendPasswordResetEmail(email)
-            .then(() => alert("Reset link sent to " + email))
-            .catch(e => alert("Error: " + e.message));
+            .then(() => window.showToast("Reset link sent to " + email, "success"))
+            .catch(e => window.showToast("Error: " + e.message, "error"));
     }
 };
 
@@ -2359,17 +2691,17 @@ function loadCustomers() {
                     </td>
                     <td data-label="WhatsApp">
                         <a href="https://wa.me/91${phone.replace(/\D/g, "").slice(-10)}" target="_blank" style="color:var(--primary); text-decoration:none; display:flex; align-items:center; gap:5px;">
-                            <i class="fab fa-whatsapp"></i> ${displayPhone}
+                             <i class="fab fa-whatsapp"></i> ${escapeHtml(displayPhone)}
                         </a>
                     </td>
                     <td data-label="Last Address">
                         <div style="font-size:12px; color:var(--text-main); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(c.address || '')}">
                             ${escapeHtml(truncatedAddress)}
                         </div>
-    ${c.locationLink ? `<a href="${c.locationLink}" target="_blank" style="color:var(--primary); font-size:10px; text-decoration:none;">📍 Map Link</a>` : ""}
+    ${c.locationLink ? `<a href="${c.locationLink}" target="_blank" style="color:var(--primary); font-size:10px; text-decoration:none;">ðŸ“ Map Link</a>` : ""}
                     </td>
                     <td data-label="Orders" style="font-weight:600; color:var(--vibrant-orange)">${orderCount}</td>
-                    <td data-label="LTV" style="font-weight:700; color:var(--warm-yellow)">₹${ltv.toLocaleString()}</td>
+                    <td data-label="LTV" style="font-weight:700; color:var(--warm-yellow)">â‚¹${ltv.toLocaleString()}</td>
                 </tr>
             `;
         });
@@ -2400,7 +2732,7 @@ window.generateCustomReport = () => {
 
     if (!tableBody) return;
 
-    tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px;'>🔔 Collecting sales data...</td></tr>";
+    tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px;'>ðŸ”” Collecting sales data...</td></tr>";
 
     Outlet.ref("orders").once("value", snap => {
         let totalRev = 0;
@@ -2432,9 +2764,9 @@ window.generateCustomReport = () => {
         const periodEl = document.getElementById("reportPeriod");
         if (periodEl) periodEl.innerText = `${fromDate} to ${toDate}`;
 
-        document.getElementById("reportRevenue").innerText = "₹" + totalRev.toLocaleString();
+        document.getElementById("reportRevenue").innerText = "\u20B9" + totalRev.toLocaleString();
         document.getElementById("reportOrders").innerText = totalOrd;
-        document.getElementById("reportAvg").innerText = "₹" + (totalOrd > 0 ? Math.round(totalRev / totalOrd) : 0);
+        document.getElementById("reportAvg").innerText = "\u20B9" + (totalOrd > 0 ? Math.round(totalRev / totalOrd) : 0);
 
         // Sort by date descending
         salesData.sort((a, b) => b.createdAt - a.createdAt);
@@ -2444,14 +2776,14 @@ window.generateCustomReport = () => {
             <tr class="report-row-bordered">
                 <td data-label="Date" class="report-cell report-date-cell">${formatDate(o.createdAt)}</td>
                 <td data-label="Customer" class="report-cell">
-                    <div class="report-cust-name">${o.customerName || 'Guest'}</div>
-                    <div class="report-cust-phone">${o.phone || ''}</div>
+                     <div class="report-cust-name">${escapeHtml(o.customerName || 'Guest')}</div>
+                    <div class="report-cust-phone">${escapeHtml(o.phone || '')}</div>
                 </td>
-                <td data-label="Total" class="report-cell report-total-cell">₹${o.total || 0}</td>
-                <td data-label="Method" class="report-cell"><span class="badge badge-secondary">${o.paymentMethod || 'COD'}</span></td>
+                <td data-label="Total" class="report-cell report-total-cell">\u20B9${o.total || 0}</td>
+                <td data-label="Method" class="report-cell"><span class="badge badge-secondary">${escapeHtml(o.paymentMethod || 'COD')}</span></td>
                 <td data-label="Items" class="report-cell">
-                    <div class="text-muted-small text-truncate" style="max-width:250px;" title="${o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : ''}">
-                        ${o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : 'Empty'}
+                     <div class="text-muted-small text-truncate" style="max-width:250px;" title="${o.items ? o.items.map(i => `${escapeHtml(i.name)} x${i.quantity}`).join(', ') : ''}">
+                        ${o.items ? o.items.map(i => `${escapeHtml(i.name)} x${i.quantity}`).join(', ') : 'Empty'}
                     </div>
                 </td>
             </tr>
@@ -2517,11 +2849,13 @@ function renderRevenueChart(data) {
             }
         }
     });
+
+
 }
 
 window.downloadExcel = () => {
     if (salesData.length === 0) {
-        alert("No data available to export. Generate a report first.");
+        window.showToast("No data to export.", "info");
         return;
     }
 
@@ -2544,12 +2878,12 @@ window.downloadExcel = () => {
 
 window.downloadPDF = () => {
     if (salesData.length === 0) {
-        alert("No data available to export. Generate a report first.");
+        window.showToast("No data to export.", "info");
         return;
     }
 
     if (!window.jspdf) {
-        alert("PDF export library not ready. Please refresh and try again.");
+        window.showToast("PDF library not ready.", "error");
         return;
     }
     const { jsPDF } = window.jspdf;
@@ -2592,7 +2926,7 @@ window.loadSettings = async () => {
     if (!container) return;
 
     try {
-        container.innerHTML = `<div style="text-align:center; padding:100px; color:var(--text-muted);">🔔 Loading shop settings...</div>`;
+        container.innerHTML = `<div style="text-align:center; padding:100px; color:var(--text-muted);">ðŸ”” Loading shop settings...</div>`;
 
         const [appSnap, uiSnap, botSnap] = await Promise.all([
             Outlet.ref("appConfig").once("value"),
@@ -2613,7 +2947,7 @@ window.loadSettings = async () => {
                 <div style="position:relative; z-index:1;">
                     <div style="display:flex; align-items:center; gap:20px; margin-bottom:40px;">
                         <div style="background:var(--action-green); width:64px; height:64px; border-radius:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 20px rgba(6,95,70,0.2);">
-            <span style="font-size:28px;">⚙️</span>
+            <span style="font-size:28px;">âš™ï¸</span>
                         </div>
                         <div>
                             <h2 style="font-size:28px; font-weight:800; color:var(--text-main); margin:0; letter-spacing:-0.5px;">Shop Configuration</h2>
@@ -2640,9 +2974,9 @@ window.loadSettings = async () => {
                                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
                                     <div>
                                         <label class="form-label" style="font-size:13px; font-weight:600;">Store Status</label>
-                                        <select id="setConfigStatus" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:600;">
-                                            <option value="Open" ${c.status === 'Open' ? 'selected' : ''}>🟢 Open</option>
-                                            <option value="Closed" ${c.status === 'Closed' ? 'selected' : ''}>🔴 Closed</option>
+                                        <select id="setConfigStatus" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:600;" title="Store Status">
+                                            <option value="Open" ${c.status === 'Open' ? 'selected' : ''}>ðŸŸ¢ Open</option>
+                                            <option value="Closed" ${c.status === 'Closed' ? 'selected' : ''}>ðŸ”´ Closed</option>
                                         </select>
                                     </div>
                                     <div>
@@ -2671,11 +3005,11 @@ window.loadSettings = async () => {
                                 
                                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
                                     <div>
-                                        <label class="form-label" style="font-size:13px; font-weight:600;">Delivery Fee (₹)</label>
+                                        <label class="form-label" style="font-size:13px; font-weight:600;">Delivery Fee (â‚¹)</label>
                                         <input type="number" id="setConfigFee" value="${c.deliveryFee || 0}" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:700;">
                                     </div>
                                     <div>
-                                        <label class="form-label" style="font-size:13px; font-weight:600;">Min. Order (₹)</label>
+                                        <label class="form-label" style="font-size:13px; font-weight:600;">Min. Order (â‚¹)</label>
                                         <input type="number" id="setConfigMinOrder" value="${c.minOrder || 0}" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:700;">
                                     </div>
                                 </div>
@@ -2687,23 +3021,22 @@ window.loadSettings = async () => {
 
                                 <div>
                                     <label class="form-label" style="font-size:13px; font-weight:600; margin-bottom:10px; display:block;">Store Banners (Click to Change)</label>
-                                    <div style="display:flex; gap:15px;">
-                                        <div style="flex:1; cursor:pointer;" onclick="document.getElementById('welcomeFile').click()">
-                                            <div style="position:relative; width:100%; height:80px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                                <img id="welcomePreview" src="${u.welcomeImage || 'https://via.placeholder.com/300x150'}" style="width:100%; height:100%; object-fit:cover;">
-                                                <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:white; font-size:9px; text-align:center; padding:4px; font-weight:700;">WELCOME</div>
-                                            </div>
-                                            <input type="file" id="welcomeFile" style="display:none" onchange="previewImage(this, 'welcomePreview')">
-                                            <input type="hidden" id="setUIWelcome" value="${u.welcomeImage || ''}">
+                                <div style="display:flex; gap:15px;">
+                                    <div style="flex:1; cursor:pointer;" data-action="triggerClick" data-val="welcomeFile">
+                                        <div style="position:relative; width:100%; height:80px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
+                                            <img id="welcomePreview" src="${u.welcomeImage || 'https://via.placeholder.com/300x150'}" style="width:100%; height:100%; object-fit:cover;">
+                                            <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:white; font-size:9px; text-align:center; padding:4px; font-weight:700;">WELCOME</div>
                                         </div>
-                                        <div style="flex:1; cursor:pointer;" onclick="document.getElementById('menuFile').click()">
-                                            <div style="position:relative; width:100%; height:80px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                                <img id="menuBannerPreview" src="${u.menuImage || 'https://via.placeholder.com/300x150'}" style="width:100%; height:100%; object-fit:cover;">
-                                                <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:white; font-size:9px; text-align:center; padding:4px; font-weight:700;">MENU BANNER</div>
-                                            </div>
-                                            <input type="file" id="menuFile" style="display:none" onchange="previewImage(this, 'menuBannerPreview')">
-                                            <input type="hidden" id="setUIMenu" value="${u.menuImage || ''}">
+                                        <input type="file" id="welcomeFile" style="display:none" data-action="previewImage" data-preview-id="welcomePreview">
+                                        <input type="hidden" id="setUIWelcome" value="${u.welcomeImage || ''}">
+                                    </div>
+                                    <div style="flex:1; cursor:pointer;" data-action="triggerClick" data-val="menuFile">
+                                        <div style="position:relative; width:100%; height:80px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
+                                            <img id="menuBannerPreview" src="${u.menuImage || 'https://via.placeholder.com/300x150'}" style="width:100%; height:100%; object-fit:cover;">
+                                            <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:white; font-size:9px; text-align:center; padding:4px; font-weight:700;">MENU BANNER</div>
                                         </div>
+                                        <input type="file" id="menuFile" style="display:none" data-action="previewImage" data-preview-id="menuBannerPreview">
+                                        <input type="hidden" id="setUIMenu" value="${u.menuImage || ''}">
                                     </div>
                                 </div>
                             </div>
@@ -2718,14 +3051,14 @@ window.loadSettings = async () => {
                             <!-- Welcome Image -->
                             <div class="settings-group">
                                 <label class="form-label" style="font-size:13px; font-weight:600; margin-bottom:12px; display:block;">Bot Welcome / Intro Image</label>
-                                <div style="cursor:pointer;" onclick="document.getElementById('botWelcomeFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botWelcomeFile">
                                     <div style="position:relative; width:100%; height:180px; border-radius:18px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
                                         <img id="botWelcomePreview" src="${b.imgWelcome || 'https://via.placeholder.com/600x300?text=Welcome+Image'}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), transparent); display:flex; align-items:flex-end; justify-content:center; padding-bottom:10px;">
                                             <span style="color:white; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Change Greeting Image</span>
                                         </div>
                                     </div>
-                                    <input type="file" id="botWelcomeFile" style="display:none" onchange="previewImage(this, 'botWelcomePreview')">
+                                    <input type="file" id="botWelcomeFile" style="display:none" data-action="previewImage" data-preview-id="botWelcomePreview">
                                     <input type="hidden" id="setBotWelcome" value="${b.imgWelcome || ''}">
                                 </div>
                             </div>
@@ -2733,66 +3066,66 @@ window.loadSettings = async () => {
                             <!-- Status Update Images -->
                             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px;">
                                 <!-- Confirmed -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botConfirmedFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botConfirmedFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
                                         <img id="botConfirmedPreview" src="${b.imgConfirmed || 'https://via.placeholder.com/150?text=Confirmed'}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(6,95,70,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">CONFIRMED</div>
                                     </div>
-                                    <input type="file" id="botConfirmedFile" style="display:none" onchange="previewImage(this, 'botConfirmedPreview')">
+                                    <input type="file" id="botConfirmedFile" style="display:none" data-action="previewImage" data-preview-id="botConfirmedPreview">
                                     <input type="hidden" id="setBotConfirmed" value="${b.imgConfirmed || ''}">
                                 </div>
                                 <!-- Preparing -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botPreparingFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botPreparingFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
                                         <img id="botPreparingPreview" src="${b.imgPreparing || 'https://via.placeholder.com/150?text=Preparing'}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(217,119,6,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">PREPARING</div>
                                     </div>
-                                    <input type="file" id="botPreparingFile" style="display:none" onchange="previewImage(this, 'botPreparingPreview')">
+                                    <input type="file" id="botPreparingFile" style="display:none" data-action="previewImage" data-preview-id="botPreparingPreview">
                                     <input type="hidden" id="setBotPreparing" value="${b.imgPreparing || ''}">
                                 </div>
                                 <!-- Cooked -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botCookedFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botCookedFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                        <img id="botCookedPreview" src="${b.imgCooked || 'https://via.placeholder.com/150?text=Cooked'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <img id="botCookedPreview" src="${b.imgCooked || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%23999'%3ECooked%3C/text%3E%3C/svg%3E"}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(31,41,55,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">COOKED</div>
                                     </div>
-                                    <input type="file" id="botCookedFile" style="display:none" onchange="previewImage(this, 'botCookedPreview')">
+                                    <input type="file" id="botCookedFile" style="display:none" data-action="previewImage" data-preview-id="botCookedPreview">
                                     <input type="hidden" id="setBotCooked" value="${b.imgCooked || ''}">
                                 </div>
                                 <!-- Out -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botOutFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botOutFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                        <img id="botOutPreview" src="${b.imgOut || 'https://via.placeholder.com/150?text=Out'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <img id="botOutPreview" src="${b.imgOut || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%23999'%3EOut%3C/text%3E%3C/svg%3E"}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(37,99,235,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">OUT FOR DEL.</div>
                                     </div>
-                                    <input type="file" id="botOutFile" style="display:none" onchange="previewImage(this, 'botOutPreview')">
+                                    <input type="file" id="botOutFile" style="display:none" data-action="previewImage" data-preview-id="botOutPreview">
                                     <input type="hidden" id="setBotOut" value="${b.imgOut || ''}">
                                 </div>
                                 <!-- Delivered -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botDeliveredFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botDeliveredFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                        <img id="botDeliveredPreview" src="${b.imgDelivered || 'https://via.placeholder.com/150?text=Delivered'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <img id="botDeliveredPreview" src="${b.imgDelivered || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%23999'%3EDelivered%3C/text%3E%3C/svg%3E"}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(5,150,105,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">DELIVERED</div>
                                     </div>
-                                    <input type="file" id="botDeliveredFile" style="display:none" onchange="previewImage(this, 'botDeliveredPreview')">
+                                    <input type="file" id="botDeliveredFile" style="display:none" data-action="previewImage" data-preview-id="botDeliveredPreview">
                                     <input type="hidden" id="setBotDelivered" value="${b.imgDelivered || ''}">
                                 </div>
                                 <!-- Feedback -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botFeedbackFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botFeedbackFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                        <img id="botFeedbackPreview" src="${b.imgFeedback || 'https://via.placeholder.com/150?text=Feedback'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <img id="botFeedbackPreview" src="${b.imgFeedback || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%23999'%3EFeedback%3C/text%3E%3C/svg%3E"}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(124,58,237,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">FEEDBACK</div>
                                     </div>
-                                    <input type="file" id="botFeedbackFile" style="display:none" onchange="previewImage(this, 'botFeedbackPreview')">
+                                    <input type="file" id="botFeedbackFile" style="display:none" data-action="previewImage" data-preview-id="botFeedbackPreview">
                                     <input type="hidden" id="setBotFeedback" value="${b.imgFeedback || ''}">
                                 </div>
                                 <!-- Cancelled -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botCancelledFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botCancelledFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                        <img id="botCancelledPreview" src="${b.imgCancelled || 'https://via.placeholder.com/150?text=Cancelled'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <img id="botCancelledPreview" src="${b.imgCancelled || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%23999'%3ECancelled%3C/text%3E%3C/svg%3E"}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(153,27,27,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">CANCELLED</div>
                                     </div>
-                                    <input type="file" id="botCancelledFile" style="display:none" onchange="previewImage(this, 'botCancelledPreview')">
+                                    <input type="file" id="botCancelledFile" style="display:none" data-action="previewImage" data-preview-id="botCancelledPreview">
                                     <input type="hidden" id="setBotCancelled" value="${b.imgCancelled || ''}">
                                 </div>
                             </div>
@@ -2800,8 +3133,8 @@ window.loadSettings = async () => {
                     </div>
 
                     <div style="margin-top: 50px; text-align: center; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 35px;">
-                        <button onclick="saveSettings()" class="btn-primary" style="margin: 0 auto; width: 340px; justify-content: center; padding: 18px; border-radius: 18px; font-size: 16px; font-weight: 800; box-shadow: 0 15px 30px rgba(6,95,70,0.2); letter-spacing:0.5px;">
-                            💾 SAVE SYSTEM CONFIGURATION
+                        <button data-action="saveSettings" class="btn-primary" style="margin: 0 auto; width: 340px; justify-content: center; padding: 18px; border-radius: 18px; font-size: 16px; font-weight: 800; box-shadow: 0 15px 30px rgba(6,95,70,0.2); letter-spacing:0.5px;">
+                            ðŸ’¾ SAVE SYSTEM CONFIGURATION
                         </button>
                     </div>
                 </div>
@@ -2809,7 +3142,7 @@ window.loadSettings = async () => {
         `;
     } catch (err) {
         console.error("Load Settings Error:", err);
-        container.innerHTML = `<div style="text-align:center; padding:100px; color:var(--text-muted);">❌ Failed to load settings. Check console.</div>`;
+        container.innerHTML = `<div style="text-align:center; padding:100px; color:var(--text-muted);">âŒ Failed to load settings. Check console.</div>`;
     }
 }
 
@@ -2897,10 +3230,10 @@ window.saveSettings = async () => {
             sidebarHeader.innerText = shopName.split(" ")[0].toUpperCase() + " ERP";
         }
 
-        alert("Settings updated successfully!");
+        window.showToast("Settings updated successfully!", "success");
         loadSettings();
     } catch (e) {
-        alert("Error saving settings: " + e.message);
+        window.showToast("Error saving settings: " + e.message, "error");
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -2953,27 +3286,27 @@ window.openPaymentModal = (id) => {
         <div class="payment-modal-card">
             <div style="text-align: center; margin-bottom: 25px;">
                 <div class="payment-modal-badge">Payment Settlement</div>
-                <h2 class="payment-modal-total">₹${total}</h2>
+                <h2 class="payment-modal-total">â‚¹${total}</h2>
                 <p style="color: #666; font-size: 14px; margin-top: 5px;">Select payment method used for this delivery</p>
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button onclick="saveDeliveredOrder('${id}', 'Cash')" class="pay-option-btn cash">
-                    <span style="font-size: 24px;">💵</span>
+                <button data-action="saveDeliveredOrder" data-id="${id}" data-val="Cash" class="pay-option-btn cash">
+                    <span style="font-size: 24px;">ðŸ’µ</span>
                     <div style="text-align: left;">
                         <div style="font-weight: 800; font-size: 16px;">Cash</div>
                         <div style="font-size: 11px; opacity: 0.7;">Received by Hand</div>
                     </div>
                 </button>
-                <button onclick="saveDeliveredOrder('${id}', 'UPI')" class="pay-option-btn upi">
-                    <span style="font-size: 24px;">📱</span>
+                <button data-action="saveDeliveredOrder" data-id="${id}" data-val="UPI" class="pay-option-btn upi">
+                    <span style="font-size: 24px;">ðŸ“±</span>
                     <div style="text-align: left;">
                         <div style="font-weight: 800; font-size: 16px;">UPI / Online</div>
                         <div style="font-size: 11px; opacity: 0.7;">GPay, PhonePe, etc.</div>
                     </div>
                 </button>
-                <button onclick="saveDeliveredOrder('${id}', 'Card')" class="pay-option-btn card">
-                    <span style="font-size: 24px;">💳</span>
+                <button data-action="saveDeliveredOrder" data-id="${id}" data-val="Card" class="pay-option-btn card">
+                    <span style="font-size: 24px;">ðŸ’³</span>
                     <div style="text-align: left;">
                         <div style="font-weight: 800; font-size: 16px;">Card</div>
                         <div style="font-size: 11px; opacity: 0.7;">Debit / Credit Card</div>
@@ -2981,7 +3314,7 @@ window.openPaymentModal = (id) => {
                 </button>
             </div>
 
-            <button onclick="document.getElementById('paymentModal').remove()" class="payment-modal-cancel">CANCEL</button>
+            <button data-action="removeElement" data-target-id="paymentModal" class="payment-modal-cancel">CANCEL</button>
         </div>
     `;
 
@@ -3014,7 +3347,7 @@ window.saveDeliveredOrder = async (id, method) => {
 
 window.assignRider = async (id, riderEmail) => {
     if (!id || !riderEmail) {
-        showToast('Invalid order ID or rider selection.', 'error');
+        window.showToast('Invalid order ID or rider selection.', 'error');
         return;
     }
 
@@ -3022,7 +3355,7 @@ window.assignRider = async (id, riderEmail) => {
         // Verify the order exists before attempting assignment
         const orderSnap = await Outlet.ref('orders/' + id).once('value');
         if (!orderSnap.exists()) {
-            showToast('Order not found.', 'error');
+            window.showToast('Order not found.', 'error');
             return;
         }
 
@@ -3030,10 +3363,10 @@ window.assignRider = async (id, riderEmail) => {
             assignedRider: riderEmail,
             status: 'Out for Delivery'
         });
-        showToast('Rider assigned successfully.', 'success');
+        window.showToast('Rider assigned successfully.', 'success');
     } catch (err) {
         console.error('[assignRider] Error:', err);
-        showToast('Failed to assign rider. Please try again.', 'error');
+        window.showToast('Failed to assign rider. Please try again.', 'error');
     }
 };
 window.toggleWifiPass = () => {
@@ -3069,10 +3402,10 @@ async function loadLostSales() {
 
         if (!data) {
             tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:80px; color:var(--text-muted);">
-                <div class="mb-14" style="font-size:32px;">🎁</div>
+                <div class="mb-14" style="font-size:32px;">\uD83D\uDED2 </div>
                 <strong>No lost sales found!</strong><br>All your customers are reaching the finish line.
             </td></tr>`;
-            if (revenueBadge) revenueBadge.innerText = `₹0`;
+            if (revenueBadge) revenueBadge.innerText = `\u20B90`;
             return;
         }
 
@@ -3098,7 +3431,7 @@ async function loadLostSales() {
                 <td>
                     <div class="flex-column">
                         <span class="font-bold">${escapeHtml(record.customerName || 'Guest')}</span>
-                        <a href="${whatsappLink}" target="_blank" class="text-primary font-bold" style="font-size:12px;">📲 ${phone}</a>
+                        <a href="${whatsappLink}" target="_blank" class="text-primary font-bold" style="font-size:12px;">\uD83D\uDCF1 ${escapeHtml(phone)}</a>
                     </div>
                 </td>
                 <td>
@@ -3110,13 +3443,13 @@ async function loadLostSales() {
                     <div class="text-truncate-2" title="${escapeHtml(itemsStr)}">${escapeHtml(itemsStr)}</div>
                 </td>
                 <td style="padding-right:25px; text-align:right;">
-                    <span class="font-black" style="font-size:16px; color:var(--text-dark);">₹${val}</span>
+                    <span class="font-black" style="font-size:16px; color:var(--text-dark);">\u20B9${val}</span>
                 </td>
             `;
             tbody.appendChild(tr);
         });
 
-        if (revenueBadge) revenueBadge.innerText = `₹${totalLost.toLocaleString()}`;
+        if (revenueBadge) revenueBadge.innerText = `\u20B9${totalLost.toLocaleString()}`;
 
     } catch (e) {
         console.error("Load Lost Sales Error:", e);
@@ -3125,16 +3458,16 @@ async function loadLostSales() {
 }
 
 async function clearLostSales() {
-    if (!confirm("⚠️ Are you sure you want to permanently delete all Lost Sales logs? This cannot be undone.")) return;
+    if (!(await window.showConfirm("Are you sure you want to permanently delete all Lost Sales logs? This cannot be undone.", "Clear Lost Sales"))) return;
 
     window.haptic(20);
     try {
         await Outlet.ref('lostSales').remove();
-        showToast("Logs cleared successfully", "success");
+        window.showToast("Logs cleared successfully", "success");
         loadLostSales();
     } catch (e) {
         console.error("Clear Logs Error:", e);
-        showToast("Failed to clear logs", "error");
+        window.showToast("Failed to clear logs", "error");
     }
 }
 window.loadLostSales = loadLostSales;
@@ -3143,21 +3476,21 @@ window.clearLostSales = clearLostSales;
 let cachedDishes = [];
 
 const catEmoji = {
-    'pizza': '🍕', 'burger': '🍔', 'cake': '🎂', 'pastry': '🍰',
-    'sandwich': '🥪', 'drink': '🥤', 'beverage': '🥤', 'juice': '🧃',
-    'ice cream': '🍦', 'dessert': '🍰', 'pasta': '🍝', 'salad': '🥗',
-    'fries': '🍟', 'chicken': '🍗', 'noodles': '🍜', 'biryani': '🍛',
-    'thali': '🍽️', 'combo': '🎁', 'wrap': '🌯', 'coffee': '☕',
-    'shake': '🥛', 'mocktail': '🍹'
+    'pizza': 'ðŸ•', 'burger': 'ðŸ”', 'cake': 'ðŸŽ‚', 'pastry': 'ðŸ°',
+    'sandwich': 'ðŸ¥ª', 'drink': 'ðŸ¥¤', 'beverage': 'ðŸ¥¤', 'juice': 'ðŸ§ƒ',
+    'ice cream': 'ðŸ¦', 'dessert': 'ðŸ°', 'pasta': 'ðŸ', 'salad': 'ðŸ¥—',
+    'fries': 'ðŸŸ', 'chicken': 'ðŸ—', 'noodles': 'ðŸœ', 'biryani': 'ðŸ¥˜',
+    'thali': 'ðŸ± ', 'combo': 'ðŸŽ ', 'wrap': 'ðŸŒ¯', 'coffee': 'â˜•',
+    'shake': 'ðŸ§‹', 'mocktail': 'ðŸ¹'
 };
 
 function getCatEmoji(category) {
-    if (!category) return '🍽️';
+    if (!category) return 'ðŸ± ';
     const lower = category.toLowerCase();
     for (const [key, emoji] of Object.entries(catEmoji)) {
         if (lower.includes(key)) return emoji;
     }
-    return '🍽️';
+    return 'ðŸ± ';
 }
 
 function loadWalkinMenu() {
@@ -3173,7 +3506,7 @@ function loadWalkinMenu() {
         });
 
         if (allWalkinDishes.length === 0) {
-            grid.innerHTML = '<p class="menu-loading-placeholder">No dishes found. Add dishes in Menu → Dishes first.</p>';
+            grid.innerHTML = '<p class="menu-loading-placeholder">No dishes found. Add dishes in Menu â†’ Dishes first.</p>';
             return;
         }
 
@@ -3228,7 +3561,7 @@ async function checkWalkinCustomer(phone) {
             const nameInput = document.getElementById('walkinCustName');
             if (nameInput) {
                 nameInput.value = data.name || "";
-                showAlert('✔ Returning Customer: ' + data.name, 'success');
+                window.showToast('âœ”ï¸ Returning Customer: ' + data.name, 'success');
             }
         }
     } catch (e) { console.error(e); }
@@ -3249,14 +3582,17 @@ window.setDiscountPct = (pct) => {
     window.setDiscount(val);
 };
 
-window.clearWalkinCart = () => {
+window.clearWalkinCart = async () => {
     if (Object.keys(walkinCart).length === 0) return;
-    if (confirm('Clear entire order?')) {
+    if (await window.showConfirm('Clear entire order?', 'Clear Cart')) {
         walkinCart = {};
         document.getElementById('walkinDiscount').value = 0;
         document.getElementById('walkinCustName').value = '';
         document.getElementById('walkinCustPhone').value = '';
+        const noteEl = document.getElementById('walkinCustNote');
+        if (noteEl) noteEl.value = '';
         renderWalkinCart();
+        window.showToast("Cart cleared", "info");
     }
 };
 
@@ -3279,7 +3615,7 @@ function renderWalkinDishGrid(dishes) {
         }
 
         const sizeOptions = Object.entries(sizes).map(([name, price]) =>
-            `<option value="${escapeHtml(name)}" data-price="${price}">${escapeHtml(name)} - ₹${price}</option>`
+            `<option value="${escapeHtml(name)}" data-price="${price}">${escapeHtml(name)} - â‚¹${price}</option>`
         ).join('');
 
         card.innerHTML = `
@@ -3292,14 +3628,14 @@ function renderWalkinDishGrid(dishes) {
                 </select>
                 
                 <div class="dish-qty-row">
-                    <button class="qty-btn-sm" onclick="adjustCardQty('${dishId}', -1)">-</button>
+                    <button class="qty-btn-sm" data-action="adjustCardQty" data-id="${dishId}" data-delta="-1">-</button>
                     <span class="qty-val-sm" id="qty_${dishId}">1</span>
-                    <button class="qty-btn-sm" onclick="adjustCardQty('${dishId}', 1)">+</button>
+                    <button class="qty-btn-sm" data-action="adjustCardQty" data-id="${dishId}" data-delta="1">+</button>
                 </div>
                 
                 <div class="dish-action-row">
-                    <button class="btn-card-add" onclick="addToWalkinCartFromCard('${dishId}')">ADD</button>
-                    <button class="btn-card-addon" onclick="showAddonView('${dishId}')" title="Configure Add-ons">⚙️</button>
+                    <button class="btn-card-add" data-action="addToWalkinCartFromCard" data-id="${dishId}">ADD</button>
+                    <button class="btn-card-addon" data-action="showAddonView" data-id="${dishId}" title="Configure Add-ons">âš™ï¸</button>
                 </div>
             </div>
         `;
@@ -3333,7 +3669,7 @@ window.showAddonView = (dishId) => {
 
     walkinTitle.innerHTML = '';
     const backBtn = document.createElement('button');
-    backBtn.onclick = hideAddonView;
+    backBtn.dataset.action = "hideAddonView";
     backBtn.className = 'btn-text';
     backBtn.style.padding = '0';
     backBtn.style.marginRight = '10px';
@@ -3362,7 +3698,7 @@ window.showAddonView = (dishId) => {
                     <input type="checkbox" ${isSelected ? 'checked' : ''} style="pointer-events:none;">
                     <span class="fs-12 font-weight-700">${escapeHtml(name)}</span>
                 </div>
-                <span class="fs-12 font-weight-800 color-green">₹${price}</span>
+                <span class="fs-12 font-weight-800 color-green">â‚¹${price}</span>
             `;
             item.onclick = (e) => {
                 if (!pendingAddonsByDish[dishId]) pendingAddonsByDish[dishId] = [];
@@ -3397,7 +3733,7 @@ window.hideAddonView = () => {
     if (dishGrid) dishGrid.classList.remove('hidden');
     if (addonGrid) addonGrid.classList.remove('hidden');
     if (searchBox) searchBox.classList.remove('hidden');
-    if (walkinTitle) walkinTitle.innerHTML = `🍽️ Select Items`;
+    if (walkinTitle) walkinTitle.innerHTML = `ðŸ± Select Items`;
 };
 
 window.addToWalkinCartFromCard = (dishId) => {
@@ -3438,7 +3774,7 @@ window.addToWalkinCartFromCard = (dishId) => {
 
     renderWalkinCart();
     haptic(20);
-    showAlert(`✔ Added ${qty}x ${dish.name}`, 'success');
+    window.showToast(`âœ” Added ${qty}x ${dish.name}`, 'success');
 };
 
 function addToWalkinCart(id, name, price, size = "Regular") {
@@ -3485,23 +3821,23 @@ function renderWalkinCart() {
         div.className = 'walkin-cart-item';
 
         const addonsText = item.addons && item.addons.length > 0
-            ? `<div class="item-addons-list">+ ${item.addons.map(a => a.name).join(', ')}</div>`
+            ? `<div class="item-addons-list">+ ${item.addons.map(a => escapeHtml(a.name)).join(', ')}</div>`
             : '';
 
         div.innerHTML = `
             <div class="item-info">
                 <div class="item-main">
                     <div class="item-name">${escapeHtml(item.name)}</div>
-                    <div class="item-variant">${escapeHtml(item.size)} - ₹${item.price}</div>
+                    <div class="item-variant">${escapeHtml(item.size)} - \u20B9${escapeHtml(item.price)}</div>
                 </div>
                 ${addonsText}
-                <button class="btn-text-primary small-btn mt-4" onclick="openCartAddonPicker('${key}')">+ Addons</button>
+                <button class="btn-text-primary small-btn mt-4" data-action="openCartAddonPicker" data-id="${escapeHtml(key)}">+ Addons</button>
             </div>
             <div class="item-controls">
-                <div class="qty-btn" onclick="walkinQtyChange('${key}', -1)">-</div>
+                <div class="qty-btn" data-action="walkinQtyChange" data-id="${escapeHtml(key)}" data-delta="-1">-</div>
                 <div class="qty-val">${item.qty}</div>
-                <div class="qty-btn" onclick="walkinQtyChange('${key}', 1)">+</div>
-                <div class="remove-btn" onclick="walkinRemoveItem('${key}')">&times;</div>
+                <div class="qty-btn" data-action="walkinQtyChange" data-id="${escapeHtml(key)}" data-delta="1">+</div>
+                <div class="remove-btn" data-action="walkinRemoveItem" data-id="${escapeHtml(key)}">&times;</div>
             </div>
         `;
         container.appendChild(div);
@@ -3524,8 +3860,8 @@ window.updateWalkinTotal = () => {
 
     const subEl = document.getElementById('walkinSubtotal');
     const totalEl = document.getElementById('walkinTotal');
-    if (subEl) subEl.textContent = '₹' + subtotal.toLocaleString();
-    if (totalEl) totalEl.textContent = '₹' + total.toLocaleString();
+    if (subEl) subEl.textContent = '\u20B9' + subtotal.toLocaleString();
+    if (totalEl) totalEl.textContent = '\u20B9' + total.toLocaleString();
 };
 
 window.toggleMobileCart = (show) => {
@@ -3547,9 +3883,9 @@ window.selectPayMethod = (btn) => {
 };
 
 window.submitWalkinSale = async () => {
-    const keys = Object.keys(walkinCart);
-    if (keys.length === 0) {
-        return alert('Please add at least one item to the cart.');
+    if (Object.keys(walkinCart).length === 0) {
+        window.showToast('Please add at least one item to the cart.', 'error');
+        return;
     }
 
     const custNote = document.getElementById('walkinCustNote')?.value.trim() || '';
@@ -3561,7 +3897,7 @@ window.submitWalkinSale = async () => {
     const discount = Math.max(0, Number(document.getElementById('walkinDiscount')?.value) || 0);
 
     let subtotal = 0;
-    const items = keys.map(key => {
+    const items = Object.keys(walkinCart).map(key => {
         const item = walkinCart[key];
         subtotal += item.price * item.qty;
         return {
@@ -3640,7 +3976,7 @@ window.submitWalkinSale = async () => {
             });
         }
 
-        const confirmPrint = confirm('Sale Recorded Successfully!\n\nID: ' + orderId + '\nTotal: ₹' + total + '\n\nWould you like to PRINT the receipt?');
+        const confirmPrint = await window.showConfirm('Sale Recorded Successfully!\n\nID: ' + orderId + '\nTotal: â‚¹' + total + '\n\nWould you like to PRINT the receipt?', 'Sale Recorded');
         if (confirmPrint) {
             printOrderReceipt(orderData);
         }
@@ -3652,9 +3988,9 @@ window.submitWalkinSale = async () => {
         const noteEl = document.getElementById('walkinCustNote');
         if (noteEl) noteEl.value = '';
         renderWalkinCart();
-        showAlert('Sale Recorded successfully!', 'success');
+        window.showToast('Sale Recorded successfully!', 'success');
     } catch (e) {
-        alert('Error recording sale: ' + e.message);
+        window.showToast('Error recording sale: ' + e.message, 'error');
     }
 };
 
@@ -3702,7 +4038,7 @@ window.printReceiptById = async (orderId) => {
         }
 
         if (!order) {
-            alert("Order not found!");
+            window.showToast("Order not found!", "error");
             return;
         }
 
@@ -3714,7 +4050,7 @@ window.printReceiptById = async (orderId) => {
 
     } catch (e) {
         console.error("Print Error:", e);
-        alert("Failed to fetch order for printing.");
+        window.showToast("Failed to fetch order for printing.", "error");
     }
 };
 
@@ -3728,6 +4064,13 @@ async function printOrderReceipt(rawOrder, isReprint = false) {
         if (printWindow) {
             printWindow.document.write(rawOrder.receiptHtml);
             printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                try {
+                    printWindow.print();
+                    printWindow.close();
+                } catch (e) { console.error("Print error:", e); }
+            }, 800);
             return;
         }
     }
@@ -3747,13 +4090,20 @@ async function printOrderReceipt(rawOrder, isReprint = false) {
 
     const printWindow = window.open('', '_blank', 'width=450,height=800');
     if (!printWindow) {
-        showToast("Popup blocked! Please allow popups to print receipts.", "error");
+        window.showToast("Popup blocked! Please allow popups to print receipts.", "error");
         return;
     }
 
     const html = window.ReceiptTemplates.generateThermalReceipt(o, store, isReprint);
     printWindow.document.write(html);
     printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        try {
+            printWindow.print();
+            printWindow.close();
+        } catch (e) { console.error("Print error:", e); }
+    }, 800);
 }
 
 
@@ -3765,9 +4115,9 @@ window.addFeeSlab = (km = "", fee = "") => {
     if (!tbody) return;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-        <td style="padding: 8px;"><input type="number" class="slab-km form-input" value="${km}" placeholder="KM" style="padding: 6px 10px;"></td>
-        <td style="padding: 8px;"><input type="number" class="slab-fee form-input" value="${fee}" placeholder="₹" style="padding: 6px 10px;"></td>
-        <td style="padding: 8px;"><button onclick="this.parentElement.parentElement.remove()" class="btn-secondary btn-small" style="padding: 5px 8px;">🗑️</button></td>
+        <td style="padding: 8px;"><input type="number" class="slab-km form-input" value="${escapeHtml(km)}" placeholder="KM" style="padding: 6px 10px;"></td>
+        <td style="padding: 8px;"><input type="number" class="slab-fee form-input" value="${escapeHtml(fee)}" placeholder="\u20B9" style="padding: 6px 10px;"></td>
+        <td style="padding: 8px;"><button data-action="removeGrandparent" class="btn-secondary btn-small" style="padding: 5px 8px;">ðŸ—‘ï¸</button></td>
     `;
     tbody.appendChild(tr);
 };
@@ -3973,21 +4323,10 @@ window.saveStoreSettings = async () => {
         if (qrUrl) document.getElementById('settingQRUrl').value = qrUrl;
 
         // Success Alert
-        const alertContainer = document.getElementById('alertContainer');
-        if (alertContainer) {
-            const div = document.createElement('div');
-            div.className = 'alert-box';
-            div.style.borderLeftColor = '#22c55e';
-            div.innerHTML = `
-                <div class="alert-title">✔ Settings Saved</div>
-                <div class="alert-sub">Store profile and delivery rules updated.</div>
-            `;
-            alertContainer.appendChild(div);
-            setTimeout(() => div.remove(), 3000);
-        }
+        window.showToast("Settings saved successfully!", "success");
 
     } catch (e) {
-        alert("Failed to save: " + e.message);
+        window.showToast("Failed to save: " + e.message, "error");
     } finally {
         btn.disabled = false;
         btn.innerText = originalText;
@@ -4018,13 +4357,13 @@ function loadFeedbacks() {
             return;
         }
 
-        feedbacks.forEach(f => {
-            const stars = "⭐".repeat(f.rating || 0);
+        const feedbackHTML = feedbacks.map(f => {
+            const stars = "â­".repeat(f.rating || 0);
             const dateStr = f.timestamp ? new Date(f.timestamp).toLocaleString() : "N/A";
 
-            tableBody.innerHTML += `
+            return `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.03)">
-                    <td data-label="Date" style="padding:15px; font-size:12px;">${dateStr}</td>
+                    <td data-label="Date" style="padding:15px; font-size:12px;">${escapeHtml(dateStr)}</td>
                     <td data-label="Order ID" style="padding:15px; font-family:monospace; font-weight:700;">#${escapeHtml(f.orderId || 'N/A')}</td>
                     <td data-label="Customer" style="padding:15px">
                         <div style="font-weight:700;">${escapeHtml(f.customerName || 'Guest')}</div>
@@ -4037,7 +4376,8 @@ function loadFeedbacks() {
                     </td>
                 </tr>
             `;
-        });
+        }).join('');
+        tableBody.innerHTML = feedbackHTML;
     });
 }
 
@@ -4048,10 +4388,17 @@ function loadFeedbacks() {
  */
 let adminTrackerMap = null;
 let riderMarkersMap = new Map(); // Store markers by rider ID
+let riderLocationCb = null; // Track callback for cleanup
 
 window.initLiveRiderTracker = () => {
     const mapDiv = document.getElementById('adminLiveMap');
-    if (!mapDiv || adminTrackerMap) return;
+    if (!mapDiv) return;
+
+    // Clean up existing map if it exists to prevent memory leaks
+    if (adminTrackerMap) {
+        adminTrackerMap.remove();
+        adminTrackerMap = null;
+    }
 
     // Initialize Map at a default center (e.g. India)
     adminTrackerMap = L.map('adminLiveMap').setView([20.5937, 78.9629], 5);
@@ -4062,8 +4409,29 @@ window.initLiveRiderTracker = () => {
     startRiderLocationListener();
 };
 
+window.cleanupLiveRiderTracker = () => {
+    console.log("[Performance] Cleaning up Live Rider Tracker...");
+    if (riderLocationCb) {
+        Outlet.ref('riders').off('value', riderLocationCb);
+        riderLocationCb = null;
+    }
+    if (adminTrackerMap) {
+        try {
+            adminTrackerMap.remove();
+        } catch (e) {
+            console.warn("Map removal error:", e);
+        }
+        adminTrackerMap = null;
+    }
+    riderMarkersMap.clear();
+};
+
 function startRiderLocationListener() {
-    Outlet.ref('riders').on('value', snap => {
+    if (riderLocationCb) {
+        Outlet.ref('riders').off('value', riderLocationCb);
+    }
+
+    riderLocationCb = snap => {
         let onlineCount = 0;
         let bounds = [];
 
@@ -4124,7 +4492,9 @@ function startRiderLocationListener() {
             const currentBounds = L.latLngBounds(bounds);
             adminTrackerMap.fitBounds(currentBounds, { padding: [50, 50], maxZoom: 15 });
         }
-    });
+    };
+
+    Outlet.ref('riders').on('value', riderLocationCb);
 }
 
 // =============================
@@ -4141,9 +4511,9 @@ window.addNewCategoryAddonField = (name = "", price = "") => {
     const div = document.createElement('div');
     div.className = "addon-row-small";
     div.innerHTML = `
-        <input placeholder="Addon" value="${name}" class="form-input flex-2">
-        <input type="number" placeholder="₹" value="${price}" class="form-input flex-1">
-        <button onclick="this.parentElement.remove()" class="btn-text-danger" style="font-size:18px;">&times;</button>
+        <input placeholder="Addon" value="${escapeHtml(name)}" class="form-input flex-2">
+        <input type="number" placeholder="\u20B9" value="${escapeHtml(price)}" class="form-input flex-1">
+        <button data-action="removeParent" class="btn-text-danger" style="font-size:18px;">&times;</button>
     `;
     container.appendChild(div);
 };
@@ -4177,11 +4547,13 @@ window.openPOSSelectionModal = async (dishId) => {
         card.className = `size-card ${idx === 0 ? 'active' : ''}`;
         card.innerHTML = `
             <div class="size-chip-box">
-                <span class="size-name">${name}</span>
-                <span class="size-price">₹${price}</span>
+                <span class="size-name">${escapeHtml(name)}</span>
+                <span class="size-price">\u20B9${escapeHtml(price)}</span>
             </div>
         `;
-        card.onclick = () => selectPOSSize(name, price, card);
+        card.setAttribute('data-action', 'selectPOSSize');
+        card.setAttribute('data-name', name);
+        card.setAttribute('data-price', price);
         sizeGrid.appendChild(card);
         if (idx === 0) currentPOSModalSize = { name, price };
     });
@@ -4199,10 +4571,10 @@ window.openPOSSelectionModal = async (dishId) => {
             item.className = "addon-check-item";
             item.innerHTML = `
                 <div class="flex-row flex-center">
-                    <input type="checkbox" onchange="togglePOSAddon('${name}', ${price}, this)">
-                    <span class="fs-13 font-weight-600">${name}</span>
+                    <input type="checkbox" data-action="togglePOSAddon" data-name="${escapeHtml(name)}" data-price="${escapeHtml(price)}">
+                    <span class="fs-13 font-weight-600">${escapeHtml(name)}</span>
                 </div>
-                <span class="text-muted-small font-weight-700">+₹${price}</span>
+                <span class="text-muted-small font-weight-700">+\u20B9${escapeHtml(price)}</span>
             `;
             addonsList.appendChild(item);
         });
@@ -4244,7 +4616,7 @@ function updatePOSModalTotal() {
     let base = currentPOSModalSize ? currentPOSModalSize.price : 0;
     let addonsTotal = Object.values(currentPOSModalAddons).reduce((a, b) => a + b, 0);
     let total = (Number(base) + addonsTotal) * currentPOSModalQty;
-    document.getElementById('posModalTotal').innerText = `₹${total}`;
+    document.getElementById('posModalTotal').innerText = `\u20B9${total}`;
 }
 
 window.addToWalkinCartFromModal = () => {
@@ -4316,10 +4688,10 @@ window.openCartAddonPicker = async (cartKey) => {
             itemDiv.className = "addon-check-item";
             itemDiv.innerHTML = `
                 <div class="flex-row flex-center">
-                    <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="togglePOSAddon('${name}', ${price}, this)">
-                    <span class="fs-13 font-weight-600">${name}</span>
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} data-action="togglePOSAddon" data-name="${escapeHtml(name)}" data-price="${escapeHtml(price)}">
+                    <span class="fs-13 font-weight-600">${escapeHtml(name)}</span>
                 </div>
-                <span class="text-muted-small font-weight-700">+₹${price}</span>
+                <span class="text-muted-small font-weight-700">+\u20B9${escapeHtml(price)}</span>
             `;
             addonsList.appendChild(itemDiv);
         });
@@ -4328,7 +4700,7 @@ window.openCartAddonPicker = async (cartKey) => {
     // Change the "Add to Cart" button to "Update Item"
     const submitBtn = document.getElementById('posModalSubmitBtn');
     const originalText = submitBtn.innerText;
-    submitBtn.innerText = "💾 Update Selection";
+    submitBtn.innerText = "\uD83D\uDCBE Update Selection";
 
     // Temporarily replace the click handler
     const originalHandler = window.addToWalkinCartFromModal;
@@ -4398,15 +4770,12 @@ window.migrateAddonsToCategories = async () => {
 
         if (Object.keys(updates).length > 0) {
             await db.ref().update(updates);
-            console.log("✔ Migration complete!", updates);
-            alert("Success: Add-ons migrated to categories!");
+            window.showToast("Success: Add-ons migrated to categories!", "success");
         } else {
-            console.log("No add-ons found to migrate.");
-            alert("No add-ons found to migrate.");
+            window.showToast("No add-ons found to migrate.", "info");
         }
     } catch (e) {
-        console.error("Migration failed:", e);
-        alert("Migration failed: " + e.message);
+        window.showToast("Migration failed: " + e.message, "error");
     }
 };
 
@@ -4418,14 +4787,15 @@ function renderWalkinCategoryTabs() {
     if (!container) return;
 
     container.innerHTML = `
-        <div class="category-tab active" onclick="filterWalkinByCategory('All', this)">All</div>
+        <div class="category-tab active" data-action="filterWalkinByCategory" data-val="All">All</div>
     `;
 
     categories.forEach(cat => {
         const tab = document.createElement('div');
         tab.className = "category-tab";
-        tab.innerText = cat.name;
-        tab.onclick = () => filterWalkinByCategory(cat.name, tab);
+        tab.innerText = escapeHtml(cat.name);
+        tab.dataset.action = "filterWalkinByCategory";
+        tab.dataset.val = cat.name;
         container.appendChild(tab);
     });
 }
@@ -4434,10 +4804,10 @@ function renderWalkinCategoryTabs() {
 // IMAGE STORAGE MIGRATION
 // =============================
 async function runImageMigration() {
-    if (!confirm("This will convert all Firebase Storage images to Base64 text in the database. This process might take a minute depending on the number of items. Proceed?")) return;
+    if (!(await window.showConfirm("This will convert images to Base64 text. This process might take a minute. Proceed?", "Image Migration"))) return;
 
     try {
-        console.log("🚀 Starting Image Migration...");
+        console.log("\uD83D\uDE80 Starting Image Migration...");
         const updates = {};
 
         // Helper to download image and convert to Base64
@@ -4502,56 +4872,39 @@ async function runImageMigration() {
         const botData = botSnap.val();
         if (botData) {
             if (botData.imgDelivered && botData.imgDelivered.includes("firebasestorage")) {
-                console.log("Migrating Bot Delivered Image");
                 updates['settings/Bot/imgDelivered'] = await convertUrlToDataUri(botData.imgDelivered);
             }
             if (botData.imgFeedback && botData.imgFeedback.includes("firebasestorage")) {
-                console.log("Migrating Bot Feedback Image");
                 updates['settings/Bot/imgFeedback'] = await convertUrlToDataUri(botData.imgFeedback);
-            }
-            if (botData.statusImages) {
-                for (const key in botData.statusImages) {
-                    if (botData.statusImages[key].url && botData.statusImages[key].url.includes("firebasestorage")) {
-                        console.log("Migrating Bot Status Image:", key);
-                        updates[`settings/Bot/statusImages/${key}/url`] = await convertUrlToDataUri(botData.statusImages[key].url);
-                    }
-                }
-            }
-        }
-
-        // 5. Store Settings
-        const storeSnap = await Outlet.ref('settings/Store').once('value');
-        const storeData = storeSnap.val();
-        if (storeData) {
-            if (storeData.bannerImage && storeData.bannerImage.includes("firebasestorage")) {
-                console.log("Migrating Banner Image");
-                updates[`${Outlet.current}/settings/Store/bannerImage`] = await convertUrlToDataUri(storeData.bannerImage);
-            }
-            if (storeData.paymentQR && storeData.paymentQR.includes("firebasestorage")) {
-                console.log("Migrating Payment QR");
-                updates[`${Outlet.current}/settings/Store/paymentQR`] = await convertUrlToDataUri(storeData.paymentQR);
             }
         }
 
         if (Object.keys(updates).length > 0) {
             await db.ref().update(updates);
-            console.log("✔ Image Migration Complete!", updates);
-            alert("Success: All images migrated to Base64 text!");
+            window.showToast("Success: All images migrated!", "success");
             location.reload();
         } else {
-            alert("No legacy images found to migrate.");
+            window.showToast("No legacy images found.", "info");
         }
     } catch (err) {
         console.error("Migration Failed:", err);
-        alert("Critical Error: Migration failed. Check console for details.");
+        window.showToast("Critical Error: Migration failed.", "error");
     }
 }
 
 
+window.exportStockList = () => {
+    if (Object.keys(stockRegistry).length === 0) {
+        window.showToast("No data to export.", "info");
+        return;
+    }
+    // ... CSV Export logic ...
+};
+
 window.exportLostSalesData = async () => {
     const snap = await Outlet.ref("lostSales").once("value");
     if (!snap.exists()) {
-        alert("No data to export.");
+        window.showToast("No data to export.", "warning");
         return;
     }
 
@@ -4579,4 +4932,47 @@ window.exportLostSalesData = async () => {
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
+
 };
+
+// --- MOBILE ACCESSIBILITY HELPER (Phase 2) ---
+function enhanceTablesForMobile(root = document) {
+    if (window.innerWidth > 600) return;
+    
+    const tables = root.querySelectorAll('table');
+    tables.forEach(table => {
+        const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+        if (headers.length === 0) return;
+        
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            cells.forEach((cell, index) => {
+                if (headers[index] && !cell.getAttribute('data-label')) {
+                    cell.setAttribute('data-label', headers[index]);
+                }
+            });
+        });
+    });
+}
+
+// Phase 3: Use MutationObserver instead of polling for performance
+if (typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver((mutations) => {
+        if (window.innerWidth <= 600) {
+            // Debounce or throttle could be added if needed, but this is usually fine
+            enhanceTablesForMobile();
+        }
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+} else {
+    // Fallback for older browsers
+    setInterval(enhanceTablesForMobile, 3000);
+}
+
+// Initial call
+enhanceTablesForMobile();

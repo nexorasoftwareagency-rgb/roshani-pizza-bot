@@ -2,90 +2,133 @@
   "rules": {
     "admins": {
       ".indexOn": ["email"],
-      ".read": "auth != null",
-      ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
-    },
-    "migrationStatus": {
-      ".read": "auth != null",
-      ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
-    },
-    "riders": {
-      ".indexOn": ["email"],
-      ".read": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
-      "$riderId": {
-        ".read": "auth != null && (auth.uid == $riderId || data.child('email').val() == auth.token.email || root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
-        ".write": "auth != null && (auth.uid == $riderId || root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
+      // Only admins can list/read the admin node
+      ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
+      // First admin can be created if none exist, otherwise only admins can write
+      ".write": "!root.child('admins').hasChildren() || (auth != null && root.child('admins/' + auth.uid).exists())",
+      "$adminId": {
+        ".read": "auth != null && (auth.uid == $adminId || root.child('admins/' + auth.uid).exists())",
+        ".write": "(!root.child('admins').hasChildren() || root.child('admins/' + auth.uid).exists())",
         ".validate": "newData.hasChildren(['name', 'email'])"
       }
     },
+    
     "riderStats": {
-      ".read": "auth != null",
+      // Admins can read/write all, riders can read/write their own stats (for increments)
+      ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
+      ".write": "auth != null && root.child('admins/' + auth.uid).exists()",
       "$riderId": {
-        ".write": "auth != null && (auth.uid == $riderId || root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
+        ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || auth.uid == $riderId)",
+        ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || auth.uid == $riderId)"
       }
     },
+
+    "riders": {
+      ".indexOn": ["email"],
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())",
+        // Allow rider to update own profile but protect identity fields (name, email, aadhar, etc.)
+        ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (auth.uid == $uid && newData.child('email').val() == data.child('email').val() && newData.child('name').val() == data.child('name').val() && newData.child('aadharNo').val() == data.child('aadharNo').val() && newData.child('outlet').val() == data.child('outlet').val() && newData.child('id').val() == data.child('id').val()))",
+        "notifications": {
+          ".indexOn": ["timestamp"],
+          ".read": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())",
+          ".write": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())",
+          "$notifId": {
+            ".validate": "newData.hasChildren(['title', 'body', 'timestamp'])"
+          }
+        },
+        "status": {
+          ".write": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())"
+        },
+        "fcmToken": {
+          ".write": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())"
+        },
+        "lastSeen": {
+          ".write": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())"
+        }
+      }
+    },
+    
     "botStatus": {
       ".read": "auth != null",
-      ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
+      ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
     },
+    
     "logs": {
-      ".read": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
-      ".write": "auth != null"
+      ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
+      ".write": "auth != null && root.child('admins/' + auth.uid).exists()",
+      "riderErrors": {
+        "$uid": {
+          ".write": "auth != null && auth.uid == $uid"
+        }
+      }
     },
-
+    
+    "bot": {
+      // Internal bot config - restricted to admins
+      ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
+      ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
+    },
+    
     "$outlet": {
       "settings": {
         ".read": "auth != null",
-        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
+        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
       },
       "appConfig": {
         ".read": "auth != null",
-        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
+        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
       },
-      "uiConfig": {
-        ".read": "auth != null",
-        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
-      },
+      
       "orders": {
         ".indexOn": ["assignedRider", "status", "whatsappNumber"],
-        ".read": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email || query.orderByChild == 'assignedRider' && query.equalTo == auth.token.email || query.orderByChild == 'status')",
+        // Strict read: Admins see all, Riders only see unassigned or their own
+        ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || query.orderByChild == 'assignedRider' && query.equalTo == auth.token.email || (query.orderByChild == 'assignedRider' && query.equalTo == null))",
         "$orderId": {
-          ".read": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email || !data.child('assignedRider').exists() || data.child('assignedRider').val() == auth.token.email || data.child('whatsappNumber').val() == auth.token.whatsapp)",
-          ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email || !data.exists() || data.child('assignedRider').val() == auth.token.email || !data.child('assignedRider').exists())",
-          ".validate": "newData.hasChild('status')"
+          ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || !data.child('assignedRider').exists() || data.child('assignedRider').val() == auth.token.email)",
+          ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (data.child('assignedRider').val() == auth.token.email || !data.child('assignedRider').exists()))",
+          ".validate": "newData.hasChildren(['status', 'total', 'items'])"
         }
       },
+      
       "categories": {
         ".read": "auth != null",
-        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
+        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
       },
+      
       "dishes": {
         ".read": "auth != null",
-        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
+        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
       },
-      "feedbacks": {
-        ".read": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
-        "$feedbackId": {
-          ".write": "auth != null && !data.exists()"
-        }
-      },
-      "inventory": {
-        ".read": "auth != null",
-        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
-      },
+      
       "liveTracker": {
+        ".read": "auth != null",
         "$riderId": {
-          ".read": "auth != null",
-          ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email || auth.uid == $riderId)"
+          ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || auth.uid == $riderId)"
         }
       },
-      "metadata": {
-        ".read": "auth != null",
-        ".write": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)"
+
+      "otpAttempts": {
+        "$orderId": {
+          // Only assigned rider or admin can read/write failure counts
+          ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || root.child($outlet + '/orders/' + $orderId + '/assignedRider').val() == auth.token.email)",
+          ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || root.child($outlet + '/orders/' + $orderId + '/assignedRider').val() == auth.token.email)"
+        }
       },
+
       "lostSales": {
-        ".read": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
+        ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
+        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
+      },
+
+      "customers": {
+        ".read": "auth != null",
         ".write": "auth != null"
+      },
+
+      "feedbacks": {
+        ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
+        ".write": "auth != null" 
       }
     }
   }
