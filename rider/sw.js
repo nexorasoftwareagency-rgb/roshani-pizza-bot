@@ -18,3 +18,29 @@ self.addEventListener('fetch', (e) => {
     caches.match(e.request).then((res) => res || fetch(e.request))
   );
 });
+
+// PUSH NOTIFICATIONS
+self.addEventListener('push', (e) => {
+  const data = e.data ? e.data.json() : { title: 'New Update', body: 'Check your rider portal.' };
+  const options = {
+    body: data.body,
+    icon: './icon-512.png',
+    badge: './icon-512.png',
+    vibrate: [100, 50, 100],
+    data: { url: data.url || './index.html' }
+  };
+  e.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(
+    clients.matchAll({ type: 'window' }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url === e.notification.data.url && 'focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(e.notification.data.url);
+    })
+  );
+});
+
