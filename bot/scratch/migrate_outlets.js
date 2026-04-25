@@ -9,11 +9,11 @@ const { db, getData } = require('../firebase');
  * Nodes to migrate:
  * - orders
  * - categories
- * - riders
  * - feedbacks
- * - metadata/orderSequence
+ * - metadata
  * - inventory
- * - riderStats
+ * - dishes
+ * - settings
  */
 
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -25,13 +25,14 @@ async function migrate() {
     const rootNodes = [
         'orders', 
         'categories', 
-        'riders', 
         'feedbacks', 
         'inventory',
-        'metadata/orderSequence',
-        'riderStats',
-        'dishes'
+        'metadata',
+        'dishes',
+        'settings'
     ];
+
+    // NOTE: 'riders', 'riderStats', 'admins' etc. are SHARED at root.
 
     const updates = {};
     const stats = {};
