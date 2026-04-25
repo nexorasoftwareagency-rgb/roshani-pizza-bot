@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="style.css?v=3.1.0">
     <link rel="stylesheet" href="mobile-overrides.css?v=3.1.0">
     <link rel="manifest" href="manifest-pizza.json">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://placehold.co https://tile.openstreetmap.org https://*.googleusercontent.com; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://placehold.co https://tile.openstreetmap.org https://*.googleusercontent.com; connect-src 'self' wss://*.firebaseio.com https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com;">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pizza ERP">
@@ -216,7 +216,7 @@
                         <div class="panel">
                             <div class="panel-header flex-row flex-between flex-center">
                                 <h3 class="panel-title">🚚 Rider Status</h3>
-                                <button data-tab="riders" class="btn-text-primary-sm" title="Manage Delivery Staff and Status">
+                                 <button data-tab="riders" data-action="switchTab" class="btn-text-primary-sm" title="Manage Delivery Staff and Status">
                                     Manage <i data-lucide="chevron-right"></i>
                                 </button>
                             </div>
@@ -370,7 +370,7 @@
                             <h2 class="panel-title">NOTIFICATION DASHBOARD</h2>
                             <p class="panel-subtitle">History of all system alerts and updates</p>
                         </div>
-                        <button id="btnClearAllNotif" class="btn-primary btn-secondary br-12">
+                         <button id="btnClearAllNotif" class="btn-secondary br-12">
                             Clear All
                         </button>
                     </div>
@@ -975,7 +975,7 @@
                         <div class="panel">
                             <div class="panel-header">
                                 <div class="flex-row flex-center flex-gap-10">
-                                    <button data-tab="dashboard" class="btn-text mobile-only" title="Back to Dashboard" aria-label="Back to Dashboard"><i data-lucide="arrow-left"></i></button>
+                                     <button data-tab="dashboard" data-action="switchTab" class="btn-text mobile-only" title="Back to Dashboard" aria-label="Back to Dashboard"><i data-lucide="arrow-left"></i></button>
                                     <h3 class="panel-title">🍽️ Select Items</h3>
                                 </div>
                                 <input type="text" id="walkinDishSearch" placeholder="Search dishes..." class="search-input-group search-input-w200">
@@ -1173,16 +1173,14 @@
                         </div>
 
                         <div class="form-row">
-                            <div class="flex-1">
-                                <label class="form-label" id="riderPassLabel">Portal Password</label>
-                                <form class="password-input-group">
-                                <div class="password-input-group flex-row flex-gap-8">
-                                   <input id="riderPass" type="password" placeholder="••••••••" class="form-input flex-1" title="New password for rider portal">
-                                   <button type="button" id="btnToggleRiderPass" class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
-                               </div>
-                                </form>
-                                <small id="riderPassHint" class="hidden text-muted-small">Leave blank to keep current password</small>
-                            </div>
+                             <div class="flex-1">
+                                 <label class="form-label" id="riderPassLabel">Portal Password</label>
+                                 <div class="password-input-group flex-row flex-gap-8">
+                                    <input id="riderPass" type="password" placeholder="••••••••" class="form-input flex-1" title="New password for rider portal">
+                                    <button type="button" id="btnToggleRiderPass" class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
+                                </div>
+                                 <small id="riderPassHint" class="hidden text-muted-small">Leave blank to keep current password</small>
+                             </div>
                             <div class="flex-1">
                                 <label class="form-label">Primary Phone</label>
                                 <input id="riderPhone" type="tel" placeholder="+91 99999 00000" class="form-input w-full" title="Rider's primary contact number">
@@ -1227,20 +1225,20 @@
 
         <!-- BOTTOM NAVIGATION (MOBILE ONLY) -->
         <nav class="bottom-nav mobile-only">
-            <button class="nav-item active" data-tab="dashboard" title="Main Dashboard">
+            <button class="nav-item active" data-tab="dashboard" data-action="switchTab" title="Main Dashboard">
                 <i data-lucide="layout-dashboard"></i>
                 <span>Dash</span>
             </button>
-            <button class="nav-item" data-tab="orders" title="Order Management">
+            <button class="nav-item" data-tab="orders" data-action="switchTab" title="Order Management">
                 <i data-lucide="package"></i>
                 <span>Orders</span>
             </button>
-            <button class="nav-item" data-tab="live" title="Live Store Operations">
+            <button class="nav-item" data-tab="live" data-action="switchTab" title="Live Store Operations">
                 <i data-lucide="flame"></i>
                 <span>Live</span>
                 <span id="badge-live-mobile" class="mobile-count-badge hidden">0</span>
             </button>
-            <button class="nav-item" data-tab="walkin" title="Point of Sale">
+            <button class="nav-item" data-tab="walkin" data-action="switchTab" title="Point of Sale">
                 <i data-lucide="shopping-cart"></i>
                 <span>POS</span>
             </button>

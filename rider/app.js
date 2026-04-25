@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, onValue, get, set, update, runTransaction, query, orderByChild, equalTo, off, serverTimestamp, remove, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
 const firebaseConfig = {
@@ -15,6 +16,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
+const dbStorage = getStorage(app);
 const messaging = getMessaging(app);
 
 // ==========================================
@@ -616,13 +618,18 @@ function showError(msg) {
 
 window.logout = async () => {
     if (await showConfirmModal("END SHIFT", "End your shift and logout?")) {
-        window.clearAllListeners();
-        if (riderMap) {
-            riderMap.remove();
-            riderMap = null;
+        try {
+            window.clearAllListeners();
+            if (riderMap) {
+                riderMap.remove();
+                riderMap = null;
+            }
+            localStorage.removeItem('rider_authenticated');
+            await auth.signOut();
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Still redirect even if signOut fails
         }
-        localStorage.removeItem('rider_authenticated');
-        auth.signOut();
     }
 };
 
@@ -903,33 +910,40 @@ window.handleProfilePhotoChange = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Check file size (limit to 500KB for base64 storage efficiency)
+    // Check file type (must be an image)
+    if (!file.type.startsWith('image/')) {
+        showToast("Please select an image file", "error");
+        return;
+    }
+
+    // Check file size (limit to 500KB for upload efficiency)
     if (file.size > 500 * 1024) {
         showToast("Image size must be less than 500KB", "error");
         return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const base64 = e.target.result;
-        try {
-            const uid = currentUser.profile.id;
-            await update(ref(db, `riders/${uid}`), { profilePhoto: base64 });
-            
-            // Sync UI
-            const profileImg = document.getElementById('r-profile-img');
-            const navPhoto = document.getElementById('r-photo');
-            if (profileImg) profileImg.src = base64;
-            if (navPhoto) navPhoto.src = base64;
-            
-            currentUser.profile.profilePhoto = base64;
-            showToast("Profile photo updated", "success");
-        } catch (error) {
-            logError("handleProfilePhotoChange", error);
-            showToast("Failed to update photo. Permission denied or network error.", "error");
-        }
-    };
-    reader.readAsDataURL(file);
+    try {
+        const uid = currentUser.profile.id;
+        // Upload to Firebase Storage instead of embedding base64
+        const storageRef = ref(dbStorage, `riders/${uid}/profile_photo`);
+        await uploadBytes(storageRef, file);
+        const downloadUrl = await getDownloadURL(storageRef);
+
+        // Update database with the download URL
+        await update(ref(db, `riders/${uid}`), { profilePhoto: downloadUrl });
+
+        // Sync UI
+        const profileImg = document.getElementById('r-profile-img');
+        const navPhoto = document.getElementById('r-photo');
+        if (profileImg) profileImg.src = downloadUrl;
+        if (navPhoto) navPhoto.src = downloadUrl;
+
+        currentUser.profile.profilePhoto = downloadUrl;
+        showToast("Profile photo updated", "success");
+    } catch (error) {
+        logError("handleProfilePhotoChange", error);
+        showToast("Failed to update photo. " + error.message, "error");
+    }
 };
 
 /**

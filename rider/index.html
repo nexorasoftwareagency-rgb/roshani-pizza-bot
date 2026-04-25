@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#FF6B00">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseio.com https://*.firebase.com https://*.googleapis.com; script-src 'self' 'unsafe-inline' https://unpkg.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.firebaseio.com https://*.firebase.com https://*.googleapis.com; frame-ancestors 'none';">
-    <title>Rider Portal | Roshani Pizza</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseio.com https://*.firebase.com https://*.googleapis.com; script-src 'self' 'unsafe-inline' https://unpkg.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' wss://*.firebaseio.com https://*.firebaseio.com https://*.firebase.com https://*.googleapis.com; frame-ancestors 'none'; report-to csp-endpoint;">
+    <meta http-equiv="Report-To" content='{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/csp-violation-report-endpoint"}],"include_subdomains":true}'>    <title>Rider Portal | Roshani Pizza</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-512.png">
@@ -284,7 +284,7 @@
                             <button class="btn-ghost btn-xs" id="btn-toggle-aadhar">SHOW</button>
                         </div>
                         <div class="aadhar-img-container" id="aadhar-container" style="display:none;">
-                            <img id="r-aadhar-img" src="" alt="Aadhar Card" class="aadhar-card-display">
+                            <img id="r-aadhar-img" alt="Aadhar Card" class="aadhar-card-display" style="display:none;">
                         </div>
                         <p class="text-xtra-small text-muted italic mt-8">Note: Handling of this ID must comply with Aadhar Act policies.</p>
                     </div>
@@ -307,7 +307,7 @@
         <div class="modal-card">
             <h3 class="modal-title">TRIP COMPLETE</h3>
             <p class="modal-sub">Enter 6-digit verification code from customer</p>
-            <input type="tel" id="otpInput" placeholder="000000" maxlength="6" inputmode="numeric" pattern="\d{6}" title="Enter 6-digit verification code from customer" autocomplete="one-time-code">
+            <input type="text" id="otpInput" placeholder="000000" maxlength="6" inputmode="numeric" pattern="\d{6}" title="Enter 6-digit verification code from customer" autocomplete="one-time-code">
             
             <button id="btnResendOTP" class="btn-resend-otp">&#128233; RESEND OTP TO CUSTOMER</button>
 

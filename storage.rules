@@ -32,21 +32,29 @@ service firebase.storage {
                    && request.resource.contentType.matches('image/.*');
     }
     
-    // --------------------------------------------
-    // OUTLET DISHES: Authenticated read, admin write
-    // --------------------------------------------
-    match /{outlet}/dishes/{dishId}/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
-    }
-    
-    // --------------------------------------------
-    // OUTLET CATEGORIES: Authenticated read, admin write
-    // --------------------------------------------
-    match /{outlet}/categories/{catId}/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
-    }
+      // --------------------------------------------
+      // OUTLET DISHES: Authenticated read, admin write
+      // --------------------------------------------
+      match /{outlet}/dishes/{dishId}/{allPaths=**} {
+        allow read: if request.auth != null && !isOutletRestricted(request.auth.token.outlet, outlet);
+        allow write: if isAdmin();
+      }
+      
+      // --------------------------------------------
+      // OUTLET CATEGORIES: Authenticated read, admin write  
+      // --------------------------------------------
+      match /{outlet}/categories/{catId}/{allPaths=**} {
+        allow read: if request.auth != null && !isOutletRestricted(request.auth.token.outlet, outlet);
+        allow write: if isAdmin();
+      }
+
+      // --------------------------------------------
+      // HELPER: Restrict outlet wildcard to known outlets
+      // --------------------------------------------
+      function isOutletRestricted(userOutlet, resourceOutlet) {
+        // Allow if same outlet or admin
+        return request.auth != null && isAdmin() || userOutlet == resourceOutlet;
+      }
     
     // --------------------------------------------
     // RECEIPTS: Admin read/write

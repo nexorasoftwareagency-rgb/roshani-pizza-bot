@@ -21,13 +21,21 @@ self.addEventListener('fetch', (e) => {
 
 // PUSH NOTIFICATIONS
 self.addEventListener('push', (e) => {
-  const data = e.data ? e.data.json() : { title: 'New Update', body: 'Check your rider portal.' };
+  let data = { title: 'New Update', body: 'Check your rider portal.', url: './index.html' };
+  try {
+    if (e.data) {
+      const parsed = e.data.json();
+      data = { ...data, ...parsed };
+    }
+  } catch (err) {
+    console.error('Failed to parse push data:', err);
+  }
   const options = {
     body: data.body,
     icon: './icon-512.png',
     badge: './icon-512.png',
     vibrate: [100, 50, 100],
-    data: { url: data.url || './index.html' }
+    data: { url: data.url }
   };
   e.waitUntil(self.registration.showNotification(data.title, options));
 });
@@ -36,10 +44,11 @@ self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   e.waitUntil(
     clients.matchAll({ type: 'window' }).then((clientList) => {
+      const resolvedUrl = new URL(data.url, self.location.origin).href;
       for (const client of clientList) {
-        if (client.url === e.notification.data.url && 'focus' in client) return client.focus();
+        if (client.url === resolvedUrl && 'focus' in client) return client.focus();
       }
-      if (clients.openWindow) return clients.openWindow(e.notification.data.url);
+      if (clients.openWindow) return clients.openWindow(data.url);
     })
   );
 });
