@@ -4,7 +4,7 @@
  */
 
 // Initialize Firebase
-if (typeof window.firebaseConfig !== 'undefined') {
+if (typeof firebase !== 'undefined' && typeof window.firebaseConfig !== 'undefined') {
     if (!firebase.apps.length) {
         firebase.initializeApp(window.firebaseConfig);
     }

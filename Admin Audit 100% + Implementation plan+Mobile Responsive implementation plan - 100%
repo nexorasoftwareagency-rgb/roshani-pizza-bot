@@ -771,16 +771,22 @@ Based on the complete 101% audit, here is a **phased, prioritized implementation
 
 | Phase | Duration | Focus | Deliverable |
 |-------|----------|-------|-------------|
-| **Phase 0** | 0.5 day | Preparation, backup, tooling | Safe dev environment, baseline metrics |
-| **Phase 1** | 1–2 days | **CRITICAL Security** (rules, XSS, oversize icons) | All critical vulnerabilities fixed |
-| **Phase 2** | 1 week | **HIGH Priority** (bugs, UX, data correctness) | Stable, functional admin panel |
-| **Phase 3** | 1 week | **MEDIUM** (performance, mobile polish, accessibility) | Fast, accessible, responsive |
+| **Phase 0** | 1 day | Preparation, backup, tooling | Safe dev environment, baseline metrics |
+| **Phase 1** | 4–5 days | **CRITICAL Security** (rules, XSS, oversize icons) | All critical vulnerabilities fixed |
+| | | **QA/Regression** | Security testing, basic regression |
+| **Phase 2** | 1 week + 2 days | **HIGH Priority** (bugs, UX, data correctness) | Stable, functional admin panel |
+| | | **QA/Regression** | Functional testing, bug verification |
+| **Phase 3** | 1 week + 2 days | **MEDIUM** (performance, mobile polish, accessibility) | Fast, accessible, responsive |
+| | | **QA/Regression** | Cross-browser/device testing |
 | **Phase 4** | 1 week | **FEATURE ENHANCEMENTS** (offline, push, dark mode) | Modern PWA |
+| | | **QA/Regression** | Feature verification |
 | **Phase 5** | 1 week | **CODE QUALITY** (build system, tests, docs) | Maintainable codebase |
 | **Phase 6** | 1 week | **PRODUCTION HARDENING** (security headers, monitoring) | Enterprise-ready |
 | **Phase 7** | Ongoing | Monitoring & iteration | Continuous improvement |
 
-**Total Effort:** 5–6 weeks, ~35–45 person-days
+**Total Effort:** 8–10 weeks, ~50–70 person-days (**+20–30% contingency** for unforeseen issues)
+
+**Note:** Phases 1-3 have explicit QA/Regression buffers. Firebase rules and deployments have non-parallel dependencies (rules must be deployed before features that rely on them). All estimates include code review and testing time.
 
 ---
 
@@ -1029,33 +1035,25 @@ navigator.clipboard.writeText(tempPass).then(() => {
 
 **Files:** All state-changing operations (settings save, order updates, rider creation)
 
-**Solution A — Synchronizer Token Pattern:**
-1. On page load, generate CSRF token stored in `sessionStorage`
-2. Include token in every Firebase write as custom claim? Not possible with client-only.
-3. **Better:** Use `window.sessionStorage` + verify via Cloud Function (requires backend).
+**Reality:** Firebase Auth uses ID tokens in the `Authorization` header (Bearer token model), not session cookies. Combined with CORS protection and short-lived tokens (1 hour), CSRF risk is **significantly lower** than traditional session-based apps.
 
-**Solution B — SameSite Cookies (Realted):** Firebase Auth already uses SameSite cookies. CSRF less critical for pure SPA, but state-changing operations (POST equivalents) should have confirmation dialogs (already have `confirm()` for delete).
+**However:**
+- XSS (token theft) is the primary risk — fix this first (see Section 1.5)
+- Confirmation modals for destructive actions provide UX protection
+- If a backend API is added later, implement CSRF tokens or SameSite cookies
 
-**Short-term fix:**
-- Add `confirm()` dialogs for all destructive actions (already present for delete)
-- For settings save, add "Are you sure?" modal with changes summary
-- Consider adding a simple token:
-  ```javascript
-  // On page load
-  sessionStorage.setItem('csrf_token', crypto.randomUUID());
-  // On every write, include in data:
-  const update = { ...data, _csrf: sessionStorage.getItem('csrf_token') };
-  // Validate in Firebase Rules? Can't access sessionStorage from rules.
-  ```
+**Current Approach:**
+1. All destructive actions have `confirm()` dialogs ✓ (delete rider, clear logs, etc.)
+2. Settings save — add confirmation for bulk changes if needed
+3. **Prioritize XSS fixes** (Section 1.5) — more critical than CSRF
 
-**Given Firebase architecture, CSRF is **lower risk** because:**
-- Auth token is short-lived (1 hour)
-- No traditional session cookie (uses ID token in Authorization header)
-- Cross-origin requests blocked by CORS (Firebase handles)
+**Do NOT implement:** sessionStorage CSRF tokens — they add complexity without meaningful security benefit for Firebase SPAs and can be read by XSS anyway.
 
-**Decision:** **Accept risk for now** but add confirmation modals for sensitive actions (delete rider, clear logs). Already have `confirm()` for delete. Add for settings save? Not necessary if admin is logged in.
+**If cookie-based sessions are introduced later:** Implement SameSite=Lax/Strict attributes and anti-CSRF tokens.
 
-**Action:** Skip full CSRF implementation; ensure all destructive actions have confirmation dialogs (already mostly there). Document as **ACCEPTABLE RISK**.
+**Assessment:** **LOW RISK** for current architecture. Focus on XSS mitigation and confirmation dialogs.
+
+**Action:** Document and monitor. No implementation needed at this time.
 
 ---
 
@@ -1451,62 +1449,39 @@ Then cleanup becomes safe.
 
 ### 3.1 Upgrade Firebase SDK v9 Compat → Modular
 
-**Current:** Using compat version (lines 26–28):
+**Current:** Using compat version (lines 26–28 in index.html):
 ```html
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 ```
 
-**Compat bundle size:** ~600 KB (includes old namespaced API)
-
-**Modular approach:** ~100 KB with tree-shaking
+**Compat bundle size:** ~600 KB (includes old namespaced API) vs **Modular:** ~100 KB with tree-shaking.
 
 **Migration Plan:**
 
-1. **Install via npm** (preferred for bundling) OR switch to CDN modular:
-   ```html
-   <!-- Replace compat with modular -->
-   <script type="module">
-     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-     import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-     import { getDatabase, ref, onValue, set, update, remove } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
-     
-     const app = initializeApp(window.firebaseConfig);
-     window.auth = getAuth(app);
-     window.db = getDatabase(app);
-   </script>
-   ```
+Since Admin panel uses CDN scripts (not npm bundling), migrate by:
 
-2. **Update all Firebase calls** in `app.js`:
-   ```javascript
-   // OLD (compat):
-   db.ref('path').once('value')
-   // NEW (modular):
-   import { getDatabase, ref, query, orderByChild, equalTo, onValue, get } from "firebase/database";
-   const db = getDatabase();
-   get(ref(db, 'path')).then(snap => { ... });
-   ```
-
-3. **Update auth calls:**
-   ```javascript
-   // OLD:
-   auth.signInWithEmailAndPassword(email, pass)
-   // NEW:
-   import { signInWithEmailAndPassword } from "firebase/auth";
-   signInWithEmailAndPassword(auth, email, pass)
-   ```
-
-4. **Test thoroughly** — modular API is promise-based; compat used callbacks.
-
-**Recommendation:** Since Admin panel is large (4,846 lines), use **compat-to-modular migration tool** or introduce a compatibility layer:
-```javascript
-// firebase-helpers.js
-export const db = () => getDatabase();
-export const ref = (path) => ref(db, path);
-// etc.
+1. **Replace compat with modular CDN imports** (must be type="module"):
+```html
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getDatabase, ref, onValue, set, update, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+  
+  const app = initializeApp(window.firebaseConfig);
+  window.auth = getAuth(app);
+  window.db = getDatabase(app);
+  window.dbStorage = getStorage(app);
+</script>
 ```
-Then incrementally update.
+
+**Note:** All Firebase calls in app.js must be updated to use the modular API. The old compat API (`db.ref()`, `auth.signInWithEmailAndPassword()`) cannot be mixed with modular imports in the same script.
+
+2. **Alternative (recommended for large codebase):** Keep compat API for now but update to latest version (v10.7.1). Modular migration is a larger refactor requiring all Firebase calls to be updated. Given the codebase size, consider this a Phase 4+ task.
+
+**Recommendation:** Update all compat scripts to latest Firebase v10 CDN URLs (improves security) and defer full modular migration to Phase 5. The current compat API is stable and secure when combined with proper security rules and CSP.
 
 ---
 

@@ -76,9 +76,9 @@ async function migrate() {
             let rawOutlet = (record.outlet || DEFAULT_OUTLET).toLowerCase();
             let outlet = rawOutlet;
             
-            // Normalization
-            if (outlet.includes('pizza')) outlet = 'pizza';
-            if (outlet.includes('cake')) outlet = 'cake';
+             // Normalization
+             if (outlet.includes('pizza')) outlet = 'pizza';
+             else if (outlet.includes('cake')) outlet = 'cake';
 
             const newPath = `${outlet}/${nodePath}/${id}`;
             updates[newPath] = record;

@@ -800,6 +800,7 @@ function doLogin() {
 }
 
 document.getElementById("loginBtn").onclick = doLogin;
+window.adminLogin = doLogin;
 
 // Enter key triggers login from both email and password fields
 adminEmail.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
@@ -3471,6 +3472,8 @@ async function clearLostSales() {
     }
 }
 window.loadLostSales = loadLostSales;
+window.loadMenu = loadMenu;
+window.loadCategories = loadCategories;
 window.clearLostSales = clearLostSales;
 
 let cachedDishes = [];
