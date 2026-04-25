@@ -52,7 +52,7 @@ The Rider Panel is a **functional but high-risk** real-time delivery management 
 
 **Forms**
 - No `<form>` elements — JS-only, no fallback
-- OTP input `type="tel"` with `inputmode="numeric"` for numeric keyboard; maxlength="6" and pattern="\d{6}" for validation
+- OTP input `type="text"` with numeric pattern → should be `type="number"` or `inputmode="numeric"`
 - Missing `required`, `autocomplete` on some fields
 
 ---
@@ -342,7 +342,7 @@ Hard-coded outlet names (`'pizza'`, `'cake'`, `'all'`), status strings (`'Online
 | OTP verification | ✅ (with bugs) | — |
 | Realtime notifications | ⚠️ in-app only | **HIGH** → push needed |
 | Earnings breakdown (deliveryFee) | ❌ shows order total | **HIGH** |
-| Completed orders | ❌ Not implemented | **MEDIUM** |
+| Completed orders
 
 
 
@@ -2002,4 +2002,4 @@ These can be done in <2 hours and improve mobile experience now:
 
 ---
 
-**Mobile friendliness is now a cross-cutting priority across all implementation phases, not a separate track.** Every UI change must pass mobile viewport testing before merge.
+**Mobile friendliness is now a cross-cutting priority across all implementation phases, not a separate track.** Every UI change must pass mobile viewport testing before merge.  
