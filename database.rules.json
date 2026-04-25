@@ -2,14 +2,13 @@
   "rules": {
     "admins": {
       ".indexOn": ["email"],
-      // Only admins can list/read the admin node
-      ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
-      // First admin can be created if none exist, otherwise only admins can write
-      // Added auth != null check to bootstrap condition
-      ".write": "auth != null && (!root.child('admins').hasChildren() && auth.uid != null || root.child('admins/' + auth.uid).exists())",
+      // Bootstrap: Allow any authenticated user to read to find their email for migration
+      ".read": "auth != null",
+      // First admin can be created if none exist, otherwise only existing admins can write
+      ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).exists())",
       "$adminId": {
         ".read": "auth != null && (auth.uid == $adminId || root.child('admins/' + auth.uid).exists())",
-        ".write": "(!root.child('admins').hasChildren() || root.child('admins/' + auth.uid).exists())",
+        ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).exists() || auth.uid == $adminId)",
         ".validate": "newData.hasChildren(['name', 'email'])"
       }
     },
