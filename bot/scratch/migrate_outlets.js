@@ -23,9 +23,9 @@ async function migrate() {
     console.log(`\n🚀 Starting Migration (Dry Run: ${DRY_RUN})\n`);
 
     const rootNodes = [
-        'orders', 
-        'categories', 
-        'feedbacks', 
+        'orders',
+        'categories',
+        'feedbacks',
         'inventory',
         'metadata',
         'dishes',
@@ -40,7 +40,7 @@ async function migrate() {
     for (const nodePath of rootNodes) {
         console.log(`📦 Processing node: /${nodePath}`);
         const data = await getData(nodePath);
-        
+
         if (!data) {
             console.log(`   - No data found for /${nodePath}`);
             continue;
@@ -76,10 +76,10 @@ async function migrate() {
             // Determine outlet
             let rawOutlet = (record.outlet || DEFAULT_OUTLET).toLowerCase();
             let outlet = rawOutlet;
-            
-             // Normalization
-             if (outlet.includes('pizza')) outlet = 'pizza';
-             else if (outlet.includes('cake')) outlet = 'cake';
+
+            // Normalization
+            if (outlet.includes('pizza')) outlet = 'pizza';
+            else if (outlet.includes('cake')) outlet = 'cake';
 
             const newPath = `${outlet}/${nodePath}/${id}`;
             updates[newPath] = record;
@@ -133,4 +133,9 @@ function updateStats(nodeStat, outlet) {
     nodeStat.byOutlet[outlet] = (nodeStat.byOutlet[outlet] || 0) + 1;
 }
 
-migrate().then(() => process.exit());
+migrate()
+    .then(() => process.exit(0))
+    .catch((err) => {
+        console.error('❌ Unhandled error:', err);
+        process.exit(1);
+    });

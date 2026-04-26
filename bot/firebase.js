@@ -44,14 +44,14 @@ const db = admin.database();
  */
 function resolvePath(path, outlet = 'pizza') {
     if (!path) return '';
-    
+
     // Shared nodes that remain at root level
     const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'bot', 'logs'];
     const rootNode = path.split('/')[0];
 
     // If already absolute or shared, return as is
     if (shared.includes(rootNode)) return path;
-    
+
     // Default to outlet-prefixed path
     return `${outlet}/${path}`;
 }
@@ -75,11 +75,12 @@ async function setData(path, data, outlet = 'pizza') {
     try {
         const resolved = resolvePath(path, outlet);
         await db.ref(resolved).set(data);
+        return true;
     } catch (err) {
         console.error("SET ERROR:", err, "Path:", path);
+        return false;
     }
 }
-
 async function updateData(path, data, outlet = 'pizza') {
     try {
         const resolved = resolvePath(path, outlet);

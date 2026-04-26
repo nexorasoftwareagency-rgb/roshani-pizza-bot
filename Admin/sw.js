@@ -1,11 +1,11 @@
-const CACHE_NAME = 'roshani-admin-v1.60';
+const CACHE_NAME = 'roshani-admin-v2';
 const ASSETS = [
   './',
   './index.html',
-  './style.css',
-  './app.js',
-  './branding.js',
-  './manifest-pizza.json',
+  './style.css?v=3.2.0',
+  './app.js?v=3.1.0',
+  './branding.js?v=3.1.0',
+  './manifest-pizza.json?v=2',
   './manifest-cake.json',
   './icon-pizza.png',
   './icon-cake.png'

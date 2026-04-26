@@ -1,9 +1,9 @@
-const CACHE_NAME = 'roshani-rider-v1';
+const CACHE_NAME = 'roshani-rider-v3';
 const ASSETS = [
   './',
-  './index.html',
-  './style.css',
-  './app.js',
+  './index.html?v=2',
+  './style.css?v=2',
+  './app.js?v=2',
   './icon-512.png'
 ];
 
@@ -21,7 +21,7 @@ self.addEventListener('fetch', (e) => {
 
 // PUSH NOTIFICATIONS
 self.addEventListener('push', (e) => {
-  let data = { title: 'New Update', body: 'Check your rider portal.', url: './index.html' };
+  let data = { title: 'New Update', body: 'Check your rider portal.', url: './index.html?v=2' };
   try {
     if (e.data) {
       const parsed = e.data.json();

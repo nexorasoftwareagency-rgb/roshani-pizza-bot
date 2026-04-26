@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#FF6B00">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseio.com https://*.firebase.com https://*.googleapis.com; script-src 'self' 'unsafe-inline' https://unpkg.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' wss://*.firebaseio.com https://*.firebaseio.com https://*.firebase.com https://*.googleapis.com; frame-ancestors 'none'; report-to csp-endpoint;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss:;">
     <meta http-equiv="Report-To" content='{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/csp-violation-report-endpoint"}],"include_subdomains":true}'>    <title>Rider Portal | Roshani Pizza</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-512.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,102 +20,92 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
-    <div id="dashboard" class="hidden">
+    <div id="dashboard">
         <!-- Dashboard Overlay -->
         <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
-        <!-- Mobile Header -->
-        <header class="mobile-header">
-            <div id="mobileMenuBtn" class="mobile-header-left" title="Open Navigation Drawer">
-                <i data-lucide="menu"></i>
-            </div>
-            <div class="mobile-header-center">
-                <h2 id="mobileTabTitle">DASHBOARD</h2>
-            </div>
-            <div id="mobileNotifBtn" class="mobile-header-right" title="View Recent Notifications">
-                <div class="notif-bell-container">
-                    <i data-lucide="bell"></i>
-                    <div id="notifBadge" class="notif-badge hidden"></div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Side Navigation (Desktop/Mobile Drawer) -->
-        <nav class="sidebar" id="sidebarNav">
-            <div class="sidebar-brand">
-                <h3 class="sidebar-title">ROSHANI RIDER</h3>
-            </div>
-            <ul class="nav-links">
-                <li class="nav-item">
-                    <button id="nav-home" class="nav-btn active" aria-label="Go to Dashboard Home" data-section="home">
-                        <i data-lucide="layout-dashboard"></i> <span>Home</span>
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button id="nav-available" class="nav-btn" aria-label="View Available Pickup Orders" data-section="available">
-                        <i data-lucide="shopping-bag"></i> <span>Pickup Orders</span>
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button id="nav-active" class="nav-btn" aria-label="View Live Delivery Tracking" data-section="active">
-                        <i data-lucide="map-pin"></i> <span>Live Delivery</span>
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button id="nav-completed" class="nav-btn" aria-label="View Trip History" data-section="completed">
-                        <i data-lucide="history"></i> <span>My History</span>
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button id="nav-earnings" class="nav-btn" aria-label="View Wallet and Earnings" data-section="earnings">
-                        <i data-lucide="wallet"></i> <span>My Wallet</span>
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button id="nav-profile" class="nav-btn" aria-label="View Profile and Settings" data-section="profile">
-                        <i data-lucide="settings-2"></i> <span>Settings</span>
-                    </button>
-                </li>
-                <li id="menu-downloadapp" class="pwa-download-item hidden" title="Download Rider App">
-                    <i data-lucide="download-cloud"></i> <span>Download App</span>
-                </li>
-                <li id="logoutBtn" class="logout-link">
-                    <i data-lucide="power"></i> <span>Exit System</span>
-                </li>
-            </ul>
-        </nav>
-
-        <!-- Bottom Navigation (Mobile) -->
-        <div class="bottom-nav" role="tablist">
-            <button id="bnav-home" class="nav-item active" data-section="home" title="Go to Dashboard Home" role="tab" aria-selected="true" aria-controls="sec-home">
-                <i data-lucide="layout-dashboard"></i> <span>HOME</span>
-            </button>
-            <button id="bnav-available" class="nav-item" data-section="available" title="View Available Pickup Orders" role="tab" aria-selected="false" aria-controls="sec-available">
-                <i data-lucide="shopping-bag"></i> <span>PICKUP</span>
-            </button>
-            <button id="bnav-active" class="nav-item" data-section="active" title="View Active Delivery Tracking" role="tab" aria-selected="false" aria-controls="sec-active">
-                <i data-lucide="map-pin"></i> <span>LIVE</span>
-            </button>
-            <button id="bnav-profile" class="nav-item" data-section="profile" title="View Your Profile & Settings" role="tab" aria-selected="false" aria-controls="sec-profile">
-                <i data-lucide="user"></i> <span>PROFILE</span>
-            </button>
-        </div>
-
-        <div class="main-content">
-            <header class="top-nav">
-                <div id="desktopMenuBtn" class="desktop-hamburger" title="Toggle Sidebar Navigation">
+        <!-- NEW PREMIUM HEADER (Zomato/Swiggy Style) -->
+        <header class="app-header">
+            <div class="header-main">
+                <div id="mobileMenuBtn" class="menu-trigger" title="Open Navigation">
                     <i data-lucide="menu"></i>
                 </div>
-                <div>
-                    <span class="section-title-lbl" id="sectionTitle">DASHBOARD</span>
+                <div class="brand-group">
+                    <h2 class="app-logo">ROSHANI RIDER</h2>
+                    <div class="status-indicator">
+                        <span class="pulse-dot"></span>
+                        <span id="statusBadge" class="status-text Online">Online</span>
+                    </div>
                     <select id="outletSwitcher" class="outlet-switcher-select hidden" title="Switch Outlet Location">
                         <!-- Populated via JS -->
                     </select>
                 </div>
-                <div class="status-toggle-container">
-                    <span id="statusBadge" class="status Online">Online</span>
+                <div class="header-actions">
+                    <div id="mobileNotifBtn" class="icon-btn notif-trigger">
+                        <i data-lucide="bell"></i>
+                        <span id="notifBadge" class="badge-dot hidden"></span>
+                    </div>
+                    <div class="profile-trigger" id="headerProfileBtn">
+                        <img id="header-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3C/svg%3E" alt="P">
+                    </div>
                 </div>
-            </header>
+            </div>
+            
+            <!-- TOP NAVIGATION TABS (Rider Panel at the top) -->
+            <nav class="top-nav-tabs" role="tablist">
+                <button class="tab-item active" data-section="home" role="tab" aria-selected="true">
+                    <i data-lucide="home"></i> <span>Home</span>
+                </button>
+                <button class="tab-item" data-section="available" role="tab" aria-selected="false">
+                    <i data-lucide="shopping-bag"></i> <span>Pickup</span>
+                </button>
+                <button class="tab-item" data-section="active" role="tab" aria-selected="false">
+                    <i data-lucide="map-pin"></i> <span>Live</span>
+                </button>
+                <button class="tab-item" data-section="earnings" role="tab" aria-selected="false">
+                    <i data-lucide="wallet"></i> <span>Wallet</span>
+                </button>
+            </nav>
+        </header>
+
+        <!-- Side Navigation (Mobile Drawer) -->
+        <nav class="sidebar" id="sidebarNav">
+            <div class="sidebar-user-section">
+                <div class="sidebar-user-info">
+                    <h4 id="sidebar-name">Rider Name</h4>
+                    <p id="sidebar-id">RID-0000</p>
+                </div>
+            </div>
+            <ul class="nav-links">
+                <li class="nav-item">
+                    <button class="nav-btn active" data-section="home">
+                        <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-btn" data-section="completed">
+                        <i data-lucide="history"></i> <span>History</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-btn" data-section="profile">
+                        <i data-lucide="user"></i> <span>My Profile</span>
+                    </button>
+                </li>
+                <li class="nav-separator"></li>
+                <li id="menu-downloadapp" class="pwa-download-item hidden">
+                    <i data-lucide="download"></i> <span>Install App</span>
+                </li>
+                <li id="logoutBtn" class="logout-link">
+                    <i data-lucide="log-out"></i> <span>Sign Out</span>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Bottom Nav removed as it moved to top-nav-tabs -->
+
+        <div class="main-content">
+            <!-- Redundant top-nav removed -->
 
             <!-- SECTION: HOME -->
             <section id="sec-home" class="view-section active">
@@ -124,15 +114,58 @@
                     <p class="welcome-subtext">Ready for your next delivery?</p>
                 </div>
 
-                <div class="overview-grid">
-                    <div class="overview-card">
-                        <span class="val" id="statsTodayDelivered">0</span>
-                        <span class="lbl">Deliveries Today</span>
+                <div class="quick-summary-premium">
+                    <div class="summary-header">
+                        <h3>Today's Performance</h3>
+                        <span class="summary-date" id="currentDate">April 25, 2026</span>
                     </div>
-                    <div class="overview-card">
-                        <span class="val" id="statsTodayEarnings">&#8377;0</span>
-                        <span class="lbl">Today's Pay</span>
+                    <div class="summary-grid-main">
+                        <div class="summary-item-premium">
+                            <div class="item-icon-box green">
+                                <i data-lucide="wallet"></i>
+                            </div>
+                            <div class="item-info">
+                                <i data-lucide="check-circle"></i>
+                            </div>
+                            <div class="item-info">
+                                <span class="item-val" id="stats-delivered">0</span>
+                                <span class="item-lbl">Delivered</span>
+                            </div>
+                        </div>
+
+                        <div class="summary-item-premium">
+                            <div class="item-icon-box blue">
+                                <i data-lucide="clock"></i>
+                            </div>
+                            <div class="item-info">
+                                <span class="item-val" id="stats-ontime">100%</span>
+                                <span class="item-lbl">On-Time</span>
+                            </div>
+                        </div>
+
+                        <div class="summary-item-premium">
+                            <div class="item-icon-box orange">
+                                <i data-lucide="indian-rupee"></i>
+                            </div>
+                            <div class="item-info">
+                                <span class="item-val" id="stats-earnings">0.00</span>
+                                <span class="item-lbl">Earnings</span>
+                            </div>
+                        </div>
+
+                        <div class="summary-item-premium">
+                            <div class="item-icon-box gold">
+                                <i data-lucide="star"></i>
+                            </div>
+                            <div class="item-info">
+                                <span class="item-val" id="statsRiderRating">4.9</span>
+                                <span class="item-lbl">Rating</span>
+                            </div>
+                        </div>
                     </div>
+                    <button class="btn-wallet-link" onclick="window.switchTab('earnings')">
+                        View Wallet Details <i data-lucide="chevron-right"></i>
+                    </button>
                 </div>
 
                 <div class="active-status-box" id="activeStatusBanner">
@@ -154,6 +187,28 @@
                 <h2 class="section-heading">Live Trip Details</h2>
                 
                 <!-- Full Map Background -->
+                <!-- ORDER VERIFICATION MODAL (PHASE 2) -->
+        <div id="verificationModal" class="modal-overlay hidden">
+            <div class="modal-content-bottom">
+                <div class="modal-handle"></div>
+                <div class="modal-header">
+                    <h2>Verify Items</h2>
+                    <p>Confirm all items are present before pickup</p>
+                </div>
+                <div class="checklist-container" id="orderChecklist">
+                    <!-- Dynamic -->
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-primary btn-full" onclick="window.confirmPickup()">
+                        ORDER PICKED UP
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+                
                 <div id="activeTripMap" class="trip-map-container glass-panel"></div>
                 
                 <!-- Empty State (no active order) -->
@@ -283,7 +338,7 @@
                             <span class="detail-label">Professional ID (Aadhar Card)</span>
                             <button class="btn-ghost btn-xs" id="btn-toggle-aadhar">SHOW</button>
                         </div>
-                        <div class="aadhar-img-container" id="aadhar-container" style="display:none;">
+                        <div class="aadhar-img-container hidden" id="aadhar-container">
                             <img id="r-aadhar-img" alt="Aadhar Card" class="aadhar-card-display" style="display:none;">
                         </div>
                         <p class="text-xtra-small text-muted italic mt-8">Note: Handling of this ID must comply with Aadhar Act policies.</p>
@@ -303,7 +358,7 @@
     </div>
 
     <!-- OTP Overlay -->
-    <div id="otpPanel" class="modal-overlay">
+    <div id="otpPanel" class="modal-overlay hidden">
         <div class="modal-card">
             <h3 class="modal-title">TRIP COMPLETE</h3>
             <p class="modal-sub">Enter 6-digit verification code from customer</p>
@@ -320,20 +375,19 @@
         </div>
     </div>
 
-    <!-- Confirmation Modal -->
-    <div id="confirmModal" class="modal">
+    <div id="confirmModal" class="modal hidden">
         <div class="modal-card">
             <h3 id="confirmTitle">CONFIRM ACTION</h3>
-            <p id="confirmMessage">Are you sure you want to proceed?</p>
+            <p id="confirmMsg">Are you sure you want to proceed?</p>
             <div class="modal-actions">
-                <button id="confirmYes" class="btn-primary">YES</button>
-                <button id="confirmNo" class="btn-ghost">CANCEL</button>
+                <button id="btnConfirmYes" class="btn-primary">YES</button>
+                <button id="btnConfirmNo" class="btn-ghost">CANCEL</button>
             </div>
         </div>
     </div>
 
     <!-- Notification Sheet -->
-    <div id="notificationSheet" class="notif-sheet">
+    <div id="notificationSheet" class="notif-sheet hidden">
         <div class="notif-sheet-header">
             <h3>Notifications</h3>
             <button id="btnClearAllNotifs" class="btn-clear-all" title="Clear All Notifications">Clear All</button>
@@ -349,6 +403,6 @@
         </div>
     </div>
 
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=2"></script>
 </body>
 </html>

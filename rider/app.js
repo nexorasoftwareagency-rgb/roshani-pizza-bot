@@ -13,11 +13,20 @@ const firebaseConfig = {
   appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
-const dbStorage = getStorage(app);
-const messaging = getMessaging(app);
+let app, auth, db, dbStorage, messaging;
+try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getDatabase(app);
+    dbStorage = getStorage(app);
+    try {
+        messaging = getMessaging(app);
+    } catch (e) {
+        console.warn("FCM not supported in this browser:", e);
+    }
+} catch (e) {
+    console.error("Firebase Init Error:", e);
+}
 
 // ==========================================
 // PIZZA ERP | RIDER PORTAL v3.0 (MODULAR)
@@ -356,12 +365,11 @@ function handleStatusChange(title, body) {
 }
 
 window.showSection = (sectionId) => {
-    window.haptic(15);
+    if (window.haptic) window.haptic(10);
     
     // Memory Management: Cleanup resources when leaving a section
     const currentSection = document.querySelector('.view-section.active');
     if (currentSection && currentSection.id === 'sec-active' && sectionId !== 'active') {
-        // Leaving Active Delivery section - destroy map to free memory
         if (typeof riderMap !== 'undefined' && riderMap) {
             try {
                 if (riderMarker) riderMarker.remove();
@@ -374,43 +382,31 @@ window.showSection = (sectionId) => {
         }
     }
     
-    // Only toggle (close) sidebar on mobile when switching sections
-    if (window.innerWidth <= 1024) {
-        window.toggleRiderSidebar();
-    }
-    
     // Hide all sections
     document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+    
     // Show target section
     const target = document.getElementById(`sec-${sectionId}`);
-    if (target) target.classList.add('active');
+    if (target) {
+        target.classList.add('active');
+        // Scroll to top on section change
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
-    // Update Desktop Sidebar
+    // Update Top Navigation Tabs
+    document.querySelectorAll('.top-nav-tabs .tab-item').forEach(tab => {
+        tab.classList.toggle('active', tab.getAttribute('data-section') === sectionId);
+    });
+
+    // Update Sidebar Links
     document.querySelectorAll('.nav-links .nav-btn').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-section') === sectionId);
     });
 
-    // Update Mobile Bottom Nav
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.toggle('active', item.getAttribute('data-section') === sectionId);
-    });
-
-    // Update Header Title
-    const titles = {
-        'home': 'Dashboard',
-        'available': 'Pickup Hub',
-        'active': 'Active Trip',
-        'completed': 'Trip History',
-        'earnings': 'Wallet',
-        'profile': 'My Account'
-    };
-    document.getElementById('sectionTitle').innerText = titles[sectionId] || 'Rider Portal';
-    
-    // If switching to active section, ensure map is initialized and refreshed
+    // Update Header UI based on section
     if (sectionId === 'active') {
         setTimeout(() => {
             initRiderMap();
-            // Trigger a re-render of orders to ensure active order data is fresh
             const activePanel = document.getElementById('activeDeliveryPanel');
             if (activePanel && !activePanel.classList.contains('hidden')) {
                 const activeOrderData = window.activeOrderData;
@@ -418,10 +414,15 @@ window.showSection = (sectionId) => {
                     window.updateRiderMap(activeOrderData.lat, activeOrderData.lng);
                 }
             }
-        }, 300); // Wait for section transition
+        }, 300);
     }
 
-    // Refresh icons
+    // Auto-close sidebar on mobile if it was open
+    const nav = document.getElementById('sidebarNav');
+    if (nav && nav.classList.contains('active')) {
+        window.toggleRiderSidebar();
+    }
+
     if (window.lucide) lucide.createIcons();
 };
 
@@ -453,8 +454,16 @@ window.login = async () => {
         await signInWithEmailAndPassword(auth, loginEmail, pass);
         // Page will naturally redirect or update via onAuthStateChanged
     } catch (e) {
-        // console.error("Login failed:", e); // Security: Don't leak auth codes
-        showError("Invalid credentials or access code");
+        let errorMsg = "Invalid credentials or access code";
+        if (e.code === 'auth/quota-exceeded') {
+            errorMsg = "Login Quota Exceeded for this hour. Please contact Admin or wait 60 minutes.";
+        } else if (e.code === 'auth/too-many-requests') {
+            errorMsg = "Too many attempts. Account temporarily locked for security. Try in 15 mins.";
+        } else if (e.code === 'auth/network-request-failed') {
+            errorMsg = "Network error. Check your internet connection.";
+        }
+        
+        showError(errorMsg);
         if (loginBtn) {
             loginBtn.disabled = false;
             loginBtn.innerHTML = `AUTHENTICATE & START <i data-lucide="chevron-right"></i>`;
@@ -468,62 +477,51 @@ window.login = async () => {
  * Centralized listener attachment to allow strict CSP (no inline scripts/handlers)
  */
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Inject theme-color
     if (!document.querySelector('meta[name="theme-color"]')) {
         const meta = document.createElement('meta');
         meta.name = 'theme-color';
-        meta.content = '#FF6B00';
+        meta.content = '#FF5200';
         document.head.appendChild(meta);
     }
 
-    // 2. Lucide icons
     if (window.lucide) lucide.createIcons();
 
-    // 3. Login Page Listeners
-    const loginBtn = document.getElementById('loginBtn');
-    if (loginBtn) loginBtn.addEventListener('click', window.login);
-
-    const emailField = document.getElementById('email');
-    if (emailField) emailField.addEventListener('keydown', (e) => { if (e.key === 'Enter') window.login(); });
-    
-    const passField = document.getElementById('password');
-    if (passField) passField.addEventListener('keydown', (e) => { if (e.key === 'Enter') window.login(); });
-
-    // 4. Dashboard Listeners
+    // 1. Header & Global Listeners
     const sidebarOverlay = document.getElementById('sidebarOverlay');
     if (sidebarOverlay) sidebarOverlay.addEventListener('click', window.toggleRiderSidebar);
 
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
     if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', window.toggleRiderSidebar);
 
-    const desktopMenuBtn = document.getElementById('desktopMenuBtn');
-    if (desktopMenuBtn) desktopMenuBtn.addEventListener('click', window.toggleRiderSidebar);
+    const profileTrigger = document.querySelector('.profile-trigger');
+    if (profileTrigger) profileTrigger.addEventListener('click', window.toggleRiderSidebar);
 
-    const mobileNotifBtn = document.getElementById('mobileNotifBtn');
-    if (mobileNotifBtn) mobileNotifBtn.addEventListener('click', () => window.toggleNotificationSheet(true));
+    const btnNotif = document.querySelector('.btn-notif');
+    if (btnNotif) btnNotif.addEventListener('click', () => window.toggleNotificationSheet(true));
 
+    const statusToggle = document.querySelector('.duty-status-toggle');
+    if (statusToggle) statusToggle.addEventListener('click', window.toggleRiderStatus);
+
+    // 2. Navigation Listeners (Tabs & Sidebar)
+    document.querySelectorAll('[data-section]').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.showSection(el.getAttribute('data-section'));
+        });
+    });
+
+    // 3. Login Page
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn) loginBtn.addEventListener('click', window.login);
+
+    // 4. Notification Sheet
     const btnCloseNotifSheet = document.getElementById('btnCloseNotifSheet');
     if (btnCloseNotifSheet) btnCloseNotifSheet.addEventListener('click', () => window.toggleNotificationSheet(false));
 
     const btnClearAllNotifs = document.getElementById('btnClearAllNotifs');
     if (btnClearAllNotifs) btnClearAllNotifs.addEventListener('click', window.clearAllNotifications);
 
-    const outletSwitcher = document.getElementById('outletSwitcher');
-    if (outletSwitcher) outletSwitcher.addEventListener('change', (e) => window.switchOutlet(e.target.value));
-
-    const statusToggleBtn = document.getElementById('statusToggleBtn');
-    if (statusToggleBtn) statusToggleBtn.addEventListener('click', window.toggleRiderStatus);
-
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) logoutBtn.addEventListener('click', window.logout);
-
-    const logoutBtnProfile = document.getElementById('logoutBtnProfile');
-    if (logoutBtnProfile) logoutBtnProfile.addEventListener('click', window.logout);
-
-    const btnToggleAadhar = document.getElementById('btn-toggle-aadhar');
-    if (btnToggleAadhar) btnToggleAadhar.addEventListener('click', window.toggleAadharView);
-
-    // Profile Editing Listeners
+    // 5. Profile Editing
     const btnEditPhoto = document.getElementById('btn-edit-photo');
     const photoInput = document.getElementById('profile-photo-input');
     if (btnEditPhoto && photoInput) {
@@ -537,49 +535,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnEditAddress = document.getElementById('btn-edit-address');
     if (btnEditAddress) btnEditAddress.addEventListener('click', () => window.editProfileField('address'));
 
-    // Nav Links (Sidebar and Bottom Nav)
-    document.querySelectorAll('[data-section]').forEach(el => {
-        el.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.showSection(el.getAttribute('data-section'));
-        });
-        el.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                window.showSection(el.getAttribute('data-section'));
-            }
-        });
-    });
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) logoutBtn.addEventListener('click', window.logout);
 
-    // 5. OTP Panel
-    const btnConfirmOTP = document.getElementById('btnConfirmOTP');
-    if (btnConfirmOTP) btnConfirmOTP.addEventListener('click', window.verifyOTP);
+    const logoutBtnProfile = document.getElementById('logoutBtnProfile');
+    if (logoutBtnProfile) logoutBtnProfile.addEventListener('click', window.logout);
 
-    const btnCloseOTP = document.getElementById('btnCloseOTP');
-    if (btnCloseOTP) btnCloseOTP.addEventListener('click', window.closeOTPPanel);
-
-    const btnResendOTP = document.getElementById('btnResendOTP');
-    if (btnResendOTP) btnResendOTP.addEventListener('click', window.regenerateOTP);
-
-    const emergencyBtn = document.getElementById('emergencyBtn');
-    if (emergencyBtn) emergencyBtn.addEventListener('click', window.emergencyOverride);
-
-    // 6. History Search
-    const historySearch = document.getElementById('historySearch');
-    if (historySearch) {
-        historySearch.addEventListener('input', () => {
-            // Re-render only history part? Easier to just trigger full render if data is cached
-            if (window._lastOrderCache) {
-                renderAllOrders(window._lastOrderCache);
-            }
-        });
-    }
-
-    // 7. PWA
-    const menuDownloadApp = document.getElementById('menu-downloadapp');
-    if (menuDownloadApp) menuDownloadApp.addEventListener('click', window.installPWA);
-
-    // 8. Map Stability (Audit 1.21)
+    // 6. Map & Stability
     const handleResize = () => {
         if (typeof riderMap !== 'undefined' && riderMap) {
             riderMap.invalidateSize();
@@ -595,14 +557,14 @@ window.toggleAadharView = () => {
     const btn = document.getElementById('btn-toggle-aadhar');
     if (!container || !img || !btn) return;
 
-    const isHidden = container.style.display === 'none';
+    const isHidden = container.classList.contains('hidden');
     
     if (isHidden) {
-        container.style.display = 'block';
+        container.classList.remove('hidden');
         img.src = (currentUser && currentUser.profile && currentUser.profile.aadharPhoto) || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'180\' viewBox=\'0 0 300 180\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23eee\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'14\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E';
         btn.innerText = 'HIDE';
     } else {
-        container.style.display = 'none';
+        container.classList.add('hidden');
         img.src = '';
         btn.innerText = 'SHOW';
     }
@@ -727,9 +689,17 @@ onAuthStateChanged(auth, async user => {
 
         // Populate UI
         const pName = riderProfile.name || "Rider";
+        const riderIdStr = riderProfile.id ? 'RID-' + riderProfile.id.slice(0, 8).toUpperCase() : 'RID-0000';
+
         const profileNameEl = document.getElementById('profileName');
         if (profileNameEl) profileNameEl.innerText = pName;
         
+        const sidebarNameEl = document.getElementById('sidebar-name');
+        if (sidebarNameEl) sidebarNameEl.innerText = pName;
+
+        const sidebarIdEl = document.getElementById('sidebar-id');
+        if (sidebarIdEl) sidebarIdEl.innerText = riderIdStr;
+
         const profilePhoneEl = document.getElementById('profilePhone');
         if (profilePhoneEl) profilePhoneEl.innerText = riderProfile.phone || user.email;
 
@@ -799,9 +769,9 @@ onAuthStateChanged(auth, async user => {
             const stats = snap.val() || { totalOrders: 0, totalEarnings: 0, avgDeliveryTime: 0 };
             
             // Populate profile stats cards
-            const totalOrdersEl = document.getElementById('profile-total-orders');
-            const totalEarningsEl = document.getElementById('profile-total-earnings');
-            const avgTimeEl = document.getElementById('profile-avg-time');
+            const totalOrdersEl = document.getElementById('stats-delivered');
+            const totalEarningsEl = document.getElementById('stats-earnings');
+            const avgTimeEl = document.getElementById('stats-ontime');
             
             if (totalOrdersEl) totalOrdersEl.innerText = (stats.totalOrders || 0).toLocaleString();
             if (totalEarningsEl) {
@@ -884,16 +854,29 @@ window.toggleRiderStatus = async () => {
 };
 
 function updateStatusUI(status) {
+    const pulseDot = document.querySelector('.pulse-dot');
+    const statusText = document.querySelector('.status-text');
+    
+    if (pulseDot) {
+        pulseDot.className = `pulse-dot ${status}`;
+    }
+    if (statusText) {
+        statusText.textContent = status;
+        statusText.className = `status-text ${status}`;
+    }
+
+    // Legacy support for old elements if they still exist in some views
     const badge = document.getElementById('statusBadge');
     const btn = document.getElementById('statusToggleBtn');
-    if (!badge || !btn) return;
-    
-    badge.innerText = status;
-    badge.className = `status ${status}`;
-    btn.innerText = `SET STATUS: ${status === "Online" ? 'OFFLINE' : 'ONLINE'}`;
-    btn.classList.toggle('btn-danger', status === "Online");
-    btn.classList.toggle('btn-success', status === "Offline");
-    btn.style.color = "white"; // Colors handled by classes now
+    if (badge) {
+        badge.innerText = status;
+        badge.className = `status ${status}`;
+    }
+    if (btn) {
+        btn.innerText = `SET STATUS: ${status === "Online" ? 'OFFLINE' : 'ONLINE'}`;
+        btn.classList.toggle('btn-danger', status === "Online");
+        btn.classList.toggle('btn-success', status === "Offline");
+    }
 
     // Trigger location tracking if online
     if (status === "Online") {
@@ -1345,15 +1328,16 @@ function renderStats(orderCache) {
     });
 
     const els = {
-        'statsTodayDelivered': todayOrders,
-        'statsTodayEarnings': '₹' + todayPay.toLocaleString(),
+        'stats-delivered': todayOrders,
+        'stats-earnings': '₹' + todayPay.toLocaleString(),
+        'stats-rating': '5.0',
+        'stats-ontime': '100%',
         'e-total': '₹' + totalCash.toLocaleString(),
         'e-pizza': '₹' + pizzaTotal.toLocaleString(),
         'e-pizza-today': '₹' + pizzaToday.toLocaleString(),
         'e-cake': '₹' + cakeTotal.toLocaleString(),
         'e-cake-today': '₹' + cakeToday.toLocaleString()
     };
-
 
     Object.keys(els).forEach(id => {
         const el = document.getElementById(id);
@@ -1366,125 +1350,93 @@ function renderStats(orderCache) {
 
 function createOrderCard(id, o, outletId) {
     const card = document.createElement('div');
-    card.className = `order-card glass-panel ${(o.status || "").replace(/\s+/g, '-').toLowerCase()}`;
+    card.className = 'order-card-premium';
     
     const orderIdText = (o.orderId || id.slice(-6)).toUpperCase();
     const customerNameText = o.customerName || 'Customer';
     const addressText = o.address || 'Address not available';
-    const itemsText = o.items ? o.items.map(i => `${i.quantity}x ${i.name}`).join(', ') : 'Order Details';
-    const phoneTextRaw = o.customerPhone || o.phone || '---';
-    const statusText = o.status || "Ready";
-    const isDelivered = statusText.toLowerCase() === "delivered";
-    const phoneText = isDelivered && phoneTextRaw !== '---' 
-        ? phoneTextRaw.replace(/.(?=.{4})/g, '*') 
-        : phoneTextRaw;
     const totalText = '₹' + Number(o.total || 0).toLocaleString();
-    const badgeClass = statusText.toLowerCase().includes('delivery') ? 'status-delivering' : 'status-ready';
-    const isAvailable = statusText.toLowerCase() === "ready";
+    const earningsText = '₹' + (o.deliveryFee || 0);
+    const statusText = o.status || 'Ready';
+    const itemsText = o.items ? o.items.map(i => `${i.quantity}x ${i.name}`).join(', ') : 'Details...';
 
-    // Header
-    const headerDiv = document.createElement('div');
-    headerDiv.className = 'order-header';
+    // Outlet Branding
+    const restaurantName = outletId === 'pizza' ? 'Roshani Pizza' : 'Roshani Cake';
     
-    const idChip = document.createElement('div');
-    idChip.className = 'order-id-chip';
-    idChip.textContent = '#' + orderIdText;
-    headerDiv.appendChild(idChip);
-    
-    const badgesDiv = document.createElement('div');
-    badgesDiv.className = 'order-meta-badges';
-    
-    if (o.outlet) {
-        const outletBadge = document.createElement('span');
-        const outletLower = o.outlet.toLowerCase();
-        const isPizza = outletLower.includes('pizza');
-        const isCake = outletLower.includes('cake');
-        outletBadge.style.cssText = `
-            font-size:9px; font-weight:800; padding:2px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px;
-            background:${isPizza ? 'rgba(249,115,22,0.15)' : isCake ? 'rgba(236,72,153,0.15)' : 'rgba(100,100,100,0.15)'};
-            color:${isPizza ? '#f97316' : isCake ? '#ec4899' : '#888'};
-            border:1px solid ${isPizza ? 'rgba(249,115,22,0.3)' : isCake ? 'rgba(236,72,153,0.3)' : 'rgba(100,100,100,0.2)'};
-        `;
-        outletBadge.textContent = o.outlet;
-        badgesDiv.appendChild(outletBadge);
+    // Distance tracking
+    let distanceHtml = '';
+    let distanceToRest = '1.2 km'; // Placeholder if no location
+    if (window.riderLocation && o.lat && o.lng) {
+        const dist = window.getDistance(window.riderLocation.lat, window.riderLocation.lng, o.lat, o.lng);
+        distanceToRest = `${dist.toFixed(1)} km`;
+        distanceHtml = `<span class="badge-dist"><i data-lucide="map-pin"></i> ${dist.toFixed(1)} km</span>`;
     }
-    
-    const statusBadge = document.createElement('span');
-    statusBadge.className = `badge ${badgeClass}`;
-    statusBadge.textContent = statusText;
-    badgesDiv.appendChild(statusBadge);
-    headerDiv.appendChild(badgesDiv);
-    
-    // Details
-    const detailsDiv = document.createElement('div');
-    detailsDiv.className = 'order-details';
-    
-    const fields = [
-        { icon: 'user', text: customerNameText },
-        { icon: 'map-pin', text: addressText },
-        { icon: 'shopping-cart', text: itemsText },
-        { icon: 'phone', text: phoneText }
-    ];
-    
-    fields.forEach(f => {
-        const p = document.createElement('p');
-        const i = document.createElement('i');
-        i.setAttribute('data-lucide', f.icon);
-        const s = document.createElement('span');
-        s.textContent = f.text;
-        p.appendChild(i);
-        p.appendChild(s);
-        detailsDiv.appendChild(p);
-    });
-    
-    const totalRow = document.createElement('div');
-    totalRow.style.cssText = 'margin-top:20px; padding-top:15px; border-top:1px solid var(--glass-border); display:flex; justify-content:space-between; align-items:center;';
-    const totalLabel = document.createElement('span');
-    totalLabel.style.cssText = 'color:var(--text-muted); font-size:11px; font-weight:700;';
-    totalLabel.textContent = 'TO COLLECT';
-    const totalVal = document.createElement('span');
-    totalVal.style.cssText = 'color:var(--primary-orange); font-size:22px; font-weight:900;';
-    totalVal.textContent = totalText;
-    totalRow.appendChild(totalLabel);
-    totalRow.appendChild(totalVal);
-    detailsDiv.appendChild(totalRow);
 
-    const earningsRow = document.createElement('div');
-    earningsRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-top:5px;';
-    const earningsLabel = document.createElement('span');
-    earningsLabel.style.cssText = 'color:var(--text-muted); font-size:11px; font-weight:700;';
-    earningsLabel.textContent = 'YOU EARN';
-    const earningsVal = document.createElement('span');
-    earningsVal.style.cssText = 'color:var(--success-green); font-size:14px; font-weight:800;';
-    earningsVal.textContent = '₹' + (o.deliveryFee || 0).toLocaleString();
-    earningsRow.appendChild(earningsLabel);
-    earningsRow.appendChild(earningsVal);
-    detailsDiv.appendChild(earningsRow);
-    
-    // Actions
-    const actionsDiv = document.createElement('div');
-    actionsDiv.className = 'card-actions';
-    if (isAvailable) {
-        const btn = document.createElement('button');
-        btn.className = 'btn-primary btn-full';
-        btn.textContent = 'START PICKUP';
-        btn.addEventListener('click', () => acceptOrder(id, outletId));
-        actionsDiv.appendChild(btn);
+    let timeHtml = '';
+    if (o.readyAt || o.createdAt) {
+        const startTime = o.readyAt || o.createdAt;
+        const diff = Math.floor((Date.now() - startTime) / 60000);
+        timeHtml = `<span class="card-time"><i data-lucide="clock"></i> ${diff}m ago</span>`;
     }
-    
-    card.appendChild(headerDiv);
-    card.appendChild(detailsDiv);
-    card.appendChild(actionsDiv);
 
+    card.innerHTML = `
+        <div class="incoming-request-header">
+            <div class="new-order-badge">NEW ORDER!</div>
+            <div class="order-id-chip">#${orderIdText}</div>
+        </div>
+        
+        <div class="incoming-request-body">
+            <div class="restaurant-info-row">
+                <div class="rest-icon"><i data-lucide="store"></i></div>
+                <div class="rest-details">
+                    <h4 class="rest-name">${restaurantName}</h4>
+                    <p class="rest-meta">Restaurant • ${distanceToRest}</p>
+                </div>
+            </div>
+
+            <div class="trip-locations-flow">
+                <div class="flow-line">
+                    <div class="dot start"></div>
+                    <div class="line"></div>
+                    <div class="dot end"></div>
+                </div>
+                <div class="flow-text">
+                    <div class="loc-item">
+                        <span class="loc-lbl">PICKUP AT</span>
+                        <span class="loc-val">${restaurantName}</span>
+                    </div>
+                    <div class="loc-item">
+                        <span class="loc-lbl">DROP-OFF AT</span>
+                        <span class="loc-val">${addressText}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="trip-summary-stats">
+                <div class="trip-stat">
+                    <span class="stat-lbl">TOTAL DISTANCE</span>
+                    <span class="stat-val">5.8 km</span>
+                </div>
+                <div class="trip-stat text-right">
+                    <span class="stat-lbl">YOUR EARNING</span>
+                    <span class="stat-val highlight">${earningsText}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="incoming-request-actions">
+            <button class="btn-decline" onclick="this.closest('.order-card-premium').remove()">DECLINE</button>
+            <button class="btn-accept" onclick="window.acceptOrder('${id}', '${outletId}')">ACCEPT</button>
+        </div>
+    `;
+
+    setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 10);
     return card;
 }
 
-/**
- * Creates the enhanced active delivery floating panel
- */
 function createActiveDeliveryPanel(id, o, outletId) {
     const panel = document.createElement('div');
-    panel.className = 'active-delivery-panel';
+    panel.className = 'active-delivery-panel premium-active-panel';
     panel.id = 'activeDeliveryPanel';
     
     const orderIdText = (o.orderId || id.slice(-6)).toUpperCase();
@@ -1492,140 +1444,94 @@ function createActiveDeliveryPanel(id, o, outletId) {
     const addressText = o.address || 'Address not available';
     const totalText = '₹' + Number(o.total || 0).toLocaleString();
     const phoneValue = o.customerPhone || o.phone || '';
-    const cleanPhone = phoneValue ? phoneValue.replace(/\D/g, '') : '';
-    const outletUpper = (o.outlet || outletId || 'pizza').toUpperCase();
-    
-    // Header
-    const headerDiv = document.createElement('div');
-    headerDiv.className = 'delivery-header';
-    
-    const badgeDiv = document.createElement('div');
-    badgeDiv.className = 'delivery-badge';
-    const pulseSpan = document.createElement('span');
-    pulseSpan.className = 'pulse-icon';
-    badgeDiv.appendChild(pulseSpan);
-    badgeDiv.appendChild(document.createTextNode(' LIVE DELIVERY'));
-    
-    const idDiv = document.createElement('div');
-    idDiv.className = 'delivery-order-id';
-    idDiv.textContent = '#' + orderIdText;
-    
-    const outletDiv = document.createElement('div');
-    outletDiv.className = 'delivery-outlet-badge';
-    outletDiv.textContent = outletUpper;
-    
-    headerDiv.appendChild(badgeDiv);
-    headerDiv.appendChild(idDiv);
-    headerDiv.appendChild(outletDiv);
-    
-    // Customer
-    const customerDiv = document.createElement('div');
-    customerDiv.className = 'delivery-customer';
-    const nameH3 = document.createElement('h3');
-    nameH3.className = 'delivery-customer-name';
-    nameH3.textContent = customerNameText;
-    customerDiv.appendChild(nameH3);
-    
-    if (cleanPhone) {
-        const phoneP = document.createElement('p');
-        phoneP.className = 'delivery-customer-phone';
-        phoneP.textContent = '📞 ' + cleanPhone;
-        phoneP.addEventListener('click', () => contactCustomer(cleanPhone));
-        customerDiv.appendChild(phoneP);
+    const cleanPhone = phoneValue ? phoneValue.replace(/\D/g, '').slice(-10) : '';
+    const currentStatus = o.status || 'Out for Delivery';
+
+    // Distance Calculation
+    let distanceText = 'Estimating...';
+    if (window.riderLocation && o.lat && o.lng) {
+        const dist = window.getDistance(window.riderLocation.lat, window.riderLocation.lng, o.lat, o.lng);
+        distanceText = `${dist.toFixed(1)} km away`;
     }
-    
-    const addrP = document.createElement('p');
-    addrP.className = 'delivery-customer-address';
-    addrP.textContent = '📍 ' + addressText;
-    customerDiv.appendChild(addrP);
-    
-    // Items
-    const itemsSummaryDiv = document.createElement('div');
-    itemsSummaryDiv.className = 'delivery-items-summary';
-    const itemsH4 = document.createElement('h4');
-    itemsH4.textContent = 'Order Items';
-    itemsSummaryDiv.appendChild(itemsH4);
-    
-    const itemsListDiv = document.createElement('div');
-    itemsListDiv.className = 'delivery-items-list';
-    
-    if (o.items && o.items.length > 0) {
-        o.items.forEach(i => {
-            const itemRow = document.createElement('div');
-            itemRow.className = 'delivery-item-row';
-            const itemInfo = document.createElement('div');
-            const itemName = document.createElement('span');
-            itemName.className = 'delivery-item-name';
-            itemName.textContent = i.name;
-            const itemMeta = document.createElement('span');
-            itemMeta.className = 'delivery-item-meta';
-            itemMeta.textContent = ` ${i.size || 'Regular'} · x${i.quantity}`;
-            itemInfo.appendChild(itemName);
-            itemInfo.appendChild(itemMeta);
-            
-            const itemQty = document.createElement('span');
-            itemQty.className = 'delivery-item-qty';
-            itemQty.textContent = 'x' + i.quantity;
-            
-            itemRow.appendChild(itemInfo);
-            itemRow.appendChild(itemQty);
-            itemsListDiv.appendChild(itemRow);
-        });
+
+    // Contextual Action Button
+    let actionButton = '';
+    if (currentStatus === 'Arriving at Restaurant') {
+        actionButton = `
+            <button class="btn-complete-delivery orange" onclick="window.updateTripStatus('${id}', '${outletId}', 'At Restaurant')">
+                <i data-lucide="map-pin"></i> ARRIVED AT RESTAURANT
+            </button>`;
+    } else if (currentStatus === 'At Restaurant') {
+        actionButton = `
+            <button class="btn-complete-delivery blue" onclick="window.openVerificationModal('${id}', '${outletId}')">
+                <i data-lucide="clipboard-check"></i> VERIFY & PICKUP
+            </button>`;
     } else {
-        const emptyRow = document.createElement('div');
-        emptyRow.className = 'delivery-item-row';
-        emptyRow.textContent = 'Food Parcel';
-        itemsListDiv.appendChild(emptyRow);
+        // Default: Out for Delivery
+        actionButton = `
+            <button class="btn-complete-delivery" onclick="window.openOTPPanel()">
+                <i data-lucide="check-circle-2"></i> COMPLETE DELIVERY
+            </button>`;
     }
-    
-    itemsSummaryDiv.appendChild(itemsListDiv);
-    
-    const totalRowDiv = document.createElement('div');
-    totalRowDiv.className = 'delivery-total-row';
-    const totalLabel = document.createElement('span');
-    totalLabel.textContent = 'Total to Collect';
-    const totalVal = document.createElement('span');
-    totalVal.className = 'delivery-total-value';
-    totalVal.textContent = totalText;
-    totalRowDiv.appendChild(totalLabel);
-    totalRowDiv.appendChild(totalVal);
-    itemsSummaryDiv.appendChild(totalRowDiv);
-    
-    // Actions
-    const actionsGrid = document.createElement('div');
-    actionsGrid.className = 'delivery-actions-grid';
-    
-    const actionBtns = [
-        { id: 'btn-navigate', icon: 'navigation-2', text: 'NAVIGATE', onclick: () => window.navigateToCustomer(o.address, o.lat, o.lng), class: 'delivery-btn-nav' },
-        { id: 'btn-call', icon: 'phone', text: 'CALL', onclick: () => window.open('tel:' + cleanPhone, '_self'), class: 'delivery-btn-call' },
-        { id: 'btn-wa', icon: 'message-circle', text: 'WHATSAPP', onclick: () => contactCustomer(cleanPhone), class: 'delivery-btn-wa' },
-        { id: 'btn-otp', icon: 'key', text: 'VERIFY OTP', onclick: () => openOTPPanel(), class: 'delivery-btn-otp' }
-    ];
-    
-    actionBtns.forEach(b => {
-        const btn = document.createElement('button');
-        btn.id = b.id;
-        btn.className = 'delivery-btn ' + b.class;
-        btn.addEventListener('click', b.onclick);
-        const iconI = document.createElement('i');
-        iconI.setAttribute('data-lucide', b.icon);
-        const spanText = document.createElement('span');
-        spanText.textContent = b.text;
-        btn.appendChild(iconI);
-        btn.appendChild(spanText);
-        actionsGrid.appendChild(btn);
-    });
-    
-    panel.appendChild(headerDiv);
-    panel.appendChild(customerDiv);
-    panel.appendChild(itemsSummaryDiv);
-    panel.appendChild(actionsGrid);
 
-    // Reinitialize Lucide icons inside the new panel
-    setTimeout(() => {
-        if (window.lucide) window.lucide.createIcons();
-    }, 50);
+    panel.innerHTML = `
+        <div class="active-handle"></div>
+        <div class="active-header-premium">
+            <div class="live-indicator">
+                <span class="pulse-ring"></span>
+                <span class="live-text">${currentStatus.toUpperCase()}</span>
+            </div>
+            <div class="active-meta">
+                <span class="active-outlet ${outletId}">${outletId.toUpperCase()}</span>
+                <span class="active-id">#${orderIdText}</span>
+            </div>
+        </div>
 
+        <div class="active-body-premium">
+            <div class="active-main-info">
+                <div class="info-group">
+                    <h2 class="active-cust-name">${customerNameText}</h2>
+                    <p class="active-dist-info"><i data-lucide="map-pin"></i> ${distanceText}</p>
+                </div>
+                <div class="action-buttons-circle">
+                    ${cleanPhone ? `
+                        <a href="tel:${cleanPhone}" class="circle-btn tel" title="Call Customer">
+                            <i data-lucide="phone"></i>
+                        </a>
+                        <button class="circle-btn wa" onclick="window.contactCustomer('${cleanPhone}')" title="WhatsApp Customer">
+                            <i data-lucide="message-circle"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+
+            <div class="active-address-card" onclick="window.navigateToCustomer('${addressText}', ${o.lat}, ${o.lng})">
+                <div class="address-icon-box">
+                    <i data-lucide="navigation-2"></i>
+                </div>
+                <div class="address-text-box">
+                    <p class="address-label">DELIVERY ADDRESS</p>
+                    <p class="address-content">${addressText}</p>
+                </div>
+                <i data-lucide="chevron-right" class="address-chevron"></i>
+            </div>
+
+            <div class="active-summary-row">
+                <div class="summary-item">
+                    <span class="summary-lbl">COLLECT FROM CUSTOMER</span>
+                    <span class="summary-val cash">${totalText}</span>
+                </div>
+                <div class="summary-item text-right">
+                    <span class="summary-lbl">TRIP EARNINGS</span>
+                    <span class="summary-val earn">₹${o.deliveryFee || 0}</span>
+                </div>
+            </div>
+
+            ${actionButton}
+        </div>
+    `;
+
+    setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 10);
     return panel;
 }
 
@@ -1639,7 +1545,7 @@ window.acceptOrder = async (id, outletId) => {
             }
             return {
                 ...current,
-                status: "Out for Delivery",
+                status: "Arriving at Restaurant",
                 deliveryOTP: Math.floor(100000 + Math.random() * 900000).toString(),
                 assignedRider: currentUser.email.toLowerCase(),
                 acceptedAt: Date.now()
@@ -1653,6 +1559,73 @@ window.acceptOrder = async (id, outletId) => {
     } catch (e) {
         logError("acceptOrder", e);
         showToast("Operation failed. Please try again.", "error");
+    }
+};
+
+/**
+ * PHASE 2: PREMIUM WORKFLOW LOGIC
+ */
+window.updateTripStatus = async (id, outletId, newStatus) => {
+    window.haptic(20);
+    try {
+        const orderPath = `${outletId}/orders/${id}`;
+        await update(ref(db, orderPath), { status: newStatus });
+        showToast(`Status updated to ${newStatus}`, "success");
+    } catch (e) {
+        logError("updateTripStatus", e);
+        showToast("Failed to update status", "error");
+    }
+};
+
+window.openVerificationModal = (id, outletId) => {
+    window.haptic(30);
+    const order = ordersMap.get(id);
+    if (!order) return;
+
+    const modal = document.getElementById('verificationModal');
+    const container = document.getElementById('orderChecklist');
+    container.innerHTML = '';
+
+    if (order.items) {
+        order.items.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'checklist-item';
+            div.innerHTML = `
+                <div class="check-box" id="check-${index}" onclick="this.classList.toggle('checked')">
+                    <i data-lucide="check"></i>
+                </div>
+                <span class="item-name">${item.name}</span>
+                <span class="item-qty">x${item.quantity}</span>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    window.currentVerificationOrder = { id, outletId };
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+};
+
+window.confirmPickup = async () => {
+    const { id, outletId } = window.currentVerificationOrder;
+    const modal = document.getElementById('verificationModal');
+    
+    // Check if all items are checked (optional strictness)
+    const boxes = document.querySelectorAll('.check-box');
+    const allChecked = Array.from(boxes).every(b => b.classList.contains('checked'));
+    
+    if (!allChecked) {
+        if (!confirm("Some items are not checked. Are you sure you have everything?")) return;
+    }
+
+    try {
+        const orderPath = `${outletId}/orders/${id}`;
+        await update(ref(db, orderPath), { status: 'Out for Delivery' });
+        modal.classList.add('hidden');
+        showToast("Order picked up! Drive safe.", "success");
+    } catch (e) {
+        logError("confirmPickup", e);
+        showToast("Failed to update pickup status", "error");
     }
 };
 
@@ -2043,10 +2016,10 @@ window.showConfirmModal = (title, message) => {
 
         titleEl.textContent = title || "CONFIRM ACTION";
         msgEl.textContent = message || "Are you sure you want to proceed?";
-        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
 
         const cleanup = (result) => {
-            modal.style.display = 'none';
+            modal.classList.add('hidden');
             btnYes.onclick = null;
             btnNo.onclick = null;
             resolve(result);
@@ -2060,3 +2033,35 @@ window.showConfirmModal = (title, message) => {
         };
     });
 };
+
+/**
+ * UI HELPER: Update Performance Summary
+ */
+window.updateRiderPerformanceUI = () => {
+    let totalEarnings = 0;
+    let totalOrders = 0;
+    let totalDist = 0;
+    
+    // ordersMap contains all orders including history
+    ordersMap.forEach(o => {
+        if (o.status === 'Delivered' && o.assignedRider === currentUser.email.toLowerCase()) {
+            totalOrders++;
+            totalEarnings += Number(o.deliveryFee || 0);
+            totalDist += 5.8; // Placeholder: In production sum up real distances
+        }
+    });
+
+    const earnEl = document.getElementById('statsTodayEarnings');
+    const orderEl = document.getElementById('statsTodayDelivered');
+    const distEl = document.getElementById('statsTodayDistance');
+    const dateEl = document.getElementById('currentDate');
+
+    if (earnEl) earnEl.innerText = \?\\;
+    if (orderEl) orderEl.innerText = totalOrders;
+    if (distEl) distEl.innerText = \\ km\;
+    if (dateEl) {
+        const d = new Date();
+        dateEl.innerText = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    }
+};
+
