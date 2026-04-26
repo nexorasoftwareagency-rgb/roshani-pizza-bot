@@ -5,6 +5,10 @@
 
     --primary: #F97316;
     --primary-rgb: 249, 115, 22;
+    --primary-pizza: #F97316;
+    --primary-cake: #EC4899;
+    --primary-dark-pizza: #EA580C;
+    --primary-dark-cake: #BE185D;
     /* Premium Vibrant Orange */
     --primary-dark: #EA580C;
     --primary-light: rgba(249, 115, 22, 0.08);
@@ -105,18 +109,12 @@
     justify-content: flex-start !important;
 }
 
-/* Mobile-only elements are HIDDEN by default on desktop */
-@media (min-width: 1025px) {
-    .mobile-only {
-        display: none !important;
-    }
-}
+.mobile-only { display: none; }
+.desktop-only { display: flex; }
 
-/* Desktop-only elements are HIDDEN by default on mobile */
-@media (max-width: 768px) {
-    .desktop-only {
-        display: none !important;
-    }
+@media screen and (max-width: 768px) {
+    .mobile-only { display: flex !important; }
+    .desktop-only { display: none !important; }
 }
 
 .tab-content {
@@ -4074,3 +4072,189 @@ body {
 
 .text-xs { font-size: 10px; }
 .mb-4 { margin-bottom: 4px; }
+
+/* ==========================================================================
+   MOBILE & TABLET RESPONSIVENESS (ANTIGRAVITY UPGRADE)
+   ========================================================================== */
+
+/* 1. TABLET & SMALL LAPTOPS (Max 1100px) */
+@media screen and (max-width: 1100px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .kpi-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .main {
+        padding: 15px;
+    }
+}
+
+/* 2. MOBILE (Max 768px) */
+@media screen and (max-width: 768px) {
+    .sidebar {
+        position: fixed !important;
+        left: -280px !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        width: 280px !important;
+        z-index: 1000 !important;
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 20px 0 50px rgba(0,0,0,0.1) !important;
+    }
+
+    .sidebar.active {
+        left: 0 !important;
+    }
+
+    .sidebar-overlay {
+        position: fixed !important;
+        inset: 0 !important;
+        background: rgba(0,0,0,0.5) !important;
+        backdrop-filter: blur(4px) !important;
+        z-index: 999 !important;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .sidebar-overlay.active {
+        display: block !important;
+        opacity: 1 !important;
+    }
+
+    .layout.sidebar-collapsed .sidebar {
+        left: -280px !important;
+    }
+
+    .main {
+        margin-left: 0 !important;
+        padding-top: 70px !important; /* Space for mobile header */
+    }
+
+    .kpi-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    .kpi-card {
+        padding: 15px !important;
+    }
+
+    .kpi-icon {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    .kpi-val {
+        font-size: 20px !important;
+    }
+
+    /* Table Adjustments */
+    .table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        margin: 0 -15px !important;
+        padding: 0 15px !important;
+        border-radius: 0 !important;
+    }
+
+    /* Modal Adjustments */
+    .modal-content {
+        width: 95% !important;
+        padding: 20px !important;
+        margin: 10px auto !important;
+    }
+
+    /* POS Mobile Adjustments */
+    .walkin-layout {
+        flex-direction: column !important;
+    }
+
+    .walkin-picker {
+        width: 100% !important;
+        border-right: none !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        max-height: 40vh !important;
+    }
+
+    .walkin-cart {
+        width: 100% !important;
+    }
+
+    .menu-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+        gap: 12px !important;
+    }
+}
+
+/* 3. SMALL MOBILE (Max 480px) */
+@media screen and (max-width: 480px) {
+    .kpi-row {
+        grid-template-columns: 1fr !important;
+    }
+
+    .top-bar-right {
+        display: none !important; /* Hide non-essential desktop header items */
+    }
+
+    .search-input {
+        min-width: 100% !important;
+    }
+
+    /* Table to Card Transformation for critical tables */
+    .mobile-card-table thead {
+        display: none !important;
+    }
+
+    .mobile-card-table tr {
+        display: block !important;
+        background: white !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 12px !important;
+        margin-bottom: 15px !important;
+        padding: 10px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.02) !important;
+    }
+
+    .mobile-card-table td {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 8px 5px !important;
+        border-bottom: 1px solid rgba(0,0,0,0.03) !important;
+        text-align: right !important;
+    }
+
+    .mobile-card-table td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 10px;
+        color: var(--text-muted);
+        text-align: left;
+    }
+
+    .mobile-card-table td:last-child {
+        border-bottom: none !important;
+        justify-content: center !important;
+        padding-top: 12px !important;
+    }
+
+    .rider-identity-cell {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+    }
+
+    .quick-stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .menu-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+}

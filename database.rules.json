@@ -4,8 +4,8 @@
       ".indexOn": [
         "email"
       ],
-      // Bootstrap: Allow any authenticated user to read to find their email for migration
-      ".read": "auth != null && (root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)", // First admin can be created if none exist, otherwise only existing admins can write
+      // Bootstrap: Allow any authenticated user with admin claim or matching bootstrap email to read
+      ".read": "auth != null && (auth.token.admin === true || root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
       ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).exists())",
       "$adminId": {
         ".read": "auth != null && (auth.uid == $adminId || root.child('admins/' + auth.uid).exists())",
