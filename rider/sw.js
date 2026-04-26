@@ -1,35 +1,56 @@
-const CACHE_NAME = 'roshani-rider-v3';
+const CACHE_NAME = 'roshani-rider-v5-premium';
 const ASSETS = [
   './',
-  './index.html?v=2',
-  './style.css?v=2',
-  './app.js?v=2',
-  './icon-512.png'
+  './index.html',
+  './login.html',
+  './style.css',
+  './app.js',
+  './icon-512.png',
+  'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap'
 ];
 
+// Install Event - Precache core assets
 self.addEventListener('install', (e) => {
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
 });
 
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then((res) => res || fetch(e.request))
+// Activate Event - Clean up old caches to ensure the new UI loads
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      );
+    })
   );
 });
 
-// PUSH NOTIFICATIONS
+// Fetch Event - Handle offline routing
+self.addEventListener('fetch', (e) => {
+  // Only cache GET requests
+  if (e.request.method !== 'GET') return;
+
+  e.respondWith(
+    fetch(e.request).catch(() => caches.match(e.request))
+  );
+});
+
+// Push Notifications Setup (Firebase Cloud Messaging Background Handler)
 self.addEventListener('push', (e) => {
-  let data = { title: 'New Update', body: 'Check your rider portal.', url: './index.html?v=2' };
+  let data = { title: 'New Order', body: 'Check your rider portal.', url: './index.html' };
+
   try {
     if (e.data) {
       const parsed = e.data.json();
       data = { ...data, ...parsed };
     }
   } catch (err) {
-    console.error('Failed to parse push data:', err);
+    console.error('Push data error:', err);
   }
+
   const options = {
     body: data.body,
     icon: './icon-512.png',
@@ -37,19 +58,22 @@ self.addEventListener('push', (e) => {
     vibrate: [100, 50, 100],
     data: { url: data.url }
   };
+
   e.waitUntil(self.registration.showNotification(data.title, options));
 });
 
+// Notification Click Handler - Open app when notification is tapped
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   e.waitUntil(
     clients.matchAll({ type: 'window' }).then((clientList) => {
-      const resolvedUrl = new URL(data.url, self.location.origin).href;
+      const resolvedUrl = new URL(e.notification.data.url, self.location.origin).href;
+      // If window is already open, focus it
       for (const client of clientList) {
         if (client.url === resolvedUrl && 'focus' in client) return client.focus();
       }
-      if (clients.openWindow) return clients.openWindow(data.url);
+      // Otherwise, open a new window
+      if (clients.openWindow) return clients.openWindow(e.notification.data.url);
     })
   );
 });
-

@@ -1,58 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Content Security Policy -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss:;">
-    <meta http-equiv="Report-To" content='{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/csp-violation-report-endpoint"}],"include_subdomains":true}'>    <title>Roshani Rider | Secure Authentication</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
-</head>
-<body class="login-page">
-    <div class="decorative-bg">
-        <div class="shape shape-1"></div>
-        <div class="shape shape-2"></div>
-        <div class="shape shape-3"></div>
-    </div>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss:;">
+    <meta name="theme-color" content="#FF5200">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Roshani Rider | Secure Authentication</title>
 
-    <div id="loginBox">
-        <div class="login-card glass-card">
-            <div class="brand">
-                <i data-lucide="zap" class="brand-icon"></i>
-                <h2>ROSHANI RIDER</h2>
-                <p class="login-subtitle">Secured Access Portal</p>
-            </div>
-            
-            <div class="input-group">
-                <label for="email">Mobile Number / Email</label>
-                <div class="input-wrapper">
-                    <i data-lucide="phone"></i>
-                    <input type="text" id="email" placeholder="Enter mobile / email" autocomplete="username" required>
-                </div>
-            </div>
-            
-            <div class="input-group">
-                <label for="password">Access Password</label>
-                <div class="input-wrapper">
-                    <i data-lucide="lock"></i>
-                    <input type="password" id="password" placeholder="Enter access password" autocomplete="current-password" required minlength="6">
-                </div>
-            </div>
-            
-            <button class="btn-primary btn-full mt-20" id="loginBtn" title="Authenticate and enter Rider Dashboard">
-                AUTHENTICATE & START <i data-lucide="chevron-right"></i>
-            </button>
-            <p id="loginError" class="error-msg"></p>
-            
-            <div class="login-footer mt-20">
-                <p class="text-muted-small text-center">Contact Admin if you forgot your code</p>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        .login-page {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #FF5200 0%, #FF7E00 100%);
+            padding: 20px;
+        }
+
+        .login-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .login-logo-box {
+            width: 70px;
+            height: 70px;
+            background: #FFF5F1;
+            color: #FF5200;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .login-logo-box i {
+            width: 35px;
+            height: 35px;
+        }
+
+        .login-card h2 {
+            font-weight: 900;
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            color: #1E293B;
+        }
+
+        .login-card p {
+            color: #64748B;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 15px;
+            color: #94A3B8;
+            width: 20px;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 16px 15px 16px 45px;
+            border: 2px solid #E2E8F0;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .input-wrapper input:focus {
+            border-color: #FF5200;
+        }
+
+        .error-msg {
+            color: #EF4444;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body class="login-page">
+
+    <div class="login-card">
+        <div class="login-logo-box">
+            <i data-lucide="zap"></i>
+        </div>
+        <h2>ROSHANI RIDER</h2>
+        <p>Secured Access Portal</p>
+
+        <div class="input-group">
+            <label for="email">Mobile Number / Email</label>
+            <div class="input-wrapper">
+                <i data-lucide="phone"></i>
+                <input type="text" id="email" placeholder="Enter mobile or email" autocomplete="username" required>
             </div>
         </div>
+
+        <div class="input-group">
+            <label for="password">Access Password</label>
+            <div class="input-wrapper">
+                <i data-lucide="lock"></i>
+                <input type="password" id="password" placeholder="Enter secure password" autocomplete="current-password"
+                    required>
+            </div>
+        </div>
+
+        <button class="btn-primary full-width mt-10" id="loginBtn" onclick="window.login()">
+            AUTHENTICATE & START
+        </button>
+        <p id="loginError" class="error-msg hidden"></p>
+
+        <p class="text-muted text-xtra-small mt-20">Contact Admin if you forgot your credentials</p>
     </div>
 
     <script type="module" src="app.js"></script>
+    <script>lucide.createIcons();</script>
 </body>
+
 </html>

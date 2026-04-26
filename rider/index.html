@@ -1,30 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#FF6B00">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss:;">
-    <meta http-equiv="Report-To" content='{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/csp-violation-report-endpoint"}],"include_subdomains":true}'>    <title>Rider Portal | Roshani Pizza</title>
-    <link rel="stylesheet" href="style.css?v=2">
+    <meta name="theme-color" content="#FF5200">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss:;">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Rider Portal | Roshani Sudha</title>
+
+    <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-512.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- Leaflet Mapping -->
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
+
 <body>
-    <div id="dashboard">
-        <!-- Dashboard Overlay -->
+    <div id="dashboard" class="hidden">
         <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
-        <!-- NEW PREMIUM HEADER (Zomato/Swiggy Style) -->
         <header class="app-header">
             <div class="header-main">
                 <div id="mobileMenuBtn" class="menu-trigger" title="Open Navigation">
@@ -32,47 +34,24 @@
                 </div>
                 <div class="brand-group">
                     <h2 class="app-logo">ROSHANI RIDER</h2>
-                    <div class="status-indicator">
-                        <span class="pulse-dot"></span>
-                        <span id="statusBadge" class="status-text Online">Online</span>
-                    </div>
-                    <select id="outletSwitcher" class="outlet-switcher-select hidden" title="Switch Outlet Location">
-                        <!-- Populated via JS -->
-                    </select>
                 </div>
                 <div class="header-actions">
-                    <div id="mobileNotifBtn" class="icon-btn notif-trigger">
+                    <div id="mobileNotifBtn" class="icon-btn btn-notif notif-trigger" style="margin-right: 10px;">
                         <i data-lucide="bell"></i>
                         <span id="notifBadge" class="badge-dot hidden"></span>
                     </div>
-                    <div class="profile-trigger" id="headerProfileBtn">
-                        <img id="header-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3C/svg%3E" alt="P">
+                    <div class="status-indicator" id="statusToggleBtn" title="Toggle Duty Status">
+                        <span class="pulse-dot Online"></span>
+                        <span id="statusBadge" class="status-text Online">ONLINE</span>
                     </div>
                 </div>
             </div>
-            
-            <!-- TOP NAVIGATION TABS (Rider Panel at the top) -->
-            <nav class="top-nav-tabs" role="tablist">
-                <button class="tab-item active" data-section="home" role="tab" aria-selected="true">
-                    <i data-lucide="home"></i> <span>Home</span>
-                </button>
-                <button class="tab-item" data-section="available" role="tab" aria-selected="false">
-                    <i data-lucide="shopping-bag"></i> <span>Pickup</span>
-                </button>
-                <button class="tab-item" data-section="active" role="tab" aria-selected="false">
-                    <i data-lucide="map-pin"></i> <span>Live</span>
-                </button>
-                <button class="tab-item" data-section="earnings" role="tab" aria-selected="false">
-                    <i data-lucide="wallet"></i> <span>Wallet</span>
-                </button>
-            </nav>
         </header>
 
-        <!-- Side Navigation (Mobile Drawer) -->
         <nav class="sidebar" id="sidebarNav">
             <div class="sidebar-user-section">
                 <div class="sidebar-user-info">
-                    <h4 id="sidebar-name">Rider Name</h4>
+                    <h4 id="sidebar-name">Boss</h4>
                     <p id="sidebar-id">RID-0000</p>
                 </div>
             </div>
@@ -84,7 +63,7 @@
                 </li>
                 <li class="nav-item">
                     <button class="nav-btn" data-section="completed">
-                        <i data-lucide="history"></i> <span>History</span>
+                        <i data-lucide="history"></i> <span>Trip History</span>
                     </button>
                 </li>
                 <li class="nav-item">
@@ -94,306 +73,228 @@
                 </li>
                 <li class="nav-separator"></li>
                 <li id="menu-downloadapp" class="pwa-download-item hidden">
-                    <i data-lucide="download"></i> <span>Install App</span>
+                    <button class="nav-btn"><i data-lucide="download"></i> <span>Install App</span></button>
                 </li>
                 <li id="logoutBtn" class="logout-link">
-                    <i data-lucide="log-out"></i> <span>Sign Out</span>
+                    <button class="nav-btn text-danger"><i data-lucide="log-out"></i> <span>Sign Out</span></button>
                 </li>
             </ul>
         </nav>
 
-        <!-- Bottom Nav removed as it moved to top-nav-tabs -->
-
         <div class="main-content">
-            <!-- Redundant top-nav removed -->
-
-            <!-- SECTION: HOME -->
             <section id="sec-home" class="view-section active">
-                <div class="view-header">
-                    <h1 class="welcome-text">Welcome, <span id="r-name">Rider</span>!</h1>
+                <div class="view-header mb-20">
+                    <h1 class="welcome-text">Welcome, <span class="text-orange" id="r-name">Boss</span>!</h1>
                     <p class="welcome-subtext">Ready for your next delivery?</p>
+                    <p class="welcome-date" id="currentDate">Loading Date...</p>
                 </div>
 
-                <div class="quick-summary-premium">
+                <div class="premium-dashboard-card">
                     <div class="summary-header">
-                        <h3>Today's Performance</h3>
-                        <span class="summary-date" id="currentDate">April 25, 2026</span>
+                        <div>
+                            <h3>Today's Performance</h3>
+                            <p class="text-muted text-small">Quick Summary</p>
+                        </div>
                     </div>
-                    <div class="summary-grid-main">
-                        <div class="summary-item-premium">
-                            <div class="item-icon-box green">
-                                <i data-lucide="wallet"></i>
-                            </div>
-                            <div class="item-info">
-                                <i data-lucide="check-circle"></i>
-                            </div>
-                            <div class="item-info">
-                                <span class="item-val" id="stats-delivered">0</span>
-                                <span class="item-lbl">Delivered</span>
+
+                    <div class="solid-stats-grid">
+                        <div class="solid-stat-card green">
+                            <div class="stat-icon-top"><i data-lucide="check-circle"></i> GREEN DELIVERED</div>
+                            <div class="stat-body">
+                                <span class="stat-small-lbl">Today's Deliveries</span>
+                                <span class="stat-main-val" id="stats-delivered">0</span>
                             </div>
                         </div>
-
-                        <div class="summary-item-premium">
-                            <div class="item-icon-box blue">
-                                <i data-lucide="clock"></i>
-                            </div>
-                            <div class="item-info">
-                                <span class="item-val" id="stats-ontime">100%</span>
-                                <span class="item-lbl">On-Time</span>
+                        <div class="solid-stat-card blue">
+                            <div class="stat-icon-top"><i data-lucide="clock"></i> BLUE ON-TIME</div>
+                            <div class="stat-body">
+                                <span class="stat-small-lbl">Average Rating</span>
+                                <span class="stat-main-val" id="stats-ontime">100%</span>
                             </div>
                         </div>
-
-                        <div class="summary-item-premium">
-                            <div class="item-icon-box orange">
-                                <i data-lucide="indian-rupee"></i>
-                            </div>
-                            <div class="item-info">
-                                <span class="item-val" id="stats-earnings">0.00</span>
-                                <span class="item-lbl">Earnings</span>
+                        <div class="solid-stat-card orange">
+                            <div class="stat-icon-top"><i data-lucide="indian-rupee"></i> ORANGE EARNINGS</div>
+                            <div class="stat-body">
+                                <span class="stat-small-lbl">Today's Earning</span>
+                                <span class="stat-main-val" id="stats-earnings">₹0.00</span>
                             </div>
                         </div>
-
-                        <div class="summary-item-premium">
-                            <div class="item-icon-box gold">
-                                <i data-lucide="star"></i>
-                            </div>
-                            <div class="item-info">
-                                <span class="item-val" id="statsRiderRating">4.9</span>
-                                <span class="item-lbl">Rating</span>
+                        <div class="solid-stat-card gold">
+                            <div class="stat-icon-top"><i data-lucide="star"></i> GOLD RATING</div>
+                            <div class="stat-body">
+                                <span class="stat-small-lbl">Average Rating</span>
+                                <span class="stat-main-val" id="statsRiderRating">4.9</span>
                             </div>
                         </div>
                     </div>
-                    <button class="btn-wallet-link" onclick="window.switchTab('earnings')">
-                        View Wallet Details <i data-lucide="chevron-right"></i>
+
+                    <button class="btn-primary full-width mt-15" onclick="window.showSection('earnings')">
+                        VIEW DETAILED STATS &rarr;
                     </button>
                 </div>
 
-                <div class="active-status-box" id="activeStatusBanner">
-                    <!-- Dynamic -->
-                </div>
+                <div id="dashboardActiveDeliveryView"></div>
             </section>
 
-            <!-- SECTION: AVAILABLE ORDERS -->
             <section id="sec-available" class="view-section">
-                <div class="section-header-flex">
+                <div class="section-header-flex mb-15">
                     <h2 class="section-heading">Available Pickup</h2>
                     <span class="count-badge" id="pickupCount">0 Orders</span>
                 </div>
                 <div id="unassignedOrdersList" class="order-list"></div>
             </section>
 
-            <!-- SECTION: ACTIVE DELIVERY -->
             <section id="sec-active" class="view-section">
-                <h2 class="section-heading">Live Trip Details</h2>
-                
-                <!-- Full Map Background -->
-                <!-- ORDER VERIFICATION MODAL (PHASE 2) -->
-        <div id="verificationModal" class="modal-overlay hidden">
-            <div class="modal-content-bottom">
-                <div class="modal-handle"></div>
-                <div class="modal-header">
-                    <h2>Verify Items</h2>
-                    <p>Confirm all items are present before pickup</p>
-                </div>
-                <div class="checklist-container" id="orderChecklist">
-                    <!-- Dynamic -->
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-primary btn-full" onclick="window.confirmPickup()">
-                        ORDER PICKED UP
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div id="toastContainer" class="toast-container"></div>
-    </div>
-                
+                <h2 class="section-heading mb-15">Live Trip Navigation</h2>
                 <div id="activeTripMap" class="trip-map-container glass-panel"></div>
-                
-                <!-- Empty State (no active order) -->
                 <div id="activeOrderView">
-                    <div class="glass-panel empty-state-glass"><p>No active trip currently.</p></div>
+                    <div class="glass-panel empty-state-glass">
+                        <p>No active trip currently.</p>
+                    </div>
                 </div>
             </section>
 
-            <!-- SECTION: COMPLETED ORDERS -->
             <section id="sec-completed" class="view-section">
-                <h2 class="section-heading">Trip History</h2>
+                <h2 class="section-heading mb-15">Trip History</h2>
                 <div class="search-box mb-15">
                     <i data-lucide="search"></i>
-                    <input type="text" id="historySearch" placeholder="Search by Order ID or Area..." class="glass-input">
+                    <input type="text" id="historySearch" placeholder="Search by Order ID..." class="glass-input">
                 </div>
                 <div id="completedOrdersList" class="order-list"></div>
             </section>
 
-            <!-- SECTION: EARNINGS -->
             <section id="sec-earnings" class="view-section">
-                <h2 class="section-heading">Wallet Summary</h2>
-                
-                <div class="overview-card mb-20">
-                    <span class="lbl">Total Cash to Settle</span>
-                    <span class="val txt-dark" id="e-total">&#8377;0</span>
+                <h2 class="section-heading mb-15">Wallet Summary</h2>
+                <div class="premium-dashboard-card mb-20 text-center">
+                    <span class="text-muted font-bold text-small uppercase">Total Cash to Settle</span>
+                    <h1 class="text-orange" style="font-size: 2.5rem; font-weight: 900;" id="e-total">&#8377;0</h1>
                 </div>
-
                 <div class="earnings-grid-split">
-                    <div class="overview-card card-pizza">
-                        <span class="lbl">Pizza Outlet</span>
-                        <span class="val earning-val txt-orange" id="e-pizza">&#8377;0</span>
-                        <span class="lbl txt-xtra-small mt-10">Today: <span id="e-pizza-today">&#8377;0</span></span>
+                    <div class="premium-dashboard-card border-left-orange">
+                        <span class="text-muted font-bold">Pizza Outlet</span>
+                        <h2 class="text-orange" id="e-pizza">&#8377;0</h2>
+                        <span class="text-xtra-small">Today: <span id="e-pizza-today">&#8377;0</span></span>
                     </div>
-                    <div class="overview-card card-cake">
-                        <span class="lbl">Cake Outlet</span>
-                        <span class="val earning-val txt-cake" id="e-cake">&#8377;0</span>
-                        <span class="lbl txt-xtra-small mt-10">Today: <span id="e-cake-today">&#8377;0</span></span>
+                    <div class="premium-dashboard-card border-left-pink">
+                        <span class="text-muted font-bold">Cake Outlet</span>
+                        <h2 class="text-pink" id="e-cake">&#8377;0</h2>
+                        <span class="text-xtra-small">Today: <span id="e-cake-today">&#8377;0</span></span>
                     </div>
-                </div>
-
-                <div class="info-banner mt-20">
-                    <i data-lucide="info" class="text-orange"></i>
-                    <p class="text-small text-muted italic">Rider earnings are calculated based on 100% of the Delivery Fee charged to the customer for each successful trip.</p>
                 </div>
             </section>
 
-            <!-- SECTION: PROFILE -->
             <section id="sec-profile" class="view-section">
-                <div class="glass-panel profile-card-glass">
-                    <div class="profile-photo-container">
-                        <img id="r-profile-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='10' fill='%23999'%3ENo Image%3C/text%3E%3C/svg%3E" alt="Profile" class="rider-profile-photo">
-                        <button class="edit-photo-btn" id="btn-edit-photo" title="Update Profile Picture">
-                            <i data-lucide="camera"></i>
-                        </button>
-                        <input type="file" id="profile-photo-input" accept="image/*" style="display:none;">
+                <div class="premium-dashboard-card text-center relative">
+                    <div class="profile-photo-wrapper">
+                        <img id="r-profile-img"
+                            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='10' fill='%23999'%3ENo Image%3C/text%3E%3C/svg%3E"
+                            alt="Profile">
+                        <button class="btn-edit-photo" id="btn-edit-photo"><i data-lucide="camera"></i></button>
+                        <input type="file" id="profile-photo-input" accept="image/*" class="hidden">
                     </div>
-                    <h3 id="profileName" class="profile-name">Loading...</h3>
-                    <p id="profilePhone" class="profile-phone">---</p>
-                    
-                    <!-- Performance Stats Row (new) -->
-                    <div class="profile-stats-row">
-                        <div class="profile-stat-card">
-                            <span class="stat-val" id="profile-total-orders">0</span>
-                            <span class="stat-lbl">Total Deliveries</span>
-                        </div>
-                        <div class="profile-stat-card">
-                            <span class="stat-val" id="profile-total-earnings">&#8377;0</span>
-                            <span class="stat-lbl">Lifetime Earnings</span>
-                        </div>
-                        <div class="profile-stat-card">
-                            <span class="stat-val" id="profile-avg-time">0m</span>
-                            <span class="stat-lbl">Avg Delivery Time</span>
-                        </div>
-                    </div>
-                    
-                    <div class="profile-details-grid">
-                        <div class="detail-item">
-                            <span class="detail-label">Father's Name</span>
-                            <span class="detail-value" id="r-father-name">---</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Age</span>
-                            <span class="detail-value" id="r-age">---</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Aadhar Card</span>
-                            <span class="detail-value" id="r-aadhar-no">---</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Qualification</span>
-                            <span class="detail-value" id="r-qualification">---</span>
-                        </div>
-                        <div class="detail-item full-width">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span class="detail-label">Contact Phone</span>
-                                <button class="btn-ghost btn-xs" id="btn-edit-phone">EDIT</button>
-                            </div>
-                            <span class="detail-value" id="profilePhoneValue">---</span>
-                        </div>
-                        <div class="detail-item full-width">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span class="detail-label">Address</span>
-                                <button class="btn-ghost btn-xs" id="btn-edit-address">EDIT</button>
-                            </div>
-                            <span class="detail-value" id="r-address">---</span>
-                        </div>
-                        <div class="detail-item full-width">
-                            <span class="detail-label">Gmail ID</span>
-                            <span class="detail-value" id="r-email">---</span>
-                        </div>
-                        <div class="detail-item full-width">
-                            <span class="detail-label">Assigned Outlet</span>
-                            <span class="detail-value" id="r-outlet">---</span>
-                        </div>
-                        <div class="detail-item full-width">
-                            <span class="detail-label">Rider ID</span>
-                            <span class="detail-value" id="r-rider-id">---</span>
-                        </div>
-                        <div class="detail-item full-width">
-                            <span class="detail-label">Join Date</span>
-                            <span class="detail-value" id="r-join-date">---</span>
-                        </div>
-                    </div>
+                    <h2 id="profileName" class="mt-10">Boss</h2>
+                    <p id="profilePhone" class="text-muted">---</p>
+                </div>
 
-                    <div class="aadhar-image-section mt-20">
-                        <div style="display:flex; justify-content:space-between; align-items:center;" class="mb-8">
-                            <span class="detail-label">Professional ID (Aadhar Card)</span>
-                            <button class="btn-ghost btn-xs" id="btn-toggle-aadhar">SHOW</button>
+                <div class="premium-dashboard-card mt-20">
+                    <h3 class="mb-15 border-bottom pb-10">Personal Details</h3>
+                    <div class="profile-list">
+                        <div class="profile-list-item"><span>Father's Name</span><span id="r-father-name">---</span>
                         </div>
-                        <div class="aadhar-img-container hidden" id="aadhar-container">
-                            <img id="r-aadhar-img" alt="Aadhar Card" class="aadhar-card-display" style="display:none;">
+                        <div class="profile-list-item"><span>Age</span><span id="r-age">---</span></div>
+                        <div class="profile-list-item"><span>Aadhar Card</span><span id="r-aadhar-no">---</span></div>
+                        <div class="profile-list-item"><span>Qualification</span><span id="r-qualification">---</span>
                         </div>
-                        <p class="text-xtra-small text-muted italic mt-8">Note: Handling of this ID must comply with Aadhar Act policies.</p>
-                    </div>
-
-                    <div class="profile-actions">
-                        <button id="statusToggleBtn" class="btn-primary" title="Toggle Duty Status">
-                            SET STATUS: ONLINE
-                        </button>
-                        <button id="logoutBtnProfile" class="btn-outline-danger" title="Logout from Rider Portal">
-                            LOGOUT
-                        </button>
+                        <div class="profile-list-item">
+                            <span>Contact Phone</span>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span id="profilePhoneValue">---</span>
+                                <button class="btn-ghost-small" id="btn-edit-phone">EDIT</button>
+                            </div>
+                        </div>
+                        <div class="profile-list-item">
+                            <span>Address</span>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span id="r-address">---</span>
+                                <button class="btn-ghost-small" id="btn-edit-address">EDIT</button>
+                            </div>
+                        </div>
+                        <div class="profile-list-item border-none">
+                            <span>Aadhar Image</span>
+                            <button class="btn-ghost-small" id="btn-toggle-aadhar"
+                                onclick="window.toggleAadharView()">SHOW</button>
+                        </div>
+                        <div id="aadhar-container" class="hidden mt-10">
+                            <img id="r-aadhar-img" style="width: 100%; border-radius: 10px;">
+                        </div>
                     </div>
                 </div>
             </section>
         </div>
+
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-section="home" onclick="window.showSection('home')">
+                <i data-lucide="home"></i><span>HOME</span>
+            </button>
+            <button class="nav-item" data-section="available" onclick="window.showSection('available')">
+                <div class="icon-wrapper">
+                    <i data-lucide="shopping-bag"></i>
+                    <span class="nav-badge" id="navPickupBadge">0</span>
+                </div>
+                <span>PICKUP</span>
+            </button>
+            <button class="nav-item" data-section="active" onclick="window.showSection('active')">
+                <i data-lucide="map-pin"></i><span>LIVE</span>
+            </button>
+            <button class="nav-item" data-section="earnings" onclick="window.showSection('earnings')">
+                <i data-lucide="wallet"></i><span>WALLET</span>
+            </button>
+        </nav>
     </div>
 
-    <!-- OTP Overlay -->
+    <div id="verificationModal" class="modal-overlay hidden">
+        <div class="modal-content-bottom">
+            <div class="modal-handle"></div>
+            <div class="modal-header">
+                <h2>Verify Items</h2>
+            </div>
+            <div class="checklist-container" id="orderChecklist"></div>
+            <button class="btn-primary full-width" onclick="window.confirmPickup()">ORDER PICKED UP</button>
+        </div>
+    </div>
+
     <div id="otpPanel" class="modal-overlay hidden">
-        <div class="modal-card">
-            <h3 class="modal-title">TRIP COMPLETE</h3>
-            <p class="modal-sub">Enter 6-digit verification code from customer</p>
-            <input type="text" id="otpInput" placeholder="000000" maxlength="6" inputmode="numeric" pattern="\d{6}" title="Enter 6-digit verification code from customer" autocomplete="one-time-code">
-            
-            <button id="btnResendOTP" class="btn-resend-otp">&#128233; RESEND OTP TO CUSTOMER</button>
-
-            <div class="modal-actions">
-                <button id="btnConfirmOTP" class="btn-primary no-shadow">CONFIRM</button>
-                <button id="btnCloseOTP" class="btn-ghost">LATER</button>
+        <div class="modal-card text-center">
+            <h2 class="mb-10 text-orange">TRIP COMPLETE</h2>
+            <p class="text-muted mb-20">Enter 6-digit verification code from customer</p>
+            <input type="text" id="otpInput" class="otp-input" placeholder="000000" maxlength="6" inputmode="numeric">
+            <button id="btnResendOTP" class="btn-outline full-width mb-15" onclick="window.regenerateOTP()">&#128233;
+                RESEND OTP</button>
+            <div class="flex-row gap-10">
+                <button id="btnConfirmOTP" class="btn-primary flex-1" onclick="window.verifyOTP()">CONFIRM</button>
+                <button id="btnCloseOTP" class="btn-outline flex-1" onclick="window.closeOTPPanel()">LATER</button>
             </div>
-            <p class="mt-14 text-xtra-small text-muted italic">If customer is unreachable, contact Admin for Backup Code.</p>
-            <button id="emergencyBtn" class="btn-ghost btn-emergency hidden">EMERGENCY OVERRIDE</button>
+            <button id="emergencyBtn" class="btn-ghost-small full-width mt-20 text-danger hidden"
+                onclick="window.emergencyOverride()">EMERGENCY OVERRIDE (ADMIN)</button>
         </div>
     </div>
 
-    <div id="confirmModal" class="modal hidden">
-        <div class="modal-card">
-            <h3 id="confirmTitle">CONFIRM ACTION</h3>
-            <p id="confirmMsg">Are you sure you want to proceed?</p>
-            <div class="modal-actions">
-                <button id="btnConfirmYes" class="btn-primary">YES</button>
-                <button id="btnConfirmNo" class="btn-ghost">CANCEL</button>
+    <div id="confirmModal" class="modal-overlay hidden">
+        <div class="modal-card text-center">
+            <h3 id="confirmTitle" class="mb-10">CONFIRM</h3>
+            <p id="confirmMsg" class="text-muted mb-20">Proceed?</p>
+            <div class="flex-row gap-10">
+                <button id="btnConfirmYes" class="btn-primary flex-1">YES</button>
+                <button id="btnConfirmNo" class="btn-outline flex-1">CANCEL</button>
             </div>
         </div>
     </div>
 
-    <!-- Notification Sheet -->
     <div id="notificationSheet" class="notif-sheet hidden">
         <div class="notif-sheet-header">
             <h3>Notifications</h3>
-            <button id="btnClearAllNotifs" class="btn-clear-all" title="Clear All Notifications">Clear All</button>
-            <button id="btnCloseNotifSheet" class="btn-close-sheet" title="Close Notification Sheet">
-                <i data-lucide="x"></i>
-            </button>
+            <button id="btnClearAllNotifs" class="btn-clear-all">Clear All</button>
+            <button id="btnCloseNotifSheet" class="btn-close-sheet"><i data-lucide="x"></i></button>
         </div>
         <div id="notifList" class="notif-list">
             <div class="empty-notif">
@@ -403,6 +304,7 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=2"></script>
+    <script type="module" src="app.js"></script>
 </body>
+
 </html>
