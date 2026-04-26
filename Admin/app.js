@@ -1438,7 +1438,7 @@ window.openOrderDrawer = (id) => {
 
         ${o.customerNote ? `
 
-        <div style="background:rgba(255&#8377;07,0,0.05); border:1px dashed var(--primary); border-radius:15px; padding:15px; margin-bottom:24px;">
+            <div style="background:rgba(255,207,0,0.05); border:1px dashed var(--primary); border-radius:15px; padding:15px; margin-bottom:24px;">
 
             <div style="font-size:10px; font-weight:900; color:var(--primary); letter-spacing:1px; margin-bottom:6px; text-transform:uppercase;">Customer Note</div>
 
@@ -1825,7 +1825,7 @@ auth.onAuthStateChanged(async user => {
         if (_ordersChildCb) { Outlet.ref("orders").off("child_added", _ordersChildCb); _ordersChildCb = null; }
         if (_ordersValueCb) { Outlet.ref("orders").off("value", _ordersValueCb); _ordersValueCb = null; }
         if (_ordersChangedCb) { Outlet.ref("orders").off("child_changed", _ordersChangedCb); _ordersChangedCb = null; }
-        if (window.currentOutlet) Outlet.ref(`dishes/${window.currentOutlet}`).off();
+        if (window.currentOutlet) Outlet.ref("dishes").off();
         Outlet.ref("admins").off();
 
         if (authOverlay) {
@@ -15186,19 +15186,7 @@ window.runImageMigration = async function () {
 
 
 
-window.exportStockList = () => {
 
-    if (Object.keys(stockRegistry).length === 0) {
-
-        window.showToast("No data to export.", "info");
-
-        return;
-
-    }
-
-    // ... CSV Export logic ...
-
-};
 
 
 

@@ -13,16 +13,12 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  // Only show notification if notification data is present
   if (payload?.notification?.title && payload?.notification?.body) {
     const notificationTitle = payload.notification.title;
     const notificationOptions = {
       body: payload.notification.body,
       icon: '/icon-512.png'
     };
-    
     self.registration.showNotification(notificationTitle, notificationOptions);
   }
-  // Don't log entire payload to avoid exposing sensitive data
-  console.log('[firebase-messaging-sw.js] Received background message');
 });
