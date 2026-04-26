@@ -76,7 +76,7 @@
             sidebarBrand.innerText = brand === 'cake' ? 'ROSHANI CAKE' : 'ROSHANI PIZZA';
         }
         if (loginHeader) {
-            loginHeader.innerText = brand === 'cake' ? 'ROSHANI CAKES LOGIN' : 'ROSHANI PIZZA LOGIN';
+            loginHeader.innerText = 'ROSHANI ADMIN LOGIN';
         }
 
         console.log(`[Branding] Switched to ${brand.toUpperCase()} mode. Theme: ${active.theme}`);

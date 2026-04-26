@@ -1670,16 +1670,13 @@ let loginInProgress = false;
 
 function doLogin() {
 
+    console.log("[Auth] Login attempt initiated for:", document.getElementById('adminEmail')?.value);
     if (loginInProgress) return;
-
     window.haptic(10);
 
     const emailEl = document.getElementById('adminEmail');
-
     const passEl = document.getElementById('adminPassword');
-
     const errorEl = document.getElementById('authError');
-
     const loginBtn = document.getElementById('loginBtn');
 
 
@@ -1821,127 +1818,80 @@ window.userLogout = () => {
 
 
 auth.onAuthStateChanged(async user => {
+    console.log("[Auth] Persistence State:", user ? `Authenticated as ${user.email}` : "Logged Out");
 
     if (!user) {
-
         // Detach persistent listeners
-
         if (_ordersChildCb) { Outlet.ref("orders").off("child_added", _ordersChildCb); _ordersChildCb = null; }
-
         if (_ordersValueCb) { Outlet.ref("orders").off("value", _ordersValueCb); _ordersValueCb = null; }
-
         if (_ordersChangedCb) { Outlet.ref("orders").off("child_changed", _ordersChangedCb); _ordersChangedCb = null; }
-
         if (window.currentOutlet) Outlet.ref(`dishes/${window.currentOutlet}`).off();
-
         Outlet.ref("admins").off();
 
-
-
         if (authOverlay) {
-
             authOverlay.classList.remove('hidden');
-
-            authOverlay.style.display = ''; // Clear any legacy inline styles
-
+            authOverlay.style.display = 'flex'; 
         }
-
         const layout = document.querySelector(".layout");
-
-        if (layout) {
-
-            layout.classList.add('hidden');
-
-            layout.style.display = ''; // Clear any legacy inline styles
-
-        }
-
+        if (layout) layout.classList.add('hidden');
         return;
-
     }
 
-
-
     try {
-
-        const adminSnap = await Outlet.ref("admins").once("value");
-
-        adminData = null;
-
-        const normalizedEmail = (user.email || "").toLowerCase();
-
-
-
-        let needsMigration = false;
-
-        let migrationData = null;
-
-
-
-        adminSnap.forEach(snap => {
-
-            const val = snap.val();
-
-            if (val && val.email && val.email.toLowerCase() === normalizedEmail) {
-
-                adminData = val;
-
-                // If the key is not the UID, we need to migrate it to secure the rules
-
-                if (snap.key !== user.uid) {
-
-                    needsMigration = true;
-
-                    migrationData = {
-
-                        ...val,
-
-                        name: val.name || user.displayName || "Admin",
-
-                        updatedAt: firebase.database.ServerValue.TIMESTAMP
-
-                    };
-
-                }
-
-            }
-
-        });
-
-
-
-        if (needsMigration && user.uid) {
-
-            console.log("[Auth] Migrating admin record to secure UID key:", user.uid);
-
-            await Outlet.ref(`admins/${user.uid}`).set(migrationData);
-
-            console.log("[Auth] Migration complete. Secure permissions enabled.");
-
-        }
-
-    } catch (authErr) {
-
-        console.error("Critical Permission Error on /admins check:", authErr);
-
-    }
-
-
-
-    try {
+        // 1. Direct Lookup by UID (Preferred & Secure)
+        console.log("[Auth] Checking permissions for UID:", user.uid);
+        let adminSnap = await Outlet.ref(`admins/${user.uid}`).once("value");
+        adminData = adminSnap.val();
 
         if (!adminData) {
-
-            window.showToast("ACCESS DENIED: Not recognized as an Admin.", "error");
-
-            auth.signOut();
-
-            return;
-
+            console.log("[Auth] No direct record found. Scanning all admins for legacy matching...");
+            // 2. Fallback to scanning all admins (handles migration/legacy keys)
+            const allSnap = await Outlet.ref("admins").once("value");
+            const normalizedEmail = (user.email || "").toLowerCase();
+            
+            allSnap.forEach(snap => {
+                const val = snap.val();
+                if (val && val.email && val.email.toLowerCase() === normalizedEmail) {
+                    adminData = val;
+                    console.log("[Auth] Found admin via email match. Migrating to UID key...");
+                    Outlet.ref(`admins/${user.uid}`).set({
+                        ...val,
+                        updatedAt: firebase.database.ServerValue.TIMESTAMP
+                    });
+                }
+            });
         }
 
+        // 3. Check for custom claims if still no data (Super Admin fallback)
+        if (!adminData) {
+            console.log("[Auth] Checking custom claims...");
+            const token = await user.getIdTokenResult(true);
+            if (token.claims.admin) {
+                console.log("[Auth] Admin claim detected. Granting access.");
+                adminData = { email: user.email, isSuper: true, name: "Super Admin", outlet: "pizza" };
+            }
+        }
+    } catch (authErr) {
+        console.error("[Auth] Permission Check Failed:", authErr);
+        // If rules block reading /admins, try one more time after token refresh
+        try {
+            console.log("[Auth] Retrying after token refresh...");
+            await user.getIdToken(true);
+            const retrySnap = await Outlet.ref(`admins/${user.uid}`).once("value");
+            adminData = retrySnap.val();
+        } catch (e) {
+            console.error("[Auth] Final permission check failed:", e);
+        }
+    }
 
+    if (!adminData) {
+        window.showToast("ACCESS DENIED: Unauthorized Account", "error");
+        console.error("[Auth] Access Denied: User has no admin record and no custom claim.");
+        setTimeout(() => auth.signOut(), 1500);
+        return;
+    }
 
+    try {
         // Handle caching and switching for multi-outlet Support
 
         const switcher = document.getElementById('outletSwitcher');
@@ -1989,49 +1939,33 @@ auth.onAuthStateChanged(async user => {
             }
 
         } else {
-
             window.currentOutlet = (adminData.outlet || 'pizza').toLowerCase();
-
+            console.log("[Auth] Regular Admin Outlet:", window.currentOutlet);
             if (switcher) switcher.classList.add('hidden');
-
             if (switcherMobile) switcherMobile.classList.add('hidden');
-
         }
+        
+        console.log("[Auth] Final window.currentOutlet:", window.currentOutlet);
 
 
 
         // --- CONSOLIDATED BRANDING SYNC ---
-
         const brandType = window.currentOutlet === 'cake' ? 'cake' : 'pizza';
-
+        
         // Only reload if the brand actually changed to ensure manifest and theme-colors refresh
-
         if (sessionStorage.getItem('admin_brand') !== brandType) {
-
             console.log(`[Branding Sync] Updating brand to: ${brandType}`);
-
             sessionStorage.setItem('admin_brand', brandType);
-
-
-
-            // Clear the 'brand' URL parameter before reloading to prevent loops
-
+            
+            // If we have a 'brand' URL parameter, strip it to prevent loops
             const url = new URL(window.location.href);
-
             if (url.searchParams.has('brand')) {
-
                 url.searchParams.delete('brand');
-
                 window.location.href = url.toString();
-
             } else {
-
                 location.reload();
-
             }
-
             return;
-
         }
 
 
@@ -2106,7 +2040,14 @@ function updateBranding() {
 
     const label = isPizza ? 'PIZZA OUTLET' : 'CAKES OUTLET';
 
-    const bgColor = isPizza ? 'var(--primary-orange)' : '#EC4899';
+    const primary = isPizza ? 'var(--primary-pizza)' : 'var(--primary-cake)';
+    const primaryDark = isPizza ? 'var(--primary-dark-pizza)' : 'var(--primary-dark-cake)';
+
+    // Apply color variables immediately
+    const root = document.documentElement;
+    root.style.setProperty('--primary', primary);
+    root.style.setProperty('--primary-orange', primary);
+    root.style.setProperty('--primary-dark', primaryDark);
 
 
 
@@ -2201,7 +2142,13 @@ window.switchOutlet = (val) => {
     switchTab(activeTabId);
 
     console.log("Admin switched outlet to:", val);
+};
 
+window.openOutletInNewTab = () => {
+    const current = window.currentOutlet === 'cake' ? 'pizza' : 'cake';
+    const url = new URL(window.location.href);
+    url.searchParams.set('brand', current);
+    window.open(url.toString(), '_blank');
 };
 
 
@@ -2438,7 +2385,7 @@ const NOTIFICATION_SOUND_BIP = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAA
 
 
 
-function addNotification(title, sub, type = 'info') {
+function addNotification(title, sub, type = 'info', outlet = null) {
 
     const notif = {
 
@@ -2450,7 +2397,9 @@ function addNotification(title, sub, type = 'info') {
 
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
 
-        type
+        type,
+
+        outlet: outlet || window.currentOutlet
 
     };
 
@@ -2754,6 +2703,8 @@ function renderNotifItem(n, isFull = false) {
 
     const safeType = escapeHtml(n.type);
 
+    const safeOutlet = n.outlet ? (n.outlet === 'pizza' ? '🍕' : '🎂') : '';
+
 
 
     return `
@@ -2762,7 +2713,7 @@ function renderNotifItem(n, isFull = false) {
 
             <div class="flex-grow-1">
 
-                <div class="notif-title notif-title-premium">${safeTitle}</div>
+                <div class="notif-title notif-title-premium">${safeOutlet} ${safeTitle}</div>
 
                 <div class="notif-sub notif-sub-premium">${safeSub}</div>
 
@@ -3031,79 +2982,26 @@ window.switchTab = (tabId) => {
         // Refresh data from cache if available
 
         const orderTabs = ['dashboard', 'orders', 'live', 'payments'];
-
         if (orderTabs.includes(tabId) && lastOrdersSnap) {
-
             renderOrders(lastOrdersSnap);
+        }
 
-            window.downloadPDF = () => {
-                if (salesData.length === 0) {
-                    alert("No data available to export. Generate a report first.");
-                    return;
-                }
-
-                if (!window.jspdf) {
-                    alert("PDF export library not ready. Please refresh and try again.");
-                    return;
-                }
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-
-                if (typeof doc.autoTable !== 'function') {
-                    alert("PDF table plugin not ready. Please refresh and try again.");
-                    return;
-                }
-
-                doc.setFontSize(20);
-                doc.text("Sales Report", 14, 22);
-                doc.setFontSize(11);
-                doc.setTextColor(100);
-
-                const from = document.getElementById("reportFrom").value;
-                const to = document.getElementById("reportTo").value;
-                doc.text(`Period: ${from} to ${to}`, 14, 30);
-                doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 36);
-
-                const tableData = salesData.map(o => [
-                    formatDate(o.createdAt),
-                    o.customerName || 'Guest',
-                    `Rs. ${o.total}`,
-                    o.paymentMethod || 'COD',
-                    o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : ''
-                ]);
-
-                doc.autoTable({
-                    startY: 45,
-                    head: [['Date', 'Customer', 'Total', 'Method', 'Items']],
-                    body: tableData,
-                    theme: 'grid',
-                    headStyles: { fillColor: [6, 95, 70] },
-                    columnStyles: {
-                        4: { cellWidth: 60 }
-                    }
-                });
-                doc.save(`Sales_Report_${from}_to_${to}.pdf`);
-            };
+        const titles = {
+            'dashboard': 'Dashboard Overview',
+            'orders': 'Order Management',
+            'live': 'Live Kitchen Operations',
+            'walkin': 'POS / Walk-in Sales',
+            'menu': 'Dish Management',
             'categories': 'Categories',
-
-                'riders': 'Delivery Fleet',
-
-                    'customers': 'Customer Base',
-
-                        'inventory': 'Inventory Tracking',
-
-                            'payments': 'Finances',
-
-                                'reports': 'Performance Analytics',
-
-                                    'liveTracker': 'Rider Tracker',
-
-                                        'notifications': 'Alerts',
-
-                                            'lostSales': 'Lost Sales (Abandoned)',
-
-                                                'settings': 'System Settings'
-
+            'riders': 'Delivery Fleet',
+            'customers': 'Customer Base',
+            'inventory': 'Inventory Tracking',
+            'payments': 'Finances',
+            'reports': 'Performance Analytics',
+            'liveTracker': 'Rider Tracker',
+            'notifications': 'Alerts',
+            'lostSales': 'Lost Sales (Abandoned)',
+            'settings': 'System Settings'
         };
 
 
@@ -3124,7 +3022,7 @@ window.switchTab = (tabId) => {
 
         // Data Loaders
 
-        const canRead = window.currentOutlet || (window.adminData && window.adminData.isSuper);
+        const canRead = window.currentOutlet || (adminData && adminData.isSuper);
 
         if (!canRead) return;
 
@@ -3236,13 +3134,27 @@ window.switchTab = (tabId) => {
 
     function initRealtimeListeners() {
 
-        // Detach any previous listeners first
+        // Detach any previous listeners from all possible outlet paths
 
-        if (_ordersChildCb) Outlet.ref("orders").off("child_added", _ordersChildCb);
+        ['pizza', 'cake'].forEach(o => {
 
-        if (_ordersChangedCb) Outlet.ref("orders").off("child_changed", _ordersChangedCb);
+            const r = db.ref(`${o}/orders`);
 
-        if (_ordersValueCb) Outlet.ref("orders").off("value", _ordersValueCb);
+            if (_ordersChildCb) r.off("child_added", _ordersChildCb);
+
+            if (_ordersChangedCb) r.off("child_changed", _ordersChangedCb);
+
+        });
+
+
+
+        if (_ordersValueCb) {
+
+            db.ref("pizza/orders").off("value", _ordersValueCb);
+
+            db.ref("cake/orders").off("value", _ordersValueCb);
+
+        }
 
 
 
@@ -3268,11 +3180,11 @@ window.switchTab = (tabId) => {
 
 
 
-                if (order && (order.outlet === window.currentOutlet || !window.currentOutlet) && order.status === "Placed" && isRecent && isPostLoad) {
+                if (order && order.status === "Placed" && isRecent && isPostLoad) {
 
                     showAlert(order);
 
-                    addNotification(`New Order #${snap.key.slice(-5)}`, `Order for ₹${order.total} is placed.`, 'new');
+                    addNotification(`New Order #${snap.key.slice(-5)}`, `Order for ₹${order.total} is placed.`, 'new', order.outlet);
 
                     setTimeout(() => highlightOrder(snap.key), 1000);
 
@@ -3282,7 +3194,9 @@ window.switchTab = (tabId) => {
 
         };
 
-        Outlet.ref("orders").on("child_added", _ordersChildCb);
+        db.ref("pizza/orders").on("child_added", _ordersChildCb);
+
+        db.ref("cake/orders").on("child_added", _ordersChildCb);
 
 
 
@@ -3292,11 +3206,11 @@ window.switchTab = (tabId) => {
 
             const order = snap.val();
 
-            if (order && (order.outlet === window.currentOutlet || !window.currentOutlet)) {
+            if (order) {
 
                 if (order.status === "Delivered") {
 
-                    addNotification(`Order Delivered (#${snap.key.slice(-5)})`, `Customer: ${order.customer?.name || 'Walk-in'} • ₹${order.total}`, 'delivered');
+                    addNotification(`Order Delivered (#${snap.key.slice(-5)})`, `Customer: ${order.customer?.name || 'Walk-in'} • ₹${order.total}`, 'delivered', order.outlet);
 
                 }
 
@@ -3304,7 +3218,9 @@ window.switchTab = (tabId) => {
 
         };
 
-        Outlet.ref("orders").on("child_changed", _ordersChangedCb);
+        db.ref("pizza/orders").on("child_changed", _ordersChangedCb);
+
+        db.ref("cake/orders").on("child_changed", _ordersChangedCb);
 
 
 
@@ -3314,9 +3230,14 @@ window.switchTab = (tabId) => {
 
         // 3. Full Data Sync
 
-        _ordersValueCb = snap => { renderOrders(snap); };
+        _ordersValueCb = snap => { 
+            console.log(`[Firebase] Orders Value received. Children: ${snap.numChildren()}`);
+            renderOrders(snap); 
+        };
 
-        Outlet.ref("orders").on("value", _ordersValueCb, err => console.error("Firebase Read Error:", err));
+        const ordersRef = Outlet.ref("orders");
+        console.log("[Firebase] Attaching orders listener to path:", ordersRef.toString());
+        ordersRef.on("value", _ordersValueCb, err => console.error("Firebase Read Error:", err));
 
 
 
@@ -3438,11 +3359,13 @@ window.switchTab = (tabId) => {
 
 
 
+            const outletIcon = order.outlet === 'cake' ? '🎂' : '🍕';
+
             div.innerHTML = `
 
             <div class="alert-content">
 
-                <div class="alert-title">🔔 New Order #${escapeHtml((order.orderId || order.id).slice(-5))}</div>
+                <div class="alert-title">${outletIcon} New Order #${escapeHtml((order.orderId || order.id).slice(-5))}</div>
 
                 <div class="alert-sub">₹${escapeHtml(order.total)} • ${(order.items || []).length} item(s)</div>
 
@@ -3625,17 +3548,16 @@ window.switchTab = (tabId) => {
     // =============================
 
     function renderOrders(snap) {
-
-        if (!snap) return;
+        if (!snap) {
+            console.warn("[Render] No snap provided to renderOrders");
+            return;
+        }
+        
+        console.log(`[Render] Starting render for ${snap.numChildren()} items. Outlet: ${window.currentOutlet}, Tab: ${window.currentActiveTab || 'dashboard'}`);
 
         lastOrdersSnap = snap; // Cache for background performance
-
-
-
         let ordersCount = 0, revenue = 0, pending = 0, today = 0, liveCount = 0;
-
         const todayStr = new Date().toISOString().split('T')[0];
-
         const activeTab = window.currentActiveTab || 'dashboard';
 
 
@@ -10299,7 +10221,6 @@ window.switchTab = (tabId) => {
     window.initRealtimeListeners = initRealtimeListeners;
 }
 
-};
 
 
 
@@ -15451,6 +15372,4 @@ window.loadFeedbacks = loadFeedbacks;
 window.loadReports = loadReports;
 window.loadLostSales = loadLostSales;
 window.initRealtimeListeners = initRealtimeListeners;
-window.loadReports = loadReports;
-window.loadLostSales = loadLostSales;
-window.initRealtimeListeners = initRealtimeListeners;
+

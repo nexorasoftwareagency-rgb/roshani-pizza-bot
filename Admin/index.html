@@ -45,7 +45,7 @@
     <!-- LOGIN -->
     <div id="authOverlay" title="Admin Login Screen">
         <form id="loginForm" class="login-box" title="Sign into the Admin Dashboard" onsubmit="return false;">
-            <h2>ROSHANI PIZZA LOGIN</h2>
+            <h2 id="loginTitle">ROSHANI ADMIN LOGIN</h2>
             <input id="adminEmail" name="email" type="email" autocomplete="username" placeholder="Email Address" title="Your administrative email address">
             <input id="adminPassword" name="password" type="password" autocomplete="current-password" placeholder="Password" title="Your administrative password">
             <button id="loginBtn" type="submit" class="btn-primary w-full flex-center" title="Sign into the Admin Dashboard">Sign In</button>
@@ -179,7 +179,7 @@
                         <div class="recent-section mt-24">
                             <h3 class="section-title">Recent Order History</h3>
                             <div class="table-responsive">
-                                <table class="table">
+                                <table class="table mobile-card-table">
                                     <thead>
                                         <tr>
                                             <th>ID</th>
@@ -235,7 +235,7 @@
                         <input type="text" id="orderSearch" placeholder="Search Order ID or Name..." class="search-input-group">
                     </div>
                     <div class="scroll-x">
-                        <table>
+                        <table class="mobile-card-table">
                             <thead>
                                 <tr>
                                     <th>Order ID</th>
@@ -258,7 +258,7 @@
                     <h3 class="desktop-only">🔥 Live Operations</h3>
                     <p class="panel-subtitle">Tracking active kitchen and delivery work</p>
                     <div class="scroll-x">
-                        <table>
+                        <table class="mobile-card-table">
                             <thead>
                                 <tr>
                                     <th>Order ID</th>
@@ -389,7 +389,7 @@
                         </div>
                     </div>
                     <div class="scroll-x">
-                        <table class="premium-table">
+                        <table class="premium-table mobile-card-table">
                             <thead>
                                 <tr>
                                     <th>Rider Identity</th>
@@ -458,7 +458,7 @@
                     
                     <div class="glass-card mb-20 p-0 overflow-hidden">
                         <div class="table-responsive">
-                            <table class="premium-table">
+                            <table class="premium-table mobile-card-table">
                                 <thead>
                                     <tr>
                                         <th class="p-l-25">Date & Time</th>
