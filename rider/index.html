@@ -2,81 +2,37 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roshani Pizza | Rider Portal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#FF6B00">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseio.com https://*.firebase.com https://*.googleapis.com; script-src 'self' 'unsafe-inline' https://unpkg.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.firebaseio.com https://*.firebase.com https://*.googleapis.com; frame-ancestors 'none';">
+    <title>Rider Portal | Roshani Pizza</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-512.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <script>
-        // Inject theme-color to avoid static validation warnings in some IDEs
-        (function() {
-            const meta = document.createElement('meta');
-            meta.name = 'theme-color';
-            meta.content = '#FF6B00';
-            document.head.appendChild(meta);
-        })();
-    </script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- Haptic Interaction Helper -->
-    <script>
-        window.haptic = (pattern = 10) => {
-            if (navigator.vibrate) navigator.vibrate(pattern);
-        };
-    </script>
-
     <!-- Leaflet Mapping -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <!-- Firebase SDK (Compat) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <!-- Haptic Interaction Helper -->
-    <script>
-        window.haptic = (pattern = 10) => {
-            if (navigator.vibrate) navigator.vibrate(pattern);
-        };
-    </script>
-    <!-- Haptic Interaction Helper -->
-    <script>
-        window.haptic = (pattern = 10) => {
-            if (navigator.vibrate) navigator.vibrate(pattern);
-        };
-    </script>
 </head>
 <body>
-    <!-- Premium Background Layers -->
-
-    <!-- Auth Guard -->
-    <script>
-        // Check local storage or temporary session for direct speed
-        if (!localStorage.getItem('rider_authenticated')) {
-            // Quick local check before Firebase loads
-            window.location.href = 'login.html';
-        }
-    </script>
-
-
-
-    <!-- Dashboard View (Protected) -->
     <div id="dashboard" class="hidden">
         <!-- Dashboard Overlay -->
-        <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleRiderSidebar()"></div>
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
         <!-- Mobile Header -->
         <header class="mobile-header">
-            <div class="mobile-header-left" onclick="toggleRiderSidebar()" title="Open Navigation Drawer">
+            <div id="mobileMenuBtn" class="mobile-header-left" title="Open Navigation Drawer">
                 <i data-lucide="menu"></i>
             </div>
             <div class="mobile-header-center">
                 <h2 id="mobileTabTitle">DASHBOARD</h2>
             </div>
-            <div class="mobile-header-right" onclick="toggleNotificationSheet()" title="View Recent Notifications">
+            <div id="mobileNotifBtn" class="mobile-header-right" title="View Recent Notifications">
                 <div class="notif-bell-container">
                     <i data-lucide="bell"></i>
                     <div id="notifBadge" class="notif-badge hidden"></div>
@@ -90,57 +46,69 @@
                 <h3 class="sidebar-title">ROSHANI RIDER</h3>
             </div>
             <ul class="nav-links">
-                <li class="active" onclick="showSection('home')" onkeydown="if(event.key==='Enter'||event.key===' ') showSection('home')" tabindex="0" role="button" aria-label="Home" data-section="home">
-                    <i data-lucide="layout-dashboard"></i> <span>Home</span>
+                <li class="nav-item">
+                    <button id="nav-home" class="nav-btn active" aria-label="Go to Dashboard Home" data-section="home">
+                        <i data-lucide="layout-dashboard"></i> <span>Home</span>
+                    </button>
                 </li>
-                <li onclick="showSection('available')" onkeydown="if(event.key==='Enter'||event.key===' ') showSection('available')" tabindex="0" role="button" aria-label="Pickup Orders" data-section="available">
-                    <i data-lucide="shopping-bag"></i> <span>Pickup Orders</span>
+                <li class="nav-item">
+                    <button id="nav-available" class="nav-btn" aria-label="View Available Pickup Orders" data-section="available">
+                        <i data-lucide="shopping-bag"></i> <span>Pickup Orders</span>
+                    </button>
                 </li>
-                <li onclick="showSection('active')" onkeydown="if(event.key==='Enter'||event.key===' ') showSection('active')" tabindex="0" role="button" aria-label="Live Delivery" data-section="active">
-                    <i data-lucide="map-pin"></i> <span>Live Delivery</span>
+                <li class="nav-item">
+                    <button id="nav-active" class="nav-btn" aria-label="View Live Delivery Tracking" data-section="active">
+                        <i data-lucide="map-pin"></i> <span>Live Delivery</span>
+                    </button>
                 </li>
-                <li onclick="showSection('completed')" onkeydown="if(event.key==='Enter'||event.key===' ') showSection('completed')" tabindex="0" role="button" aria-label="My History" data-section="completed">
-                    <i data-lucide="history"></i> <span>My History</span>
+                <li class="nav-item">
+                    <button id="nav-completed" class="nav-btn" aria-label="View Trip History" data-section="completed">
+                        <i data-lucide="history"></i> <span>My History</span>
+                    </button>
                 </li>
-                <li onclick="showSection('earnings')" onkeydown="if(event.key==='Enter'||event.key===' ') showSection('earnings')" tabindex="0" role="button" aria-label="My Wallet" data-section="earnings">
-                    <i data-lucide="wallet"></i> <span>My Wallet</span>
+                <li class="nav-item">
+                    <button id="nav-earnings" class="nav-btn" aria-label="View Wallet and Earnings" data-section="earnings">
+                        <i data-lucide="wallet"></i> <span>My Wallet</span>
+                    </button>
                 </li>
-                <li onclick="showSection('profile')" onkeydown="if(event.key==='Enter'||event.key===' ') showSection('profile')" tabindex="0" role="button" aria-label="Settings" data-section="profile">
-                    <i data-lucide="settings-2"></i> <span>Settings</span>
+                <li class="nav-item">
+                    <button id="nav-profile" class="nav-btn" aria-label="View Profile and Settings" data-section="profile">
+                        <i data-lucide="settings-2"></i> <span>Settings</span>
+                    </button>
                 </li>
-                <li id="menu-downloadapp" onclick="window.installPWA()" class="pwa-download-item hidden" title="Download Rider App">
+                <li id="menu-downloadapp" class="pwa-download-item hidden" title="Download Rider App">
                     <i data-lucide="download-cloud"></i> <span>Download App</span>
                 </li>
-                <li onclick="logout()" class="logout-link">
+                <li id="logoutBtn" class="logout-link">
                     <i data-lucide="power"></i> <span>Exit System</span>
                 </li>
             </ul>
         </nav>
 
         <!-- Bottom Navigation (Mobile) -->
-        <div class="bottom-nav">
-            <div class="nav-item active" onclick="showSection('home')" data-section="home" title="Go to Dashboard Home">
+        <div class="bottom-nav" role="tablist">
+            <button id="bnav-home" class="nav-item active" data-section="home" title="Go to Dashboard Home" role="tab" aria-selected="true" aria-controls="sec-home">
                 <i data-lucide="layout-dashboard"></i> <span>HOME</span>
-            </div>
-            <div class="nav-item" onclick="showSection('available')" data-section="available" title="View Available Pickup Orders">
+            </button>
+            <button id="bnav-available" class="nav-item" data-section="available" title="View Available Pickup Orders" role="tab" aria-selected="false" aria-controls="sec-available">
                 <i data-lucide="shopping-bag"></i> <span>PICKUP</span>
-            </div>
-            <div class="nav-item" onclick="showSection('active')" data-section="active" title="View Active Delivery Tracking">
+            </button>
+            <button id="bnav-active" class="nav-item" data-section="active" title="View Active Delivery Tracking" role="tab" aria-selected="false" aria-controls="sec-active">
                 <i data-lucide="map-pin"></i> <span>LIVE</span>
-            </div>
-            <div class="nav-item" onclick="showSection('profile')" data-section="profile" title="View Your Profile & Settings">
+            </button>
+            <button id="bnav-profile" class="nav-item" data-section="profile" title="View Your Profile & Settings" role="tab" aria-selected="false" aria-controls="sec-profile">
                 <i data-lucide="user"></i> <span>PROFILE</span>
-            </div>
+            </button>
         </div>
 
         <div class="main-content">
             <header class="top-nav">
-                <div class="desktop-hamburger" onclick="toggleRiderSidebar()" title="Toggle Sidebar Navigation">
+                <div id="desktopMenuBtn" class="desktop-hamburger" title="Toggle Sidebar Navigation">
                     <i data-lucide="menu"></i>
                 </div>
                 <div>
                     <span class="section-title-lbl" id="sectionTitle">DASHBOARD</span>
-                    <select id="outletSwitcher" class="outlet-switcher-select hidden" onchange="switchOutlet(this.value)" title="Switch Outlet Location">
+                    <select id="outletSwitcher" class="outlet-switcher-select hidden" title="Switch Outlet Location">
                         <!-- Populated via JS -->
                     </select>
                 </div>
@@ -197,6 +165,10 @@
             <!-- SECTION: COMPLETED ORDERS -->
             <section id="sec-completed" class="view-section">
                 <h2 class="section-heading">Trip History</h2>
+                <div class="search-box mb-15">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="historySearch" placeholder="Search by Order ID or Area..." class="glass-input">
+                </div>
                 <div id="completedOrdersList" class="order-list"></div>
             </section>
 
@@ -221,13 +193,22 @@
                         <span class="lbl txt-xtra-small mt-10">Today: <span id="e-cake-today">₹0</span></span>
                     </div>
                 </div>
+
+                <div class="info-banner mt-20">
+                    <i data-lucide="info" class="text-orange"></i>
+                    <p class="text-small text-muted italic">Rider earnings are calculated based on 100% of the Delivery Fee charged to the customer for each successful trip.</p>
+                </div>
             </section>
 
             <!-- SECTION: PROFILE -->
             <section id="sec-profile" class="view-section">
                 <div class="glass-panel profile-card-glass">
                     <div class="profile-photo-container">
-                        <img id="r-profile-img" src="https://via.placeholder.com/150" alt="Profile" class="rider-profile-photo">
+                        <img id="r-profile-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='10' fill='%23999'%3ENo Image%3C/text%3E%3C/svg%3E" alt="Profile" class="rider-profile-photo">
+                        <button class="edit-photo-btn" id="btn-edit-photo" title="Update Profile Picture">
+                            <i data-lucide="camera"></i>
+                        </button>
+                        <input type="file" id="profile-photo-input" accept="image/*" style="display:none;">
                     </div>
                     <h3 id="profileName" class="profile-name">Loading...</h3>
                     <p id="profilePhone" class="profile-phone">---</p>
@@ -266,7 +247,17 @@
                             <span class="detail-value" id="r-qualification">---</span>
                         </div>
                         <div class="detail-item full-width">
-                            <span class="detail-label">Address</span>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span class="detail-label">Contact Phone</span>
+                                <button class="btn-ghost btn-xs" id="btn-edit-phone">EDIT</button>
+                            </div>
+                            <span class="detail-value" id="profilePhoneValue">---</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span class="detail-label">Address</span>
+                                <button class="btn-ghost btn-xs" id="btn-edit-address">EDIT</button>
+                            </div>
                             <span class="detail-value" id="r-address">---</span>
                         </div>
                         <div class="detail-item full-width">
@@ -290,19 +281,19 @@
                     <div class="aadhar-image-section mt-20">
                         <div style="display:flex; justify-content:space-between; align-items:center;" class="mb-8">
                             <span class="detail-label">Professional ID (Aadhar Card)</span>
-                            <button class="btn-ghost btn-xs" onclick="toggleAadharView()" id="btn-toggle-aadhar">SHOW</button>
+                            <button class="btn-ghost btn-xs" id="btn-toggle-aadhar">SHOW</button>
                         </div>
                         <div class="aadhar-img-container" id="aadhar-container" style="display:none;">
-                            <img id="r-aadhar-img-tag" src="" alt="Aadhar Card" class="aadhar-card-display">
+                            <img id="r-aadhar-img" src="" alt="Aadhar Card" class="aadhar-card-display">
                         </div>
                         <p class="text-xtra-small text-muted italic mt-8">Note: Handling of this ID must comply with Aadhar Act policies.</p>
                     </div>
 
                     <div class="profile-actions">
-                        <button id="statusToggleBtn" onclick="toggleRiderStatus()" class="btn-primary" title="Toggle Duty Status">
+                        <button id="statusToggleBtn" class="btn-primary" title="Toggle Duty Status">
                             SET STATUS: ONLINE
                         </button>
-                        <button onclick="logout()" class="btn-outline-danger" title="Logout from Rider Portal">
+                        <button id="logoutBtnProfile" class="btn-outline-danger" title="Logout from Rider Portal">
                             LOGOUT
                         </button>
                     </div>
@@ -316,16 +307,28 @@
         <div class="modal-card">
             <h3 class="modal-title">TRIP COMPLETE</h3>
             <p class="modal-sub">Enter 6-digit verification code from customer</p>
-            <input type="text" id="otpInput" placeholder="000000" maxlength="6" inputmode="numeric" pattern="\d{6}" title="Enter 6-digit verification code from customer">
+            <input type="tel" id="otpInput" placeholder="000000" maxlength="6" inputmode="numeric" pattern="\d{6}" title="Enter 6-digit verification code from customer" autocomplete="one-time-code">
             
-            <button id="btnResendOTP" onclick="window.regenerateOTP()" class="btn-resend-otp">📩 RESEND OTP TO CUSTOMER</button>
+            <button id="btnResendOTP" class="btn-resend-otp">📩 RESEND OTP TO CUSTOMER</button>
 
             <div class="modal-actions">
-                <button class="btn-primary no-shadow" onclick="verifyOTP()">CONFIRM</button>
-                <button onclick="closeOTPPanel()" class="btn-ghost">LATER</button>
+                <button id="btnConfirmOTP" class="btn-primary no-shadow">CONFIRM</button>
+                <button id="btnCloseOTP" class="btn-ghost">LATER</button>
             </div>
             <p class="mt-14 text-xtra-small text-muted italic">If customer is unreachable, contact Admin for Backup Code.</p>
-            <button id="emergencyBtn" class="btn-ghost btn-emergency hidden" onclick="emergencyOverride()">EMERGENCY OVERRIDE</button>
+            <button id="emergencyBtn" class="btn-ghost btn-emergency hidden">EMERGENCY OVERRIDE</button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-card">
+            <h3 class="modal-title" id="confirmTitle">CONFIRM ACTION</h3>
+            <p class="modal-sub" id="confirmMsg">Are you sure you want to proceed?</p>
+            <div class="modal-actions">
+                <button id="btnConfirmYes" class="btn-primary no-shadow">YES</button>
+                <button id="btnConfirmNo" class="btn-ghost">CANCEL</button>
+            </div>
         </div>
     </div>
 
@@ -333,8 +336,8 @@
     <div id="notificationSheet" class="notif-sheet">
         <div class="notif-sheet-header">
             <h3>Notifications</h3>
-            <button class="btn-clear-all" onclick="clearAllNotifications()" title="Clear All Notifications">Clear All</button>
-            <button class="btn-close-sheet" onclick="toggleNotificationSheet()" title="Close Notification Sheet">
+            <button id="btnClearAllNotifs" class="btn-clear-all" title="Clear All Notifications">Clear All</button>
+            <button id="btnCloseNotifSheet" class="btn-close-sheet" title="Close Notification Sheet">
                 <i data-lucide="x"></i>
             </button>
         </div>
@@ -346,26 +349,6 @@
         </div>
     </div>
 
-    <script src="firebase.js"></script>
-    <script src="app.js"></script>
-    <script>
-        lucide.createIcons();
-        function toggleAadharView() {
-            const container = document.getElementById('aadhar-container');
-            const img = document.getElementById('r-aadhar-img-tag');
-            const btn = document.getElementById('btn-toggle-aadhar');
-            const isHidden = container.style.display === 'none';
-            
-            if (isHidden) {
-                container.style.display = 'block';
-                img.src = currentUser.profile.aadharPhoto || 'https://via.placeholder.com/300x180?text=No+Image';
-                btn.innerText = 'HIDE';
-            } else {
-                container.style.display = 'none';
-                img.src = '';
-                btn.innerText = 'SHOW';
-            }
-        }
-    </script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>

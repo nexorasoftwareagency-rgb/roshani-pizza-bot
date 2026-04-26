@@ -79,7 +79,7 @@ window.ReceiptTemplates = {
                     .reprint-tag { background: #000; color: #fff; padding: 2px 8px; font-size: 0.7rem; display: inline-block; margin-bottom: 5px; }
                 </style>
             </head>
-            <body onload="setTimeout(() => { window.print(); window.close(); }, 800);">
+            <body>
                 <div class="center">
                     ${isReprint ? `<div class="reprint-tag bold">REPRINTED BILL</div>` : ''}
                     ${store.entityName ? `<div class="store-entity bold">${store.entityName}</div>` : ''}

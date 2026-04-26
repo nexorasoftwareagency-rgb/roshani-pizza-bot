@@ -1,10 +1,234 @@
-// ==========================================
-// PIZZA ERP | ADMINISTRATION PANEL v3.0
-// ==========================================
-window.haptic = window.haptic || ((val) => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate(val);
-    }
+/**
+ * PIZZA ERP | ADMIN CORE APPLICATION
+ * Strict CSP & Secure DOM Implementation
+ */
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Static Event Binding
+    const setupStaticListeners = () => {
+        // Global Image Error Handler (CSP Compliant)
+        document.addEventListener('error', (e) => {
+            if (e.target.tagName === 'IMG') {
+                e.target.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\' viewBox=\'0 0 150 150\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23eee\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'12\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E';
+            }
+        }, true);
+
+        // Login Form
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        if (loginForm) loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (loginBtn) loginBtn.click();
+        });
+        if (loginBtn) loginBtn.addEventListener('click', () => {
+            if (window.adminLogin) window.adminLogin();
+        });
+
+        // Helper: Bind click to other element
+        const bindClickTo = (btnId, targetId) => {
+            const btn = document.getElementById(btnId);
+            if (btn) btn.addEventListener('click', () => {
+                const target = document.getElementById(targetId);
+                if (target) target.click();
+            });
+        };
+
+        // Helper: Bind function to click
+        const bindFn = (id, fnName) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('click', () => {
+                if (typeof window[fnName] === 'function') window[fnName]();
+            });
+        };
+
+        // Modal Controls
+        document.querySelectorAll('.close-btn, .cancel-dish-btn, .cancel-cat-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const modal = e.target.closest('.modal');
+                if (modal) modal.style.display = 'none';
+            });
+        });
+
+        // Menu & Categories
+        bindFn('btnShowDishModal', 'showDishModal');
+        bindFn('btnMigrateDishAddons', 'migrateAddonsToCategories');
+        bindFn('btnAddCatAddonField', 'addNewCategoryAddonField');
+        bindFn('btnAddCategory', 'addCategory');
+        bindClickTo('btnChangeCatPhoto', 'catFile');
+        const catFile = document.getElementById('catFile');
+        if (catFile) catFile.addEventListener('change', (e) => {
+            if (window.previewImage) window.previewImage(e.target, 'catPreview');
+        });
+
+        // Riders
+        bindFn('btnShowRiderModal', 'showRiderModal');
+        bindClickTo('btnUpdateRiderPhoto', 'riderFile');
+        const riderFile = document.getElementById('riderFile');
+        if (riderFile) riderFile.addEventListener('change', (e) => {
+            if (window.previewImage) window.previewImage(e.target, 'riderPreview');
+        });
+
+        // Notifications & Logs
+        bindFn('btnClearAllNotif', 'clearAllNotifications');
+        bindFn('btnClearNotificationsBottom', 'clearNotifications');
+        bindFn('btnClearLostSales', 'clearLostSales');
+        bindFn('btnEnableNotif', 'requestNotificationPermission');
+
+        // Settings
+        bindFn('btnSaveSettings', 'saveStoreSettings');
+        bindFn('btnQuickToggleOutlet', 'quickUpdateOutletStatus');
+
+        // POS (Walk-in)
+        bindFn('btnShowPOSSelection', 'showPOSSelectionModal');
+        bindFn('btnPosClear', 'clearPos');
+        bindFn('btnPosCheckout', 'posCheckout');
+        bindFn('btnPosPrintLast', 'reprintLastPosReceipt');
+        const btnPosQtyDec = document.getElementById('btnPosQtyDec');
+        if (btnPosQtyDec) btnPosQtyDec.addEventListener('click', () => {
+            if (window.adjustPosQty) window.adjustPosQty(-1);
+        });
+        const btnPosQtyInc = document.getElementById('btnPosQtyInc');
+        if (btnPosQtyInc) btnPosQtyInc.addEventListener('click', () => {
+            if (window.adjustPosQty) window.adjustPosQty(1);
+        });
+        bindClickTo('btnPosUpdateDishPhoto', 'posDishFile');
+        const posDishFile = document.getElementById('posDishFile');
+        if (posDishFile) posDishFile.addEventListener('change', (e) => {
+            if (window.previewImage) window.previewImage(e.target, 'posDishPreview');
+        });
+
+        // Dish Modal
+        bindClickTo('btnUpdateDishPhoto', 'dishFile');
+        const dishFile = document.getElementById('dishFile');
+        if (dishFile) dishFile.addEventListener('change', (e) => {
+            if (window.previewImage) window.previewImage(e.target, 'dishPreview');
+        });
+
+        const saveDishBtn = document.getElementById('saveDishBtn');
+        if (saveDishBtn) saveDishBtn.addEventListener('click', () => {
+            if (window.saveDish) window.saveDish();
+        });
+
+        // Toggle Password Visibility
+        const setupPassToggle = (btnId, inputId) => {
+            const btn = document.getElementById(btnId);
+            const input = document.getElementById(inputId);
+            if (btn && input) {
+                btn.addEventListener('click', () => {
+                    const isPass = input.type === 'password';
+                    input.type = isPass ? 'text' : 'password';
+                    btn.textContent = isPass ? '🔒' : '👁️';
+                });
+            }
+        };
+        setupPassToggle('btnToggleWifiPass', 'settingWifiPass');
+        setupPassToggle('btnToggleRiderPass', 'riderPass');
+
+        // Reports
+        const btnGenerateReport = document.getElementById('btnGenerateReport');
+        if (btnGenerateReport) btnGenerateReport.addEventListener('click', () => {
+            if (window.generateReport) window.generateReport();
+        });
+
+        // --- 2. Dynamic Event Delegation (CSP Compliant) ---
+        // Using a single listener for all dynamically rendered elements
+        document.addEventListener('click', (e) => {
+            const el = e.target.closest('[data-action], [data-tab]');
+            if (!el) return;
+
+            const action = el.getAttribute('data-action');
+            const tab = el.getAttribute('data-tab');
+
+            // Handle Tab Switching
+            if (tab) {
+                if (window.switchTab) window.switchTab(tab);
+                return;
+            }
+
+            if (!action) return;
+            const id = el.getAttribute('data-id');
+            const val = el.getAttribute('data-val');
+            const name = el.getAttribute('data-name');
+            const price = el.getAttribute('data-price');
+
+            // Handle actions
+            switch (action) {
+                case 'updateStatusFromDrawer': if (window.updateStatusFromDrawer) window.updateStatusFromDrawer(id, val); break;
+                case 'closeOrderDrawer': if (window.closeOrderDrawer) window.closeOrderDrawer(); break;
+                case 'chatOnWhatsapp': if (window.chatOnWhatsapp) window.chatOnWhatsapp(id); break;
+                case 'printReceiptById': if (window.printReceiptById) window.printReceiptById(id); break;
+                case 'updateStatus': if (window.updateStatus) window.updateStatus(id, val); break;
+                case 'assignRider': if (window.assignRider) window.assignRider(id, val); break;
+                case 'openOrderDrawer': if (window.openOrderDrawer) window.openOrderDrawer(id); break;
+                case 'markAsPaid': if (window.markAsPaid) window.markAsPaid(id); break;
+                case 'deleteCategory': if (window.deleteCategory) window.deleteCategory(id); break;
+                case 'removeParent': el.parentElement.remove(); break;
+                case 'removeGrandparent': el.parentElement.parentElement.remove(); break;
+                case 'editRider': if (window.editRider) window.editRider(id); break;
+                case 'resetRiderPassword': if (window.resetRiderPassword) window.resetRiderPassword(el.getAttribute('data-email')); break;
+                case 'deleteRider': if (window.deleteRider) window.deleteRider(id); break;
+                case 'saveSettings': if (window.saveSettings) window.saveSettings(); break;
+                case 'saveDeliveredOrder': if (window.saveDeliveredOrder) window.saveDeliveredOrder(id, val); break;
+                case 'adjustCardQty': if (window.adjustCardQty) window.adjustCardQty(id, parseInt(val)); break;
+                case 'addToWalkinCartFromCard': if (window.addToWalkinCartFromCard) window.addToWalkinCartFromCard(id); break;
+                case 'showAddonView': if (window.showAddonView) window.showAddonView(id); break;
+                case 'hideAddonView': if (window.hideAddonView) window.hideAddonView(); break;
+                case 'openCartAddonPicker': if (window.openCartAddonPicker) window.openCartAddonPicker(id); break;
+                case 'walkinQtyChange': if (window.walkinQtyChange) window.walkinQtyChange(id, parseInt(val)); break;
+                case 'walkinRemoveItem': if (window.walkinRemoveItem) window.walkinRemoveItem(id); break;
+                case 'filterWalkinByCategory': if (window.filterWalkinByCategory) window.filterWalkinByCategory(val, el); break;
+                case 'removeElement': {
+                    const targetId = el.getAttribute('data-target-id');
+                    const targetEl = document.getElementById(targetId);
+                    if (targetEl) targetEl.remove();
+                    break;
+                }
+                case 'selectPOSSize': if (window.selectPOSSize) window.selectPOSSize(name, parseFloat(price), el); break;
+                case 'triggerClick': const target = document.getElementById(val); if (target) target.click(); break;
+                case 'markDelivered': if (window.markDelivered) window.markDelivered(id); break;
+                case 'editDish': if (window.editDish) window.editDish(id); break;
+                case 'deleteDish': if (window.deleteDish) window.deleteDish(id); break;
+                case 'editCategory': if (window.editCategory) window.editCategory(id); break;
+                case 'closeModal': const modal = el.closest('.modal'); if (modal) modal.style.display = 'none'; break;
+                case 'toggleNotificationSheet': if (window.toggleNotificationSheet) window.toggleNotificationSheet(); break;
+                case 'toggleSidebar': if (window.toggleSidebar) window.toggleSidebar(); break;
+                case 'openOutletInNewTab': if (window.openOutletInNewTab) window.openOutletInNewTab(); break;
+                case 'userLogout': if (window.userLogout) window.userLogout(); break;
+                case 'installPWA': if (window.installPWA) window.installPWA(); break;
+                case 'removeRow': el.closest('tr').remove(); break;
+                case 'addFeeSlab': if (window.addFeeSlab) window.addFeeSlab(); break;
+                case 'migrateAddons': if (window.migrateAddonsToCategories) window.migrateAddonsToCategories(); break;
+                case 'runImageMigration': if (window.runImageMigration) window.runImageMigration(); break;
+            }
+        });
+
+        document.addEventListener('change', (e) => {
+            const el = e.target;
+            const action = el.getAttribute('data-action');
+            if (!action) return;
+
+            const id = el.getAttribute('data-id');
+            const val = el.value;
+
+            switch (action) {
+                case 'updateStatus': if (window.updateStatus) window.updateStatus(id, val); break;
+                case 'assignRider': if (window.assignRider) window.assignRider(id, val); break;
+                case 'toggleDish': if (window.toggleDishAvailable) window.toggleDishAvailable(id, el.checked); break;
+                case 'togglePOSAddon': 
+                    if (window.togglePOSAddon) window.togglePOSAddon(el.getAttribute('data-name'), parseFloat(el.getAttribute('data-price')), el); 
+                    break;
+                case 'previewImage':
+                    if (window.previewImage) window.previewImage(el, el.getAttribute('data-preview-id'));
+                    break;
+                case 'switchOutlet': if (window.switchOutlet) window.switchOutlet(val); break;
+            }
+        });
+    };
+
+    setupStaticListeners();
+    
+    // Initial Icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 });
 let deferredPrompt;
 
@@ -152,14 +376,6 @@ const Outlet = {
         // Shared paths that stay at root level (admins, shared riders)
         const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'bot', 'logs'];
         const rootPath = path.split('/')[0];
-
-        // Special case: dishes was dishes/${outlet}, now ${outlet}/dishes
-        if (rootPath === 'dishes') {
-            const parts = path.split('/');
-            const outletInPath = parts[1] ? parts[1].toLowerCase() : this.current;
-            const subPath = parts.slice(2).join('/');
-            return db.ref(`${outletInPath}/dishes${subPath ? '/' + subPath : ''}`);
-        }
 
         if (shared.includes(rootPath)) return db.ref(path);
 
@@ -410,7 +626,7 @@ window.openOrderDrawer = (id) => {
                 <div class="font-bold text-main">${escapeHtml(item.name)}</div>
                 <div class="text-muted-small">${escapeHtml(item.size)} x ${item.qty || 1}</div>
             </div>
-            <div class="font-black text-primary">₹${item.price * (item.qty || 1)}</div>
+            <div class="font-black text-primary">&#8377;${item.price * (item.qty || 1)}</div>
         </div>
     `).join('');
 
@@ -424,7 +640,7 @@ window.openOrderDrawer = (id) => {
             ${itemsHtml}
             <div style="display:flex; justify-content:space-between; margin-top:10px; padding-top:12px; border-top:2px solid white;">
                 <span style="font-weight:800; font-size:14px;">TOTAL AMOUNT</span>
-                <span style="font-weight:900; font-size:20px; color:var(--primary);">₹${safeTotal}</span>
+                <span style="font-weight:900; font-size:20px; color:var(--primary);">&#8377;${safeTotal}</span>
             </div>
         </div>
 
@@ -438,12 +654,12 @@ window.openOrderDrawer = (id) => {
         <div style="display:flex; flex-direction:column; gap:12px;">
             <div style="font-size:11px; font-weight:800; color:var(--text-muted); text-align:center;">QUICK ACTIONS</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <button class="btn-primary" style="background:#10b981; border:none;" onclick="updateStatusFromDrawer('${id}', 'Confirmed')">CONFIRM</button>
-                <button class="btn-primary" style="background:#3b82f6; border:none;" onclick="updateStatusFromDrawer('${id}', 'Preparing')">PREPARE</button>
-                <button class="btn-primary" style="background:#f59e0b; border:none;" onclick="updateStatusFromDrawer('${id}', 'Cooked')">READY</button>
-                <button class="btn-primary" style="background:#ef4444; border:none;" onclick="updateStatusFromDrawer('${id}', 'Out for Delivery')">DISPATCH</button>
+                <button class="btn-primary" style="background:#10b981; border:none;" data-action="updateStatusFromDrawer" data-id="${id}" data-val="Confirmed">CONFIRM</button>
+                <button class="btn-primary" style="background:#3b82f6; border:none;" data-action="updateStatusFromDrawer" data-id="${id}" data-val="Preparing">PREPARE</button>
+                <button class="btn-primary" style="background:#f59e0b; border:none;" data-action="updateStatusFromDrawer" data-id="${id}" data-val="Cooked">READY</button>
+                <button class="btn-primary" style="background:#ef4444; border:none;" data-action="updateStatusFromDrawer" data-id="${id}" data-val="Out for Delivery">DISPATCH</button>
             </div>
-            <button class="btn-primary btn-full" style="margin-top:10px; background:#161616;" onclick="closeOrderDrawer()">CLOSE DETAILS</button>
+            <button class="btn-primary btn-full" style="margin-top:10px; background:#161616;" data-action="closeOrderDrawer">CLOSE DETAILS</button>
         </div>
     `;
 
@@ -575,12 +791,30 @@ auth.onAuthStateChanged(async user => {
         adminData = null;
         const normalizedEmail = (user.email || "").toLowerCase();
 
+        let needsMigration = false;
+        let migrationData = null;
+
         adminSnap.forEach(snap => {
             const val = snap.val();
             if (val && val.email && val.email.toLowerCase() === normalizedEmail) {
                 adminData = val;
+                // If the key is not the UID, we need to migrate it to secure the rules
+                if (snap.key !== user.uid) {
+                    needsMigration = true;
+                    migrationData = {
+                        ...val,
+                        name: val.name || user.displayName || "Admin",
+                        updatedAt: firebase.database.ServerValue.TIMESTAMP
+                    };
+                }
             }
         });
+
+        if (needsMigration && user.uid) {
+            console.log("[Auth] Migrating admin record to secure UID key:", user.uid);
+            await Outlet.ref(`admins/${user.uid}`).set(migrationData);
+            console.log("[Auth] Migration complete. Secure permissions enabled.");
+        }
     } catch (authErr) {
         console.error("Critical Permission Error on /admins check:", authErr);
     }
@@ -1111,10 +1345,10 @@ window.switchTab = (tabId) => {
     const mainItem = document.getElementById(`menu-${tabId}`);
     if (mainItem) mainItem.classList.add('active');
 
-    // Update Mobile Bottom Nav (if exists)
+    // Update Mobile Bottom Nav
     document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
         item.classList.remove('active');
-        if (item.getAttribute('onclick')?.includes(`'${tabId}'`)) {
+        if (item.getAttribute('data-tab') === tabId) {
             item.classList.add('active');
         }
     });
@@ -1324,7 +1558,7 @@ function showAlert(data, type = 'info') {
         div.innerHTML = `
             <div class="alert-content">
                 <div class="alert-title">🔔 New Order #${escapeHtml((order.orderId || order.id).slice(-5))}</div>
-                <div class="alert-sub">₹${escapeHtml(order.total)} • ${(order.items || []).length} item(s)</div>
+                <div class="alert-sub">&#8377;${escapeHtml(order.total)} • ${(order.items || []).length} item(s)</div>
             </div>
             <button class="alert-print-btn" data-order-id="${escapeHtml(orderKey)}">🖨️ Print</button>
         `;
@@ -1468,17 +1702,17 @@ function renderOrders(snap) {
             <td data-label="Customer">
                 ${safeCustomerName}<br>
                 <small style="color:var(--text-muted)">${displayPhone}</small>
-                ${o.phone ? `<button onclick="event.stopPropagation(); window.chatOnWhatsapp('${id}')" class="btn-chat" title="Message on WhatsApp">💬</button>` : ''}
+                ${o.phone ? `<button data-action="chatOnWhatsapp" data-id="${id}" class="btn-chat" title="Message on WhatsApp">💬</button>` : ''}
             </td>
             <td data-label="Address">
                 <span title="${safeAddress}">${escapeHtml(truncatedAddress)}</span>
     ${safeLocationLink ? `<br><a href="${safeLocationLink}" target="_blank" style="color:var(--primary); font-size:11px; text-decoration:none;">📍 Map</a>` : ""}
             </td>
-            <td data-label="Total" style="font-weight:700">₹${safeTotal}</td>
+            <td data-label="Total" style="font-weight:700">&#8377;${safeTotal}</td>
             <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
             <td data-label="Actions">
                 <div class="flex-row flex-gap-5">
-                    <select onchange="event.stopPropagation(); updateStatus('${id}', this.value)" onclick="event.stopPropagation()" class="status-select">
+                    <select data-action="updateStatus" data-id="${id}" class="status-select">
                         <option value="">Status</option>
                         <option value="Confirmed" ${safeStatus === "Confirmed" ? "selected" : ""}>Confirm</option>
                         <option value="Preparing" ${safeStatus === "Preparing" ? "selected" : ""}>Preparing</option>
@@ -1487,10 +1721,10 @@ function renderOrders(snap) {
                         <option value="Delivered" ${safeStatus === "Delivered" ? "selected" : ""}>Delivered</option>
                         <option value="Cancelled" ${safeStatus === "Cancelled" ? "selected" : ""}>Cancelled X</option>
                     </select>
-        <button onclick="event.stopPropagation(); window.printReceiptById('${o.orderId || id}')" class="btn-table-icon" title="Print Receipt">🖨️</button>
+        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-table-icon" title="Print Receipt">🖨️</button>
                 </div>
                 <div class="mt-5">
-                    <select onchange="event.stopPropagation(); assignRider('${id}', this.value)" onclick="event.stopPropagation()" class="rider-select" style="width: 100%;">
+                    <select data-action="assignRider" data-id="${id}" class="rider-select" style="width: 100%;">
                         <option value="">Assign Rider</option>
                         ${ridersList.map(r => `<option value="${escapeHtml(r.email)}" ${o.assignedRider === r.email ? "selected" : ""}>${escapeHtml(r.name)}</option>`).join("")}
                     </select>
@@ -1504,7 +1738,8 @@ function renderOrders(snap) {
             const row = document.createElement("tr");
             row.id = `row-${id}`;
             row.className = "clickable-row";
-            row.onclick = () => window.openOrderDrawer(id);
+            row.setAttribute('data-action', 'openOrderDrawer');
+            row.setAttribute('data-id', id);
             row.innerHTML = trHTML;
             ordersTable.appendChild(row);
             ordersCount++;
@@ -1513,7 +1748,8 @@ function renderOrders(snap) {
         // Populate Order History
         const rowFull = document.createElement("tr");
         rowFull.className = "clickable-row";
-        rowFull.onclick = () => window.openOrderDrawer(id);
+        rowFull.setAttribute('data-action', 'openOrderDrawer');
+        rowFull.setAttribute('data-id', id);
         rowFull.innerHTML = trHTML;
         if (document.getElementById("ordersTableFull")) document.getElementById("ordersTableFull").appendChild(rowFull);
 
@@ -1521,7 +1757,8 @@ function renderOrders(snap) {
         if (isLive && liveOrdersTable) {
             const rowLive = document.createElement("tr");
             rowLive.className = "clickable-row";
-            rowLive.onclick = () => window.openOrderDrawer(id);
+            rowLive.setAttribute('data-action', 'openOrderDrawer');
+            rowLive.setAttribute('data-id', id);
             const safeItemsHTML = o.items ? o.items.map(i => `<strong>${escapeHtml(i.name)}</strong> (${escapeHtml(i.size)})${i.addons?.length ? '<br>+ ' + i.addons.map(a => escapeHtml(a.name)).join(', ') : ''}`).join('<br>') : '1 item';
             rowLive.innerHTML = `
                 <td data-label="Order ID" style="font-family: monospace; font-weight: 600;">#${safeOrderId}</td>
@@ -1531,16 +1768,16 @@ function renderOrders(snap) {
                         ${safeItemsHTML}
                     </small>
                 </td>
-                <td data-label="Total" style="font-weight:700">₹${safeTotal}</td>
+                <td data-label="Total" style="font-weight:700">&#8377;${safeTotal}</td>
                 <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
                 <td data-label="Rider">
-                    <select onchange="event.stopPropagation(); assignRider('${id}', this.value)" onclick="event.stopPropagation()" class="rider-select">
+                    <select data-action="assignRider" data-id="${id}" class="rider-select">
                         <option value="">Select Rider</option>
                         ${ridersList.map(r => `<option value="${escapeHtml(r.email)}" ${o.assignedRider === r.email ? "selected" : ""}>${escapeHtml(r.name)}</option>`).join("")}
                     </select>
                 </td>
                 <td data-label="Action">
-                    <button onclick="event.stopPropagation(); updateStatus('${id}', 'Delivered')" class="btn-table-action">Deliver</button>
+                    <button data-action="updateStatus" data-id="${id}" data-val="Delivered" class="btn-table-action">Deliver</button>
                 </td>
             `;
             liveOrdersTable.appendChild(rowLive);
@@ -1556,10 +1793,10 @@ function renderOrders(snap) {
                 <td data-label="Order ID" style="font-family: monospace;">#${safeOrderId}</td>
                 <td data-label="Customer">${safeCustomerName}</td>
                 <td data-label="Method">${safePMethod}</td>
-                <td data-label="Total" style="font-weight:700">₹${safeTotal}</td>
+                <td data-label="Total" style="font-weight:700">&#8377;${safeTotal}</td>
                 <td data-label="Status"><span class="status-${safePStatusClass}">${safePStatus}</span></td>
                 <td data-label="Action">
-                    ${safePStatus === 'Pending' ? `<button onclick="event.stopPropagation(); markAsPaid('${id}')" class="btn-secondary" style="padding:4px 8px; font-size:11px;">Mark Paid</button>` : '✔'}
+                    ${safePStatus === 'Pending' ? `<button data-action="markAsPaid" data-id="${id}" class="btn-secondary" style="padding:4px 8px; font-size:11px;">Mark Paid</button>` : '✔'}
                 </td>
             `;
             paymentsTable.appendChild(rowPay);
@@ -1602,18 +1839,18 @@ function renderPriorityTable(sortedOrders) {
             </div>`;
     } else {
         list.innerHTML = priority.map(o => `
-            <div class="priority-card" onclick="window.openOrderDrawer('${o.id}')">
+            <div class="priority-card" data-action="openOrderDrawer" data-id="${o.id}">
                 <div class="p-header">
                     <span class="p-id">#${escapeHtml(o.orderId || o.id.slice(-5))}</span>
                     <span class="status-badge ${(o.status || 'Pending').toLowerCase().replace(/ /g, '-')}">${o.status || 'Pending'}</span>
                 </div>
                 <div class="p-body">
                     <div class="p-cust">${escapeHtml(o.customerName)}</div>
-                    <div class="p-meta">₹${escapeHtml(o.total)} • ${o.items?.length || 0} items</div>
+                    <div class="p-meta">&#8377;${escapeHtml(o.total)} • ${o.items?.length || 0} items</div>
                 </div>
                 <div class="p-footer">
                     <span class="p-time">${o.createdAt ? new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
-                    <button class="btn-priority-action" onclick="event.stopPropagation(); updateStatus('${o.id}', 'Confirmed')">Confirm</button>
+                    <button class="btn-priority-action" data-action="updateStatus" data-id="${o.id}" data-val="Confirmed">Confirm</button>
                 </div>
             </div>
         `).join('');
@@ -1648,7 +1885,7 @@ function calculateTopSpenders(snap) {
                 <div class="spender-phone">${phone}</div>
             </div>
             <div class="text-right">
-                <div class="spender-total">₹${data.total.toLocaleString()}</div>
+                <div class="spender-total">&#8377;${data.total.toLocaleString()}</div>
                 <div class="spender-meta">${data.count} VISITS</div>
             </div>
         </div>
@@ -1715,12 +1952,12 @@ function loadCategories() {
             div.style.border = "1px solid rgba(0,0,0,0.05)";
 
             div.innerHTML = `
-                <img src="${cat.image || 'https://via.placeholder.com/60'}" style="width:60px; height:60px; border-radius:10px; object-fit:cover; border:1px solid rgba(0,0,0,0.05)">
+                <img src="${cat.image || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\' viewBox=\'0 0 60 60\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23eee\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'8\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" style="width:60px; height:60px; border-radius:10px; object-fit:cover; border:1px solid rgba(0,0,0,0.05)">
                 <div style="flex:1">
                     <h4 style="margin:0; color:var(--text-main); font-weight:700;">${cat.name}</h4>
                     <small style="color:var(--text-muted)">ID: ${child.key.slice(-4)}</small>
                 </div>
-                <button onclick="deleteCategory('${cat.id}')" style="background:none; border:none; color:#ef4444; font-size:20px; cursor:pointer; opacity:0.6 hover:opacity:1;">&times;</button>
+                <button data-action="deleteCategory" data-id="${cat.id}" style="background:none; border:none; color:#ef4444; font-size:20px; cursor:pointer; opacity:0.6;">&times;</button>
             `;
             container.appendChild(div);
         });
@@ -1764,7 +2001,7 @@ async function addCategory() {
 
         nameInput.value = "";
         fileInput.value = "";
-        if (previewImg) previewImg.src = "https://via.placeholder.com/40";
+        if (previewImg) previewImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3C/svg%3E";
         alert('Category added successfully!');
     } catch (err) {
         console.error(err);
@@ -1786,7 +2023,7 @@ window.addSizeField = (name = "", price = "") => {
     div.innerHTML = `
         <input placeholder="Size (e.g. Small)" value="${name}" class="form-input" style="flex:2; margin-bottom:0">
         <input type="number" placeholder="Price" value="${price}" class="form-input" style="flex:1; margin-bottom:0">
-        <button onclick="this.parentElement.remove()" style="background:none; border:none; color:red; cursor:pointer;">×</button>
+        <button data-action="removeParent" style="background:none; border:none; color:red; cursor:pointer;">×</button>
     `;
     container.appendChild(div);
 };
@@ -1799,7 +2036,7 @@ window.addNewAddonField = (name = "", price = "") => {
     div.innerHTML = `
         <input placeholder="Addon (e.g. Extra Cheese)" value="${name}" class="form-input" style="flex:2; margin-bottom:0">
         <input type="number" placeholder="Price" value="${price}" class="form-input" style="flex:1; margin-bottom:0">
-        <button onclick="this.parentElement.remove()" style="background:none; border:none; color:red; cursor:pointer;">×</button>
+        <button data-action="removeParent" style="background:none; border:none; color:red; cursor:pointer;">×</button>
     `;
     container.appendChild(div);
 };
@@ -1812,7 +2049,8 @@ window.hideDishModal = () => {
     }
 };
 
-document.getElementById('saveDishBtn').onclick = async () => {
+// Rename function to saveDish to avoid conflict with event listener name
+window.saveDish = async () => {
     if (!window.currentOutlet || window.currentOutlet === 'null' || window.currentOutlet === 'undefined') {
         return alert("Error: Current outlet context is missing. Please refresh or select an outlet first.");
     }
@@ -1894,59 +2132,53 @@ document.getElementById('saveDishBtn').onclick = async () => {
 
 function loadMenu() {
     const grid = document.getElementById("menuGrid");
-    Outlet.ref(`dishes`).off(); // Detach previous listener before re-attaching
+    Outlet.ref(`dishes`).off();
     Outlet.ref(`dishes`).on("value", snap => {
         grid.innerHTML = "";
         snap.forEach(child => {
             const d = child.val();
-            const dishId = child.key; // capture in block scope — safe for closures
+            const dishId = child.key;
 
             let sizesHtml = "";
             if (d.sizes) {
                 sizesHtml = `
-                    <div style="margin:12px 0; padding:12px; background:rgba(0,0,0,0.02); border-radius:10px; border:1px solid rgba(0,0,0,0.03);">
-                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Sizes &amp; Pricing</div>
+                    <div class="dish-pricing-box">
+                        <div style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:5px; letter-spacing:0.5px;">Sizes &amp; Pricing</div>
                         ${Object.entries(d.sizes).map(([size, price]) => `
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-size:13px;">
+                            <div class="dish-price-row">
                                 <span style="color:var(--text-main)">${size}</span>
-                                <span style="font-weight:800; color:var(--action-green)">₹${price}</span>
+                                <span class="dish-price-val">&#8377;${price}</span>
                             </div>
                         `).join("")}
                     </div>`;
             } else {
                 sizesHtml = `
-                    <div style="margin:12px 0; display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:13px; color:var(--text-muted)">Standard Price</span>
-                        <span style="font-size:18px; font-weight:800; color:var(--action-green)">₹${d.price || 0}</span>
+                    <div class="dish-pricing-box flex-between">
+                        <span style="font-size:12px; color:var(--text-muted)">Standard</span>
+                        <span class="dish-price-val" style="font-size:15px;">&#8377;${d.price || 0}</span>
                     </div>`;
             }
 
-            // Build card via createElement to avoid innerHTML+= closure bug
             const card = document.createElement('div');
-            card.className = 'glass-card';
-            card.style.cssText = 'padding:15px; transition:transform 0.2s; cursor:default;';
-            card.onmouseover = () => card.style.transform = 'translateY(-5px)';
-            card.onmouseout = () => card.style.transform = 'translateY(0)';
+            card.className = 'dish-card';
             card.innerHTML = `
-                <div style="position:relative; width:100%; height:160px; border-radius:12px; overflow:hidden; margin-bottom:15px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-                    <img src="${d.image || 'https://via.placeholder.com/150'}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://via.placeholder.com/150'">
-                    <div style="position:absolute; top:10px; right:10px; background:${d.stock ? 'rgba(6,95,70,0.9)' : 'rgba(220,38,38,0.9)'}; color:white; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);">
+                <div class="dish-img-container">
+                    <img src="${d.image || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\' viewBox=\'0 0 150 150\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23eee\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'12\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="${d.name}">
+                    <div class="stock-badge ${d.stock ? 'available' : 'out'}">
                         ${d.stock ? 'AVAILABLE' : 'OUT OF STOCK'}
                     </div>
                 </div>
-                <div style="padding:0 5px;">
-                    <h4 style="margin:0; font-size:16px; color:var(--text-main); font-weight:700;">${d.name}</h4>
-                    <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${d.category || ''}</div>
+                <div class="dish-info">
+                    <h4>${d.name}</h4>
+                    <div class="dish-category">${d.category || ''}</div>
                     ${sizesHtml}
-                    <div style="display:flex; gap:8px; margin-top:5px;">
-                        <button class="edit-btn btn-secondary" style="flex:1; font-size:12px; padding:8px 0; display:flex; align-items:center; justify-content:center; gap:5px;">✔ï¸ Edit</button>
-            <button class="delete-btn btn-secondary" style="color:#ef4444; width:40px; padding:8px 0; display:flex; align-items:center; justify-content:center;">🗑️</button>
+                    <div class="dish-actions">
+                        <button class="edit-btn btn-secondary flex-center gap-5" data-action="editDish" data-id="${dishId}"><i data-lucide="edit-3" style="width:12px;"></i> Edit</button>
+                        <button class="delete-btn btn-secondary flex-center" data-action="deleteDish" data-id="${dishId}"><i data-lucide="trash-2" style="width:12px;"></i></button>
                     </div>
                 </div>`;
 
-            // Wire buttons using addEventListener — closures correctly capture dishId
-            card.querySelector('.edit-btn').addEventListener('click', () => window.showDishModal(dishId));
-            card.querySelector('.delete-btn').addEventListener('click', () => window.deleteDish(dishId));
+            if (window.lucide) window.lucide.createIcons(card);
 
             grid.appendChild(card);
         });
@@ -1998,13 +2230,13 @@ window.deleteDish = (dishId) => {
     const cleanup = () => overlay.remove();
 
     // Cancel button
-    overlay.querySelector('#confirmDeleteNo').onclick = cleanup;
+    overlay.querySelector('#confirmDeleteNo').addEventListener('click', cleanup);
 
     // Click backdrop to cancel
-    overlay.onclick = (e) => { if (e.target === overlay) cleanup(); };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(); });
 
     // Confirm delete
-    overlay.querySelector('#confirmDeleteYes').onclick = async () => {
+    overlay.querySelector('#confirmDeleteYes').addEventListener('click', async () => {
         cleanup();
         try {
             const snap = await Outlet.ref(`dishes/${dishId}`).once('value');
@@ -2014,7 +2246,7 @@ window.deleteDish = (dishId) => {
         } catch (e) {
             alert('Delete failed: ' + e.message);
         }
-    };
+    });
 };
 
 // (Duplicate loadCategories, addCategory, deleteCategory removed — canonical versions above at loadCategories/line ~600)
@@ -2069,18 +2301,18 @@ function renderRiders() {
                     </td>
                     <td data-label="Status" style="padding:15px"><span class="status ${statusClass}" style="${r.status === 'Offline' ? 'background:rgba(0,0,0,0.1); color:gray' : ''}">${r.status || 'Active'}</span></td>
                     <td data-label="Portal" style="padding:15px">
-                        <a href="${portalUrl}" target="_blank" style="font-size:10px; font-weight:800; color:var(--action-green); text-decoration:none; border:2px solid var(--action-green); padding:5px 10px; border-radius:8px; display:inline-block; transition:all 0.2s;" onmouseover="this.style.background='var(--action-green)'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='var(--action-green)';">
+                        <a href="${portalUrl}" target="_blank" class="rider-portal-btn">
                             🚀 DASHBOARD
                         </a>
                     </td>
                     <td data-label="Stats" style="padding:15px">
                         <div style="font-size:11px;"><strong>${stats.totalOrders}</strong> Orders</div>
-                        <div style="font-size:11px; color:var(--action-green); font-weight:700;">₹${stats.totalEarnings.toLocaleString()}</div>
+                        <div style="font-size:11px; color:var(--action-green); font-weight:700;">&#8377;${stats.totalEarnings.toLocaleString()}</div>
                     </td>
                     <td data-label="Actions" style="padding:15px; display:flex; gap:10px; align-items:center;">
-                        <button onclick="editRider('${r.id}')" title="Edit Rider" style="background:var(--action-green); color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:600;">Edit</button>
-                        <button onclick="resetRiderPassword('${r.email}')" title="Reset Password" style="background:none; border:none; color:var(--action-green); cursor:pointer; font-size:18px;">🔔</button>
-                        <button onclick="deleteRider('${r.id}')" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer; text-decoration:underline; font-weight:600;">Remove</button>
+                        <button data-action="editRider" data-id="${r.id}" title="Edit Rider" style="background:var(--action-green); color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:600;">Edit</button>
+                        <button data-action="resetRiderPassword" data-email="${r.email}" title="Reset Password" style="background:none; border:none; color:var(--action-green); cursor:pointer; font-size:18px;">🔔</button>
+                        <button data-action="deleteRider" data-id="${r.id}" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer; text-decoration:underline; font-weight:600;">Remove</button>
                     </td>
                 </tr>
             `;
@@ -2150,9 +2382,9 @@ window.showRiderModal = () => {
     document.getElementById('riderPass').value = "";
 
     // Reset Images
-    document.getElementById('riderProfilePreview').src = "https://via.placeholder.com/150";
+    document.getElementById('riderProfilePreview').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='12' fill='%23999'%3ENo Photo%3C/text%3E%3C/svg%3E";
     document.getElementById('riderPhotoUrl').value = "";
-    document.getElementById('aadharPreview').src = "https://via.placeholder.com/100x60";
+    document.getElementById('aadharPreview').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='60' viewBox='0 0 100 60'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='8' fill='%23999'%3EID Preview%3C/text%3E%3C/svg%3E";
     document.getElementById('aadharUrl').value = "";
 
     document.getElementById('riderModal').style.display = 'flex';
@@ -2183,9 +2415,10 @@ window.editRider = (id) => {
     document.getElementById('riderPass').value = "";
 
     // Populate Images
-    document.getElementById('riderProfilePreview').src = r.profilePhoto || "https://via.placeholder.com/150";
+    const SVG_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23ccc%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20x%3D%223%22%20y%3D%223%22%20width%3D%2218%22%20height%3D%2218%22%20rx%3D%222%22%20ry%3D%222%22%3E%3C%2Frect%3E%3Cline%20x1%3D%223%22%20y1%3D%2221%22%20x2%3D%2221%22%20y2%3D%223%22%3E%3C%2Fline%3E%3C%2Fsvg%3E";
+    document.getElementById('riderProfilePreview').src = r.profilePhoto || SVG_PLACEHOLDER;
     document.getElementById('riderPhotoUrl').value = r.profilePhoto || "";
-    document.getElementById('aadharPreview').src = r.aadharPhoto || "https://via.placeholder.com/100x60";
+    document.getElementById('aadharPreview').src = r.aadharPhoto || SVG_PLACEHOLDER;
     document.getElementById('aadharUrl').value = r.aadharPhoto || "";
 
     document.getElementById('riderModal').style.display = 'flex';
@@ -2195,9 +2428,22 @@ window.hideRiderModal = () => document.getElementById('riderModal').style.displa
 
 window.saveRiderAccount = async () => {
     const name = document.getElementById('riderName').value.trim();
-    const email = document.getElementById('riderEmail').value.trim();
-    const pass = document.getElementById('riderPass').value;
+    let email = document.getElementById('riderEmail').value.trim();
     const phone = document.getElementById('riderPhone').value.trim();
+    let pass = document.getElementById('riderPass').value;
+
+    // Validate email
+    if (!email) {
+        alert("Please provide a valid email address for account management (required for password resets).");
+        return;
+    }
+
+    // Generate secure temporary password for new accounts if none provided
+    if (!isEditRiderMode && !pass) {
+        pass = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4).toUpperCase();
+        alert("SECURITY NOTICE: A secure temporary password has been generated for this new rider:\n\n" + pass + "\n\nPlease share this securely with the rider. They should change it upon first login.");
+    }
+
     const fatherName = document.getElementById('riderFatherName').value.trim();
     const age = document.getElementById('riderAge').value;
     const aadharNo = document.getElementById('riderAadharNo').value.trim();
@@ -2206,8 +2452,8 @@ window.saveRiderAccount = async () => {
     let profilePhoto = document.getElementById('riderPhotoUrl').value;
     let aadharPhoto = document.getElementById('aadharUrl').value;
 
-    if (!name || !email) {
-        alert("Name and Email are required.");
+    if (!name || !email || !pass) {
+        alert("Name, Email, and Password are required.");
         return;
     }
 
@@ -2369,7 +2615,7 @@ function loadCustomers() {
     ${c.locationLink ? `<a href="${c.locationLink}" target="_blank" style="color:var(--primary); font-size:10px; text-decoration:none;">📍 Map Link</a>` : ""}
                     </td>
                     <td data-label="Orders" style="font-weight:600; color:var(--vibrant-orange)">${orderCount}</td>
-                    <td data-label="LTV" style="font-weight:700; color:var(--warm-yellow)">₹${ltv.toLocaleString()}</td>
+                    <td data-label="LTV" style="font-weight:700; color:var(--warm-yellow)">&#8377;${ltv.toLocaleString()}</td>
                 </tr>
             `;
         });
@@ -2432,9 +2678,9 @@ window.generateCustomReport = () => {
         const periodEl = document.getElementById("reportPeriod");
         if (periodEl) periodEl.innerText = `${fromDate} to ${toDate}`;
 
-        document.getElementById("reportRevenue").innerText = "₹" + totalRev.toLocaleString();
+        document.getElementById("reportRevenue").innerText = "&#8377;" + totalRev.toLocaleString();
         document.getElementById("reportOrders").innerText = totalOrd;
-        document.getElementById("reportAvg").innerText = "₹" + (totalOrd > 0 ? Math.round(totalRev / totalOrd) : 0);
+        document.getElementById("reportAvg").innerText = "&#8377;" + (totalOrd > 0 ? Math.round(totalRev / totalOrd) : 0);
 
         // Sort by date descending
         salesData.sort((a, b) => b.createdAt - a.createdAt);
@@ -2447,7 +2693,7 @@ window.generateCustomReport = () => {
                     <div class="report-cust-name">${o.customerName || 'Guest'}</div>
                     <div class="report-cust-phone">${o.phone || ''}</div>
                 </td>
-                <td data-label="Total" class="report-cell report-total-cell">₹${o.total || 0}</td>
+                <td data-label="Total" class="report-cell report-total-cell">&#8377;${o.total || 0}</td>
                 <td data-label="Method" class="report-cell"><span class="badge badge-secondary">${o.paymentMethod || 'COD'}</span></td>
                 <td data-label="Items" class="report-cell">
                     <div class="text-muted-small text-truncate" style="max-width:250px;" title="${o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : ''}">
@@ -2517,6 +2763,8 @@ function renderRevenueChart(data) {
             }
         }
     });
+
+
 }
 
 window.downloadExcel = () => {
@@ -2640,7 +2888,7 @@ window.loadSettings = async () => {
                                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
                                     <div>
                                         <label class="form-label" style="font-size:13px; font-weight:600;">Store Status</label>
-                                        <select id="setConfigStatus" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:600;">
+                                        <select id="setConfigStatus" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:600;" title="Store Status">
                                             <option value="Open" ${c.status === 'Open' ? 'selected' : ''}>🟢 Open</option>
                                             <option value="Closed" ${c.status === 'Closed' ? 'selected' : ''}>🔴 Closed</option>
                                         </select>
@@ -2671,11 +2919,11 @@ window.loadSettings = async () => {
                                 
                                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
                                     <div>
-                                        <label class="form-label" style="font-size:13px; font-weight:600;">Delivery Fee (₹)</label>
+                                        <label class="form-label" style="font-size:13px; font-weight:600;">Delivery Fee (&#8377;)</label>
                                         <input type="number" id="setConfigFee" value="${c.deliveryFee || 0}" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:700;">
                                     </div>
                                     <div>
-                                        <label class="form-label" style="font-size:13px; font-weight:600;">Min. Order (₹)</label>
+                                        <label class="form-label" style="font-size:13px; font-weight:600;">Min. Order (&#8377;)</label>
                                         <input type="number" id="setConfigMinOrder" value="${c.minOrder || 0}" class="form-input" style="background:white; border:1.5px solid rgba(0,0,0,0.05); font-weight:700;">
                                     </div>
                                 </div>
@@ -2687,23 +2935,22 @@ window.loadSettings = async () => {
 
                                 <div>
                                     <label class="form-label" style="font-size:13px; font-weight:600; margin-bottom:10px; display:block;">Store Banners (Click to Change)</label>
-                                    <div style="display:flex; gap:15px;">
-                                        <div style="flex:1; cursor:pointer;" onclick="document.getElementById('welcomeFile').click()">
-                                            <div style="position:relative; width:100%; height:80px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                                <img id="welcomePreview" src="${u.welcomeImage || 'https://via.placeholder.com/300x150'}" style="width:100%; height:100%; object-fit:cover;">
-                                                <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:white; font-size:9px; text-align:center; padding:4px; font-weight:700;">WELCOME</div>
-                                            </div>
-                                            <input type="file" id="welcomeFile" style="display:none" onchange="previewImage(this, 'welcomePreview')">
-                                            <input type="hidden" id="setUIWelcome" value="${u.welcomeImage || ''}">
+                                <div style="display:flex; gap:15px;">
+                                    <div style="flex:1; cursor:pointer;" data-action="triggerClick" data-val="welcomeFile">
+                                        <div style="position:relative; width:100%; height:80px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
+                                            <img id="welcomePreview" src="${u.welcomeImage || 'https://via.placeholder.com/300x150'}" style="width:100%; height:100%; object-fit:cover;">
+                                            <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:white; font-size:9px; text-align:center; padding:4px; font-weight:700;">WELCOME</div>
                                         </div>
-                                        <div style="flex:1; cursor:pointer;" onclick="document.getElementById('menuFile').click()">
-                                            <div style="position:relative; width:100%; height:80px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                                <img id="menuBannerPreview" src="${u.menuImage || 'https://via.placeholder.com/300x150'}" style="width:100%; height:100%; object-fit:cover;">
-                                                <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:white; font-size:9px; text-align:center; padding:4px; font-weight:700;">MENU BANNER</div>
-                                            </div>
-                                            <input type="file" id="menuFile" style="display:none" onchange="previewImage(this, 'menuBannerPreview')">
-                                            <input type="hidden" id="setUIMenu" value="${u.menuImage || ''}">
+                                        <input type="file" id="welcomeFile" style="display:none" data-action="previewImage" data-preview-id="welcomePreview">
+                                        <input type="hidden" id="setUIWelcome" value="${u.welcomeImage || ''}">
+                                    </div>
+                                    <div style="flex:1; cursor:pointer;" data-action="triggerClick" data-val="menuFile">
+                                        <div style="position:relative; width:100%; height:80px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
+                                            <img id="menuBannerPreview" src="${u.menuImage || 'https://via.placeholder.com/300x150'}" style="width:100%; height:100%; object-fit:cover;">
+                                            <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:white; font-size:9px; text-align:center; padding:4px; font-weight:700;">MENU BANNER</div>
                                         </div>
+                                        <input type="file" id="menuFile" style="display:none" data-action="previewImage" data-preview-id="menuBannerPreview">
+                                        <input type="hidden" id="setUIMenu" value="${u.menuImage || ''}">
                                     </div>
                                 </div>
                             </div>
@@ -2718,14 +2965,14 @@ window.loadSettings = async () => {
                             <!-- Welcome Image -->
                             <div class="settings-group">
                                 <label class="form-label" style="font-size:13px; font-weight:600; margin-bottom:12px; display:block;">Bot Welcome / Intro Image</label>
-                                <div style="cursor:pointer;" onclick="document.getElementById('botWelcomeFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botWelcomeFile">
                                     <div style="position:relative; width:100%; height:180px; border-radius:18px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
                                         <img id="botWelcomePreview" src="${b.imgWelcome || 'https://via.placeholder.com/600x300?text=Welcome+Image'}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), transparent); display:flex; align-items:flex-end; justify-content:center; padding-bottom:10px;">
                                             <span style="color:white; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Change Greeting Image</span>
                                         </div>
                                     </div>
-                                    <input type="file" id="botWelcomeFile" style="display:none" onchange="previewImage(this, 'botWelcomePreview')">
+                                    <input type="file" id="botWelcomeFile" style="display:none" data-action="previewImage" data-preview-id="botWelcomePreview">
                                     <input type="hidden" id="setBotWelcome" value="${b.imgWelcome || ''}">
                                 </div>
                             </div>
@@ -2733,66 +2980,66 @@ window.loadSettings = async () => {
                             <!-- Status Update Images -->
                             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px;">
                                 <!-- Confirmed -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botConfirmedFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botConfirmedFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
                                         <img id="botConfirmedPreview" src="${b.imgConfirmed || 'https://via.placeholder.com/150?text=Confirmed'}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(6,95,70,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">CONFIRMED</div>
                                     </div>
-                                    <input type="file" id="botConfirmedFile" style="display:none" onchange="previewImage(this, 'botConfirmedPreview')">
+                                    <input type="file" id="botConfirmedFile" style="display:none" data-action="previewImage" data-preview-id="botConfirmedPreview">
                                     <input type="hidden" id="setBotConfirmed" value="${b.imgConfirmed || ''}">
                                 </div>
                                 <!-- Preparing -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botPreparingFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botPreparingFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
                                         <img id="botPreparingPreview" src="${b.imgPreparing || 'https://via.placeholder.com/150?text=Preparing'}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(217,119,6,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">PREPARING</div>
                                     </div>
-                                    <input type="file" id="botPreparingFile" style="display:none" onchange="previewImage(this, 'botPreparingPreview')">
+                                    <input type="file" id="botPreparingFile" style="display:none" data-action="previewImage" data-preview-id="botPreparingPreview">
                                     <input type="hidden" id="setBotPreparing" value="${b.imgPreparing || ''}">
                                 </div>
                                 <!-- Cooked -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botCookedFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botCookedFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                        <img id="botCookedPreview" src="${b.imgCooked || 'https://via.placeholder.com/150?text=Cooked'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <img id="botCookedPreview" src="${b.imgCooked || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%23999'%3ECooked%3C/text%3E%3C/svg%3E"}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(31,41,55,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">COOKED</div>
                                     </div>
-                                    <input type="file" id="botCookedFile" style="display:none" onchange="previewImage(this, 'botCookedPreview')">
+                                    <input type="file" id="botCookedFile" style="display:none" data-action="previewImage" data-preview-id="botCookedPreview">
                                     <input type="hidden" id="setBotCooked" value="${b.imgCooked || ''}">
                                 </div>
                                 <!-- Out -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botOutFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botOutFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                        <img id="botOutPreview" src="${b.imgOut || 'https://via.placeholder.com/150?text=Out'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <img id="botOutPreview" src="${b.imgOut || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%23999'%3EOut%3C/text%3E%3C/svg%3E"}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(37,99,235,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">OUT FOR DEL.</div>
                                     </div>
-                                    <input type="file" id="botOutFile" style="display:none" onchange="previewImage(this, 'botOutPreview')">
+                                    <input type="file" id="botOutFile" style="display:none" data-action="previewImage" data-preview-id="botOutPreview">
                                     <input type="hidden" id="setBotOut" value="${b.imgOut || ''}">
                                 </div>
                                 <!-- Delivered -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botDeliveredFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botDeliveredFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                        <img id="botDeliveredPreview" src="${b.imgDelivered || 'https://via.placeholder.com/150?text=Delivered'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <img id="botDeliveredPreview" src="${b.imgDelivered || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%23999'%3EDelivered%3C/text%3E%3C/svg%3E"}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(5,150,105,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">DELIVERED</div>
                                     </div>
-                                    <input type="file" id="botDeliveredFile" style="display:none" onchange="previewImage(this, 'botDeliveredPreview')">
+                                    <input type="file" id="botDeliveredFile" style="display:none" data-action="previewImage" data-preview-id="botDeliveredPreview">
                                     <input type="hidden" id="setBotDelivered" value="${b.imgDelivered || ''}">
                                 </div>
                                 <!-- Feedback -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botFeedbackFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botFeedbackFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                        <img id="botFeedbackPreview" src="${b.imgFeedback || 'https://via.placeholder.com/150?text=Feedback'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <img id="botFeedbackPreview" src="${b.imgFeedback || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%23999'%3EFeedback%3C/text%3E%3C/svg%3E"}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(124,58,237,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">FEEDBACK</div>
                                     </div>
-                                    <input type="file" id="botFeedbackFile" style="display:none" onchange="previewImage(this, 'botFeedbackPreview')">
+                                    <input type="file" id="botFeedbackFile" style="display:none" data-action="previewImage" data-preview-id="botFeedbackPreview">
                                     <input type="hidden" id="setBotFeedback" value="${b.imgFeedback || ''}">
                                 </div>
                                 <!-- Cancelled -->
-                                <div style="cursor:pointer;" onclick="document.getElementById('botCancelledFile').click()">
+                                <div style="cursor:pointer;" data-action="triggerClick" data-val="botCancelledFile">
                                     <div style="position:relative; width:100%; height:85px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,0.05);">
-                                        <img id="botCancelledPreview" src="${b.imgCancelled || 'https://via.placeholder.com/150?text=Cancelled'}" style="width:100%; height:100%; object-fit:cover;">
+                                        <img id="botCancelledPreview" src="${b.imgCancelled || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%23999'%3ECancelled%3C/text%3E%3C/svg%3E"}" style="width:100%; height:100%; object-fit:cover;">
                                         <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(153,27,27,0.8); color:white; font-size:8px; text-align:center; padding:3px; font-weight:700;">CANCELLED</div>
                                     </div>
-                                    <input type="file" id="botCancelledFile" style="display:none" onchange="previewImage(this, 'botCancelledPreview')">
+                                    <input type="file" id="botCancelledFile" style="display:none" data-action="previewImage" data-preview-id="botCancelledPreview">
                                     <input type="hidden" id="setBotCancelled" value="${b.imgCancelled || ''}">
                                 </div>
                             </div>
@@ -2800,7 +3047,7 @@ window.loadSettings = async () => {
                     </div>
 
                     <div style="margin-top: 50px; text-align: center; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 35px;">
-                        <button onclick="saveSettings()" class="btn-primary" style="margin: 0 auto; width: 340px; justify-content: center; padding: 18px; border-radius: 18px; font-size: 16px; font-weight: 800; box-shadow: 0 15px 30px rgba(6,95,70,0.2); letter-spacing:0.5px;">
+                        <button data-action="saveSettings" class="btn-primary" style="margin: 0 auto; width: 340px; justify-content: center; padding: 18px; border-radius: 18px; font-size: 16px; font-weight: 800; box-shadow: 0 15px 30px rgba(6,95,70,0.2); letter-spacing:0.5px;">
                             💾 SAVE SYSTEM CONFIGURATION
                         </button>
                     </div>
@@ -2953,26 +3200,26 @@ window.openPaymentModal = (id) => {
         <div class="payment-modal-card">
             <div style="text-align: center; margin-bottom: 25px;">
                 <div class="payment-modal-badge">Payment Settlement</div>
-                <h2 class="payment-modal-total">₹${total}</h2>
+                <h2 class="payment-modal-total">&#8377;${total}</h2>
                 <p style="color: #666; font-size: 14px; margin-top: 5px;">Select payment method used for this delivery</p>
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button onclick="saveDeliveredOrder('${id}', 'Cash')" class="pay-option-btn cash">
+                <button data-action="saveDeliveredOrder" data-id="${id}" data-val="Cash" class="pay-option-btn cash">
                     <span style="font-size: 24px;">💵</span>
                     <div style="text-align: left;">
                         <div style="font-weight: 800; font-size: 16px;">Cash</div>
                         <div style="font-size: 11px; opacity: 0.7;">Received by Hand</div>
                     </div>
                 </button>
-                <button onclick="saveDeliveredOrder('${id}', 'UPI')" class="pay-option-btn upi">
+                <button data-action="saveDeliveredOrder" data-id="${id}" data-val="UPI" class="pay-option-btn upi">
                     <span style="font-size: 24px;">📱</span>
                     <div style="text-align: left;">
                         <div style="font-weight: 800; font-size: 16px;">UPI / Online</div>
                         <div style="font-size: 11px; opacity: 0.7;">GPay, PhonePe, etc.</div>
                     </div>
                 </button>
-                <button onclick="saveDeliveredOrder('${id}', 'Card')" class="pay-option-btn card">
+                <button data-action="saveDeliveredOrder" data-id="${id}" data-val="Card" class="pay-option-btn card">
                     <span style="font-size: 24px;">💳</span>
                     <div style="text-align: left;">
                         <div style="font-weight: 800; font-size: 16px;">Card</div>
@@ -2981,7 +3228,7 @@ window.openPaymentModal = (id) => {
                 </button>
             </div>
 
-            <button onclick="document.getElementById('paymentModal').remove()" class="payment-modal-cancel">CANCEL</button>
+            <button data-action="removeElement" data-target-id="paymentModal" class="payment-modal-cancel">CANCEL</button>
         </div>
     `;
 
@@ -3072,7 +3319,7 @@ async function loadLostSales() {
                 <div class="mb-14" style="font-size:32px;">🎁</div>
                 <strong>No lost sales found!</strong><br>All your customers are reaching the finish line.
             </td></tr>`;
-            if (revenueBadge) revenueBadge.innerText = `₹0`;
+            if (revenueBadge) revenueBadge.innerText = `&#8377;0`;
             return;
         }
 
@@ -3110,13 +3357,13 @@ async function loadLostSales() {
                     <div class="text-truncate-2" title="${escapeHtml(itemsStr)}">${escapeHtml(itemsStr)}</div>
                 </td>
                 <td style="padding-right:25px; text-align:right;">
-                    <span class="font-black" style="font-size:16px; color:var(--text-dark);">₹${val}</span>
+                    <span class="font-black" style="font-size:16px; color:var(--text-dark);">&#8377;${val}</span>
                 </td>
             `;
             tbody.appendChild(tr);
         });
 
-        if (revenueBadge) revenueBadge.innerText = `₹${totalLost.toLocaleString()}`;
+        if (revenueBadge) revenueBadge.innerText = `&#8377;${totalLost.toLocaleString()}`;
 
     } catch (e) {
         console.error("Load Lost Sales Error:", e);
@@ -3292,14 +3539,14 @@ function renderWalkinDishGrid(dishes) {
                 </select>
                 
                 <div class="dish-qty-row">
-                    <button class="qty-btn-sm" onclick="adjustCardQty('${dishId}', -1)">-</button>
+                    <button class="qty-btn-sm" data-action="adjustCardQty" data-id="${dishId}" data-delta="-1">-</button>
                     <span class="qty-val-sm" id="qty_${dishId}">1</span>
-                    <button class="qty-btn-sm" onclick="adjustCardQty('${dishId}', 1)">+</button>
+                    <button class="qty-btn-sm" data-action="adjustCardQty" data-id="${dishId}" data-delta="1">+</button>
                 </div>
                 
                 <div class="dish-action-row">
-                    <button class="btn-card-add" onclick="addToWalkinCartFromCard('${dishId}')">ADD</button>
-                    <button class="btn-card-addon" onclick="showAddonView('${dishId}')" title="Configure Add-ons">⚙️</button>
+                    <button class="btn-card-add" data-action="addToWalkinCartFromCard" data-id="${dishId}">ADD</button>
+                    <button class="btn-card-addon" data-action="showAddonView" data-id="${dishId}" title="Configure Add-ons">⚙️</button>
                 </div>
             </div>
         `;
@@ -3333,7 +3580,7 @@ window.showAddonView = (dishId) => {
 
     walkinTitle.innerHTML = '';
     const backBtn = document.createElement('button');
-    backBtn.onclick = hideAddonView;
+    backBtn.dataset.action = "hideAddonView";
     backBtn.className = 'btn-text';
     backBtn.style.padding = '0';
     backBtn.style.marginRight = '10px';
@@ -3495,13 +3742,13 @@ function renderWalkinCart() {
                     <div class="item-variant">${escapeHtml(item.size)} - ₹${item.price}</div>
                 </div>
                 ${addonsText}
-                <button class="btn-text-primary small-btn mt-4" onclick="openCartAddonPicker('${key}')">+ Addons</button>
+                <button class="btn-text-primary small-btn mt-4" data-action="openCartAddonPicker" data-id="${key}">+ Addons</button>
             </div>
             <div class="item-controls">
-                <div class="qty-btn" onclick="walkinQtyChange('${key}', -1)">-</div>
+                <div class="qty-btn" data-action="walkinQtyChange" data-id="${key}" data-delta="-1">-</div>
                 <div class="qty-val">${item.qty}</div>
-                <div class="qty-btn" onclick="walkinQtyChange('${key}', 1)">+</div>
-                <div class="remove-btn" onclick="walkinRemoveItem('${key}')">&times;</div>
+                <div class="qty-btn" data-action="walkinQtyChange" data-id="${key}" data-delta="1">+</div>
+                <div class="remove-btn" data-action="walkinRemoveItem" data-id="${key}">&times;</div>
             </div>
         `;
         container.appendChild(div);
@@ -3728,6 +3975,13 @@ async function printOrderReceipt(rawOrder, isReprint = false) {
         if (printWindow) {
             printWindow.document.write(rawOrder.receiptHtml);
             printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                try {
+                    printWindow.print();
+                    printWindow.close();
+                } catch (e) { console.error("Print error:", e); }
+            }, 800);
             return;
         }
     }
@@ -3754,6 +4008,13 @@ async function printOrderReceipt(rawOrder, isReprint = false) {
     const html = window.ReceiptTemplates.generateThermalReceipt(o, store, isReprint);
     printWindow.document.write(html);
     printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        try {
+            printWindow.print();
+            printWindow.close();
+        } catch (e) { console.error("Print error:", e); }
+    }, 800);
 }
 
 
@@ -3767,7 +4028,7 @@ window.addFeeSlab = (km = "", fee = "") => {
     tr.innerHTML = `
         <td style="padding: 8px;"><input type="number" class="slab-km form-input" value="${km}" placeholder="KM" style="padding: 6px 10px;"></td>
         <td style="padding: 8px;"><input type="number" class="slab-fee form-input" value="${fee}" placeholder="₹" style="padding: 6px 10px;"></td>
-        <td style="padding: 8px;"><button onclick="this.parentElement.parentElement.remove()" class="btn-secondary btn-small" style="padding: 5px 8px;">🗑️</button></td>
+        <td style="padding: 8px;"><button data-action="removeGrandparent" class="btn-secondary btn-small" style="padding: 5px 8px;">🗑️</button></td>
     `;
     tbody.appendChild(tr);
 };
@@ -4143,7 +4404,7 @@ window.addNewCategoryAddonField = (name = "", price = "") => {
     div.innerHTML = `
         <input placeholder="Addon" value="${name}" class="form-input flex-2">
         <input type="number" placeholder="₹" value="${price}" class="form-input flex-1">
-        <button onclick="this.parentElement.remove()" class="btn-text-danger" style="font-size:18px;">&times;</button>
+        <button data-action="removeParent" class="btn-text-danger" style="font-size:18px;">&times;</button>
     `;
     container.appendChild(div);
 };
@@ -4181,7 +4442,9 @@ window.openPOSSelectionModal = async (dishId) => {
                 <span class="size-price">₹${price}</span>
             </div>
         `;
-        card.onclick = () => selectPOSSize(name, price, card);
+        card.setAttribute('data-action', 'selectPOSSize');
+        card.setAttribute('data-name', name);
+        card.setAttribute('data-price', price);
         sizeGrid.appendChild(card);
         if (idx === 0) currentPOSModalSize = { name, price };
     });
@@ -4199,7 +4462,7 @@ window.openPOSSelectionModal = async (dishId) => {
             item.className = "addon-check-item";
             item.innerHTML = `
                 <div class="flex-row flex-center">
-                    <input type="checkbox" onchange="togglePOSAddon('${name}', ${price}, this)">
+                    <input type="checkbox" data-action="togglePOSAddon" data-name="${name}" data-price="${price}">
                     <span class="fs-13 font-weight-600">${name}</span>
                 </div>
                 <span class="text-muted-small font-weight-700">+₹${price}</span>
@@ -4316,7 +4579,7 @@ window.openCartAddonPicker = async (cartKey) => {
             itemDiv.className = "addon-check-item";
             itemDiv.innerHTML = `
                 <div class="flex-row flex-center">
-                    <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="togglePOSAddon('${name}', ${price}, this)">
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} data-action="togglePOSAddon" data-name="${name}" data-price="${price}">
                     <span class="fs-13 font-weight-600">${name}</span>
                 </div>
                 <span class="text-muted-small font-weight-700">+₹${price}</span>
@@ -4418,14 +4681,15 @@ function renderWalkinCategoryTabs() {
     if (!container) return;
 
     container.innerHTML = `
-        <div class="category-tab active" onclick="filterWalkinByCategory('All', this)">All</div>
+        <div class="category-tab active" data-action="filterWalkinByCategory" data-val="All">All</div>
     `;
 
     categories.forEach(cat => {
         const tab = document.createElement('div');
         tab.className = "category-tab";
         tab.innerText = cat.name;
-        tab.onclick = () => filterWalkinByCategory(cat.name, tab);
+        tab.dataset.action = "filterWalkinByCategory";
+        tab.dataset.val = cat.name;
         container.appendChild(tab);
     });
 }
