@@ -10,10 +10,11 @@
     <script src="branding.js?v=3.1.0"></script>
     <script src="firebase-config.js?v=3.1.0"></script>
 
-    <link rel="stylesheet" href="style.css?v=3.1.0">
+    <link rel="stylesheet" href="style.css?v=3.2.0">
     <link rel="stylesheet" href="mobile-overrides.css?v=3.1.0">
-    <link rel="manifest" href="manifest-pizza.json">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://placehold.co https://tile.openstreetmap.org https://*.googleusercontent.com; connect-src 'self' wss://*.firebaseio.com https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com;">
+    <link rel="manifest" href="manifest-pizza.json?v=2">
+    <link rel="icon" type="image/png" href="icon-pizza.png">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.firebaseio.com https://*.firebasedatabase.app https://unpkg.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://* http://*; connect-src 'self' wss://*.firebaseio.com https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com https://*.firebaseapp.com https://www.google-analytics.com https://region1.google-analytics.com https://overbridgenet.com https://raw.githubusercontent.com https://*.tile.openstreetmap.org;">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pizza ERP">
@@ -41,44 +42,41 @@
 <body>
     <div id="alertContainer"></div>
 
-    <!-- Haptic Interaction Helper -->
-
     <!-- LOGIN -->
     <div id="authOverlay" title="Admin Login Screen">
-        <form id="loginForm" class="login-box" title="Sign into the Admin Dashboard">
+        <form id="loginForm" class="login-box" title="Sign into the Admin Dashboard" onsubmit="return false;">
             <h2>ROSHANI PIZZA LOGIN</h2>
-            <input id="adminEmail" placeholder="Email Address" title="Your administrative email address">
-            <input id="adminPassword" type="password" placeholder="Password" title="Your administrative password">
-            <button id="loginBtn" type="button" class="btn-primary w-full flex-center" title="Sign into the Admin Dashboard">Sign In</button>
+            <input id="adminEmail" name="email" type="email" autocomplete="username" placeholder="Email Address" title="Your administrative email address">
+            <input id="adminPassword" name="password" type="password" autocomplete="current-password" placeholder="Password" title="Your administrative password">
+            <button id="loginBtn" type="submit" class="btn-primary w-full flex-center" title="Sign into the Admin Dashboard">Sign In</button>
             <p id="authError" class="login-error"></p>
         </form>
     </div>
 
-    <div class="layout">
-
+    <div class="layout hidden">
         <div id="sidebarOverlay" class="sidebar-overlay" data-action="toggleSidebar"></div>
 
         <!-- SIDEBAR -->
         <div class="sidebar" id="sidebarNav">
             <div class="sidebar-header"><span id="sidebarBrandText">ROSHANI PIZZA</span></div>
             <ul>
-                <li class="active" title="View Main Dashboard Snapshot"><button data-action="switchTab" data-tab="dashboard" class="nav-btn"><i data-lucide="layout-dashboard"></i> <span>Dashboard</span></button></li>
-                <li title="Manage Customer Orders"><button data-action="switchTab" data-tab="orders" class="nav-btn"><i data-lucide="shopping-cart"></i> <span>Orders</span></button></li>
-                <li title="Monitor Live Store Operations"><button data-action="switchTab" data-tab="live" class="nav-btn"><i data-lucide="activity"></i> <span>Live Ops</span> <span id="badge-live" class="counter-badge hidden">0</span></button></li>
-                <li title="Open Point of Sale (POS) Interface"><button data-action="switchTab" data-tab="walkin" class="nav-btn"><i data-lucide="monitor"></i> <span>POS Control</span></button></li>
-                <li title="Manage Product Menu and Items"><button data-action="switchTab" data-tab="menu" class="nav-btn"><i data-lucide="utensils"></i> <span>Menu</span></button></li>
-                <li title="Organize Menu Categories"><button data-action="switchTab" data-tab="categories" class="nav-btn"><i data-lucide="folder-tree"></i> <span>Categories</span></button></li>
-                <li title="Manage Delivery Staff and Status"><button data-action="switchTab" data-tab="riders" class="nav-btn"><i data-lucide="bike"></i> <span>Riders</span></button></li>
-                <li title="View and Manage Customer Records"><button data-action="switchTab" data-tab="customers" class="nav-btn"><i data-lucide="users"></i> <span>Customers</span></button></li>
-                <li title="View Orders Abandoned at Checkout"><button data-action="switchTab" data-tab="lostSales" class="nav-btn"><i data-lucide="shopping-bag"></i> <span>Lost Sales</span></button></li>
-                <li><button data-action="switchTab" data-tab="reports" class="nav-btn"><i data-lucide="bar-chart-3"></i> <span>Analytics</span></button></li>
-                <li><button data-action="switchTab" data-tab="feedback" class="nav-btn"><i data-lucide="star"></i> <span>Feedback</span></button></li>
-                <li><button data-action="switchTab" data-tab="liveTracker" class="nav-btn"><i data-lucide="map-pin"></i> <span>Live Tracking</span> <span class="badge-new badge-live-tracking-pill">LIVE</span></button></li>
-                <li><button data-action="switchTab" data-tab="notifications" class="nav-btn"><i data-lucide="bell"></i> <span>Notifications</span> <span id="sidebar-notif-count" class="badge-new badge-sidebar-notif-pill">0</span></button></li>
-                <li class="hidden"><button data-action="switchTab" data-tab="inventory" class="nav-btn"><i data-lucide="box"></i> <span>Inventory</span></button></li>
-                <li title="Download Portal as App"><button id="menu-download" data-action="installPWA" class="nav-btn"><i data-lucide="download-cloud"></i> <span>Download App</span></button></li>
-                <li title="Manage Store & Delivery Configuration"><button data-action="switchTab" data-tab="settings" class="nav-btn"><i data-lucide="settings"></i> <span>Settings</span></button></li>
-                <li class="logout-item" title="Sign Out of Dashboard"><button data-action="userLogout" class="nav-btn"><i data-lucide="log-out"></i> <span>Logout</span></button></li>
+                <li id="menu-dashboard" class="active" title="View Main Dashboard Snapshot"><button data-action="switchTab" data-tab="dashboard" class="nav-btn"><i data-lucide="layout-dashboard"></i> <span>Dashboard</span></button></li>
+                <li id="menu-orders" title="Manage Customer Orders"><button data-action="switchTab" data-tab="orders" class="nav-btn"><i data-lucide="shopping-cart"></i> <span>Orders</span></button></li>
+                <li id="menu-live" title="Monitor Live Store Operations"><button data-action="switchTab" data-tab="live" class="nav-btn"><i data-lucide="activity"></i> <span>Live Ops</span> <span id="badge-live" class="counter-badge hidden">0</span></button></li>
+                <li id="menu-walkin" title="Open Point of Sale (POS) Interface"><button data-action="switchTab" data-tab="walkin" class="nav-btn"><i data-lucide="monitor"></i> <span>POS Control</span></button></li>
+                <li id="menu-menu" title="Manage Product Menu and Items"><button data-action="switchTab" data-tab="menu" class="nav-btn"><i data-lucide="utensils"></i> <span>Menu</span></button></li>
+                <li id="menu-categories" title="Organize Menu Categories"><button data-action="switchTab" data-tab="categories" class="nav-btn"><i data-lucide="folder-tree"></i> <span>Categories</span></button></li>
+                <li id="menu-riders" title="Manage Delivery Staff and Status"><button data-action="switchTab" data-tab="riders" class="nav-btn"><i data-lucide="bike"></i> <span>Riders</span></button></li>
+                <li id="menu-customers" title="View and Manage Customer Records"><button data-action="switchTab" data-tab="customers" class="nav-btn"><i data-lucide="users"></i> <span>Customers</span></button></li>
+                <li id="menu-lostSales" title="View Orders Abandoned at Checkout"><button data-action="switchTab" data-tab="lostSales" class="nav-btn"><i data-lucide="shopping-bag"></i> <span>Lost Sales</span></button></li>
+                <li id="menu-reports"><button data-action="switchTab" data-tab="reports" class="nav-btn"><i data-lucide="bar-chart-3"></i> <span>Analytics</span></button></li>
+                <li id="menu-feedback"><button data-action="switchTab" data-tab="feedback" class="nav-btn"><i data-lucide="star"></i> <span>Feedback</span></button></li>
+                <li id="menu-liveTracker"><button data-action="switchTab" data-tab="liveTracker" class="nav-btn"><i data-lucide="map-pin"></i> <span>Live Tracking</span> <span class="badge-new badge-live-tracking-pill">LIVE</span></button></li>
+                <li id="menu-notifications"><button data-action="switchTab" data-tab="notifications" class="nav-btn"><i data-lucide="bell"></i> <span>Notifications</span> <span id="sidebar-notif-count" class="badge-new badge-sidebar-notif-pill">0</span></button></li>
+                <li id="menu-inventory" class="hidden"><button data-action="switchTab" data-tab="inventory" class="nav-btn"><i data-lucide="box"></i> <span>Inventory</span></button></li>
+                <li id="menu-install" title="Download Portal as App"><button id="menu-download" data-action="installPWA" class="nav-btn"><i data-lucide="download-cloud"></i> <span>Download App</span></button></li>
+                <li id="menu-settings" title="Manage Store & Delivery Configuration"><button data-action="switchTab" data-tab="settings" class="nav-btn"><i data-lucide="settings"></i> <span>Settings</span></button></li>
+                <li id="menu-logout" class="logout-item" title="Sign Out of Dashboard"><button data-action="userLogout" class="nav-btn"><i data-lucide="log-out"></i> <span>Logout</span></button></li>
             </ul>
         </div>
 
@@ -323,7 +321,7 @@
                                     </div>
                                 </div>
 
-                                <button id="btnAddCategory" class="btn-primary w-full mt-20 p-12 br-12 font-weight-700" title="Save new category">🚀 Add Category</button>
+                                <button id="btnAddCategory" data-action="addCategory" class="btn-primary w-full mt-20 p-12 br-12 font-weight-700" title="Save new category">🚀 Add Category</button>
                             </div>
                         </div>
 
@@ -339,21 +337,66 @@
             </div>
 
             <!-- RIDERS TAB -->
-            <div id="tab-riders" class="tab-content hidden">
-                <div class="panel">
-                    <div class="panel-header">
-                        <h3 class="panel-title">Rider Management</h3>
-                        <button id="btnShowRiderModal" class="btn-primary btn-small" title="Create a new rider account">+ Add New Rider</button>
+            <section id="tab-riders" class="tab-content hidden">
+                <div class="section-header">
+                    <div class="flex-col">
+                        <h2>Rider Management</h2>
+                        <p class="text-secondary-sm">Monitor delivery staff, earnings, and live status.</p>
+                    </div>
+                    <button class="btn-primary" data-action="showAddRiderModal"><i data-lucide="user-plus"></i> Add New Rider</button>
+                </div>
+
+                <!-- Rider Stats Summary Row -->
+                <div class="kpi-row mb-20">
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box bg-success-light"><i data-lucide="check-circle" class="text-success"></i></div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Online Now</span>
+                            <span id="rider-stat-online" class="kpi-value">0</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box bg-warning-light"><i data-lucide="navigation" class="text-warning"></i></div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">On Delivery</span>
+                            <span id="rider-stat-busy" class="kpi-value">0</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box bg-danger-light"><i data-lucide="power" class="text-danger"></i></div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Offline</span>
+                            <span id="rider-stat-offline" class="kpi-value">0</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box bg-primary-light"><i data-lucide="wallet" class="text-primary"></i></div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Today's Earnings</span>
+                            <span id="rider-stat-earnings" class="kpi-value">₹0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header-flex">
+                        <h3>All Registered Riders</h3>
+                        <div class="flex-center flex-gap-12">
+                            <div class="search-input-wrapper">
+                                <i data-lucide="search"></i>
+                                <input type="text" placeholder="Search riders..." class="search-input" id="riderSearchInput">
+                            </div>
+                        </div>
                     </div>
                     <div class="scroll-x">
-                        <table>
+                        <table class="premium-table">
                             <thead>
                                 <tr>
-                                    <th>Rider Name</th>
-                                    <th>Credentials</th>
-                                    <th>Status</th>
-                                    <th>Portal</th>
-                                    <th>Stats</th>
+                                    <th>Rider Identity</th>
+                                    <th>Access Credentials</th>
+                                    <th>Current Status</th>
+                                    <th>Quick Stats</th>
+                                    <th>Performance</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -361,7 +404,7 @@
                         </table>
                     </div>
                 </div>
-            </div>
+            </section>
 
             <section id="tab-notifications" class="tab-content hidden">
                 <div class="panel">
@@ -543,7 +586,7 @@
                                         <div class="flex-1">
                                             <label class="form-label-small">WiFi Password</label>
                                             <div class="flex-row flex-gap-10">
-                                                <input type="password" id="settingWifiPass" class="form-input flex-1" placeholder="WiFi Password" title="WiFi Password">
+                                                <input type="password" id="settingWifiPass" class="form-input flex-1" autocomplete="new-password" placeholder="WiFi Password" title="WiFi Password">
                                                 <button type="button" id="btnToggleWifiPass" class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
                                             </div>
                                             <div class="notif-sub-premium mt-6 font-weight-500 color-primary">
@@ -777,7 +820,7 @@
                                     <thead>
                                         <tr>
                                             <th>Up to (KM)</th>
-                                            <th>Charge (&#8377;)</th>
+                                            <th>Charge (₹)</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -831,7 +874,7 @@
                     <div class="kpi-card">
                         <div class="kpi-icon-box green"><i data-lucide="indian-rupee"></i></div>
                         <div class="kpi-info">
-                            <span class="val" id="reportRevenue">&#8377;0</span>
+                            <span class="val" id="reportRevenue">₹0</span>
                             <span class="lbl">Total Revenue</span>
                         </div>
                     </div>
@@ -845,7 +888,7 @@
                     <div class="kpi-card">
                         <div class="kpi-icon-box orange"><i data-lucide="trending-up"></i></div>
                         <div class="kpi-info">
-                            <span class="val" id="reportAvg">&#8377;0</span>
+                            <span class="val" id="reportAvg">₹0</span>
                             <span class="lbl">Avg. Ticket Size</span>
                         </div>
                     </div>
@@ -875,7 +918,7 @@
                                         <tr>
                                             <th>Date</th>
                                             <th>Customer</th>
-                                            <th>Total (&#8377;)</th>
+                                            <th>Total (₹)</th>
                                             <th>Method</th>
                                             <th>Items</th>
                                         </tr>
@@ -998,7 +1041,7 @@
                         <div class="panel sticky-cart">
                             <div class="flex-between flex-center mb-14">
                                 <h3 class="panel-title mb-0">🧾 Order Summary</h3>
-                                <button id="btnClearWalkinCart" class="btn-text-danger small-btn">Clear All</button>
+                                <button id="btnClearWalkinCart" data-action="clearWalkinCart" class="btn-text-danger small-btn">Clear All</button>
                             </div>
 
                             <!-- Cart Items -->
@@ -1010,25 +1053,25 @@
                             <div class="divider-top mb-14">
                                 <div class="flex-between mb-8">
                                     <span class="text-muted-small font-800">Subtotal</span>
-                                    <span id="walkinSubtotal" class="font-800">&#8377;0</span>
+                                    <span id="walkinSubtotal" class="font-800">₹0</span>
                                 </div>
                                 <div class="flex-between flex-center mb-8">
                                     <span class="text-muted-small font-800">Discount</span>
                                     <div class="flex-row flex-center flex-gap-10">
                                         <div class="discount-presets" id="discountPresets">
-                                            <button class="chip btn-discount-preset" data-amount="50">&#8377;50</button>
-                                            <button class="chip btn-discount-preset" data-amount="100">&#8377;100</button>
-                                            <button class="chip btn-discount-preset" data-pct="10">10%</button>
+                                            <button class="chip btn-discount-preset" data-action="applyWalkinDiscount" data-amount="50">₹50</button>
+                                            <button class="chip btn-discount-preset" data-action="applyWalkinDiscount" data-amount="100">₹100</button>
+                                            <button class="chip btn-discount-preset" data-action="applyWalkinDiscount" data-pct="10">10%</button>
                                         </div>
                                         <div class="flex-row flex-center">
-                                            <span class="text-muted-small mr-4">&#8377;</span>
+                                            <span class="text-muted-small mr-4">?</span>
                                             <input type="number" id="walkinDiscount" value="0" min="0" class="form-input mb-0 input-discount" title="Discount Amount">
                                         </div>
                                     </div>
                                 </div>
                                 <div class="flex-between mt-20 checkout-total">
                                     <span>Total</span>
-                                    <span id="walkinTotal">&#8377;0</span>
+                                    <span id="walkinTotal">₹0</span>
                                 </div>
                             </div>
  
@@ -1044,14 +1087,14 @@
                             <div class="mb-14">
                                 <label class="form-label-small text-muted mb-8 d-block">Payment Method</label>
                                 <div class="flex-row flex-gap-10">
-                                    <button class="walkin-pay-btn active" data-method="Cash" title="Pay by Cash">💵 Cash</button>
-                                    <button class="walkin-pay-btn" data-method="UPI" title="Pay by UPI / Scanner">📱 UPI</button>
-                                    <button class="walkin-pay-btn" data-method="Card" title="Pay by Credit/Debit Card">💳 Card</button>
+                                    <button class="walkin-pay-btn active" data-action="selectWalkinPayment" data-method="Cash" title="Pay by Cash">💵 Cash</button>
+                                    <button class="walkin-pay-btn" data-action="selectWalkinPayment" data-method="UPI" title="Pay by UPI / Scanner">📱 UPI</button>
+                                    <button class="walkin-pay-btn" data-action="selectWalkinPayment" data-method="Card" title="Pay by Credit/Debit Card">💳 Card</button>
                                 </div>
                             </div>
 
                             <!-- Submit -->
-                            <button id="walkinSubmitBtn" class="btn-primary w-full btn-checkout">
+                             <button id="walkinSubmitBtn" data-action="submitWalkinSale" class="btn-primary w-full btn-checkout">
                                 ✅ Record Sale
                             </button>
                         </div>
@@ -1061,8 +1104,6 @@
             </div>
         </div>
     </div>
-
-    <script src="init.js?v=3.1.0"></script>
 
     <!-- DISH MODAL -->
     <div id="dishModal" class="modal">
@@ -1098,7 +1139,7 @@
                     <label class="form-label">Dish Name</label>
                     <input id="dishName" placeholder="e.g. Farmhouse Pizza" class="form-input w-full mb-20">
 
-                    <label class="form-label">Base Price (&#8377;)</label>
+                    <label class="form-label">Base Price (₹)</label>
                     <input id="dishPriceBase" type="number" placeholder="499" class="form-input w-full mb-20">
 
                     <div class="divider-top">
@@ -1176,7 +1217,7 @@
                              <div class="flex-1">
                                  <label class="form-label" id="riderPassLabel">Portal Password</label>
                                  <div class="password-input-group flex-row flex-gap-8">
-                                    <input id="riderPass" type="password" placeholder="••••••••" class="form-input flex-1" title="New password for rider portal">
+                                    <input id="riderPass" type="password" autocomplete="new-password" placeholder="••••••••" class="form-input flex-1" title="New password for rider portal">
                                     <button type="button" id="btnToggleRiderPass" class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
                                 </div>
                                  <small id="riderPassHint" class="hidden text-muted-small">Leave blank to keep current password</small>
@@ -1214,7 +1255,7 @@
 
             <div class="modal-footer">
                 <small id="uploadStatusRider" class="hidden upload-status-text">Processing...</small>
-                <button id="saveRiderBtn" class="btn-primary flex-center flex-gap-8 w-150">
+                <button id="saveRiderBtn" data-action="saveRiderAccount" class="btn-primary flex-center flex-gap-8 w-150">
                     <i data-lucide="check-circle"></i> Save Rider
                 </button>
                 <button class="btn-secondary w-100 btn-hide-rider-modal">Cancel</button>
@@ -1268,7 +1309,7 @@
                     <div class="summary-icon"><i data-lucide="shopping-bag"></i></div>
                     <div>
                         <div id="mobileCartCount" class="summary-count">0 Items</div>
-                        <div id="mobileCartTotal" class="summary-total">&#8377;0</div>
+                        <div id="mobileCartTotal" class="summary-total">₹0</div>
                     </div>
                 </div>
                 <button class="btn-checkout-mobile">View Cart <i data-lucide="chevron-right"></i></button>
@@ -1331,7 +1372,7 @@
             <div class="modal-footer selection-footer">
                 <div class="selection-total-info">
                     <div class="text-muted-small">Total Price</div>
-                    <div id="posModalTotal" class="total-price-large">&#8377;0</div>
+                    <div id="posModalTotal" class="total-price-large">₹0</div>
                 </div>
                 <button id="posAddBtn" class="btn-primary btn-add-large" title="Add this item with selected options to your cart">
                     &#128722; Add to Cart
@@ -1342,6 +1383,6 @@
 
     <script src="receipt-templates.js?v=3.1.0"></script>
     <script src="init.js?v=3.1.0"></script>
-    <script src="app.js?v=3.1.0"></script>
+    <script src="app.js?v=3.2.0"></script>
 </body>
 </html>
