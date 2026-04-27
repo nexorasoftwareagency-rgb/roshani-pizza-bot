@@ -4,8 +4,7 @@
       ".indexOn": [
         "email"
       ],
-      // Bootstrap: Allow any authenticated user with admin claim or matching bootstrap email to read
-      ".read": "auth != null && (auth.token.admin === true || root.child('admins/a1/email').val() == auth.token.email || root.child('admins/a2/email').val() == auth.token.email)",
+      ".read": "auth != null && auth.token.email_verified === true && (auth.token.admin === true || root.child('admins/' + auth.uid).exists())",
       ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).exists())",
       "$adminId": {
         ".read": "auth != null && (auth.uid == $adminId || root.child('admins/' + auth.uid).exists())",
@@ -14,7 +13,6 @@
       }
     },
     "riderStats": {
-      // Admins can read/write all, riders can read/write their own stats (for increments)
       ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
       ".write": "auth != null && root.child('admins/' + auth.uid).exists()",
       "$riderId": {
@@ -63,7 +61,6 @@
       }
     },
     "bot": {
-      // Internal bot config - restricted to admins only
       ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
       ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
     },
@@ -82,14 +79,11 @@
           "status",
           "whatsappNumber"
         ],
-        // Strict read: Admins see all, Riders only see unassigned or their own
-        // Removed status query to prevent order enumeration across all outlets
-        ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || query.orderByChild == 'assignedRider' && query.equalTo == auth.token.email)",
+        ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || (query.orderByChild == 'assignedRider' && (query.equalTo == auth.token.email || query.equalTo == null)))",
         "$orderId": {
           ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || !data.child('assignedRider').exists() || data.child('assignedRider').val() == auth.token.email)",
           ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (data.child('assignedRider').val() == auth.token.email || !data.child('assignedRider').exists()))",
           ".validate": "newData.hasChildren(['status', 'total', 'items'])",
-          // Non-admin riders can only update assignedRider field
           "assignedRider": {
             ".validate": "!root.child('admins/' + auth.uid).exists() || newData.val() == data.val() || (auth.token.email == newData.val() && !data.exists())"
           }
@@ -111,7 +105,6 @@
       },
       "otpAttempts": {
         "$orderId": {
-          // Only assigned rider or admin can read/write failure counts
           ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || root.child($outlet + '/orders/' + $orderId + '/assignedRider').val() == auth.token.email)",
           ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || root.child($outlet + '/orders/' + $orderId + '/assignedRider').val() == auth.token.email)"
         }

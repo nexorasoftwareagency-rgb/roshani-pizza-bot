@@ -9,14 +9,21 @@
 
 
 window.haptic = (val) => {
-
     if (window.navigator && window.navigator.vibrate) {
-
         window.navigator.vibrate(val);
-
     }
-
 };
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+window.escapeHtml = escapeHtml;
 
 
 
@@ -609,26 +616,19 @@ window.showConfirm = (message, title = "Confirm Action") => {
 
 
         overlay.innerHTML = `
-
             <div style="background: #1c1c1c; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
-
                         padding: 32px; max-width: 360px; width: 90%; text-align: center;
-
                         box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
-
-                <h3 style="color: #fff; margin: 0 0 12px; font-size: 18px; font-weight: 700;">${title}</h3>
-
-                <p style="color: #aaa; font-size: 14px; margin: 0 0 24px;">${message}</p>
-
+                <h3 id="confirmTitle" style="color: #fff; margin: 0 0 12px; font-size: 18px; font-weight: 700;"></h3>
+                <p id="confirmMessage" style="color: #aaa; font-size: 14px; margin: 0 0 24px;"></p>
                 <div style="display: flex; gap: 12px; justify-content: center;">
-
                     <button id="confirmNo" style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #333; background: transparent; color: #aaa; cursor: pointer; font-size: 14px; font-weight: 600;">Cancel</button>
-
                     <button id="confirmYes" style="flex: 1; padding: 12px; border-radius: 12px; border: none; background: var(--action-green); color: #fff; cursor: pointer; font-size: 14px; font-weight: 700;">Confirm</button>
-
                 </div>
-
             </div>`;
+
+        overlay.querySelector('#confirmTitle').textContent = title;
+        overlay.querySelector('#confirmMessage').textContent = message;
 
 
 
@@ -1830,7 +1830,7 @@ auth.onAuthStateChanged(async user => {
 
         if (authOverlay) {
             authOverlay.classList.remove('hidden');
-            authOverlay.style.display = 'flex'; 
+            authOverlay.style.display = 'flex';
         }
         const layout = document.querySelector(".layout");
         if (layout) layout.classList.add('hidden');
@@ -1848,7 +1848,7 @@ auth.onAuthStateChanged(async user => {
             // 2. Fallback to scanning all admins (handles migration/legacy keys)
             const allSnap = await Outlet.ref("admins").once("value");
             const normalizedEmail = (user.email || "").toLowerCase();
-            
+
             allSnap.forEach(snap => {
                 const val = snap.val();
                 if (val && val.email && val.email.toLowerCase() === normalizedEmail) {
@@ -1944,19 +1944,19 @@ auth.onAuthStateChanged(async user => {
             if (switcher) switcher.classList.add('hidden');
             if (switcherMobile) switcherMobile.classList.add('hidden');
         }
-        
+
         console.log("[Auth] Final window.currentOutlet:", window.currentOutlet);
 
 
 
         // --- CONSOLIDATED BRANDING SYNC ---
         const brandType = window.currentOutlet === 'cake' ? 'cake' : 'pizza';
-        
+
         // Only reload if the brand actually changed to ensure manifest and theme-colors refresh
         if (sessionStorage.getItem('admin_brand') !== brandType) {
             console.log(`[Branding Sync] Updating brand to: ${brandType}`);
             sessionStorage.setItem('admin_brand', brandType);
-            
+
             // If we have a 'brand' URL parameter, strip it to prevent loops
             const url = new URL(window.location.href);
             if (url.searchParams.has('brand')) {
@@ -3230,9 +3230,9 @@ window.switchTab = (tabId) => {
 
         // 3. Full Data Sync
 
-        _ordersValueCb = snap => { 
+        _ordersValueCb = snap => {
             console.log(`[Firebase] Orders Value received. Children: ${snap.numChildren()}`);
-            renderOrders(snap); 
+            renderOrders(snap);
         };
 
         const ordersRef = Outlet.ref("orders");
@@ -3277,7 +3277,7 @@ window.switchTab = (tabId) => {
 
             // High-frequency "Ping" chime (pleasant and loud)
 
-            const chime = new Audio("https://raw.githubusercontent.com/Prashant-Satyarthy/CDN/main/orders-alert.mp3");
+            const chime = new Audio("assets/sounds/alert.mp3");
 
             chime.volume = 0.8;
 
@@ -3471,24 +3471,7 @@ window.switchTab = (tabId) => {
 
 
 
-    function escapeHtml(str) {
-
-        if (!str) return '';
-
-        return String(str)
-
-            .replace(/&/g, '&amp;')
-
-            .replace(/</g, '&lt;')
-
-            .replace(/>/g, '&gt;')
-
-            .replace(/"/g, '&quot;')
-
-            .replace(/'/g, '&#039;');
-
-    }
-
+    // Moved escapeHtml to top level for global access
 
 
     function validateUrl(url) {
@@ -3552,7 +3535,7 @@ window.switchTab = (tabId) => {
             console.warn("[Render] No snap provided to renderOrders");
             return;
         }
-        
+
         console.log(`[Render] Starting render for ${snap.numChildren()} items. Outlet: ${window.currentOutlet}, Tab: ${window.currentActiveTab || 'dashboard'}`);
 
         lastOrdersSnap = snap; // Cache for background performance
@@ -5636,7 +5619,7 @@ window.switchTab = (tabId) => {
 
                         </div>
 
-    ${c.locationLink ? `<a href="${c.locationLink}" target="_blank" style="color:var(--primary); font-size:10px; text-decoration:none;">📍 Map Link</a>` : ""}
+    ${c.locationLink ? `<a href="${escapeHtml(c.locationLink)}" target="_blank" style="color:var(--primary); font-size:10px; text-decoration:none;">📍 Map Link</a>` : ""}
 
                     </td>
 
@@ -10750,7 +10733,7 @@ function loadCustomers() {
 
                         </div>
 
-    ${c.locationLink ? `<a href="${c.locationLink}" target="_blank" style="color:var(--primary); font-size:10px; text-decoration:none;">📍 Map Link</a>` : ""}
+    ${c.locationLink ? `<a href="${escapeHtml(c.locationLink)}" target="_blank" style="color:var(--primary); font-size:10px; text-decoration:none;">📍 Map Link</a>` : ""}
 
                     </td>
 
@@ -15271,71 +15254,34 @@ function enhanceTablesForMobile(root = document) {
     tables.forEach(table => {
 
         const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
-
         if (headers.length === 0) return;
-
-
-
         const rows = table.querySelectorAll('tbody tr');
-
         rows.forEach(row => {
-
             const cells = row.querySelectorAll('td');
-
             cells.forEach((cell, index) => {
-
                 if (headers[index] && !cell.getAttribute('data-label')) {
-
                     cell.setAttribute('data-label', headers[index]);
-
                 }
-
             });
-
         });
-
     });
-
 }
-
-
-
 // Phase 3: Use MutationObserver instead of polling for performance
-
 if (typeof MutationObserver !== 'undefined') {
-
     const observer = new MutationObserver((mutations) => {
-
         if (window.innerWidth <= 600) {
-
             // Debounce or throttle could be added if needed, but this is usually fine
-
             enhanceTablesForMobile();
-
         }
-
     });
-
-
-
     observer.observe(document.body, {
-
         childList: true,
-
         subtree: true
-
     });
-
 } else {
-
     // Fallback for older browsers
-
     setInterval(enhanceTablesForMobile, 3000);
-
 }
-
-
-
 // Initial call
 
 enhanceTablesForMobile();

@@ -3,18 +3,15 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Roshani Pizza | Admin Dashboard</title>
 
     <!-- Dynamic Branding Engine -->
     <script src="branding.js?v=3.1.0"></script>
     <script src="firebase-config.js?v=3.1.0"></script>
 
-    <link rel="stylesheet" href="style.css?v=3.2.0">
-    <link rel="stylesheet" href="mobile-overrides.css?v=3.1.0">
-    <link rel="manifest" href="manifest-pizza.json?v=2">
-    <link rel="icon" type="image/png" href="icon-pizza.png">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.firebaseio.com https://*.firebasedatabase.app https://unpkg.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://* http://*; connect-src 'self' wss://*.firebaseio.com https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com https://*.firebaseapp.com https://www.google-analytics.com https://region1.google-analytics.com https://overbridgenet.com https://raw.githubusercontent.com https://*.tile.openstreetmap.org;">
+    <link rel="stylesheet" href="style.css?v=3.1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://placehold.co https://tile.openstreetmap.org https://*.googleusercontent.com; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com;">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pizza ERP">
@@ -42,41 +39,44 @@
 <body>
     <div id="alertContainer"></div>
 
+    <!-- Haptic Interaction Helper -->
+
     <!-- LOGIN -->
     <div id="authOverlay" title="Admin Login Screen">
-        <form id="loginForm" class="login-box" title="Sign into the Admin Dashboard" onsubmit="return false;">
-            <h2 id="loginTitle">ROSHANI ADMIN LOGIN</h2>
-            <input id="adminEmail" name="email" type="email" autocomplete="username" placeholder="Email Address" title="Your administrative email address">
-            <input id="adminPassword" name="password" type="password" autocomplete="current-password" placeholder="Password" title="Your administrative password">
-            <button id="loginBtn" type="submit" class="btn-primary w-full flex-center" title="Sign into the Admin Dashboard">Sign In</button>
+        <form id="loginForm" class="login-box" title="Sign into the Admin Dashboard">
+            <h2>ROSHANI PIZZA LOGIN</h2>
+            <input id="adminEmail" placeholder="Email Address" title="Your administrative email address">
+            <input id="adminPassword" type="password" placeholder="Password" title="Your administrative password">
+            <button id="loginBtn" type="button" class="btn-primary w-full flex-center" title="Sign into the Admin Dashboard">Sign In</button>
             <p id="authError" class="login-error"></p>
         </form>
     </div>
 
-    <div class="layout hidden">
+    <div class="layout">
+
         <div id="sidebarOverlay" class="sidebar-overlay" data-action="toggleSidebar"></div>
 
         <!-- SIDEBAR -->
         <div class="sidebar" id="sidebarNav">
             <div class="sidebar-header"><span id="sidebarBrandText">ROSHANI PIZZA</span></div>
             <ul>
-                <li id="menu-dashboard" class="active" title="View Main Dashboard Snapshot"><button data-action="switchTab" data-tab="dashboard" class="nav-btn"><i data-lucide="layout-dashboard"></i> <span>Dashboard</span></button></li>
-                <li id="menu-orders" title="Manage Customer Orders"><button data-action="switchTab" data-tab="orders" class="nav-btn"><i data-lucide="shopping-cart"></i> <span>Orders</span></button></li>
-                <li id="menu-live" title="Monitor Live Store Operations"><button data-action="switchTab" data-tab="live" class="nav-btn"><i data-lucide="activity"></i> <span>Live Ops</span> <span id="badge-live" class="counter-badge hidden">0</span></button></li>
-                <li id="menu-walkin" title="Open Point of Sale (POS) Interface"><button data-action="switchTab" data-tab="walkin" class="nav-btn"><i data-lucide="monitor"></i> <span>POS Control</span></button></li>
-                <li id="menu-menu" title="Manage Product Menu and Items"><button data-action="switchTab" data-tab="menu" class="nav-btn"><i data-lucide="utensils"></i> <span>Menu</span></button></li>
-                <li id="menu-categories" title="Organize Menu Categories"><button data-action="switchTab" data-tab="categories" class="nav-btn"><i data-lucide="folder-tree"></i> <span>Categories</span></button></li>
-                <li id="menu-riders" title="Manage Delivery Staff and Status"><button data-action="switchTab" data-tab="riders" class="nav-btn"><i data-lucide="bike"></i> <span>Riders</span></button></li>
-                <li id="menu-customers" title="View and Manage Customer Records"><button data-action="switchTab" data-tab="customers" class="nav-btn"><i data-lucide="users"></i> <span>Customers</span></button></li>
-                <li id="menu-lostSales" title="View Orders Abandoned at Checkout"><button data-action="switchTab" data-tab="lostSales" class="nav-btn"><i data-lucide="shopping-bag"></i> <span>Lost Sales</span></button></li>
-                <li id="menu-reports"><button data-action="switchTab" data-tab="reports" class="nav-btn"><i data-lucide="bar-chart-3"></i> <span>Analytics</span></button></li>
-                <li id="menu-feedback"><button data-action="switchTab" data-tab="feedback" class="nav-btn"><i data-lucide="star"></i> <span>Feedback</span></button></li>
-                <li id="menu-liveTracker"><button data-action="switchTab" data-tab="liveTracker" class="nav-btn"><i data-lucide="map-pin"></i> <span>Live Tracking</span> <span class="badge-new badge-live-tracking-pill">LIVE</span></button></li>
-                <li id="menu-notifications"><button data-action="switchTab" data-tab="notifications" class="nav-btn"><i data-lucide="bell"></i> <span>Notifications</span> <span id="sidebar-notif-count" class="badge-new badge-sidebar-notif-pill">0</span></button></li>
-                <li id="menu-inventory" class="hidden"><button data-action="switchTab" data-tab="inventory" class="nav-btn"><i data-lucide="box"></i> <span>Inventory</span></button></li>
-                <li id="menu-install" title="Download Portal as App"><button id="menu-download" data-action="installPWA" class="nav-btn"><i data-lucide="download-cloud"></i> <span>Download App</span></button></li>
-                <li id="menu-settings" title="Manage Store & Delivery Configuration"><button data-action="switchTab" data-tab="settings" class="nav-btn"><i data-lucide="settings"></i> <span>Settings</span></button></li>
-                <li id="menu-logout" class="logout-item" title="Sign Out of Dashboard"><button data-action="userLogout" class="nav-btn"><i data-lucide="log-out"></i> <span>Logout</span></button></li>
+                <li data-action="switchTab" data-tab="dashboard" class="active" title="View Main Dashboard Snapshot"><i data-lucide="layout-dashboard"></i> <span>Dashboard</span></li>
+                <li data-action="switchTab" data-tab="orders" title="Manage Customer Orders"><i data-lucide="shopping-cart"></i> <span>Orders</span></li>
+                <li data-action="switchTab" data-tab="live" title="Monitor Live Store Operations"><i data-lucide="activity"></i> <span>Live Ops</span> <span id="badge-live" class="counter-badge hidden">0</span></li>
+                <li data-action="switchTab" data-tab="walkin" title="Open Point of Sale (POS) Interface"><i data-lucide="monitor"></i> <span>POS Control</span></li>
+                <li data-action="switchTab" data-tab="menu" title="Manage Product Menu and Items"><i data-lucide="utensils"></i> <span>Menu</span></li>
+                <li data-action="switchTab" data-tab="categories" title="Organize Menu Categories"><i data-lucide="folder-tree"></i> <span>Categories</span></li>
+                <li data-action="switchTab" data-tab="riders" title="Manage Delivery Staff and Status"><i data-lucide="bike"></i> <span>Riders</span></li>
+                <li data-action="switchTab" data-tab="customers" title="View and Manage Customer Records"><i data-lucide="users"></i> <span>Customers</span></li>
+                <li data-action="switchTab" data-tab="lostSales" title="View Orders Abandoned at Checkout"><i data-lucide="shopping-bag"></i> <span>Lost Sales</span></li>
+                <li data-action="switchTab" data-tab="reports"><i data-lucide="bar-chart-3"></i> <span>Analytics</span></li>
+                <li data-action="switchTab" data-tab="feedback"><i data-lucide="star"></i> <span>Feedback</span></li>
+                <li data-action="switchTab" data-tab="liveTracker"><i data-lucide="map-pin"></i> <span>Live Tracking</span> <span class="badge-new badge-live-tracking-pill">LIVE</span></li>
+                <li data-action="switchTab" data-tab="notifications"><i data-lucide="bell"></i> <span>Notifications</span> <span id="sidebar-notif-count" class="badge-new badge-sidebar-notif-pill">0</span></li>
+                <li data-action="switchTab" data-tab="inventory" class="hidden"><i data-lucide="box"></i> <span>Inventory</span></li>
+                <li data-action="installPWA" title="Download Portal as App"><i data-lucide="download-cloud"></i> <span>Download App</span></li>
+                <li data-action="switchTab" data-tab="settings" title="Manage Store & Delivery Configuration"><i data-lucide="settings"></i> <span>Settings</span></li>
+                <li data-action="userLogout" class="logout-item" title="Sign Out of Dashboard"><i data-lucide="log-out"></i> <span>Logout</span></li>
             </ul>
         </div>
 
@@ -150,7 +150,7 @@
                     <div class="kpi-card">
                         <div class="kpi-icon-box blue"><i data-lucide="indian-rupee"></i></div>
                         <div class="kpi-info">
-                            <span class="val" id="statRevenue">₹0</span>
+                            <span class="val" id="statRevenue">?0</span>
                             <span class="lbl">Total Revenue</span>
                         </div>
                     </div>
@@ -179,7 +179,7 @@
                         <div class="recent-section mt-24">
                             <h3 class="section-title">Recent Order History</h3>
                             <div class="table-responsive">
-                                <table class="table mobile-card-table">
+                                <table class="table">
                                     <thead>
                                         <tr>
                                             <th>ID</th>
@@ -214,12 +214,12 @@
                         <div class="panel">
                             <div class="panel-header flex-row flex-between flex-center">
                                 <h3 class="panel-title">🚚 Rider Status</h3>
-                                 <button data-tab="riders" data-action="switchTab" class="btn-text-primary-sm" title="Manage Delivery Staff and Status">
+                                <button data-tab="riders" class="btn-text-primary-sm" title="Manage Delivery Staff and Status">
                                     Manage <i data-lucide="chevron-right"></i>
                                 </button>
                             </div>
                             <div class="mb-10"><span id="onlineRiderCount" class="badge badge-ready">0 ON</span></div>
-                            <div id="riderStatusList" class="scroll-y max-h-300">
+                            <div id="riderStatusList" class="scroll-y" style="max-height: 300px;">
                                 <!-- Dynamic -->
                             </div>
                         </div>
@@ -235,7 +235,7 @@
                         <input type="text" id="orderSearch" placeholder="Search Order ID or Name..." class="search-input-group">
                     </div>
                     <div class="scroll-x">
-                        <table class="mobile-card-table">
+                        <table>
                             <thead>
                                 <tr>
                                     <th>Order ID</th>
@@ -258,7 +258,7 @@
                     <h3 class="desktop-only">🔥 Live Operations</h3>
                     <p class="panel-subtitle">Tracking active kitchen and delivery work</p>
                     <div class="scroll-x">
-                        <table class="mobile-card-table">
+                        <table>
                             <thead>
                                 <tr>
                                     <th>Order ID</th>
@@ -321,7 +321,7 @@
                                     </div>
                                 </div>
 
-                                <button id="btnAddCategory" data-action="addCategory" class="btn-primary w-full mt-20 p-12 br-12 font-weight-700" title="Save new category">🚀 Add Category</button>
+                                <button id="btnAddCategory" class="btn-primary w-full mt-20 p-12 br-12 font-weight-700" title="Save new category">🚀 Add Category</button>
                             </div>
                         </div>
 
@@ -337,66 +337,21 @@
             </div>
 
             <!-- RIDERS TAB -->
-            <section id="tab-riders" class="tab-content hidden">
-                <div class="section-header">
-                    <div class="flex-col">
-                        <h2>Rider Management</h2>
-                        <p class="text-secondary-sm">Monitor delivery staff, earnings, and live status.</p>
-                    </div>
-                    <button class="btn-primary" data-action="showAddRiderModal"><i data-lucide="user-plus"></i> Add New Rider</button>
-                </div>
-
-                <!-- Rider Stats Summary Row -->
-                <div class="kpi-row mb-20">
-                    <div class="kpi-card">
-                        <div class="kpi-icon-box bg-success-light"><i data-lucide="check-circle" class="text-success"></i></div>
-                        <div class="kpi-info">
-                            <span class="kpi-label">Online Now</span>
-                            <span id="rider-stat-online" class="kpi-value">0</span>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon-box bg-warning-light"><i data-lucide="navigation" class="text-warning"></i></div>
-                        <div class="kpi-info">
-                            <span class="kpi-label">On Delivery</span>
-                            <span id="rider-stat-busy" class="kpi-value">0</span>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon-box bg-danger-light"><i data-lucide="power" class="text-danger"></i></div>
-                        <div class="kpi-info">
-                            <span class="kpi-label">Offline</span>
-                            <span id="rider-stat-offline" class="kpi-value">0</span>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon-box bg-primary-light"><i data-lucide="wallet" class="text-primary"></i></div>
-                        <div class="kpi-info">
-                            <span class="kpi-label">Today's Earnings</span>
-                            <span id="rider-stat-earnings" class="kpi-value">₹0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="glass-card">
-                    <div class="card-header-flex">
-                        <h3>All Registered Riders</h3>
-                        <div class="flex-center flex-gap-12">
-                            <div class="search-input-wrapper">
-                                <i data-lucide="search"></i>
-                                <input type="text" placeholder="Search riders..." class="search-input" id="riderSearchInput">
-                            </div>
-                        </div>
+            <div id="tab-riders" class="tab-content hidden">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">Rider Management</h3>
+                        <button id="btnShowRiderModal" class="btn-primary btn-small" title="Create a new rider account">+ Add New Rider</button>
                     </div>
                     <div class="scroll-x">
-                        <table class="premium-table mobile-card-table">
+                        <table>
                             <thead>
                                 <tr>
-                                    <th>Rider Identity</th>
-                                    <th>Access Credentials</th>
-                                    <th>Current Status</th>
-                                    <th>Quick Stats</th>
-                                    <th>Performance</th>
+                                    <th>Rider Name</th>
+                                    <th>Credentials</th>
+                                    <th>Status</th>
+                                    <th>Portal</th>
+                                    <th>Stats</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -404,7 +359,7 @@
                         </table>
                     </div>
                 </div>
-            </section>
+            </div>
 
             <section id="tab-notifications" class="tab-content hidden">
                 <div class="panel">
@@ -413,7 +368,7 @@
                             <h2 class="panel-title">NOTIFICATION DASHBOARD</h2>
                             <p class="panel-subtitle">History of all system alerts and updates</p>
                         </div>
-                         <button id="btnClearAllNotif" class="btn-secondary br-12">
+                        <button id="btnClearAllNotif" class="btn-primary btn-secondary br-12">
                             Clear All
                         </button>
                     </div>
@@ -450,7 +405,7 @@
                         <div class="flex-row flex-gap-12 flex-center">
                             <div class="notif-time-badge-premium revenue-badge-lost" id="lostSalesTotalRevenue">
                                 <small class="revenue-badge-sub">Potential Revenue Lost</small>
-                                <span class="revenue-badge-val">₹0</span>
+                                <span class="revenue-badge-val">?0</span>
                             </div>
                             <button id="btnClearLostSales" class="btn-secondary btn-lost-sales-clear">🗑️ Clear Logs</button>
                         </div>
@@ -458,7 +413,7 @@
                     
                     <div class="glass-card mb-20 p-0 overflow-hidden">
                         <div class="table-responsive">
-                            <table class="premium-table mobile-card-table">
+                            <table class="premium-table">
                                 <thead>
                                     <tr>
                                         <th class="p-l-25">Date & Time</th>
@@ -564,7 +519,7 @@
                                                 <label class="form-label-small mb-0" style="font-weight:700;">🔌 Outlet Status</label>
                                                 <span id="outletStatusPill" class="outlet-status-pill status-auto" title="Current outlet status">AUTO</span>
                                             </div>
-                                            <button type="button" id="btnQuickToggleOutlet" class="btn-primary btn-small flex-center flex-gap-6 p-6-14" title="Instantly apply this status to Firebase">
+                                            <button type="button" id="btnQuickToggleOutlet" class="btn-primary btn-small flex-center flex-gap-6" title="Instantly apply this status to Firebase" style="padding:6px 14px;">
                                                 <i data-lucide="zap" class="icon-fixed-sm"></i> Apply Now
                                             </button>
                                         </div>
@@ -586,7 +541,7 @@
                                         <div class="flex-1">
                                             <label class="form-label-small">WiFi Password</label>
                                             <div class="flex-row flex-gap-10">
-                                                <input type="password" id="settingWifiPass" class="form-input flex-1" autocomplete="new-password" placeholder="WiFi Password" title="WiFi Password">
+                                                <input type="password" id="settingWifiPass" class="form-input flex-1" placeholder="WiFi Password" title="WiFi Password">
                                                 <button type="button" id="btnToggleWifiPass" class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
                                             </div>
                                             <div class="notif-sub-premium mt-6 font-weight-500 color-primary">
@@ -610,7 +565,7 @@
                                         <div class="flex-1">
                                             <label class="form-label-small">Receipt Feedback URL (Base)</label>
                                             <input type="text" id="settingReviewUrl" class="form-input" placeholder="https://yourwebsite.com/feedback">
-                                            <small class="fs-10 text-muted">This URL will be used for the Receipt QR. Order details will be appended automatically.</small>
+                                            <small style="font-size: 0.65rem; color: var(--text-muted);">This URL will be used for the Receipt QR. Order details will be appended automatically.</small>
                                         </div>
                                     </div>
 
@@ -820,7 +775,7 @@
                                     <thead>
                                         <tr>
                                             <th>Up to (KM)</th>
-                                            <th>Charge (₹)</th>
+                                            <th>Charge (?)</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -858,9 +813,9 @@
 
             <!-- REPORTS TAB -->
             <div id="tab-reports" class="tab-content hidden">
-                <div class="flex-row justify-between flex-center mb-20 p-0-10">
-                    <h2 class="section-title fs-24 m-0">📊 Sales Analytics & Reports</h2>
-                    <div class="flex-row flex-gap-10 flex-center glass-card p-10-20 rounded-12">
+                <div class="flex-row justify-between flex-center mb-20" style="padding: 0 10px;">
+                    <h2 class="section-title" style="font-size: 24px; margin: 0;">📊 Sales Analytics & Reports</h2>
+                    <div class="flex-row flex-gap-10 flex-center glass-card" style="padding: 10px 20px; border-radius: 12px;">
                         <input type="date" id="reportFrom" class="form-input report-date-input" title="From Date">
                         <span class="text-muted-small">to</span>
                         <input type="date" id="reportTo" class="form-input report-date-input" title="To Date">
@@ -874,7 +829,7 @@
                     <div class="kpi-card">
                         <div class="kpi-icon-box green"><i data-lucide="indian-rupee"></i></div>
                         <div class="kpi-info">
-                            <span class="val" id="reportRevenue">₹0</span>
+                            <span class="val" id="reportRevenue">?0</span>
                             <span class="lbl">Total Revenue</span>
                         </div>
                     </div>
@@ -888,7 +843,7 @@
                     <div class="kpi-card">
                         <div class="kpi-icon-box orange"><i data-lucide="trending-up"></i></div>
                         <div class="kpi-info">
-                            <span class="val" id="reportAvg">₹0</span>
+                            <span class="val" id="reportAvg">?0</span>
                             <span class="lbl">Avg. Ticket Size</span>
                         </div>
                     </div>
@@ -904,9 +859,9 @@
                 <div class="reports-grid">
                     <!-- Left: Detailed Table -->
                     <div class="flex-col">
-                        <div class="glass-card mb-20 p-24 min-h-400">
+                        <div class="glass-card mb-20 p-24" style="min-height: 400px;">
                             <div class="flex-row justify-between flex-center mb-20">
-                                <h4 class="panel-title m-0">Detailed Sales Data</h4>
+                                <h4 class="panel-title" style="margin: 0;">Detailed Sales Data</h4>
                                 <div class="flex-row flex-gap-10">
                                     <button id="btnDownloadExcel" class="btn-secondary btn-small excel-btn" title="Export current sales report to Excel">📥 Excel</button>
                                     <button id="btnDownloadPDF" class="btn-secondary btn-small pdf-btn" title="Export current sales report to PDF">📥 PDF</button>
@@ -918,7 +873,7 @@
                                         <tr>
                                             <th>Date</th>
                                             <th>Customer</th>
-                                            <th>Total (₹)</th>
+                                            <th>Total (?)</th>
                                             <th>Method</th>
                                             <th>Items</th>
                                         </tr>
@@ -1018,7 +973,7 @@
                         <div class="panel">
                             <div class="panel-header">
                                 <div class="flex-row flex-center flex-gap-10">
-                                     <button data-tab="dashboard" data-action="switchTab" class="btn-text mobile-only" title="Back to Dashboard" aria-label="Back to Dashboard"><i data-lucide="arrow-left"></i></button>
+                                    <button data-tab="dashboard" class="btn-text mobile-only" title="Back to Dashboard" aria-label="Back to Dashboard"><i data-lucide="arrow-left"></i></button>
                                     <h3 class="panel-title">🍽️ Select Items</h3>
                                 </div>
                                 <input type="text" id="walkinDishSearch" placeholder="Search dishes..." class="search-input-group search-input-w200">
@@ -1041,7 +996,10 @@
                         <div class="panel sticky-cart">
                             <div class="flex-between flex-center mb-14">
                                 <h3 class="panel-title mb-0">🧾 Order Summary</h3>
-                                <button id="btnClearWalkinCart" data-action="clearWalkinCart" class="btn-text-danger small-btn">Clear All</button>
+                                <div class="flex-row flex-gap-10">
+                                    <button data-action="reprintLastPosReceipt" class="btn-text small-btn" title="Reprint the last recorded sale receipt"><i data-lucide="printer"></i></button>
+                                    <button data-action="clearPos" class="btn-text-danger small-btn">Clear All</button>
+                                </div>
                             </div>
 
                             <!-- Cart Items -->
@@ -1053,15 +1011,15 @@
                             <div class="divider-top mb-14">
                                 <div class="flex-between mb-8">
                                     <span class="text-muted-small font-800">Subtotal</span>
-                                    <span id="walkinSubtotal" class="font-800">₹0</span>
+                                    <span id="walkinSubtotal" class="font-800">?0</span>
                                 </div>
                                 <div class="flex-between flex-center mb-8">
                                     <span class="text-muted-small font-800">Discount</span>
                                     <div class="flex-row flex-center flex-gap-10">
                                         <div class="discount-presets" id="discountPresets">
-                                            <button class="chip btn-discount-preset" data-action="applyWalkinDiscount" data-amount="50">₹50</button>
-                                            <button class="chip btn-discount-preset" data-action="applyWalkinDiscount" data-amount="100">₹100</button>
-                                            <button class="chip btn-discount-preset" data-action="applyWalkinDiscount" data-pct="10">10%</button>
+                                            <button class="chip btn-discount-preset" data-amount="50">?50</button>
+                                            <button class="chip btn-discount-preset" data-amount="100">?100</button>
+                                            <button class="chip btn-discount-preset" data-pct="10">10%</button>
                                         </div>
                                         <div class="flex-row flex-center">
                                             <span class="text-muted-small mr-4">?</span>
@@ -1071,7 +1029,7 @@
                                 </div>
                                 <div class="flex-between mt-20 checkout-total">
                                     <span>Total</span>
-                                    <span id="walkinTotal">₹0</span>
+                                    <span id="walkinTotal">?0</span>
                                 </div>
                             </div>
  
@@ -1080,21 +1038,21 @@
                                 <label class="form-label-small text-muted mb-8 d-block">Customer & Notes (optional)</label>
                                 <input type="text" id="walkinCustName" placeholder="Customer Name" class="form-input mb-8" title="Customer Name">
                                 <input type="text" id="walkinCustPhone" placeholder="Phone Number" class="form-input mb-8" title="Customer Phone">
-                                <textarea id="walkinCustNote" placeholder="Order notes / instructions..." class="form-input mb-0 h-60 no-resize" title="Order instructions for this sale"></textarea>
+                                <textarea id="walkinCustNote" placeholder="Order notes / instructions..." class="form-input mb-0 h-60" style="resize: none;" title="Order instructions for this sale"></textarea>
                             </div>
  
                             <!-- Payment Method -->
                             <div class="mb-14">
                                 <label class="form-label-small text-muted mb-8 d-block">Payment Method</label>
                                 <div class="flex-row flex-gap-10">
-                                    <button class="walkin-pay-btn active" data-action="selectWalkinPayment" data-method="Cash" title="Pay by Cash">💵 Cash</button>
-                                    <button class="walkin-pay-btn" data-action="selectWalkinPayment" data-method="UPI" title="Pay by UPI / Scanner">📱 UPI</button>
-                                    <button class="walkin-pay-btn" data-action="selectWalkinPayment" data-method="Card" title="Pay by Credit/Debit Card">💳 Card</button>
+                                    <button class="walkin-pay-btn active" data-action="selectWalkinPayMethod" data-val="Cash" title="Pay by Cash">💵 Cash</button>
+                                    <button class="walkin-pay-btn" data-action="selectWalkinPayMethod" data-val="UPI" title="Pay by UPI / Scanner">📱 UPI</button>
+                                    <button class="walkin-pay-btn" data-action="selectWalkinPayMethod" data-val="Card" title="Pay by Credit/Debit Card">💳 Card</button>
                                 </div>
                             </div>
 
                             <!-- Submit -->
-                             <button id="walkinSubmitBtn" data-action="submitWalkinSale" class="btn-primary w-full btn-checkout">
+                            <button id="walkinSubmitBtn" data-action="posCheckout" class="btn-primary w-full btn-checkout">
                                 ✅ Record Sale
                             </button>
                         </div>
@@ -1104,6 +1062,8 @@
             </div>
         </div>
     </div>
+
+    <script src="init.js?v=3.1.0"></script>
 
     <!-- DISH MODAL -->
     <div id="dishModal" class="modal">
@@ -1139,7 +1099,7 @@
                     <label class="form-label">Dish Name</label>
                     <input id="dishName" placeholder="e.g. Farmhouse Pizza" class="form-input w-full mb-20">
 
-                    <label class="form-label">Base Price (₹)</label>
+                    <label class="form-label">Base Price (?)</label>
                     <input id="dishPriceBase" type="number" placeholder="499" class="form-input w-full mb-20">
 
                     <div class="divider-top">
@@ -1214,14 +1174,16 @@
                         </div>
 
                         <div class="form-row">
-                             <div class="flex-1">
-                                 <label class="form-label" id="riderPassLabel">Portal Password</label>
-                                 <div class="password-input-group flex-row flex-gap-8">
-                                    <input id="riderPass" type="password" autocomplete="new-password" placeholder="••••••••" class="form-input flex-1" title="New password for rider portal">
-                                    <button type="button" id="btnToggleRiderPass" class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
-                                </div>
-                                 <small id="riderPassHint" class="hidden text-muted-small">Leave blank to keep current password</small>
-                             </div>
+                            <div class="flex-1">
+                                <label class="form-label" id="riderPassLabel">Portal Password</label>
+                                <form class="password-input-group">
+                                <div class="password-input-group flex-row flex-gap-8">
+                                   <input id="riderPass" type="password" placeholder="••••••••" class="form-input flex-1" title="New password for rider portal">
+                                   <button type="button" id="btnToggleRiderPass" class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
+                               </div>
+                                </form>
+                                <small id="riderPassHint" class="hidden text-muted-small">Leave blank to keep current password</small>
+                            </div>
                             <div class="flex-1">
                                 <label class="form-label">Primary Phone</label>
                                 <input id="riderPhone" type="tel" placeholder="+91 99999 00000" class="form-input w-full" title="Rider's primary contact number">
@@ -1255,7 +1217,7 @@
 
             <div class="modal-footer">
                 <small id="uploadStatusRider" class="hidden upload-status-text">Processing...</small>
-                <button id="saveRiderBtn" data-action="saveRiderAccount" class="btn-primary flex-center flex-gap-8 w-150">
+                <button id="saveRiderBtn" class="btn-primary flex-center flex-gap-8 w-150">
                     <i data-lucide="check-circle"></i> Save Rider
                 </button>
                 <button class="btn-secondary w-100 btn-hide-rider-modal">Cancel</button>
@@ -1266,27 +1228,27 @@
 
         <!-- BOTTOM NAVIGATION (MOBILE ONLY) -->
         <nav class="bottom-nav mobile-only">
-            <button class="nav-item active" data-tab="dashboard" data-action="switchTab" title="Main Dashboard">
+            <div class="nav-item active" data-tab="dashboard" title="Dashboard Overview">
                 <i data-lucide="layout-dashboard"></i>
                 <span>Dash</span>
-            </button>
-            <button class="nav-item" data-tab="orders" data-action="switchTab" title="Order Management">
+            </div>
+            <div class="nav-item" data-tab="orders" title="Order Management">
                 <i data-lucide="package"></i>
                 <span>Orders</span>
-            </button>
-            <button class="nav-item" data-tab="live" data-action="switchTab" title="Live Store Operations">
+            </div>
+            <div class="nav-item" data-tab="live" title="Live Store Operations">
                 <i data-lucide="flame"></i>
                 <span>Live</span>
                 <span id="badge-live-mobile" class="mobile-count-badge hidden">0</span>
-            </button>
-            <button class="nav-item" data-tab="walkin" data-action="switchTab" title="Point of Sale">
+            </div>
+            <div class="nav-item" data-tab="walkin" title="Point of Sale">
                 <i data-lucide="shopping-cart"></i>
                 <span>POS</span>
-            </button>
-            <button id="mobileMoreBtn" class="nav-item" title="More Menu Options">
+            </div>
+            <div id="mobileMoreBtn" class="nav-item" title="More Menu Options">
                 <i data-lucide="menu"></i>
                 <span>More</span>
-            </button>
+            </div>
         </nav>
         
         <!-- MOBILE NOTIFICATION SHEET -->
@@ -1309,7 +1271,7 @@
                     <div class="summary-icon"><i data-lucide="shopping-bag"></i></div>
                     <div>
                         <div id="mobileCartCount" class="summary-count">0 Items</div>
-                        <div id="mobileCartTotal" class="summary-total">₹0</div>
+                        <div id="mobileCartTotal" class="summary-total">?0</div>
                     </div>
                 </div>
                 <button class="btn-checkout-mobile">View Cart <i data-lucide="chevron-right"></i></button>
@@ -1338,7 +1300,7 @@
                     <h2 id="posModalDishName" class="modal-title">Select Options</h2>
                     <p id="posModalDishCategory" class="text-muted-small mt-4"></p>
                 </div>
-                <button class="close-btn btn-hide-pos-modal" title="Close selection modal">&times;</button>
+                <button class="close-btn" data-action="closeModal" title="Close selection modal">&times;</button>
             </div>
             
             <div class="modal-body p-20">
@@ -1362,9 +1324,9 @@
                 <div class="selection-section mt-24">
                     <label class="pos-section-label">QUANTITY</label>
                     <div class="flex-row flex-center flex-gap-20 mt-10">
-                        <button id="btnPosQtyDec" class="qty-btn-large" title="Decrease quantity">−</button>
+                        <button id="btnPosQtyDec" data-action="adjustPOSModalQty" data-val="-1" class="qty-btn-large" title="Decrease quantity">−</button>
                         <span id="posModalQty" class="qty-val-large">1</span>
-                        <button id="btnPosQtyInc" class="qty-btn-large" title="Increase quantity">+</button>
+                        <button id="btnPosQtyInc" data-action="adjustPOSModalQty" data-val="1" class="qty-btn-large" title="Increase quantity">+</button>
                     </div>
                 </div>
             </div>
@@ -1372,10 +1334,10 @@
             <div class="modal-footer selection-footer">
                 <div class="selection-total-info">
                     <div class="text-muted-small">Total Price</div>
-                    <div id="posModalTotal" class="total-price-large">₹0</div>
+                    <div id="posModalTotal" class="total-price-large">?0</div>
                 </div>
-                <button id="posAddBtn" class="btn-primary btn-add-large" title="Add this item with selected options to your cart">
-                    &#128722; Add to Cart
+                <button id="posAddBtn" data-action="addSelectedToPosCart" class="btn-primary btn-add-large" title="Add this item with selected options to your cart">
+                    🛒 Add to Cart
                 </button>
             </div>
         </div>
@@ -1383,6 +1345,6 @@
 
     <script src="receipt-templates.js?v=3.1.0"></script>
     <script src="init.js?v=3.1.0"></script>
-    <script src="app.js?v=3.2.0"></script>
+    <script src="app.js?v=3.1.0"></script>
 </body>
 </html>

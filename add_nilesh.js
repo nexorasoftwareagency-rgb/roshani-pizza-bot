@@ -2,20 +2,22 @@ const { setData } = require('./bot/firebase');
 
 async function run() {
   const nilesh = {
-    email: "2nileshshah84870@gmail.com",
+    email: process.env.ADMIN_EMAIL || "2nileshshah84870@gmail.com",
     isSuper: true,
     name: "Nilesh Shah",
     outlet: "pizza"
   };
 
-  console.log("Seeding Nilesh Shah as admin...");
-  const success = await setData("admins/sfrhHdH4R7NdHeEoAFFeTW2ieC53", nilesh);
+  console.log(`Seeding admin: ${nilesh.email}...`);
+  const adminUid = process.env.ADMIN_UID || "sfrhHdH4R7NdHeEoAFFeTW2ieC53";
+  const success = await setData(`admins/${adminUid}`, nilesh);
   if (success) {
-    console.log("Success! Nilesh is now an admin in RTDB.");
+    console.log("Success! Admin is now seeded in RTDB.");
+    process.exit(0);
   } else {
-    console.log("Failed to seed Nilesh.");
+    console.error("Failed to seed admin.");
+    process.exit(1);
   }
-  process.exit(0);
 }
 
 run();

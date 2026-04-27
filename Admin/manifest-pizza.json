@@ -1,17 +1,90 @@
 {
-  "id": "roshani-pizza-admin",
-  "name": "Roshani Pizza Admin",
-  "short_name": "Pizza Admin",
-  "start_url": "index.html?brand=pizza&pwa=true",
+  "name": "Roshani Pizza Admin ERP",
+  "short_name": "Pizza ERP",
+  "description": "Professional ERP for Roshani Pizza Outlet Management",
+  "start_url": "./index.html?brand=pizza",
   "display": "standalone",
-  "background_color": "#0a0a0b",
-  "theme_color": "#FF6B00",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#FF5200",
+  "scope": "./",
+  "dir": "ltr",
+  "lang": "en-US",
+  "categories": [
+    "business",
+    "food",
+    "productivity"
+  ],
   "icons": [
+    {
+      "src": "icon-pizza.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-pizza.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-pizza.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-pizza.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-pizza.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-pizza.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-pizza.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "icon-pizza.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live Orders",
+      "url": "./index.html?brand=pizza#dashboard",
+      "icons": [
+        {
+          "src": "icon-pizza.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "POS Console",
+      "url": "./index.html?brand=pizza#walkin",
+      "icons": [
+        {
+          "src": "icon-pizza.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

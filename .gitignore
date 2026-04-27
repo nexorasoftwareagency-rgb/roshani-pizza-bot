@@ -7,3 +7,11 @@ bot/service-account.json
 .firebase/
 graphify-out/
 scratch/
+
+# Data Dumps & Backups
+riders_dump.json
+*_backup.js
+*_old.js
+*_head.js
+*.bak
+temp-*/
