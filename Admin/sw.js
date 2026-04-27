@@ -1,62 +1,69 @@
-const CACHE_NAME = 'roshani-admin-v2';
-const ASSETS = [
-  './',
-  './index.html',
-  './style.css?v=3.2.0',
-  './app.js?v=3.1.0',
-  './branding.js?v=3.1.0',
-  './manifest-pizza.json?v=2',
-  './manifest-cake.json',
-  './icon-pizza.png',
-  './icon-cake.png'
+const CACHE_NAME = 'roshani-erp-v3.2';
+const ASSETS_TO_CACHE = [
+  'index.html',
+  'style.css',
+  'app.js',
+  'branding.js',
+  'manifest-pizza.json',
+  'manifest-cake.json',
+  'https://unpkg.com/lucide@latest',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'assets/sounds/alert.mp3' // Add your notification sound path here
 ];
 
-// Force activation and cache latest assets
-self.addEventListener('install', (e) => {
+// 1. Install Event: Cache UI Assets
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS_TO_CACHE);
+    })
+  );
   self.skipWaiting();
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+});
+
+// 2. Activate Event: Cleanup old caches
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) return caches.delete(key);
+        })
+      );
+    })
   );
 });
 
-// Clear old caches and claim clients immediately
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    Promise.all([
-      self.clients.claim(),
-      caches.keys().then((keys) => {
-        return Promise.all(
-          keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-        );
-      })
-    ])
+// 3. Fetch Event: Network-First Strategy
+self.addEventListener('fetch', (event) => {
+  // Skip Firebase Realtime Database calls (must be live)
+  if (event.request.url.includes('firebaseio.com')) return;
+
+  event.respondWith(
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
+    })
   );
 });
 
-// Cache strategy: Network-First for core logic, Cache-First for assets
-self.addEventListener('fetch', (e) => {
-  const url = e.request.url;
-  if (url.includes('app.js') || url.includes('index.html') || url.includes('style.css')) {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request))
-    );
-  } else {
-  }
+// 4. Push Notification Event
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : { title: 'New Alert', body: 'Check your dashboard.' };
+  const options = {
+    body: data.body,
+    icon: 'icon-512.png',
+    badge: 'icon-192.png',
+    vibrate: [100, 50, 100],
+    data: { url: 'index.html' }
+  };
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
-// Handle notification interaction
+// 5. Notification Click Event
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes('/Admin/') && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow('./');
-      }
-    })
+    clients.openWindow(event.notification.data.url || 'index.html')
   );
 });

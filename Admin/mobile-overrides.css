@@ -1,121 +1,230 @@
+/* * ROSHANI ERP | PREMIUM MOBILE OVERRIDES v3.2
+ * Optimized for Saharsa/Bihar Network Latency & High-Performance Touch UX
+ */
 
-/* ==========================================================================
-   PHASE 2: MOBILE RESPONSIVENESS & TOUCH OPTIMIZATION (Audit 1.35 & 1.36)
-   ========================================================================== */
+@media (max-width: 1024px) {
 
-@media screen and (max-width: 600px) {
-    /* 1. TABLE TO CARD TRANSFORMATION */
-    /* Target all main data tables (Orders, Customers, Riders) */
-    .orders-table-container table,
-    .customers-table-container table,
-    .riders-table-container table,
-    #ordersTableFull,
-    #ridersTable {
-        border: 0;
+    /* --- 1. GLOBAL MOBILE RESET --- */
+    :root {
+        --safe-bottom: env(safe-area-inset-bottom);
     }
 
-    .orders-table-container thead,
-    .customers-table-container thead,
-    .riders-table-container thead,
-    #ordersTableFull thead,
-    #ridersTable thead {
-        display: none; /* Hide headers on small screens */
+    .desktop-only {
+        display: none;
     }
 
-    .orders-table-container tr,
-    .customers-table-container tr,
-    .riders-table-container tr,
-    #ordersTableFull tr,
-    #ridersTable tr {
+    .mobile-only {
+        display: flex;
+    }
+
+    body {
+        padding-bottom: calc(70px + var(--safe-bottom));
+        /* Prevent content overlap with Bottom Nav */
+        font-size: 14px;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* --- 2. SIDEBAR NAVIGATION (DRAWER MODE) --- */
+    .sidebar {
+        position: fixed;
+        left: -280px;
+        top: 0;
+        bottom: 0;
+        width: 280px;
+        z-index: 5000;
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 20px 0 50px rgba(0, 0, 0, 0.3);
+        border-right: none;
+    }
+
+    .sidebar.active {
+        transform: translateX(280px);
+    }
+
+    .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(4px);
+        z-index: 4999;
+        display: none;
+    }
+
+    .sidebar-overlay.active {
         display: block;
-        margin-bottom: 1rem;
-        background: #fff;
-        border: 1px solid var(--glass-border);
-        border-radius: 16px;
-        padding: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     }
 
-    .orders-table-container td,
-    .customers-table-container td,
-    .riders-table-container td,
-    #ordersTableFull td,
-    #ridersTable td {
+    /* --- 3. UPDATED ADVANCED FILTERS (SCROLLABLE BAR) --- */
+    .filters-card {
+        margin: 10px;
+        padding: 12px !important;
+        border-radius: 12px !important;
+    }
+
+    .filters-grid {
+        display: flex !important;
+        overflow-x: auto;
+        gap: 12px;
+        padding-bottom: 5px;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        /* Hide scrollbar for clean look */
+    }
+
+    .filters-grid::-webkit-scrollbar {
+        display: none;
+    }
+
+    .filter-group {
+        flex: 0 0 160px;
+        /* Fixed width for horizontal scrolling filters */
+    }
+
+    /* --- 4. LIVE DASHBOARD SPLIT VIEW (STACKED) --- */
+    .orders-split-grid {
+        grid-template-columns: 1fr !important;
+        /* Force single column on mobile */
+        gap: 15px !important;
+        padding: 0 10px;
+    }
+
+    .orders-column {
+        background: white;
+        border-radius: 16px;
+        padding: 15px;
+    }
+
+    /* --- 5. POS / WALK-IN MOBILE OPTIMIZATION --- */
+    .pos-container {
+        flex-direction: column !important;
+    }
+
+    .pos-menu {
+        width: 100% !important;
+        padding-bottom: 80px;
+    }
+
+    .pos-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        /* 2 items per row */
+        gap: 10px !important;
+    }
+
+    /* Sticky Cart Summary for Mobile */
+    .pos-cart {
+        position: fixed !important;
+        bottom: 70px;
+        /* Sits above bottom nav */
+        left: 0;
+        right: 0;
+        width: 100% !important;
+        height: auto !important;
+        border-radius: 20px 20px 0 0 !important;
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.1) !important;
+        z-index: 999;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+    }
+
+    .pos-cart.active {
+        transform: translateY(0);
+    }
+
+    /* --- 6. PREMIUM BOTTOM SHEET (ORDER DRAWER) --- */
+    .drawer-content {
+        position: fixed;
+        bottom: -100%;
+        left: 0;
+        right: 0;
+        background: white;
+        z-index: 6000;
+        border-radius: 24px 24px 0 0;
+        padding: 20px;
+        padding-bottom: calc(20px + var(--safe-bottom));
+        box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.2);
+        transition: bottom 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .drawer-content.active {
+        bottom: 0;
+    }
+
+    .drawer-handle {
+        width: 40px;
+        height: 5px;
+        background: #e2e8f0;
+        border-radius: 10px;
+        margin: 0 auto 15px;
+    }
+
+    /* --- 7. BOTTOM NAVIGATION BAR --- */
+    .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: calc(65px + var(--safe-bottom));
+        background: white;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        border-top: 1px solid #f1f5f9;
+        z-index: 5000;
+        padding-bottom: var(--safe-bottom);
+    }
+
+    .nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: #94a3b8;
+        font-size: 10px;
+        font-weight: 600;
+        background: none;
+        border: none;
+        padding: 8px 0;
+    }
+
+    .nav-item.active {
+        color: var(--primary);
+    }
+
+    .nav-item i {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* --- 8. REPORT TABLES (SCROLLABLE CARDS) --- */
+    .report-table-container {
+        margin: 10px;
+        border-radius: 12px;
+    }
+
+    table thead {
+        display: none;
+        /* Hide headers on mobile for card-style layout if preferred */
+    }
+
+    table tr {
+        display: block;
+        border-bottom: 1px solid #f1f5f9;
+        padding: 10px 0;
+    }
+
+    table td {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        padding: 8px 0;
-        border-bottom: 1px solid rgba(0,0,0,0.03);
-        font-size: 13px;
+        padding: 5px 15px !important;
         text-align: right;
     }
 
-    .orders-table-container td:last-child,
-    .customers-table-container td:last-child,
-    .riders-table-container td:last-child,
-    #ordersTableFull td:last-child,
-    #ridersTable td:last-child {
-        border-bottom: 0;
-        justify-content: center;
-        padding-top: 12px;
-    }
-
-    /* Add pseudo-labels for context where possible */
-    .orders-table-container td::before,
-    #ordersTableFull td::before {
+    table td::before {
         content: attr(data-label);
         font-weight: 700;
-        text-transform: uppercase;
-        font-size: 10px;
-        color: var(--text-muted);
-        float: left;
-        margin-right: 10px;
-    }
-
-    /* 2. POS (WALKIN) MOBILE REFINEMENT */
-    #tab-walkin .walkin-layout {
-        flex-direction: column !important; /* Stack menu and cart on very small screens */
-    }
-
-    #tab-walkin .walkin-picker {
-        flex: none !important;
-        width: 100% !important;
-        height: auto !important;
-        max-height: 250px;
-        border-right: none;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-        display: flex;
-        overflow-x: auto;
-        white-space: nowrap;
-    }
-
-    #tab-walkin .walkin-dish-grid {
-        display: flex !important;
-        flex-direction: row !important;
-        padding: 10px;
-        gap: 12px;
-    }
-
-    #tab-walkin .walkin-dish-card {
-        flex: 0 0 100px;
-        min-height: 100px;
-    }
-
-    #tab-walkin .walkin-cart {
-        height: calc(100vh - 350px);
-    }
-
-    /* 3. TOUCH TARGETS (Audit 1.35) */
-    .nav-btn, 
-    .btn-primary, 
-    .btn-outline, 
-    .action-btn,
-    .qty-btn,
-    .remove-btn {
-        min-height: 44px;
-        min-width: 44px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+        color: #64748b;
+        text-align: left;
     }
 }

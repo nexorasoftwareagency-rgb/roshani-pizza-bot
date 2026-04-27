@@ -138,6 +138,14 @@ body {
     border-bottom: 1px solid #E2E8F0;
 }
 
+.mr-10 { margin-right: 10px !important; }
+.fs-2-5rem { font-size: 2.5rem !important; }
+.fw-900 { font-weight: 900 !important; }
+.flex-gap-10 { gap: 10px !important; }
+.br-10 { border-radius: 10px !important; }
+.flex-center { align-items: center; justify-content: center; }
+.flex-align-center { align-items: center; }
+
 /* -------------------------------------------------------------------------- */
 /* TOP HEADER (FIXED)                                                         */
 /* -------------------------------------------------------------------------- */

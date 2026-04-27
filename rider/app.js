@@ -285,6 +285,20 @@ window.toggleAadharView = () => {
     }
 };
 
+window.confirmPickup = async () => {
+    if (!window.activeOrderId) return;
+    const orderPath = `${window.activeOrderOutlet || 'pizza'}/orders/${window.activeOrderId}`;
+    try {
+        await update(ref(db, orderPath), { status: "Picked Up", pickedUpAt: serverTimestamp() });
+        const modal = document.getElementById('verificationModal');
+        if (modal) modal.classList.add('hidden');
+        window.showToast("Order Picked Up! Drive safe. 🛵", "success");
+    } catch (e) {
+        logError("confirmPickup", e);
+        window.showToast("Failed to update status.", "error");
+    }
+};
+
 // GPS LOCATION ENGINE
 let _locationWatchId = null;
 let _locationInterval = null;
@@ -527,15 +541,15 @@ window.renderAllOrders = () => {
                     <div class="order-card-premium">
                         <div class="incoming-request-header">
                             <div class="new-order-badge">NEW ORDER</div>
-                            <div class="order-id-chip">#${(o.orderId || id.slice(-6)).toUpperCase()}</div>
+                            <div class="order-id-chip">#${escapeHtml((o.orderId || id.slice(-6)).toUpperCase())}</div>
                         </div>
                         <div class="incoming-request-body">
-                            <h3 class="rest-name">Drop-off: ${o.address || 'Unknown'}</h3>
+                            <h3 class="rest-name">Drop-off: ${escapeHtml(o.address || 'Unknown')}</h3>
                             <div class="trip-summary-stats mt-15" style="background:#f8fafc; padding:10px; border-radius:10px;">
-                                <div class="trip-stat"><span class="text-muted text-small font-bold uppercase">Earning</span><br><span class="text-orange font-bold" style="font-size:1.2rem;">₹${o.deliveryFee || 0}</span></div>
+                                <div class="trip-stat"><span class="text-muted text-small font-bold uppercase">Earning</span><br><span class="text-orange font-bold" style="font-size:1.2rem;">₹${escapeHtml(String(o.deliveryFee || 0))}</span></div>
                             </div>
                         </div>
-                        <button class="btn-primary full-width mt-15" onclick="window.acceptOrder('${id}', '${outletId}')">ACCEPT ORDER</button>
+                        <button class="btn-primary full-width mt-15" data-action="accept" data-id="${escapeHtml(id)}" data-outlet="${escapeHtml(outletId)}">ACCEPT ORDER</button>
                     </div>`;
                 unassignedCount++;
             }
@@ -552,21 +566,21 @@ window.renderAllOrders = () => {
                 dashboardActiveView.innerHTML = `
                     <div class="active-delivery-mock-card">
                         <div class="active-del-header">
-                            <div class="active-del-title">Active Delivery <span class="text-muted text-small">#${oId}</span></div>
+                            <div class="active-del-title">Active Delivery <span class="text-muted text-small">#${escapeHtml(oId)}</span></div>
                             <div class="active-badge">1 ACTIVE TRIP</div>
                         </div>
                         <div class="customer-info-row">
-                            <div class="cust-avatar">${cName.charAt(0).toUpperCase()}</div>
+                            <div class="cust-avatar">${escapeHtml(cName.charAt(0).toUpperCase())}</div>
                             <div class="cust-details">
-                                <h3>${cName}</h3>
-                                <p><i data-lucide="map-pin"></i> ${cAdd}</p>
-                                <p class="text-orange text-small mt-10 font-bold">${o.status.toUpperCase()}</p>
+                                <h3>${escapeHtml(cName)}</h3>
+                                <p><i data-lucide="map-pin"></i> ${escapeHtml(cAdd)}</p>
+                                <p class="text-orange text-small mt-10 font-bold">${escapeHtml(o.status.toUpperCase())}</p>
                             </div>
                         </div>
                         <div class="action-pill-row">
-                            <button class="action-pill" onclick="window.open('tel:${cPhone}')"><i data-lucide="phone"></i>CALL</button>
-                            <button class="action-pill" onclick="window.triggerWhatsAppAlert('${cPhone}', '${oId}', 'PICKED_UP')"><i data-lucide="message-circle"></i>MSG</button>
-                            <button class="action-pill" onclick="window.openOTPPanel()"><i data-lucide="key-round"></i>OTP</button>
+                            <button class="action-pill" data-action="call" data-phone="${escapeHtml(cPhone)}"><i data-lucide="phone"></i>CALL</button>
+                            <button class="action-pill" data-action="msg" data-phone="${escapeHtml(cPhone)}" data-orderid="${escapeHtml(oId)}"><i data-lucide="message-circle"></i>MSG</button>
+                            <button class="action-pill" data-action="otp"><i data-lucide="key-round"></i>OTP</button>
                         </div>
                     </div>
                 `;
@@ -590,13 +604,49 @@ window.renderAllOrders = () => {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Nav Click Listeners
     document.querySelectorAll('[data-section]').forEach(el => el.addEventListener('click', e => {
         e.preventDefault(); window.showSection(el.getAttribute('data-section'));
     }));
-    document.getElementById('sidebarOverlay').addEventListener('click', window.toggleRiderSidebar);
+
+    // Header & Sidebar
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', window.toggleRiderSidebar);
+    document.getElementById('sidebarOverlay')?.addEventListener('click', window.toggleRiderSidebar);
+    document.getElementById('statusToggleBtn')?.addEventListener('click', window.toggleRiderStatus);
+    document.getElementById('logoutBtn')?.addEventListener('click', window.logout);
+
+    // Profile Actions
+    document.getElementById('btn-toggle-aadhar')?.addEventListener('click', window.toggleAadharView);
+
+    // Order Actions (Event Delegation)
+    document.getElementById('unassignedOrdersList')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="accept"]');
+        if (btn) window.acceptOrder(btn.dataset.id, btn.dataset.outlet);
+    });
+
+    document.getElementById('dashboardActiveDeliveryView')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === 'call') window.open(`tel:${btn.dataset.phone}`);
+        else if (action === 'msg') window.triggerWhatsAppAlert(btn.dataset.phone, btn.dataset.orderid, 'PICKED_UP');
+        else if (action === 'otp') window.openOTPPanel();
+    });
+
+    // Modals
+    document.getElementById('btnConfirmPickup')?.addEventListener('click', window.confirmPickup);
+    document.getElementById('btnConfirmOTP')?.addEventListener('click', window.verifyOTP);
+    document.getElementById('btnCloseOTP')?.addEventListener('click', window.closeOTPPanel);
+    document.getElementById('btnResendOTP')?.addEventListener('click', window.regenerateOTP);
+    document.getElementById('emergencyBtn')?.addEventListener('click', window.emergencyOverride);
+
+    // Login (if present)
+    document.getElementById('loginBtn')?.addEventListener('click', window.login);
 
     const dateOpts = { month: 'long', day: 'numeric', year: 'numeric' };
-    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', dateOpts);
+    const dateEl = document.getElementById('currentDate');
+    if (dateEl) dateEl.innerText = new Date().toLocaleDateString('en-US', dateOpts);
+    
     if (window.lucide) lucide.createIcons();
 });
 
