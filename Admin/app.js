@@ -3181,13 +3181,10 @@ window.switchTab = (tabId) => {
 
 
                 if (order && order.status === "Placed" && isRecent && isPostLoad) {
-
                     showAlert(order);
-
+                    playNotificationSound();
                     addNotification(`New Order #${snap.key.slice(-5)}`, `Order for ₹${order.total} is placed.`, 'new', order.outlet);
-
                     setTimeout(() => highlightOrder(snap.key), 1000);
-
                 }
 
             }
@@ -3322,6 +3319,11 @@ window.switchTab = (tabId) => {
     }
 
 
+
+    window.playNotificationSound = () => {
+        const audio = new Audio('assets/sounds/alert.mp3');
+        audio.play().catch(e => console.warn("Audio play blocked by browser (User interaction required):", e));
+    };
 
     function showAlert(data, type = 'info') {
 

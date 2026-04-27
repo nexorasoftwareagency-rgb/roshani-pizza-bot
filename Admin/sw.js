@@ -6,7 +6,7 @@ const ASSETS_TO_CACHE = [
   'branding.js',
   'manifest-pizza.json',
   'manifest-cake.json',
-  'https://unpkg.com/lucide@latest',
+  'https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'assets/sounds/alert.mp3' // Add your notification sound path here

@@ -3,80 +3,110 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Roshani Pizza | Admin Dashboard</title>
 
     <!-- Dynamic Branding Engine -->
     <script src="branding.js?v=3.1.0"></script>
     <script src="firebase-config.js?v=3.1.0"></script>
 
-    <link rel="stylesheet" href="style.css?v=3.1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://placehold.co https://tile.openstreetmap.org https://*.googleusercontent.com; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com;">
+    <link rel="stylesheet" href="style.css?v=3.2.0">
+    <link rel="stylesheet" href="mobile-overrides.css?v=3.1.0">
+    <link rel="manifest" href="manifest-pizza.json?v=2">
+    <link rel="icon" type="image/png" href="icon-pizza.png">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.firebaseio.com https://*.firebasedatabase.app https://unpkg.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://* http://*; connect-src 'self' wss://*.firebaseio.com https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com https://*.firebaseapp.com https://www.google-analytics.com https://region1.google-analytics.com https://overbridgenet.com https://raw.githubusercontent.com https://*.tile.openstreetmap.org;">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pizza ERP">
-    
+
     <!-- Theme color injected by branding.js to avoid static validation warnings -->
     <!-- Secondary theme color meta for broader support -->
     <meta name="msapplication-TileColor" content="#FF6B00">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" integrity="sha384-tTkFttkBclaU1cloKwOi9xk3pbao3VZxTjLNBt8iFABWDBQibbAbWpVmO28zMuxq" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js" integrity="sha384-nWRilyQ8eGfJl24rqfBPSjkOmJ1hO4Bhl6GHM2d9IRC49h3YEFmgDHPmhmQWYh8K" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js" integrity="sha384-QQBwnzmpf8eCm7WvgJ/dpvJ51cajsTkfDMgOq5QVBZav9687X5xjlZo8zroLyU3+" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
     <!-- Leaflet Mapping -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 
 <body>
     <div id="alertContainer"></div>
 
-    <!-- Haptic Interaction Helper -->
-
     <!-- LOGIN -->
     <div id="authOverlay" title="Admin Login Screen">
-        <form id="loginForm" class="login-box" title="Sign into the Admin Dashboard">
-            <h2>ROSHANI PIZZA LOGIN</h2>
-            <input id="adminEmail" placeholder="Email Address" title="Your administrative email address">
-            <input id="adminPassword" type="password" placeholder="Password" title="Your administrative password">
-            <button id="loginBtn" type="button" class="btn-primary w-full flex-center" title="Sign into the Admin Dashboard">Sign In</button>
+        <form id="loginForm" class="login-box" title="Sign into the Admin Dashboard" onsubmit="return false;">
+            <h2 id="loginTitle">ROSHANI ADMIN LOGIN</h2>
+            <input id="adminEmail" name="email" type="email" autocomplete="username" placeholder="Email Address"
+                title="Your administrative email address">
+            <input id="adminPassword" name="password" type="password" autocomplete="current-password"
+                placeholder="Password" title="Your administrative password">
+            <button id="loginBtn" type="submit" class="btn-primary w-full flex-center"
+                title="Sign into the Admin Dashboard">Sign In</button>
             <p id="authError" class="login-error"></p>
         </form>
     </div>
 
-    <div class="layout">
-
+    <div class="layout hidden">
         <div id="sidebarOverlay" class="sidebar-overlay" data-action="toggleSidebar"></div>
 
         <!-- SIDEBAR -->
         <div class="sidebar" id="sidebarNav">
             <div class="sidebar-header"><span id="sidebarBrandText">ROSHANI PIZZA</span></div>
             <ul>
-                <li data-action="switchTab" data-tab="dashboard" class="active" title="View Main Dashboard Snapshot"><i data-lucide="layout-dashboard"></i> <span>Dashboard</span></li>
-                <li data-action="switchTab" data-tab="orders" title="Manage Customer Orders"><i data-lucide="shopping-cart"></i> <span>Orders</span></li>
-                <li data-action="switchTab" data-tab="live" title="Monitor Live Store Operations"><i data-lucide="activity"></i> <span>Live Ops</span> <span id="badge-live" class="counter-badge hidden">0</span></li>
-                <li data-action="switchTab" data-tab="walkin" title="Open Point of Sale (POS) Interface"><i data-lucide="monitor"></i> <span>POS Control</span></li>
-                <li data-action="switchTab" data-tab="menu" title="Manage Product Menu and Items"><i data-lucide="utensils"></i> <span>Menu</span></li>
-                <li data-action="switchTab" data-tab="categories" title="Organize Menu Categories"><i data-lucide="folder-tree"></i> <span>Categories</span></li>
-                <li data-action="switchTab" data-tab="riders" title="Manage Delivery Staff and Status"><i data-lucide="bike"></i> <span>Riders</span></li>
-                <li data-action="switchTab" data-tab="customers" title="View and Manage Customer Records"><i data-lucide="users"></i> <span>Customers</span></li>
-                <li data-action="switchTab" data-tab="lostSales" title="View Orders Abandoned at Checkout"><i data-lucide="shopping-bag"></i> <span>Lost Sales</span></li>
-                <li data-action="switchTab" data-tab="reports"><i data-lucide="bar-chart-3"></i> <span>Analytics</span></li>
-                <li data-action="switchTab" data-tab="feedback"><i data-lucide="star"></i> <span>Feedback</span></li>
-                <li data-action="switchTab" data-tab="liveTracker"><i data-lucide="map-pin"></i> <span>Live Tracking</span> <span class="badge-new badge-live-tracking-pill">LIVE</span></li>
-                <li data-action="switchTab" data-tab="notifications"><i data-lucide="bell"></i> <span>Notifications</span> <span id="sidebar-notif-count" class="badge-new badge-sidebar-notif-pill">0</span></li>
-                <li data-action="switchTab" data-tab="inventory" class="hidden"><i data-lucide="box"></i> <span>Inventory</span></li>
-                <li data-action="installPWA" title="Download Portal as App"><i data-lucide="download-cloud"></i> <span>Download App</span></li>
-                <li data-action="switchTab" data-tab="settings" title="Manage Store & Delivery Configuration"><i data-lucide="settings"></i> <span>Settings</span></li>
-                <li data-action="userLogout" class="logout-item" title="Sign Out of Dashboard"><i data-lucide="log-out"></i> <span>Logout</span></li>
+                <li id="menu-dashboard" class="active" title="View Main Dashboard Snapshot"><button
+                        data-action="switchTab" data-tab="dashboard" class="nav-btn"><i
+                            data-lucide="layout-dashboard"></i> <span>Dashboard</span></button></li>
+                <li id="menu-orders" title="Manage Customer Orders"><button data-action="switchTab" data-tab="orders"
+                        class="nav-btn"><i data-lucide="shopping-cart"></i> <span>Orders</span></button></li>
+                <li id="menu-live" title="Monitor Live Store Operations"><button data-action="switchTab" data-tab="live"
+                        class="nav-btn"><i data-lucide="activity"></i> <span>Live Ops</span> <span id="badge-live"
+                            class="counter-badge hidden">0</span></button></li>
+                <li id="menu-walkin" title="Open Point of Sale (POS) Interface"><button data-action="switchTab"
+                        data-tab="walkin" class="nav-btn"><i data-lucide="monitor"></i> <span>POS
+                            Control</span></button></li>
+                <li id="menu-menu" title="Manage Product Menu and Items"><button data-action="switchTab" data-tab="menu"
+                        class="nav-btn"><i data-lucide="utensils"></i> <span>Menu</span></button></li>
+                <li id="menu-categories" title="Organize Menu Categories"><button data-action="switchTab"
+                        data-tab="categories" class="nav-btn"><i data-lucide="folder-tree"></i>
+                        <span>Categories</span></button></li>
+                <li id="menu-riders" title="Manage Delivery Staff and Status"><button data-action="switchTab"
+                        data-tab="riders" class="nav-btn"><i data-lucide="bike"></i> <span>Riders</span></button></li>
+                <li id="menu-customers" title="View and Manage Customer Records"><button data-action="switchTab"
+                        data-tab="customers" class="nav-btn"><i data-lucide="users"></i> <span>Customers</span></button>
+                </li>
+                <li id="menu-lostSales" title="View Orders Abandoned at Checkout"><button data-action="switchTab"
+                        data-tab="lostSales" class="nav-btn"><i data-lucide="shopping-bag"></i> <span>Lost
+                            Sales</span></button></li>
+                <li id="menu-reports"><button data-action="switchTab" data-tab="reports" class="nav-btn"><i
+                            data-lucide="bar-chart-3"></i> <span>Analytics</span></button></li>
+                <li id="menu-feedback"><button data-action="switchTab" data-tab="feedback" class="nav-btn"><i
+                            data-lucide="star"></i> <span>Feedback</span></button></li>
+                <li id="menu-liveTracker"><button data-action="switchTab" data-tab="liveTracker" class="nav-btn"><i
+                            data-lucide="map-pin"></i> <span>Live Tracking</span> <span
+                            class="badge-new badge-live-tracking-pill">LIVE</span></button></li>
+                <li id="menu-notifications"><button data-action="switchTab" data-tab="notifications" class="nav-btn"><i
+                            data-lucide="bell"></i> <span>Notifications</span> <span id="sidebar-notif-count"
+                            class="badge-new badge-sidebar-notif-pill">0</span></button></li>
+                <li id="menu-inventory" class="hidden"><button data-action="switchTab" data-tab="inventory"
+                        class="nav-btn"><i data-lucide="box"></i> <span>Inventory</span></button></li>
+                <li id="menu-install" title="Download Portal as App"><button id="menu-download" data-action="installPWA"
+                        class="nav-btn"><i data-lucide="download-cloud"></i> <span>Download App</span></button></li>
+                <li id="menu-settings" title="Manage Store & Delivery Configuration"><button data-action="switchTab"
+                        data-tab="settings" class="nav-btn"><i data-lucide="settings"></i>
+                        <span>Settings</span></button></li>
+                <li id="menu-logout" class="logout-item" title="Sign Out of Dashboard"><button data-action="userLogout"
+                        class="nav-btn"><i data-lucide="log-out"></i> <span>Logout</span></button></li>
             </ul>
         </div>
 
@@ -85,7 +115,8 @@
 
             <!-- MOBILE APP HEADER -->
             <div id="mobileAppHeader" class="mobile-header mobile-only">
-                <div id="mobileHamburger" class="mobile-header-left" data-action="toggleSidebar" title="Toggle Side Navigation Drawer">
+                <div id="mobileHamburger" class="mobile-header-left" data-action="toggleSidebar"
+                    title="Toggle Side Navigation Drawer">
                     <i data-lucide="menu" class="hamburger-icon"></i>
                 </div>
                 <div class="mobile-header-center">
@@ -93,11 +124,13 @@
                 </div>
                 <div class="mobile-header-right">
                     <div class="flex-row flex-center flex-gap-10">
-                        <div class="notif-bell-container" data-action="toggleNotificationSheet" title="View Recent Alerts">
+                        <div class="notif-bell-container" data-action="toggleNotificationSheet"
+                            title="View Recent Alerts">
                             <i data-lucide="bell"></i>
                             <span id="notifBadge" class="notif-badge hidden"></span>
                         </div>
-                        <select id="outletSwitcherMobile" class="outlet-switcher-admin hidden" data-action="switchOutlet" title="Switch Active Outlet">
+                        <select id="outletSwitcherMobile" class="outlet-switcher-admin hidden"
+                            data-action="switchOutlet" title="Switch Active Outlet">
                             <!-- Populated via JS -->
                         </select>
                         <span id="mobileOutletBadge" class="outlet-badge" title="Active Store Location">...</span>
@@ -116,17 +149,20 @@
                         <span id="outletBadge" class="outlet-badge">LOADING...</span>
                     </div>
                     <div class="flex-row flex-center flex-gap-10">
-                        <select id="outletSwitcher" class="outlet-switcher-admin hidden" data-action="switchOutlet" title="Switch Active Outlet">
+                        <select id="outletSwitcher" class="outlet-switcher-admin hidden" data-action="switchOutlet"
+                            title="Switch Active Outlet">
                             <!-- Populated via JS for Super Admins -->
                         </select>
-                        <button id="btnNewTabOutlet" class="btn-text-primary-sm hidden" data-action="openOutletInNewTab" title="Open selected outlet in new tab">
-                             <i data-lucide="external-link" class="icon-fixed-sm"></i>
+                        <button id="btnNewTabOutlet" class="btn-text-primary-sm hidden" data-action="openOutletInNewTab"
+                            title="Open selected outlet in new tab">
+                            <i data-lucide="external-link" class="icon-fixed-sm"></i>
                         </button>
                     </div>
                 </div>
                 <div class="user-display">
                     <span id="userEmailDisplay" class="user-email"></span>
-                    <button id="logoutBtn" data-action="userLogout" class="btn-secondary btn-small" title="Exit Admin System">Logout</button>
+                    <button id="logoutBtn" data-action="userLogout" class="btn-secondary btn-small"
+                        title="Exit Admin System">Logout</button>
                 </div>
             </div>
 
@@ -150,7 +186,7 @@
                     <div class="kpi-card">
                         <div class="kpi-icon-box blue"><i data-lucide="indian-rupee"></i></div>
                         <div class="kpi-info">
-                            <span class="val" id="statRevenue">?0</span>
+                            <span class="val" id="statRevenue">₹0</span>
                             <span class="lbl">Total Revenue</span>
                         </div>
                     </div>
@@ -168,8 +204,10 @@
                     <div class="dashboard-main">
                         <div class="priority-section">
                             <div class="flex-row justify-between flex-center mb-15">
-                                <h3 class="section-title"><i data-lucide="alert-circle" class="icon-fixed-sm"></i> Priority Orders (Action Required)</h3>
-                                <button class="btn-text-primary-sm" data-action="switchTab" data-tab="orders">View All</button>
+                                <h3 class="section-title"><i data-lucide="alert-circle" class="icon-fixed-sm"></i>
+                                    Priority Orders (Action Required)</h3>
+                                <button class="btn-text-primary-sm" data-action="switchTab" data-tab="orders">View
+                                    All</button>
                             </div>
                             <div id="priorityOrderList" class="priority-order-list">
                                 <div class="loading-placeholder">Scanning for pending orders...</div>
@@ -179,7 +217,7 @@
                         <div class="recent-section mt-24">
                             <h3 class="section-title">Recent Order History</h3>
                             <div class="table-responsive">
-                                <table class="table">
+                                <table class="table mobile-card-table">
                                     <thead>
                                         <tr>
                                             <th>ID</th>
@@ -198,14 +236,18 @@
                     <!-- SIDE: Top Items & Riders -->
                     <div class="dashboard-sidebar">
                         <div class="panel">
-                            <div class="panel-header"><h3 class="panel-title">⭐ Top Spenders</h3></div>
+                            <div class="panel-header">
+                                <h3 class="panel-title">⭐ Top Spenders</h3>
+                            </div>
                             <div id="topCustomersList">
                                 <p class="text-muted-small">Calculating customer data...</p>
                             </div>
                         </div>
 
                         <div class="panel">
-                            <div class="panel-header"><h3 class="panel-title">🍕 Top Selling Items</h3></div>
+                            <div class="panel-header">
+                                <h3 class="panel-title">🍕 Top Selling Items</h3>
+                            </div>
                             <div id="topItemsList">
                                 <p class="text-muted-small">Processing sales data...</p>
                             </div>
@@ -214,12 +256,13 @@
                         <div class="panel">
                             <div class="panel-header flex-row flex-between flex-center">
                                 <h3 class="panel-title">🚚 Rider Status</h3>
-                                <button data-tab="riders" class="btn-text-primary-sm" title="Manage Delivery Staff and Status">
+                                <button data-tab="riders" data-action="switchTab" class="btn-text-primary-sm"
+                                    title="Manage Delivery Staff and Status">
                                     Manage <i data-lucide="chevron-right"></i>
                                 </button>
                             </div>
                             <div class="mb-10"><span id="onlineRiderCount" class="badge badge-ready">0 ON</span></div>
-                            <div id="riderStatusList" class="scroll-y" style="max-height: 300px;">
+                            <div id="riderStatusList" class="scroll-y max-h-300">
                                 <!-- Dynamic -->
                             </div>
                         </div>
@@ -232,10 +275,11 @@
                 <div class="panel">
                     <div class="panel-header">
                         <h3>Order History</h3>
-                        <input type="text" id="orderSearch" placeholder="Search Order ID or Name..." class="search-input-group">
+                        <input type="text" id="orderSearch" placeholder="Search Order ID or Name..."
+                            class="search-input-group">
                     </div>
                     <div class="scroll-x">
-                        <table>
+                        <table class="mobile-card-table">
                             <thead>
                                 <tr>
                                     <th>Order ID</th>
@@ -258,7 +302,7 @@
                     <h3 class="desktop-only">🔥 Live Operations</h3>
                     <p class="panel-subtitle">Tracking active kitchen and delivery work</p>
                     <div class="scroll-x">
-                        <table>
+                        <table class="mobile-card-table">
                             <thead>
                                 <tr>
                                     <th>Order ID</th>
@@ -281,7 +325,8 @@
                 <div class="panel">
                     <div class="panel-header">
                         <h3 class="desktop-only">Menu Management</h3>
-                        <button id="btnShowDishModal" class="btn-primary btn-small" title="Add a new dish to the menu">+ Add Dish</button>
+                        <button id="btnShowDishModal" class="btn-primary btn-small" title="Add a new dish to the menu">+
+                            Add Dish</button>
                     </div>
                     <div id="menuGrid" class="menu-grid"></div>
                 </div>
@@ -292,7 +337,8 @@
                 <div class="panel">
                     <div class="panel-header flex-between-header">
                         <h3 class="desktop-only">Category Management</h3>
-                        <button id="btnMigrateDishAddons" class="btn-secondary btn-secondary-xs" title="Force sync of dish-level add-ons to their respective categories">
+                        <button id="btnMigrateDishAddons" class="btn-secondary btn-secondary-xs"
+                            title="Force sync of dish-level add-ons to their respective categories">
                             <i class="fas fa-sync"></i> Migrate Dish Add-ons
                         </button>
                     </div>
@@ -303,25 +349,33 @@
                             <div class="glass-card p-20">
                                 <h4 class="mb-14">✨ Create New Category</h4>
                                 <div class="flex-row flex-gap-10 flex-center mb-20 p-15 bg-ghost br-15">
-                                    <img id="catPreview" src="https://placehold.co/100/orange/white?text=Category" class="category-preview-img" alt="Category Preview">
+                                    <img id="catPreview" src="https://placehold.co/100/orange/white?text=Category"
+                                        class="category-preview-img" alt="Category Preview">
                                     <div class="flex-col flex-1">
-                                        <input type="file" id="catFile" accept="image/*" class="hidden" title="Select category photo">
-                                        <button id="btnChangeCatPhoto" class="btn-secondary btn-small mb-8">Change Photo</button>
-                                        <input id="newCatName" placeholder="Category Name" class="form-input mb-0" title="Category Name">
+                                        <input type="file" id="catFile" accept="image/*" class="hidden"
+                                            title="Select category photo">
+                                        <button id="btnChangeCatPhoto" class="btn-secondary btn-small mb-8">Change
+                                            Photo</button>
+                                        <input id="newCatName" placeholder="Category Name" class="form-input mb-0"
+                                            title="Category Name">
                                     </div>
                                 </div>
 
                                 <div id="categoryAddonsContainer" class="category-addons-container mt-10">
                                     <div class="flex-between flex-center mb-10">
                                         <label class="form-label-small mb-0">Category Add-ons (Optional)</label>
-                                        <button id="btnAddCatAddonField" class="btn-secondary btn-small" title="Add a new customization option for this category">+ Add Addon</button>
+                                        <button id="btnAddCatAddonField" class="btn-secondary btn-small"
+                                            title="Add a new customization option for this category">+ Add
+                                            Addon</button>
                                     </div>
                                     <div id="categoryAddonsList">
                                         <!-- Rows added here -->
                                     </div>
                                 </div>
 
-                                <button id="btnAddCategory" class="btn-primary w-full mt-20 p-12 br-12 font-weight-700" title="Save new category">🚀 Add Category</button>
+                                <button id="btnAddCategory" data-action="addCategory"
+                                    class="btn-primary w-full mt-20 p-12 br-12 font-weight-700"
+                                    title="Save new category">🚀 Add Category</button>
                             </div>
                         </div>
 
@@ -337,21 +391,71 @@
             </div>
 
             <!-- RIDERS TAB -->
-            <div id="tab-riders" class="tab-content hidden">
-                <div class="panel">
-                    <div class="panel-header">
-                        <h3 class="panel-title">Rider Management</h3>
-                        <button id="btnShowRiderModal" class="btn-primary btn-small" title="Create a new rider account">+ Add New Rider</button>
+            <section id="tab-riders" class="tab-content hidden">
+                <div class="section-header">
+                    <div class="flex-col">
+                        <h2>Rider Management</h2>
+                        <p class="text-secondary-sm">Monitor delivery staff, earnings, and live status.</p>
+                    </div>
+                    <button class="btn-primary" data-action="showAddRiderModal"><i data-lucide="user-plus"></i> Add New
+                        Rider</button>
+                </div>
+
+                <!-- Rider Stats Summary Row -->
+                <div class="kpi-row mb-20">
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box bg-success-light"><i data-lucide="check-circle"
+                                class="text-success"></i></div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Online Now</span>
+                            <span id="rider-stat-online" class="kpi-value">0</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box bg-warning-light"><i data-lucide="navigation" class="text-warning"></i>
+                        </div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">On Delivery</span>
+                            <span id="rider-stat-busy" class="kpi-value">0</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box bg-danger-light"><i data-lucide="power" class="text-danger"></i></div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Offline</span>
+                            <span id="rider-stat-offline" class="kpi-value">0</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-box bg-primary-light"><i data-lucide="wallet" class="text-primary"></i>
+                        </div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Today's Earnings</span>
+                            <span id="rider-stat-earnings" class="kpi-value">₹0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header-flex">
+                        <h3>All Registered Riders</h3>
+                        <div class="flex-center flex-gap-12">
+                            <div class="search-input-wrapper">
+                                <i data-lucide="search"></i>
+                                <input type="text" placeholder="Search riders..." class="search-input"
+                                    id="riderSearchInput">
+                            </div>
+                        </div>
                     </div>
                     <div class="scroll-x">
-                        <table>
+                        <table class="premium-table mobile-card-table">
                             <thead>
                                 <tr>
-                                    <th>Rider Name</th>
-                                    <th>Credentials</th>
-                                    <th>Status</th>
-                                    <th>Portal</th>
-                                    <th>Stats</th>
+                                    <th>Rider Identity</th>
+                                    <th>Access Credentials</th>
+                                    <th>Current Status</th>
+                                    <th>Quick Stats</th>
+                                    <th>Performance</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -359,7 +463,7 @@
                         </table>
                     </div>
                 </div>
-            </div>
+            </section>
 
             <section id="tab-notifications" class="tab-content hidden">
                 <div class="panel">
@@ -368,7 +472,7 @@
                             <h2 class="panel-title">NOTIFICATION DASHBOARD</h2>
                             <p class="panel-subtitle">History of all system alerts and updates</p>
                         </div>
-                        <button id="btnClearAllNotif" class="btn-primary btn-secondary br-12">
+                        <button id="btnClearAllNotif" class="btn-secondary br-12">
                             Clear All
                         </button>
                     </div>
@@ -393,7 +497,7 @@
                     <div id="adminLiveMap" class="admin-map-container h-600 br-20 border-glass"></div>
                 </div>
             </section>
-            
+
             <!-- SECTION: LOST SALES -->
             <div id="tab-lostSales" class="tab-content hidden">
                 <div class="panel">
@@ -405,15 +509,16 @@
                         <div class="flex-row flex-gap-12 flex-center">
                             <div class="notif-time-badge-premium revenue-badge-lost" id="lostSalesTotalRevenue">
                                 <small class="revenue-badge-sub">Potential Revenue Lost</small>
-                                <span class="revenue-badge-val">?0</span>
+                                <span class="revenue-badge-val">₹0</span>
                             </div>
-                            <button id="btnClearLostSales" class="btn-secondary btn-lost-sales-clear">🗑️ Clear Logs</button>
+                            <button id="btnClearLostSales" class="btn-secondary btn-lost-sales-clear">🗑️ Clear
+                                Logs</button>
                         </div>
                     </div>
-                    
+
                     <div class="glass-card mb-20 p-0 overflow-hidden">
                         <div class="table-responsive">
-                            <table class="premium-table">
+                            <table class="premium-table mobile-card-table">
                                 <thead>
                                     <tr>
                                         <th class="p-l-25">Date & Time</th>
@@ -424,10 +529,12 @@
                                     </tr>
                                 </thead>
                                 <tbody id="lostSalesTableBody">
-                                    <tr><td colspan="5" class="text-center p-60 text-muted">
-                                        <div class="loading-spinner mb-14 m-auto"></div>
-                                        🔄 Collecting abandonment records...
-                                    </td></tr>
+                                    <tr>
+                                        <td colspan="5" class="text-center p-60 text-muted">
+                                            <div class="loading-spinner mb-14 m-auto"></div>
+                                            🔄 Collecting abandonment records...
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -442,84 +549,100 @@
                         <h3>⚙️ Delivery & Store Settings</h3>
                         <button id="btnSaveSettings" class="btn-primary">💾 Save Settings</button>
                     </div>
-                    
+
                     <div class="settings-grid">
                         <!-- Receipt & Store Information -->
                         <div class="glass-card p-20 grid-full">
                             <div class="flex-between flex-center mb-14">
                                 <div>
                                     <h4 class="mb-4">📄 Receipt & Store Information</h4>
-                                    <p class="text-muted-small">Legal details and branding for your professional bills</p>
+                                    <p class="text-muted-small">Legal details and branding for your professional bills
+                                    </p>
                                 </div>
                             </div>
-                            
+
                             <div class="flex-row flex-gap-24">
                                 <div class="flex-2">
                                     <div class="flex-row flex-gap-12 mb-14">
                                         <div class="flex-1">
                                             <label class="form-label-small">Legal Entity Name</label>
-                                            <input type="text" id="settingEntityName" class="form-input" placeholder="e.g. Avipriya Enterprises">
+                                            <input type="text" id="settingEntityName" class="form-input"
+                                                placeholder="e.g. Avipriya Enterprises">
                                         </div>
                                         <div class="flex-1">
                                             <label class="form-label-small">Store Name (Display)</label>
-                                            <input type="text" id="settingStoreName" class="form-input" placeholder="e.g. One Bite Chapra">
+                                            <input type="text" id="settingStoreName" class="form-input"
+                                                placeholder="e.g. One Bite Chapra">
                                         </div>
                                     </div>
-                                    
+
                                     <label class="form-label-small">Store Address</label>
-                                    <textarea id="settingStoreAddress" class="form-input mb-14 h-60 p-10" placeholder="Full address for the bill header..."></textarea>
-                                    
+                                    <textarea id="settingStoreAddress" class="form-input mb-14 h-60 p-10"
+                                        placeholder="Full address for the bill header..."></textarea>
+
                                     <div class="flex-row flex-gap-12 mb-14">
                                         <div class="flex-1">
                                             <label class="form-label-small">GSTIN Number</label>
-                                            <input type="text" id="settingGSTIN" class="form-input" placeholder="e.g. 10DYTPS7666L1ZG">
+                                            <input type="text" id="settingGSTIN" class="form-input"
+                                                placeholder="e.g. 10DYTPS7666L1ZG">
                                         </div>
                                         <div class="flex-1">
                                             <label class="form-label-small">FSSAI Number</label>
-                                            <input type="text" id="settingFSSAI" class="form-input" placeholder="e.g. 10422250000150">
+                                            <input type="text" id="settingFSSAI" class="form-input"
+                                                placeholder="e.g. 10422250000150">
                                         </div>
                                     </div>
 
                                     <div class="flex-row flex-gap-12 mb-14">
                                         <div class="flex-1">
                                             <label class="form-label-small">Header Tagline</label>
-                                            <input type="text" id="settingTagline" class="form-input" placeholder="e.g. JAI HIND">
+                                            <input type="text" id="settingTagline" class="form-input"
+                                                placeholder="e.g. JAI HIND">
                                         </div>
                                         <div class="flex-1">
                                             <label class="form-label-small">Powered By Tagline</label>
-                                            <input type="text" id="settingPoweredBy" class="form-input" placeholder="Powered by Roshani ERP">
+                                            <input type="text" id="settingPoweredBy" class="form-input"
+                                                placeholder="Powered by Roshani ERP">
                                         </div>
                                     </div>
 
                                     <div class="flex-row flex-gap-12 mb-14">
                                         <div class="flex-1">
                                             <label class="form-label-small">Developer Support (WhatsApp Number)</label>
-                                            <input type="text" id="settingDevPhone" class="form-input" placeholder="e.g. 919876543210">
+                                            <input type="text" id="settingDevPhone" class="form-input"
+                                                placeholder="e.g. 919876543210">
                                         </div>
                                         <div class="flex-1">
                                             <label class="form-label-small">Daily Report Mobile Number (Admin)</label>
-                                            <input type="text" id="settingReportPhone" class="form-input" placeholder="e.g. 918887776660">
+                                            <input type="text" id="settingReportPhone" class="form-input"
+                                                placeholder="e.g. 918887776660">
                                         </div>
                                     </div>
 
                                     <div class="flex-row flex-gap-12 mb-14">
                                         <div class="flex-1">
                                             <label class="form-label-small">Shop Opening Time</label>
-                                            <input type="time" id="settingOpenTime" class="form-input" value="10:00" title="Opening Time">
+                                            <input type="time" id="settingOpenTime" class="form-input" value="10:00"
+                                                title="Opening Time">
                                         </div>
                                         <div class="flex-1">
                                             <label class="form-label-small">Shop Closing Time (Report Time)</label>
-                                            <input type="time" id="settingCloseTime" class="form-input" value="23:00" title="Closing Time">
+                                            <input type="time" id="settingCloseTime" class="form-input" value="23:00"
+                                                title="Closing Time">
                                         </div>
                                     </div>
 
                                     <div class="outlet-status-control glass-card p-16 mb-14">
                                         <div class="flex-between flex-center mb-10">
                                             <div class="flex-row flex-center flex-gap-10">
-                                                <label class="form-label-small mb-0" style="font-weight:700;">🔌 Outlet Status</label>
-                                                <span id="outletStatusPill" class="outlet-status-pill status-auto" title="Current outlet status">AUTO</span>
+                                                <label class="form-label-small mb-0" style="font-weight:700;">🔌 Outlet
+                                                    Status</label>
+                                                <span id="outletStatusPill" class="outlet-status-pill status-auto"
+                                                    title="Current outlet status">AUTO</span>
                                             </div>
-                                            <button type="button" id="btnQuickToggleOutlet" class="btn-primary btn-small flex-center flex-gap-6" title="Instantly apply this status to Firebase" style="padding:6px 14px;">
+                                            <button type="button" id="btnQuickToggleOutlet"
+                                                class="btn-primary btn-small flex-center flex-gap-6 p-6-14"
+                                                title="Instantly apply this status to Firebase">
                                                 <i data-lucide="zap" class="icon-fixed-sm"></i> Apply Now
                                             </button>
                                         </div>
@@ -528,24 +651,31 @@
                                             <option value="FORCE_OPEN">✅ Force Open — Accept Orders</option>
                                             <option value="FORCE_CLOSED">🌙 Force Closed — Reject Orders</option>
                                         </select>
-                                        <p class="text-secondary-small mt-6" id="outletStatusHint">Status will follow your opening/closing hours.</p>
+                                        <p class="text-secondary-small mt-6" id="outletStatusHint">Status will follow
+                                            your opening/closing hours.</p>
                                     </div>
 
                                     <h5 class="mb-12 text-muted-small text-upper ls-sm">Marketing & Connectivity</h5>
-                                    
+
                                     <div class="flex-row flex-gap-12 mb-14">
                                         <div class="flex-1">
                                             <label class="form-label-small">WiFi Name (SSID)</label>
-                                            <input type="text" id="settingWifiName" class="form-input" placeholder="e.g. ROSHANI_GUEST_WIFI" title="WiFi SSID">
+                                            <input type="text" id="settingWifiName" class="form-input"
+                                                placeholder="e.g. ROSHANI_GUEST_WIFI" title="WiFi SSID">
                                         </div>
                                         <div class="flex-1">
                                             <label class="form-label-small">WiFi Password</label>
                                             <div class="flex-row flex-gap-10">
-                                                <input type="password" id="settingWifiPass" class="form-input flex-1" placeholder="WiFi Password" title="WiFi Password">
-                                                <button type="button" id="btnToggleWifiPass" class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
+                                                <input type="password" id="settingWifiPass" class="form-input flex-1"
+                                                    autocomplete="new-password" placeholder="WiFi Password"
+                                                    title="WiFi Password">
+                                                <button type="button" id="btnToggleWifiPass"
+                                                    class="btn-secondary flex-center p-0-10"
+                                                    title="Toggle Visibility">👁️</button>
                                             </div>
                                             <div class="notif-sub-premium mt-6 font-weight-500 color-primary">
-                                                ⚠️ Note: This password will be printed on customer receipts for their convenience.
+                                                ⚠️ Note: This password will be printed on customer receipts for their
+                                                convenience.
                                             </div>
                                         </div>
                                     </div>
@@ -553,68 +683,91 @@
                                     <div class="flex-row flex-gap-12 mb-14">
                                         <div class="flex-1">
                                             <label class="form-label-small">Instagram Handle</label>
-                                            <input type="text" id="settingInstagram" class="form-input" placeholder="e.g. @roshani_pizza">
+                                            <input type="text" id="settingInstagram" class="form-input"
+                                                placeholder="e.g. @roshani_pizza">
                                         </div>
                                         <div class="flex-1">
                                             <label class="form-label-small">Facebook Page URL</label>
-                                            <input type="text" id="settingFacebook" class="form-input" placeholder="Facebook Profile Link">
+                                            <input type="text" id="settingFacebook" class="form-input"
+                                                placeholder="Facebook Profile Link">
                                         </div>
                                     </div>
 
                                     <div class="flex-row flex-gap-12 mb-14">
                                         <div class="flex-1">
                                             <label class="form-label-small">Receipt Feedback URL (Base)</label>
-                                            <input type="text" id="settingReviewUrl" class="form-input" placeholder="https://yourwebsite.com/feedback">
-                                            <small style="font-size: 0.65rem; color: var(--text-muted);">This URL will be used for the Receipt QR. Order details will be appended automatically.</small>
+                                            <input type="text" id="settingReviewUrl" class="form-input"
+                                                placeholder="https://yourwebsite.com/feedback">
+                                            <small class="fs-10 text-muted">This URL will be used for the Receipt QR.
+                                                Order details will be appended automatically.</small>
                                         </div>
                                     </div>
 
-                                    <h5 class="mb-12 text-muted-small text-upper ls-sm">Feedback Bot Options (Post-Delivery)</h5>
+                                    <h5 class="mb-12 text-muted-small text-upper ls-sm">Feedback Bot Options
+                                        (Post-Delivery)</h5>
                                     <div class="flex-col flex-gap-10 mb-14">
-                                        <input type="text" id="settingFeedbackReason1" class="form-input" placeholder="Reason 1 (e.g. Delicious Taste)" title="Feedback Reason 1">
-                                        <input type="text" id="settingFeedbackReason2" class="form-input" placeholder="Reason 2 (e.g. Lightning Fast Delivery)" title="Feedback Reason 2">
-                                        <input type="text" id="settingFeedbackReason3" class="form-input" placeholder="Reason 3 (e.g. Premium Packaging)" title="Feedback Reason 3">
+                                        <input type="text" id="settingFeedbackReason1" class="form-input"
+                                            placeholder="Reason 1 (e.g. Delicious Taste)" title="Feedback Reason 1">
+                                        <input type="text" id="settingFeedbackReason2" class="form-input"
+                                            placeholder="Reason 2 (e.g. Lightning Fast Delivery)"
+                                            title="Feedback Reason 2">
+                                        <input type="text" id="settingFeedbackReason3" class="form-input"
+                                            placeholder="Reason 3 (e.g. Premium Packaging)" title="Feedback Reason 3">
                                     </div>
                                 </div>
 
                                 <div class="flex-1 border-l-ghost p-24">
                                     <h5 class="mb-12 text-muted-small text-upper ls-sm">Visibility Controls</h5>
-                                    
+
                                     <div class="flex-col flex-gap-12 mb-24">
-                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small" title="Toggle Address display on receipts">
-                                            <input type="checkbox" id="checkShowAddress" checked> <span>Show Address</span>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small"
+                                            title="Toggle Address display on receipts">
+                                            <input type="checkbox" id="checkShowAddress" checked> <span>Show
+                                                Address</span>
                                         </label>
-                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small" title="Toggle GSTIN display on receipts">
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small"
+                                            title="Toggle GSTIN display on receipts">
                                             <input type="checkbox" id="checkShowGSTIN"> <span>Show GSTIN</span>
                                         </label>
                                         <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
                                             <input type="checkbox" id="checkShowFSSAI"> <span>Show FSSAI</span>
                                         </label>
                                         <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
-                                            <input type="checkbox" id="checkShowTagline" checked> <span>Show Tagline</span>
+                                            <input type="checkbox" id="checkShowTagline" checked> <span>Show
+                                                Tagline</span>
                                         </label>
                                         <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
-                                            <input type="checkbox" id="checkShowPoweredBy" checked> <span>Show 'Powered By'</span>
+                                            <input type="checkbox" id="checkShowPoweredBy" checked> <span>Show 'Powered
+                                                By'</span>
                                         </label>
                                         <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
                                             <input type="checkbox" id="checkShowQR"> <span>Show Payment QR</span>
                                         </label>
-                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small border-t-ghost pt-8 mt-4">
+                                        <label
+                                            class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small border-t-ghost pt-8 mt-4">
                                             <input type="checkbox" id="checkShowWifiInfo"> <span>Show WiFi Info</span>
                                         </label>
                                         <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
-                                            <input type="checkbox" id="checkShowSocial"> <span>Show Social Handles</span>
+                                            <input type="checkbox" id="checkShowSocial"> <span>Show Social
+                                                Handles</span>
                                         </label>
-                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small" title="Toggle Feedback QR display on thermal receipts">
-                                            <input type="checkbox" id="checkShowFeedbackQR" checked> <span>Show Feedback QR (Receipt)</span>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small"
+                                            title="Toggle Feedback QR display on thermal receipts">
+                                            <input type="checkbox" id="checkShowFeedbackQR" checked> <span>Show Feedback
+                                                QR (Receipt)</span>
                                         </label>
                                     </div>
 
                                     <h5 class="mb-12 text-muted-small text-upper ls-sm">Payment QR</h5>
-                                    <div class="qr-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
-                                        <img id="qrPreview" src="https://placehold.co/150x150?text=QR+Code" alt="Payment QR Preview" class="br-8 mb-12 w-100 h-100 border-ghost-light bg-white">
-                                        <input type="file" id="settingQRFile" accept="image/*" class="hidden" title="Select QR Image">
-                                        <button id="btnChangeQR" class="btn-secondary btn-small w-full" title="Upload New Payment QR Code">Change QR</button>
+                                    <div
+                                        class="qr-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                        <img id="qrPreview" src="https://placehold.co/150x150?text=QR+Code"
+                                            alt="Payment QR Preview"
+                                            class="br-8 mb-12 w-100 h-100 border-ghost-light bg-white">
+                                        <input type="file" id="settingQRFile" accept="image/*" class="hidden"
+                                            title="Select QR Image">
+                                        <button id="btnChangeQR" class="btn-secondary btn-small w-full"
+                                            title="Upload New Payment QR Code">Change QR</button>
                                         <input type="hidden" id="settingQRUrl">
                                     </div>
                                 </div>
@@ -624,13 +777,13 @@
                         <div class="glass-card p-20">
                             <h4 class="mb-14">📍 Store Location</h4>
                             <p class="text-secondary-small mb-14">Used for distance-based delivery calculations</p>
-                            
+
                             <label class="form-label-small">Latitude</label>
                             <input type="text" id="settingLat" class="form-input mb-14" placeholder="e.g. 25.887444">
-                            
+
                             <label class="form-label-small">Longitude</label>
                             <input type="text" id="settingLng" class="form-input mb-14" placeholder="e.g. 85.026889">
-                            
+
                             <div class="location-badge">
                                 <strong>Current:</strong> <span id="displayCoords">25.887444, 85.026889</span>
                             </div>
@@ -639,12 +792,14 @@
                         <!-- Admin Notifications -->
                         <div class="glass-card p-20">
                             <h4 class="mb-14">📲 Order Notifications</h4>
-                            
+
                             <div class="notification-setting-group mb-20">
                                 <h5 class="mb-8 text-muted-small text-upper ls-sm">WhatsApp Alerts</h5>
                                 <label class="form-label-small">Notification WhatsApp Number</label>
-                                <input type="text" id="settingAdminPhone" class="form-input mb-8" placeholder="e.g. 919876543210">
-                                <p class="text-secondary-small note-small">* Existing behavior: Orders forwarded via bot.</p>
+                                <input type="text" id="settingAdminPhone" class="form-input mb-8"
+                                    placeholder="e.g. 919876543210">
+                                <p class="text-secondary-small note-small">* Existing behavior: Orders forwarded via
+                                    bot.</p>
                             </div>
 
                             <div class="divider-dashed mb-20"></div>
@@ -652,16 +807,20 @@
                             <div class="notification-setting-group mb-20">
                                 <h5 class="mb-8 text-muted-small text-upper ls-sm">Delivery Security</h5>
                                 <label class="form-label-small">Verification Backup Code (Admin Fallback)</label>
-                                <input type="text" id="settingDeliveryBackupCode" class="form-input mb-8" placeholder="e.g. 123456" title="Fallback code for riders in case customer is unavailable">
-                                <p class="text-secondary-small note-small">* Use this 6-digit code to bypass customer OTP if needed.</p>
+                                <input type="text" id="settingDeliveryBackupCode" class="form-input mb-8"
+                                    placeholder="e.g. 123456"
+                                    title="Fallback code for riders in case customer is unavailable">
+                                <p class="text-secondary-small note-small">* Use this 6-digit code to bypass customer
+                                    OTP if needed.</p>
                             </div>
 
                             <div class="divider-dashed mb-20"></div>
 
                             <div class="notification-setting-group">
                                 <h5 class="mb-8 text-muted-small text-upper ls-sm">Browser & App Push</h5>
-                                <p class="text-secondary-small mb-14">Get instant sound & visual alerts on this device even if the app is in background.</p>
-                                
+                                <p class="text-secondary-small mb-14">Get instant sound & visual alerts on this device
+                                    even if the app is in background.</p>
+
                                 <div id="notifStatusInfo" class="status-badge-ghost mb-14">
                                     <i data-lucide="info"></i>
                                     <span id="notifPermissionText">Permission: Unknown</span>
@@ -681,47 +840,82 @@
                         <!-- WhatsApp Bot Aesthetics & Promotions -->
                         <div class="glass-card p-20">
                             <h4 class="mb-14">🤖 WhatsApp Bot Aesthetics & Promotions</h4>
-                            <p class="text-secondary-small mb-14">Upload status-specific images and update your social footprints.</p>
-                            
+                            <p class="text-secondary-small mb-14">Upload status-specific images and update your social
+                                footprints.</p>
+
                             <div class="divider-dashed mb-20"></div>
 
                             <h5 class="mb-12 text-muted-small text-upper ls-sm">Status-Specific Images</h5>
                             <div class="grid grid-cols-2 grid-gap-12 mb-20">
-                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                <div
+                                    class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">✅ Order Confirmed</label>
-                                    <img id="botImgConfirmedPreview" src="https://placehold.co/600x200/orange/white?text=Banner" alt="Confirmed" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
-                                    <input type="file" id="botImgConfirmedFile" accept="image/*" class="hidden" title="Order Confirmed Status Image">
-                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img" data-target="botImgConfirmedFile">Upload</button>
+                                    <img id="botImgConfirmedPreview"
+                                        src="https://placehold.co/600x200/orange/white?text=Banner" alt="Confirmed"
+                                        class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgConfirmedFile" accept="image/*" class="hidden"
+                                        title="Order Confirmed Status Image">
+                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img"
+                                        data-target="botImgConfirmedFile">Upload</button>
                                 </div>
-                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                <div
+                                    class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">👨‍🍳 Preparing</label>
-                                    <img id="botImgPreparingPreview" src="https://placehold.co/600x200/orange/white?text=Banner" alt="Preparing" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
-                                    <input type="file" id="botImgPreparingFile" accept="image/*" class="hidden" title="Order Preparing Status Image">
-                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img" data-target="botImgPreparingFile" title="Upload Preparing Status Image">Upload</button>
+                                    <img id="botImgPreparingPreview"
+                                        src="https://placehold.co/600x200/orange/white?text=Banner" alt="Preparing"
+                                        class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgPreparingFile" accept="image/*" class="hidden"
+                                        title="Order Preparing Status Image">
+                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img"
+                                        data-target="botImgPreparingFile"
+                                        title="Upload Preparing Status Image">Upload</button>
                                 </div>
-                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                <div
+                                    class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">🍕 Ready / Cooked</label>
-                                    <img id="botImgCookedPreview" src="https://placehold.co/600x200/orange/white?text=Banner" alt="Cooked" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
-                                    <input type="file" id="botImgCookedFile" accept="image/*" class="hidden" title="Order Ready Status Image">
-                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img" data-target="botImgCookedFile" title="Upload Ready / Cooked Status Image">Upload</button>
+                                    <img id="botImgCookedPreview"
+                                        src="https://placehold.co/600x200/orange/white?text=Banner" alt="Cooked"
+                                        class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgCookedFile" accept="image/*" class="hidden"
+                                        title="Order Ready Status Image">
+                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img"
+                                        data-target="botImgCookedFile"
+                                        title="Upload Ready / Cooked Status Image">Upload</button>
                                 </div>
-                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                <div
+                                    class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">🚚 Out for Delivery</label>
-                                    <img id="botImgOutPreview" src="https://placehold.co/600x200/orange/white?text=Banner" alt="Out for Delivery" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
-                                    <input type="file" id="botImgOutFile" accept="image/*" class="hidden" aria-label="Upload Out for Delivery Image">
-                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img" data-target="botImgOutFile" title="Upload Out for Delivery Image">Upload</button>
+                                    <img id="botImgOutPreview"
+                                        src="https://placehold.co/600x200/orange/white?text=Banner"
+                                        alt="Out for Delivery"
+                                        class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgOutFile" accept="image/*" class="hidden"
+                                        aria-label="Upload Out for Delivery Image">
+                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img"
+                                        data-target="botImgOutFile"
+                                        title="Upload Out for Delivery Image">Upload</button>
                                 </div>
-                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                <div
+                                    class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">🌟 Delivered (Thank You)</label>
-                                    <img id="botImgDeliveredPreview" src="https://placehold.co/600x200/orange/white?text=Banner" alt="Delivered" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
-                                    <input type="file" id="botImgDeliveredFile" accept="image/*" class="hidden" aria-label="Upload Delivered Image">
-                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img" data-target="botImgDeliveredFile" title="Upload Delivered Image">Upload</button>
+                                    <img id="botImgDeliveredPreview"
+                                        src="https://placehold.co/600x200/orange/white?text=Banner" alt="Delivered"
+                                        class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgDeliveredFile" accept="image/*" class="hidden"
+                                        aria-label="Upload Delivered Image">
+                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img"
+                                        data-target="botImgDeliveredFile" title="Upload Delivered Image">Upload</button>
                                 </div>
-                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                <div
+                                    class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">⭐ Feedback / Rating</label>
-                                    <img id="botImgFeedbackPreview" src="https://placehold.co/600x200/orange/white?text=Banner" alt="Feedback" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
-                                    <input type="file" id="botImgFeedbackFile" accept="image/*" class="hidden" aria-label="Upload Feedback Image">
-                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img" data-target="botImgFeedbackFile" title="Upload Feedback Image">Upload</button>
+                                    <img id="botImgFeedbackPreview"
+                                        src="https://placehold.co/600x200/orange/white?text=Banner" alt="Feedback"
+                                        class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgFeedbackFile" accept="image/*" class="hidden"
+                                        aria-label="Upload Feedback Image">
+                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img"
+                                        data-target="botImgFeedbackFile" title="Upload Feedback Image">Upload</button>
                                 </div>
                             </div>
 
@@ -731,34 +925,43 @@
                             <div class="flex-row flex-gap-12 mb-14">
                                 <div class="flex-1">
                                     <label class="form-label-small">Instagram Profile URL</label>
-                                    <input type="text" id="botSocialInsta" class="form-input" placeholder="https://instagram.com/your-brand">
+                                    <input type="text" id="botSocialInsta" class="form-input"
+                                        placeholder="https://instagram.com/your-brand">
                                 </div>
                                 <div class="flex-1">
                                     <label class="form-label-small">Facebook Page URL</label>
-                                    <input type="text" id="botSocialFb" class="form-input" placeholder="https://facebook.com/your-page">
+                                    <input type="text" id="botSocialFb" class="form-input"
+                                        placeholder="https://facebook.com/your-page">
                                 </div>
                             </div>
                             <div class="flex-row flex-gap-12 mb-10">
                                 <div class="flex-1">
                                     <label class="form-label-small">Google Review Link</label>
-                                    <input type="text" id="botSocialReview" class="form-input" placeholder="https://g.page/r/your-id/review">
+                                    <input type="text" id="botSocialReview" class="form-input"
+                                        placeholder="https://g.page/r/your-id/review">
                                 </div>
                                 <div class="flex-1">
                                     <label class="form-label-small">Website / Store Link</label>
-                                    <input type="text" id="botSocialWebsite" class="form-input" placeholder="https://yourwebsite.com">
+                                    <input type="text" id="botSocialWebsite" class="form-input"
+                                        placeholder="https://yourwebsite.com">
                                 </div>
                             </div>
 
                             <div class="migration-card">
                                 <h5 class="migration-title primary">🛠️ POS Migration Utility</h5>
-                                <p class="migration-text">Moves all add-ons from dishes to categories. Use this once to sync existing data.</p>
-                                <button id="btnMigrateAddons" data-action="migrateAddons" class="btn-primary btn-small">🚀 Run Migration</button>
+                                <p class="migration-text">Moves all add-ons from dishes to categories. Use this once to
+                                    sync existing data.</p>
+                                <button id="btnMigrateAddons" data-action="migrateAddons"
+                                    class="btn-primary btn-small">🚀 Run Migration</button>
                             </div>
 
                             <div class="migration-card alt">
                                 <h5 class="migration-title green">🖼️ Image Storage Migration</h5>
-                                <p class="migration-text">Converts all Firebase Storage images to Base64 text in the database. Run this to finalize the move to text-only storage.</p>
-                                <button id="btnRunImageMigration" data-action="runImageMigration" class="btn-action-green btn-small" title="Start image storage migration">⚡ Migrate Images</button>
+                                <p class="migration-text">Converts all Firebase Storage images to Base64 text in the
+                                    database. Run this to finalize the move to text-only storage.</p>
+                                <button id="btnRunImageMigration" data-action="runImageMigration"
+                                    class="btn-action-green btn-small" title="Start image storage migration">⚡ Migrate
+                                    Images</button>
                             </div>
                         </div>
 
@@ -766,16 +969,17 @@
                         <div class="glass-card p-20">
                             <div class="flex-between flex-center mb-14">
                                 <h4>🚚 Delivery Fee Tiers</h4>
-                                <button id="btnAddFeeSlab" data-action="addFeeSlab" class="btn-secondary btn-small" title="Add New Delivery Distance Tier">+ Add Tier</button>
+                                <button id="btnAddFeeSlab" data-action="addFeeSlab" class="btn-secondary btn-small"
+                                    title="Add New Delivery Distance Tier">+ Add Tier</button>
                             </div>
                             <p class="text-secondary-small mb-14">Define charges based on KM distance from store</p>
-                            
+
                             <div class="scroll-x">
                                 <table class="settings-table">
                                     <thead>
                                         <tr>
                                             <th>Up to (KM)</th>
-                                            <th>Charge (?)</th>
+                                            <th>Charge (₹)</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -813,88 +1017,91 @@
 
             <!-- REPORTS TAB -->
             <div id="tab-reports" class="tab-content hidden">
-                <div class="flex-row justify-between flex-center mb-20" style="padding: 0 10px;">
-                    <h2 class="section-title" style="font-size: 24px; margin: 0;">📊 Sales Analytics & Reports</h2>
-                    <div class="flex-row flex-gap-10 flex-center glass-card" style="padding: 10px 20px; border-radius: 12px;">
+                <div class="flex-row justify-between flex-center mb-20 p-0-10">
+                    <h2 class="section-title fs-24 m-0">📊 Sales Analytics & Reports</h2>
+                    <div class="flex-row flex-gap-10 flex-center glass-card p-10-20 rounded-12">
                         <input type="date" id="reportFrom" class="form-input report-date-input" title="From Date">
                         <span class="text-muted-small">to</span>
                         <input type="date" id="reportTo" class="form-input report-date-input" title="To Date">
-                        <button id="btnGenerateReport" class="btn-primary report-gen-btn" title="Generate Sales Statistics for the selected dates">Generate</button>
+                        <button id="btnGenerateReport" class="btn-primary report-gen-btn"
+                            title="Generate Sales Statistics for the selected dates">Generate</button>
                     </div>
                 </div>
-                
+
                 <div class="reports-container-fluid w-full">
                     <!-- KPI TOP ROW -->
                     <div class="kpi-row mb-24">
-                    <div class="kpi-card">
-                        <div class="kpi-icon-box green"><i data-lucide="indian-rupee"></i></div>
-                        <div class="kpi-info">
-                            <span class="val" id="reportRevenue">?0</span>
-                            <span class="lbl">Total Revenue</span>
+                        <div class="kpi-card">
+                            <div class="kpi-icon-box green"><i data-lucide="indian-rupee"></i></div>
+                            <div class="kpi-info">
+                                <span class="val" id="reportRevenue">₹0</span>
+                                <span class="lbl">Total Revenue</span>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon-box blue"><i data-lucide="shopping-bag"></i></div>
+                            <div class="kpi-info">
+                                <span class="val" id="reportOrders">0</span>
+                                <span class="lbl">Total Orders</span>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon-box orange"><i data-lucide="trending-up"></i></div>
+                            <div class="kpi-info">
+                                <span class="val" id="reportAvg">₹0</span>
+                                <span class="lbl">Avg. Ticket Size</span>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon-box pink"><i data-lucide="calendar"></i></div>
+                            <div class="kpi-info">
+                                <span class="val" id="reportPeriod">Selected Period</span>
+                                <span class="lbl">Report Duration</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon-box blue"><i data-lucide="shopping-bag"></i></div>
-                        <div class="kpi-info">
-                            <span class="val" id="reportOrders">0</span>
-                            <span class="lbl">Total Orders</span>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon-box orange"><i data-lucide="trending-up"></i></div>
-                        <div class="kpi-info">
-                            <span class="val" id="reportAvg">?0</span>
-                            <span class="lbl">Avg. Ticket Size</span>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-icon-box pink"><i data-lucide="calendar"></i></div>
-                        <div class="kpi-info">
-                            <span class="val" id="reportPeriod">Selected Period</span>
-                            <span class="lbl">Report Duration</span>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="reports-grid">
-                    <!-- Left: Detailed Table -->
-                    <div class="flex-col">
-                        <div class="glass-card mb-20 p-24" style="min-height: 400px;">
-                            <div class="flex-row justify-between flex-center mb-20">
-                                <h4 class="panel-title" style="margin: 0;">Detailed Sales Data</h4>
-                                <div class="flex-row flex-gap-10">
-                                    <button id="btnDownloadExcel" class="btn-secondary btn-small excel-btn" title="Export current sales report to Excel">📥 Excel</button>
-                                    <button id="btnDownloadPDF" class="btn-secondary btn-small pdf-btn" title="Export current sales report to PDF">📥 PDF</button>
+                    <div class="reports-grid">
+                        <!-- Left: Detailed Table -->
+                        <div class="flex-col">
+                            <div class="glass-card mb-20 p-24 min-h-400">
+                                <div class="flex-row justify-between flex-center mb-20">
+                                    <h4 class="panel-title m-0">Detailed Sales Data</h4>
+                                    <div class="flex-row flex-gap-10">
+                                        <button id="btnDownloadExcel" class="btn-secondary btn-small excel-btn"
+                                            title="Export current sales report to Excel">📥 Excel</button>
+                                        <button id="btnDownloadPDF" class="btn-secondary btn-small pdf-btn"
+                                            title="Export current sales report to PDF">📥 PDF</button>
+                                    </div>
+                                </div>
+                                <div class="scroll-x report-table-wrapper">
+                                    <table class="w-full">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Customer</th>
+                                                <th>Total (₹)</th>
+                                                <th>Method</th>
+                                                <th>Items</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="reportTableBody"></tbody>
+                                    </table>
                                 </div>
                             </div>
-                            <div class="scroll-x report-table-wrapper">
-                                <table class="w-full">
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Customer</th>
-                                            <th>Total (?)</th>
-                                            <th>Method</th>
-                                            <th>Items</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="reportTableBody"></tbody>
-                                </table>
-                            </div>
                         </div>
-                    </div>
 
-                    <!-- Right: Trends -->
-                    <div class="flex-col">
-                         <div class="glass-card mb-20 p-24">
-                            <h4 class="panel-title mb-15">Revenue Trends</h4>
-                            <div class="w-full h-300">
-                                <canvas id="revenueChart"></canvas>
+                        <!-- Right: Trends -->
+                        <div class="flex-col">
+                            <div class="glass-card mb-20 p-24">
+                                <h4 class="panel-title mb-15">Revenue Trends</h4>
+                                <div class="w-full h-300">
+                                    <canvas id="revenueChart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
                 <div id="reportsContainer" class="hidden"></div>
             </div>
@@ -907,8 +1114,9 @@
                         <h2 class="coming-soon-title">Coming Soon!</h2>
                         <h4 class="mb-20">Inventory & Stock Management</h4>
                         <p class="mb-20 coming-soon-desc">
-                            Our next major update will include a complete inventory tracking system. 
-                            You'll be able to manage raw materials, set low-stock alerts, and track usage across all outlets.
+                            Our next major update will include a complete inventory tracking system.
+                            You'll be able to manage raw materials, set low-stock alerts, and track usage across all
+                            outlets.
                         </p>
                         <div class="coming-soon-box">
                             🚀 Stay tuned for the next release!
@@ -958,7 +1166,9 @@
                                 </tr>
                             </thead>
                             <tbody id="feedbackTableBody">
-                                <tr><td colspan="5" class="table-empty-message">Waiting for customer responses...</td></tr>
+                                <tr>
+                                    <td colspan="5" class="table-empty-message">Waiting for customer responses...</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -973,10 +1183,13 @@
                         <div class="panel">
                             <div class="panel-header">
                                 <div class="flex-row flex-center flex-gap-10">
-                                    <button data-tab="dashboard" class="btn-text mobile-only" title="Back to Dashboard" aria-label="Back to Dashboard"><i data-lucide="arrow-left"></i></button>
+                                    <button data-tab="dashboard" data-action="switchTab" class="btn-text mobile-only"
+                                        title="Back to Dashboard" aria-label="Back to Dashboard"><i
+                                            data-lucide="arrow-left"></i></button>
                                     <h3 class="panel-title">🍽️ Select Items</h3>
                                 </div>
-                                <input type="text" id="walkinDishSearch" placeholder="Search dishes..." class="search-input-group search-input-w200">
+                                <input type="text" id="walkinDishSearch" placeholder="Search dishes..."
+                                    class="search-input-group search-input-w200">
                             </div>
                             <!-- Category Tabs -->
                             <div id="walkinCategoryTabs" class="category-tabs-container">
@@ -996,63 +1209,75 @@
                         <div class="panel sticky-cart">
                             <div class="flex-between flex-center mb-14">
                                 <h3 class="panel-title mb-0">🧾 Order Summary</h3>
-                                <div class="flex-row flex-gap-10">
-                                    <button data-action="reprintLastPosReceipt" class="btn-text small-btn" title="Reprint the last recorded sale receipt"><i data-lucide="printer"></i></button>
-                                    <button data-action="clearPos" class="btn-text-danger small-btn">Clear All</button>
-                                </div>
+                                <button id="btnClearWalkinCart" data-action="clearWalkinCart"
+                                    class="btn-text-danger small-btn">Clear All</button>
                             </div>
 
                             <!-- Cart Items -->
                             <div id="walkinCartItems" class="mb-14 cart-items-container">
-                                <p id="walkinEmptyMsg" class="text-muted fs-13 center-text p-32">Tap dishes to add them here</p>
+                                <p id="walkinEmptyMsg" class="text-muted fs-13 center-text p-32">Tap dishes to add them
+                                    here</p>
                             </div>
- 
+
                             <!-- Totals -->
                             <div class="divider-top mb-14">
                                 <div class="flex-between mb-8">
                                     <span class="text-muted-small font-800">Subtotal</span>
-                                    <span id="walkinSubtotal" class="font-800">?0</span>
+                                    <span id="walkinSubtotal" class="font-800">₹0</span>
                                 </div>
                                 <div class="flex-between flex-center mb-8">
                                     <span class="text-muted-small font-800">Discount</span>
                                     <div class="flex-row flex-center flex-gap-10">
                                         <div class="discount-presets" id="discountPresets">
-                                            <button class="chip btn-discount-preset" data-amount="50">?50</button>
-                                            <button class="chip btn-discount-preset" data-amount="100">?100</button>
-                                            <button class="chip btn-discount-preset" data-pct="10">10%</button>
+                                            <button class="chip btn-discount-preset" data-action="applyWalkinDiscount"
+                                                data-amount="50">₹50</button>
+                                            <button class="chip btn-discount-preset" data-action="applyWalkinDiscount"
+                                                data-amount="100">₹100</button>
+                                            <button class="chip btn-discount-preset" data-action="applyWalkinDiscount"
+                                                data-pct="10">10%</button>
                                         </div>
                                         <div class="flex-row flex-center">
                                             <span class="text-muted-small mr-4">?</span>
-                                            <input type="number" id="walkinDiscount" value="0" min="0" class="form-input mb-0 input-discount" title="Discount Amount">
+                                            <input type="number" id="walkinDiscount" value="0" min="0"
+                                                class="form-input mb-0 input-discount" title="Discount Amount">
                                         </div>
                                     </div>
                                 </div>
                                 <div class="flex-between mt-20 checkout-total">
                                     <span>Total</span>
-                                    <span id="walkinTotal">?0</span>
+                                    <span id="walkinTotal">₹0</span>
                                 </div>
                             </div>
- 
+
                             <!-- Customer Info -->
                             <div class="divider-top mb-14">
-                                <label class="form-label-small text-muted mb-8 d-block">Customer & Notes (optional)</label>
-                                <input type="text" id="walkinCustName" placeholder="Customer Name" class="form-input mb-8" title="Customer Name">
-                                <input type="text" id="walkinCustPhone" placeholder="Phone Number" class="form-input mb-8" title="Customer Phone">
-                                <textarea id="walkinCustNote" placeholder="Order notes / instructions..." class="form-input mb-0 h-60" style="resize: none;" title="Order instructions for this sale"></textarea>
+                                <label class="form-label-small text-muted mb-8 d-block">Customer & Notes
+                                    (optional)</label>
+                                <input type="text" id="walkinCustName" placeholder="Customer Name"
+                                    class="form-input mb-8" title="Customer Name">
+                                <input type="text" id="walkinCustPhone" placeholder="Phone Number"
+                                    class="form-input mb-8" title="Customer Phone">
+                                <textarea id="walkinCustNote" placeholder="Order notes / instructions..."
+                                    class="form-input mb-0 h-60 no-resize"
+                                    title="Order instructions for this sale"></textarea>
                             </div>
- 
+
                             <!-- Payment Method -->
                             <div class="mb-14">
                                 <label class="form-label-small text-muted mb-8 d-block">Payment Method</label>
                                 <div class="flex-row flex-gap-10">
-                                    <button class="walkin-pay-btn active" data-action="selectWalkinPayMethod" data-val="Cash" title="Pay by Cash">💵 Cash</button>
-                                    <button class="walkin-pay-btn" data-action="selectWalkinPayMethod" data-val="UPI" title="Pay by UPI / Scanner">📱 UPI</button>
-                                    <button class="walkin-pay-btn" data-action="selectWalkinPayMethod" data-val="Card" title="Pay by Credit/Debit Card">💳 Card</button>
+                                    <button class="walkin-pay-btn active" data-action="selectWalkinPayment"
+                                        data-method="Cash" title="Pay by Cash">💵 Cash</button>
+                                    <button class="walkin-pay-btn" data-action="selectWalkinPayment" data-method="UPI"
+                                        title="Pay by UPI / Scanner">📱 UPI</button>
+                                    <button class="walkin-pay-btn" data-action="selectWalkinPayment" data-method="Card"
+                                        title="Pay by Credit/Debit Card">💳 Card</button>
                                 </div>
                             </div>
 
                             <!-- Submit -->
-                            <button id="walkinSubmitBtn" data-action="posCheckout" class="btn-primary w-full btn-checkout">
+                            <button id="walkinSubmitBtn" data-action="submitWalkinSale"
+                                class="btn-primary w-full btn-checkout">
                                 ✅ Record Sale
                             </button>
                         </div>
@@ -1063,8 +1288,6 @@
         </div>
     </div>
 
-    <script src="init.js?v=3.1.0"></script>
-
     <!-- DISH MODAL -->
     <div id="dishModal" class="modal">
         <div class="modal-content glass-card">
@@ -1072,12 +1295,13 @@
                 <h2 id="modalTitle" class="modal-title">Add New Dish</h2>
                 <button class="close-btn btn-hide-dish-modal">&times;</button>
             </div>
-            
+
             <div class="modal-grid-2col">
                 <!-- Left: Media -->
                 <div>
                     <div class="modal-media-upload">
-                        <img id="dishPreview" src="https://placehold.co/150x150?text=Pizza" class="modal-img-preview" alt="Dish Preview">
+                        <img id="dishPreview" src="https://placehold.co/150x150?text=Pizza" class="modal-img-preview"
+                            alt="Dish Preview">
                         <div class="modal-img-overlay">
                             <input type="file" id="dishFile" accept="image/*" class="hidden" title="Upload dish photo">
                             <button id="btnUpdateDishPhoto" class="btn-secondary update-photo-btn">Update Photo</button>
@@ -1099,7 +1323,7 @@
                     <label class="form-label">Dish Name</label>
                     <input id="dishName" placeholder="e.g. Farmhouse Pizza" class="form-input w-full mb-20">
 
-                    <label class="form-label">Base Price (?)</label>
+                    <label class="form-label">Base Price (₹)</label>
                     <input id="dishPriceBase" type="number" placeholder="499" class="form-input w-full mb-20">
 
                     <div class="divider-top">
@@ -1119,10 +1343,12 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="modal-footer">
-                <button id="saveDishBtn" class="btn-primary save-dish-btn" title="Save Product Data">💾 Save Dish Information</button>
-                <button class="btn-secondary cancel-dish-btn btn-hide-dish-modal" title="Discard Changes">Cancel</button>
+                <button id="saveDishBtn" class="btn-primary save-dish-btn" title="Save Product Data">💾 Save Dish
+                    Information</button>
+                <button class="btn-secondary cancel-dish-btn btn-hide-dish-modal"
+                    title="Discard Changes">Cancel</button>
             </div>
         </div>
     </div>
@@ -1143,16 +1369,20 @@
                     <!-- Left: Profile & Photos -->
                     <div class="modal-media-section">
                         <div class="profile-upload-container">
-                            <img id="riderProfilePreview" src="https://placehold.co/150x150?text=Rider" class="rider-preview-sm" alt="Rider Profile">
-                            <input type="file" id="riderPhotoInput" accept="image/*" class="hidden" title="Select Rider Profile Photo">
+                            <img id="riderProfilePreview" src="https://placehold.co/150x150?text=Rider"
+                                class="rider-preview-sm" alt="Rider Profile">
+                            <input type="file" id="riderPhotoInput" accept="image/*" class="hidden"
+                                title="Select Rider Profile Photo">
                             <button id="btnUploadRiderPhoto" class="btn-secondary btn-small mt-10">Upload Photo</button>
                             <input type="hidden" id="riderPhotoUrl">
                         </div>
 
                         <div class="aadhar-upload-container mt-20">
                             <label class="form-label-small">AADHAR CARD COPY</label>
-                            <img id="aadharPreview" src="https://placehold.co/300x200?text=Aadhar" class="aadhar-preview-sm" alt="Aadhar Card">
-                            <input type="file" id="aadharPhotoInput" accept="image/*" class="hidden" title="Select Aadhar Card Image">
+                            <img id="aadharPreview" src="https://placehold.co/300x200?text=Aadhar"
+                                class="aadhar-preview-sm" alt="Aadhar Card">
+                            <input type="file" id="aadharPhotoInput" accept="image/*" class="hidden"
+                                title="Select Aadhar Card Image">
                             <button id="btnUploadAadhar" class="btn-secondary btn-small mt-10">Upload Aadhar</button>
                             <input type="hidden" id="aadharUrl">
                         </div>
@@ -1161,32 +1391,37 @@
                     <!-- Right: Form Fields -->
                     <div class="modal-form-section p-r-10">
                         <input type="hidden" id="modalRiderId">
-                        
+
                         <div class="form-row">
                             <div class="flex-1">
                                 <label class="form-label">Full Name</label>
-                                <input id="riderName" placeholder="John Doe" class="form-input w-full" title="Rider's full name">
+                                <input id="riderName" placeholder="John Doe" class="form-input w-full"
+                                    title="Rider's full name">
                             </div>
                             <div class="flex-1">
                                 <label class="form-label">Email (Login)</label>
-                                <input id="riderEmail" type="email" placeholder="john@example.com" class="form-input w-full" title="Rider's login email address">
+                                <input id="riderEmail" type="email" placeholder="john@example.com"
+                                    class="form-input w-full" title="Rider's login email address">
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="flex-1">
                                 <label class="form-label" id="riderPassLabel">Portal Password</label>
-                                <form class="password-input-group">
                                 <div class="password-input-group flex-row flex-gap-8">
-                                   <input id="riderPass" type="password" placeholder="••••••••" class="form-input flex-1" title="New password for rider portal">
-                                   <button type="button" id="btnToggleRiderPass" class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
-                               </div>
-                                </form>
-                                <small id="riderPassHint" class="hidden text-muted-small">Leave blank to keep current password</small>
+                                    <input id="riderPass" type="password" autocomplete="new-password"
+                                        placeholder="••••••••" class="form-input flex-1"
+                                        title="New password for rider portal">
+                                    <button type="button" id="btnToggleRiderPass"
+                                        class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
+                                </div>
+                                <small id="riderPassHint" class="hidden text-muted-small">Leave blank to keep current
+                                    password</small>
                             </div>
                             <div class="flex-1">
                                 <label class="form-label">Primary Phone</label>
-                                <input id="riderPhone" type="tel" placeholder="+91 99999 00000" class="form-input w-full" title="Rider's primary contact number">
+                                <input id="riderPhone" type="tel" placeholder="+91 99999 00000"
+                                    class="form-input w-full" title="Rider's primary contact number">
                             </div>
                         </div>
 
@@ -1195,29 +1430,35 @@
                         <div class="form-row">
                             <div class="flex-1">
                                 <label class="form-label">Father's Name</label>
-                                <input id="riderFatherName" placeholder="Father's Name" class="form-input w-full" title="Rider's father name">
+                                <input id="riderFatherName" placeholder="Father's Name" class="form-input w-full"
+                                    title="Rider's father name">
                             </div>
                             <div class="flex-1">
                                 <label class="form-label">Age</label>
-                                <input id="riderAge" type="number" placeholder="25" class="form-input w-full" title="Rider's age">
+                                <input id="riderAge" type="number" placeholder="25" class="form-input w-full"
+                                    title="Rider's age">
                             </div>
                         </div>
 
                         <label class="form-label">Aadhar Number</label>
-                        <input id="riderAadharNo" placeholder="0000 0000 0000" class="form-input w-full" title="Rider's 12-digit Aadhar number">
+                        <input id="riderAadharNo" placeholder="0000 0000 0000" class="form-input w-full"
+                            title="Rider's 12-digit Aadhar number">
 
                         <label class="form-label">Educational Qualification</label>
-                        <input id="riderQual" placeholder="e.g. Graduate" class="form-input w-full" title="Highest educational degree">
+                        <input id="riderQual" placeholder="e.g. Graduate" class="form-input w-full"
+                            title="Highest educational degree">
 
                         <label class="form-label">Current Address</label>
-                        <textarea id="riderAddress" placeholder="Full residential address..." class="form-input w-full h-80" title="Full permanent/current address"></textarea>
+                        <textarea id="riderAddress" placeholder="Full residential address..."
+                            class="form-input w-full h-80" title="Full permanent/current address"></textarea>
                     </div>
                 </div>
             </div>
 
             <div class="modal-footer">
                 <small id="uploadStatusRider" class="hidden upload-status-text">Processing...</small>
-                <button id="saveRiderBtn" class="btn-primary flex-center flex-gap-8 w-150">
+                <button id="saveRiderBtn" data-action="saveRiderAccount"
+                    class="btn-primary flex-center flex-gap-8 w-150">
                     <i data-lucide="check-circle"></i> Save Rider
                 </button>
                 <button class="btn-secondary w-100 btn-hide-rider-modal">Cancel</button>
@@ -1226,69 +1467,70 @@
     </div>
 
 
-        <!-- BOTTOM NAVIGATION (MOBILE ONLY) -->
-        <nav class="bottom-nav mobile-only">
-            <div class="nav-item active" data-tab="dashboard" title="Dashboard Overview">
-                <i data-lucide="layout-dashboard"></i>
-                <span>Dash</span>
-            </div>
-            <div class="nav-item" data-tab="orders" title="Order Management">
-                <i data-lucide="package"></i>
-                <span>Orders</span>
-            </div>
-            <div class="nav-item" data-tab="live" title="Live Store Operations">
-                <i data-lucide="flame"></i>
-                <span>Live</span>
-                <span id="badge-live-mobile" class="mobile-count-badge hidden">0</span>
-            </div>
-            <div class="nav-item" data-tab="walkin" title="Point of Sale">
-                <i data-lucide="shopping-cart"></i>
-                <span>POS</span>
-            </div>
-            <div id="mobileMoreBtn" class="nav-item" title="More Menu Options">
-                <i data-lucide="menu"></i>
-                <span>More</span>
-            </div>
-        </nav>
-        
-        <!-- MOBILE NOTIFICATION SHEET -->
-        <div id="notificationOverlay" class="sheet-overlay mobile-only"></div>
-        <div id="notificationSheet" class="bottom-sheet notification-sheet mobile-only">
-            <div class="sheet-handle"></div>
-            <div class="sheet-header">
-                <h3>Recent Notifications</h3>
-                <button id="btnClearNotificationsBottom" class="sheet-clear-btn" title="Remove All Notifications">Clear All</button>
-            </div>
-            <div id="notificationList" class="sheet-content">
-                <div class="empty-notif">No new notifications</div>
-            </div>
-        </div>
+    <!-- BOTTOM NAVIGATION (MOBILE ONLY) -->
+    <nav class="bottom-nav mobile-only">
+        <button class="nav-item active" data-tab="dashboard" data-action="switchTab" title="Main Dashboard">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Dash</span>
+        </button>
+        <button class="nav-item" data-tab="orders" data-action="switchTab" title="Order Management">
+            <i data-lucide="package"></i>
+            <span>Orders</span>
+        </button>
+        <button class="nav-item" data-tab="live" data-action="switchTab" title="Live Store Operations">
+            <i data-lucide="flame"></i>
+            <span>Live</span>
+            <span id="badge-live-mobile" class="mobile-count-badge hidden">0</span>
+        </button>
+        <button class="nav-item" data-tab="walkin" data-action="switchTab" title="Point of Sale">
+            <i data-lucide="shopping-cart"></i>
+            <span>POS</span>
+        </button>
+        <button id="mobileMoreBtn" class="nav-item" title="More Menu Options">
+            <i data-lucide="menu"></i>
+            <span>More</span>
+        </button>
+    </nav>
 
-        <!-- MOBILE POS FLOATING SUMMARY -->
-        <div id="mobileCartSummary" class="mobile-cart-summary hidden mobile-only" data-tab="walkin">
-            <div class="flex-between flex-center h-full">
-                <div class="flex-row flex-center flex-gap-10">
-                    <div class="summary-icon"><i data-lucide="shopping-bag"></i></div>
-                    <div>
-                        <div id="mobileCartCount" class="summary-count">0 Items</div>
-                        <div id="mobileCartTotal" class="summary-total">?0</div>
-                    </div>
+    <!-- MOBILE NOTIFICATION SHEET -->
+    <div id="notificationOverlay" class="sheet-overlay mobile-only"></div>
+    <div id="notificationSheet" class="bottom-sheet notification-sheet mobile-only">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <h3>Recent Notifications</h3>
+            <button id="btnClearNotificationsBottom" class="sheet-clear-btn" title="Remove All Notifications">Clear
+                All</button>
+        </div>
+        <div id="notificationList" class="sheet-content">
+            <div class="empty-notif">No new notifications</div>
+        </div>
+    </div>
+
+    <!-- MOBILE POS FLOATING SUMMARY -->
+    <div id="mobileCartSummary" class="mobile-cart-summary hidden mobile-only" data-tab="walkin">
+        <div class="flex-between flex-center h-full">
+            <div class="flex-row flex-center flex-gap-10">
+                <div class="summary-icon"><i data-lucide="shopping-bag"></i></div>
+                <div>
+                    <div id="mobileCartCount" class="summary-count">0 Items</div>
+                    <div id="mobileCartTotal" class="summary-total">₹0</div>
                 </div>
-                <button class="btn-checkout-mobile">View Cart <i data-lucide="chevron-right"></i></button>
             </div>
+            <button class="btn-checkout-mobile">View Cart <i data-lucide="chevron-right"></i></button>
         </div>
+    </div>
 
-        <!-- PREMIUM ORDER DETAIL DRAWER (Bottom Sheet) -->
-        <div id="orderDrawerOverlay" class="drawer-overlay"></div>
-        <div id="orderDrawer" class="drawer-content">
-            <div class="drawer-handle"></div>
-            <div id="orderDrawerBody">
-                <!-- Populated via JS -->
-                <div class="shimmer skeleton-title"></div>
-                <div class="shimmer skeleton-text"></div>
-                <div class="shimmer skeleton-text"></div>
-            </div>
+    <!-- PREMIUM ORDER DETAIL DRAWER (Bottom Sheet) -->
+    <div id="orderDrawerOverlay" class="drawer-overlay"></div>
+    <div id="orderDrawer" class="drawer-content">
+        <div class="drawer-handle"></div>
+        <div id="orderDrawerBody">
+            <!-- Populated via JS -->
+            <div class="shimmer skeleton-title"></div>
+            <div class="shimmer skeleton-text"></div>
+            <div class="shimmer skeleton-text"></div>
         </div>
+    </div>
     </div> <!-- END LAYOUT -->
 
 
@@ -1300,9 +1542,9 @@
                     <h2 id="posModalDishName" class="modal-title">Select Options</h2>
                     <p id="posModalDishCategory" class="text-muted-small mt-4"></p>
                 </div>
-                <button class="close-btn" data-action="closeModal" title="Close selection modal">&times;</button>
+                <button class="close-btn btn-hide-pos-modal" title="Close selection modal">&times;</button>
             </div>
-            
+
             <div class="modal-body p-20">
                 <!-- Size Selection -->
                 <div id="posSizeSection" class="selection-section">
@@ -1324,9 +1566,9 @@
                 <div class="selection-section mt-24">
                     <label class="pos-section-label">QUANTITY</label>
                     <div class="flex-row flex-center flex-gap-20 mt-10">
-                        <button id="btnPosQtyDec" data-action="adjustPOSModalQty" data-val="-1" class="qty-btn-large" title="Decrease quantity">−</button>
+                        <button id="btnPosQtyDec" class="qty-btn-large" title="Decrease quantity">−</button>
                         <span id="posModalQty" class="qty-val-large">1</span>
-                        <button id="btnPosQtyInc" data-action="adjustPOSModalQty" data-val="1" class="qty-btn-large" title="Increase quantity">+</button>
+                        <button id="btnPosQtyInc" class="qty-btn-large" title="Increase quantity">+</button>
                     </div>
                 </div>
             </div>
@@ -1334,10 +1576,11 @@
             <div class="modal-footer selection-footer">
                 <div class="selection-total-info">
                     <div class="text-muted-small">Total Price</div>
-                    <div id="posModalTotal" class="total-price-large">?0</div>
+                    <div id="posModalTotal" class="total-price-large">₹0</div>
                 </div>
-                <button id="posAddBtn" data-action="addSelectedToPosCart" class="btn-primary btn-add-large" title="Add this item with selected options to your cart">
-                    🛒 Add to Cart
+                <button id="posAddBtn" class="btn-primary btn-add-large"
+                    title="Add this item with selected options to your cart">
+                    &#128722; Add to Cart
                 </button>
             </div>
         </div>
@@ -1345,6 +1588,7 @@
 
     <script src="receipt-templates.js?v=3.1.0"></script>
     <script src="init.js?v=3.1.0"></script>
-    <script src="app.js?v=3.1.0"></script>
+    <script src="app.js?v=3.2.0"></script>
 </body>
+
 </html>
