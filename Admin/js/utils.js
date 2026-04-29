@@ -1,0 +1,184 @@
+import { Outlet } from './firebase.js';
+
+export const haptic = (val = 10) => {
+    if (window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(val);
+    }
+};
+
+export const formatDate = (ts) => {
+    if (!ts) return "N/A";
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return ts;
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ", " + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+};
+
+export const escapeHtml = (str) => {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+};
+
+export const showToast = (message, type = 'success') => {
+    const container = document.getElementById('alertContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerText = message;
+    
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+};
+
+export const playNotificationSound = () => {
+    const audio = new Audio('assets/sounds/alert.mp3');
+    audio.play().catch(e => console.warn('Audio playback failed:', e));
+};
+
+export const playSuccessSound = () => {
+    const audio = new Audio('assets/sounds/success.mp3');
+    audio.play().catch(e => console.warn('Audio playback failed:', e));
+};
+
+export const generateNextOrderId = async () => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = (today.getMonth() + 1).toString().padStart(2, '0');
+    const d = today.getDate().toString().padStart(2, '0');
+    const dateStr = `${y}${m}${d}`;
+
+    const seqRef = Outlet.ref(`metadata/orderSequence/${dateStr}`);
+    const result = await seqRef.transaction((current) => (current || 0) + 1);
+    const seqNum = result.snapshot.val() || 1;
+    return `${dateStr}-${seqNum.toString().padStart(4, '0')}`;
+};
+
+export const standardizeOrderData = (o) => {
+    if (!o) return null;
+
+    const orderId = o.orderId || o.id || (o.key ? o.key.slice(-8).toUpperCase() : "ORD-N/A");
+
+    const items = (o.items || []).map(i => ({
+        name: i.name || "Unknown Item",
+        size: i.size || "",
+        quantity: parseInt(i.quantity) || 1,
+        price: parseFloat(i.price || i.unitPrice || 0)
+    }));
+
+    const orderDate = o.createdAt ? new Date(o.createdAt) : new Date();
+
+    return {
+        orderId: orderId,
+        date: orderDate.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        time: orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+        customerName: o.customerName || "Walk-in Customer",
+        phone: o.phone || o.whatsappNumber || "",
+        address: o.address || "",
+        customerNote: o.customerNote || "",
+        items: items,
+        subtotal: parseFloat(o.subtotal || o.itemTotal || 0),
+        discount: parseFloat(o.discount || 0),
+        deliveryFee: parseFloat(o.deliveryFee || 0),
+        total: parseFloat(o.total || 0),
+        paymentMethod: o.paymentMethod || "Cash",
+        type: o.type === "Walk-in" ? "Dine-in" : "Online Booked"
+    };
+};
+
+export const logAudit = async (action, details = {}) => {
+    try {
+        const user = firebase.auth().currentUser;
+        const auditRef = Outlet.ref('logs/audit').push();
+        await auditRef.set({
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            user: user ? user.email : 'system',
+            uid: user ? user.uid : 'system',
+            action,
+            details,
+            outlet: Outlet.current
+        });
+    } catch (e) {
+        console.error("[Audit] Log failed:", e);
+    }
+};
+
+export const standardizeAuthError = (error) => {
+    if (!error || !error.code) return "An unexpected error occurred. Please try again.";
+
+    switch (error.code) {
+        case 'auth/invalid-email':
+            return "The email address is not valid.";
+        case 'auth/user-disabled':
+            return "This account has been disabled.";
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+            return "Incorrect email or password.";
+        case 'auth/too-many-requests':
+            return "Too many failed attempts. Security lock active. Please wait 15-30 minutes.";
+        case 'auth/quota-exceeded':
+            return "Login Quota Exceeded (Spark Plan limit). Please wait 60 minutes or contact Firebase support.";
+        case 'auth/email-already-in-use':
+            return "This email address is already in use.";
+        case 'auth/operation-not-allowed':
+            return "Operation not allowed. Contact support.";
+        case 'auth/weak-password':
+            return "The password is too weak.";
+        case 'auth/network-request-failed':
+            return "Network error. Please check your internet connection or VPN settings.";
+        default:
+            return error.message || "Authentication failed.";
+    }
+};
+
+export const previewImage = (input, previewId) => {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const preview = document.getElementById(previewId);
+            const hidden = document.getElementById(previewId.replace('Preview', 'Url'));
+            if (preview) preview.src = e.target.result;
+            if (hidden) hidden.value = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+};
+
+export const validateUrl = (url) => {
+    try {
+        new URL(url);
+        return true;
+    } catch (_) {
+        return false;
+    }
+};
+
+export const enhanceTablesForMobile = (root = document) => {
+    if (window.innerWidth > 600) return;
+
+    const tables = root.querySelectorAll('table');
+    tables.forEach(table => {
+        const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+        if (headers.length === 0) return;
+
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            cells.forEach((cell, index) => {
+                if (headers[index] && !cell.getAttribute('data-label')) {
+                    cell.setAttribute('data-label', headers[index]);
+                }
+            });
+        });
+    });
+};

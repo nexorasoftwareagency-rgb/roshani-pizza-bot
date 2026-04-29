@@ -5,7 +5,7 @@
         "email"
       ],
       ".read": "auth != null && auth.token.email_verified === true && (auth.token.admin === true || root.child('admins/' + auth.uid).exists())",
-      ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).exists())",
+      ".write": "auth != null && ((!data.exists() && root.child('admins').numChildren() === 0) || root.child('admins/' + auth.uid).exists())",
       "$adminId": {
         ".read": "auth != null && (auth.uid == $adminId || root.child('admins/' + auth.uid).exists())",
         ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).exists() || auth.uid == $adminId)",
@@ -17,7 +17,7 @@
       ".write": "auth != null && root.child('admins/' + auth.uid).exists()",
       "$riderId": {
         ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || auth.uid == $riderId)",
-        ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || auth.uid == $riderId)"
+        ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (auth.uid == $riderId && (!data.exists() || newData.child('lastUpdate').val() > data.child('lastUpdate').val() + 5000)))"
       }
     },
     "riders": {
@@ -26,7 +26,15 @@
       ],
       "$uid": {
         ".read": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())",
-        ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (auth.uid == $uid && newData.child('email').val() == data.child('email').val() && newData.child('name').val() == data.child('name').val() && newData.child('aadharNo').val() == data.child('aadharNo').val() && newData.child('outlet').val() == data.child('outlet').val() && newData.child('id').val() == data.child('id').val()))",
+        ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (auth.uid == $uid && newData.child('email').val() == data.child('email').val()))",
+        ".validate": "newData.hasChildren(['name', 'email']) && !newData.hasChild('isAdmin') && !newData.hasChild('role')",
+        "phone": { ".validate": "newData.isString() && newData.val().length >= 10" },
+        "aadharNo": { ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^[0-9]{12}$/))" },
+        "location": {
+          ".validate": "newData.hasChildren(['lat', 'lng'])",
+          "lat": { ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90" },
+          "lng": { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" }
+        },
         "notifications": {
           ".indexOn": [
             "timestamp"
@@ -44,11 +52,12 @@
           ".write": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())"
         },
         "lastSeen": {
-          ".write": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())"
+          ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (auth.uid == $uid && (!data.exists() || newData.val() > data.val() + 10000)))"
         },
         "profilePhoto": {
           ".write": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())"
-        }
+        },
+        "$other": { ".validate": false }
       }
     },
     "logs": {
@@ -56,22 +65,22 @@
       ".write": "auth != null && root.child('admins/' + auth.uid).exists()",
       "riderErrors": {
         "$uid": {
-          ".write": "auth != null && auth.uid == $uid"
+          ".write": "auth != null && auth.uid == $uid && (!data.exists() || newData.child('timestamp').val() > data.child('timestamp').val() + 5000)"
         }
       }
     },
     "bot": {
       ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
-      ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
+      ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).exists())"
     },
     "$outlet": {
       "settings": {
         ".read": "auth != null",
-        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
-      },
-      "appConfig": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
+        ".write": "auth != null && root.child('admins/' + auth.uid).exists()",
+        "Store": {
+            "lat": { ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= -90 && newData.val() <= 90)" },
+            "lng": { ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= -180 && newData.val() <= 180)" }
+        }
       },
       "orders": {
         ".indexOn": [
@@ -79,47 +88,37 @@
           "status",
           "whatsappNumber"
         ],
-        ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || (query.orderByChild == 'assignedRider' && (query.equalTo == auth.token.email || query.equalTo == null)))",
+        ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || (query.orderByChild == 'assignedRider' && query.equalTo == auth.token.email))",
         "$orderId": {
           ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || !data.child('assignedRider').exists() || data.child('assignedRider').val() == auth.token.email)",
           ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (data.child('assignedRider').val() == auth.token.email || !data.child('assignedRider').exists()))",
           ".validate": "newData.hasChildren(['status', 'total', 'items'])",
+          "total": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+          "subtotal": { ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0)" },
+          "deliveryFee": { ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0)" },
+          "lat": { ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= -90 && newData.val() <= 90)" },
+          "lng": { ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= -180 && newData.val() <= 180)" },
           "assignedRider": {
             ".validate": "!root.child('admins/' + auth.uid).exists() || newData.val() == data.val() || (auth.token.email == newData.val() && !data.exists())"
           }
         }
       },
-      "categories": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
-      },
       "dishes": {
         ".read": "auth != null",
-        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
+        ".write": "auth != null && root.child('admins/' + auth.uid).exists()",
+        "$dishId": {
+           "price": { ".validate": "newData.isNumber() && newData.val() >= 0" }
+        }
       },
       "liveTracker": {
         ".read": "auth != null",
         "$riderId": {
-          ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || auth.uid == $riderId)"
+          ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (auth.uid == $riderId && (!data.exists() || newData.child('timestamp').val() > data.child('timestamp').val() + 3000)))"
         }
-      },
-      "otpAttempts": {
-        "$orderId": {
-          ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || root.child($outlet + '/orders/' + $orderId + '/assignedRider').val() == auth.token.email)",
-          ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || root.child($outlet + '/orders/' + $orderId + '/assignedRider').val() == auth.token.email)"
-        }
-      },
-      "lostSales": {
-        ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
-        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
-      },
-      "customers": {
-        ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
-        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
       },
       "feedbacks": {
         ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
-        ".write": "auth != null"
+        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
       }
     }
   }

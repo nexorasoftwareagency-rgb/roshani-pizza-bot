@@ -1,5 +1,5 @@
-/* * ROSHANI ERP | PREMIUM MOBILE OVERRIDES v3.2
- * Optimized for Saharsa/Bihar Network Latency & High-Performance Touch UX
+/* *** ROSHANI ERP | PREMIUM MOBILE OVERRIDES v3.4
+ * Optimized for Mobile Touch & PWA
  */
 
 @media (max-width: 1024px) {
@@ -9,19 +9,31 @@
         --safe-bottom: env(safe-area-inset-bottom);
     }
 
+    * {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        box-sizing: border-box;
+    }
+
+    html, body {
+        position: relative;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
     .desktop-only {
-        display: none;
+        display: none !important;
     }
 
     .mobile-only {
-        display: flex;
+        display: flex !important;
     }
 
     body {
         padding-bottom: calc(70px + var(--safe-bottom));
-        /* Prevent content overlap with Bottom Nav */
         font-size: 14px;
-        -webkit-tap-highlight-color: transparent;
     }
 
     /* --- 2. SIDEBAR NAVIGATION (DRAWER MODE) --- */
@@ -32,7 +44,7 @@
         bottom: 0;
         width: 280px;
         z-index: 5000;
-        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 20px 0 50px rgba(0, 0, 0, 0.3);
         border-right: none;
     }
@@ -55,7 +67,58 @@
         display: block;
     }
 
-    /* --- 3. UPDATED ADVANCED FILTERS (SCROLLABLE BAR) --- */
+    /* Mobile Header */
+    .mobile-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: linear-gradient(135deg, #fff, #f8fafc);
+        border-bottom: 1px solid #e2e8f0;
+        z-index: 1000;
+        padding: 0 15px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* --- 3. TOUCH-FRIENDLY BUTTONS --- */
+    button, 
+    .btn-primary, 
+    .btn-secondary,
+    .nav-btn {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 12px 20px;
+        font-size: 15px;
+        border-radius: 12px;
+    }
+
+    .btn-table-action,
+    .btn-table-icon {
+        min-height: 40px;
+        min-width: 40px;
+        padding: 8px 12px;
+    }
+
+    /* --- 4. IMPROVED INPUTS FOR MOBILE --- */
+    input, 
+    select, 
+    textarea {
+        font-size: 16px !important;
+        padding: 14px 16px !important;
+        border-radius: 12px !important;
+        min-height: 48px;
+    }
+
+    input:focus, 
+    select:focus, 
+    textarea:focus {
+        font-size: 16px !important;
+    }
+
+    /* --- 5. FILTERS (SCROLLABLE BAR) --- */
     .filters-card {
         margin: 10px;
         padding: 12px !important;
@@ -69,7 +132,7 @@
         padding-bottom: 5px;
         scrollbar-width: none;
         -ms-overflow-style: none;
-        /* Hide scrollbar for clean look */
+        -webkit-overflow-scrolling: touch;
     }
 
     .filters-grid::-webkit-scrollbar {
@@ -78,13 +141,11 @@
 
     .filter-group {
         flex: 0 0 160px;
-        /* Fixed width for horizontal scrolling filters */
     }
 
-    /* --- 4. LIVE DASHBOARD SPLIT VIEW (STACKED) --- */
+    /* --- 6. LIVE DASHBOARD SPLIT VIEW (STACKED) --- */
     .orders-split-grid {
         grid-template-columns: 1fr !important;
-        /* Force single column on mobile */
         gap: 15px !important;
         padding: 0 10px;
     }
@@ -95,43 +156,261 @@
         padding: 15px;
     }
 
-    /* --- 5. POS / WALK-IN MOBILE OPTIMIZATION --- */
-    .pos-container {
+    /* --- 7. POS / WALK-IN MOBILE OPTIMIZATION --- */
+    .walkin-layout {
+        display: flex !important;
         flex-direction: column !important;
+        gap: 0 !important;
+        height: calc(100vh - 130px) !important;
+        padding-bottom: 0 !important;
     }
 
-    .pos-menu {
+    /* Menu Picker Section */
+    .walkin-picker {
         width: 100% !important;
-        padding-bottom: 80px;
+        flex: 1 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding: 10px !important;
+        background: #f8fafc;
     }
 
-    .pos-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        /* 2 items per row */
-        gap: 10px !important;
+    .walkin-picker .panel {
+        padding: 12px !important;
+        margin: 0 !important;
+        border-radius: 16px !important;
+        box-shadow: none !important;
+        background: transparent !important;
     }
 
-    /* Sticky Cart Summary for Mobile */
-    .pos-cart {
+    /* Search - Floating style */
+    .walkin-picker .panel-header {
+        position: sticky;
+        top: 0;
+        background: #fff;
+        padding: 8px 0;
+        margin-bottom: 10px;
+        border-radius: 12px;
+        z-index: 10;
+    }
+
+    /* Dish Grid - 4 columns for mobile */
+    .walkin-dish-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 8px !important;
+        padding: 4px !important;
+    }
+
+    .walkin-dish-card {
+        padding: 10px 6px !important;
+        border-radius: 14px !important;
+        background: #fff !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    }
+
+    .walkin-dish-card .dish-emoji {
+        font-size: 22px !important;
+        margin-bottom: 4px;
+    }
+
+    .walkin-dish-card .dish-name {
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
+
+    .walkin-dish-card .dish-price {
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    /* Cart - Bottom Sheet Style */
+    .walkin-cart {
         position: fixed !important;
-        bottom: 70px;
-        /* Sits above bottom nav */
-        left: 0;
-        right: 0;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
         width: 100% !important;
-        height: auto !important;
-        border-radius: 20px 20px 0 0 !important;
-        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.1) !important;
-        z-index: 999;
-        transform: translateY(100%);
-        transition: transform 0.3s ease;
+        max-width: 100% !important;
+        height: 55vh !important;
+        border-radius: 24px 24px 0 0 !important;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25) !important;
+        z-index: 6000 !important;
+        background: #fff !important;
     }
 
-    .pos-cart.active {
-        transform: translateY(0);
+    .walkin-cart .sticky-cart {
+        padding: 16px !important;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
     }
 
-    /* --- 6. PREMIUM BOTTOM SHEET (ORDER DRAWER) --- */
+    /* Cart handle */
+    .walkin-cart::before {
+        content: '';
+        display: block;
+        width: 36px;
+        height: 4px;
+        background: #cbd5e1;
+        border-radius: 10px;
+        margin: 8px auto;
+    }
+
+    /* Cart header */
+    .sticky-cart .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+        flex-shrink: 0;
+    }
+
+    .sticky-cart .panel-title {
+        font-size: 16px;
+    }
+
+    .sticky-cart .btn-text-danger {
+        padding: 6px 12px;
+    }
+
+    /* Cart Items */
+    .cart-items-container {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        min-height: 100px;
+    }
+
+    .walkin-cart-item {
+        padding: 10px 0;
+    }
+
+    .walkin-cart-item .item-name {
+        font-size: 13px;
+    }
+
+    .walkin-cart-item .qty-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    /* Totals */
+    .divider-top {
+        padding-top: 12px;
+        margin-top: 10px;
+    }
+
+    .checkout-total {
+        font-size: 22px !important;
+        font-weight: 800;
+        color: var(--primary) !important;
+    }
+
+    /* Payment buttons - Horizontal row */
+    .flex-row.flex-gap-10 {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    .walkin-pay-btn {
+        flex: none !important;
+        padding: 12px 8px !important;
+        font-size: 12px !important;
+    }
+
+    /* Discount presets */
+    .discount-presets {
+        display: flex !important;
+        gap: 6px !important;
+        flex-wrap: wrap;
+    }
+
+    .discount-presets .chip {
+        padding: 6px 10px !important;
+        font-size: 11px !important;
+    }
+
+    .input-discount {
+        width: 60px !important;
+        padding: 8px !important;
+    }
+
+    /* Customer form */
+    .divider-top.mb-14 {
+        margin-top: 8px;
+        padding-top: 8px;
+    }
+
+    /* Checkout button */
+    .btn-checkout {
+        padding: 14px !important;
+        font-size: 16px !important;
+        font-weight: 700;
+        border-radius: 14px !important;
+    }
+
+    /* --- Mobile Category Tabs - Filter Pills --- */
+    .category-tabs-container {
+        display: flex !important;
+        overflow-x: auto !important;
+        gap: 10px !important;
+        padding: 8px 0 12px !important;
+        margin-bottom: 8px !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none;
+        scroll-behavior: smooth;
+    }
+
+    .category-tabs-container::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .category-tab {
+        padding: 10px 20px !important;
+        background: #fff !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 24px !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        color: #64748b !important;
+        white-space: nowrap !important;
+        cursor: pointer !important;
+        transition: all 0.25s ease !important;
+        flex-shrink: 0 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .category-tab:hover {
+        transform: none !important;
+    }
+
+.category-tab.active {
+        background: linear-gradient(135deg, var(--primary), #ea580c) !important;
+        border-color: var(--primary) !important;
+        color: #fff !important;
+        box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4) !important;
+    }
+
+    /* Search input */
+    .search-input-group {
+        width: 100% !important;
+        margin: 8px 0 12px !important;
+        font-size: 14px !important;
+        padding: 12px 16px !important;
+        border-radius: 12px !important;
+        border: 2px solid #e2e8f0 !important;
+        background: #fff !important;
+    }
+
+    .search-input-group:focus {
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1) !important;
+    }
+
+    /* --- 8. PREMIUM BOTTOM SHEET (ORDER DRAWER) --- */
     .drawer-content {
         position: fixed;
         bottom: -100%;
@@ -144,6 +423,8 @@
         padding-bottom: calc(20px + var(--safe-bottom));
         box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.2);
         transition: bottom 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        max-height: 85vh;
+        overflow-y: auto;
     }
 
     .drawer-content.active {
@@ -158,20 +439,21 @@
         margin: 0 auto 15px;
     }
 
-    /* --- 7. BOTTOM NAVIGATION BAR --- */
+    /* --- 9. BOTTOM NAVIGATION BAR --- */
     .bottom-nav {
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
         height: calc(65px + var(--safe-bottom));
-        background: white;
+        background: linear-gradient(135deg, #fff, #f8fafc);
         display: flex;
         justify-content: space-around;
         align-items: center;
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid #e2e8f0;
         z-index: 5000;
         padding-bottom: var(--safe-bottom);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
     }
 
     .nav-item {
@@ -185,7 +467,8 @@
         font-weight: 600;
         background: none;
         border: none;
-        padding: 8px 0;
+        padding: 10px 0;
+        min-height: 50px;
     }
 
     .nav-item.active {
@@ -193,11 +476,11 @@
     }
 
     .nav-item i {
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
     }
 
-    /* --- 8. REPORT TABLES (SCROLLABLE CARDS) --- */
+    /* --- 10. REPORT TABLES (SCROLLABLE CARDS) --- */
     .report-table-container {
         margin: 10px;
         border-radius: 12px;
@@ -205,20 +488,21 @@
 
     table thead {
         display: none;
-        /* Hide headers on mobile for card-style layout if preferred */
     }
 
     table tr {
         display: block;
         border-bottom: 1px solid #f1f5f9;
-        padding: 10px 0;
+        padding: 12px 0;
+        margin-bottom: 8px;
     }
 
     table td {
         display: flex;
         justify-content: space-between;
-        padding: 5px 15px !important;
+        padding: 8px 15px !important;
         text-align: right;
+        font-size: 14px;
     }
 
     table td::before {
@@ -226,5 +510,48 @@
         font-weight: 700;
         color: #64748b;
         text-align: left;
+    }
+
+    /* --- 11. GRID OPTIMIZATIONS --- */
+    .menu-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+        gap: 10px !important;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    .kpi-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    /* --- 12. MODAL OPTIMIZATIONS --- */
+    .modal {
+        padding: 10px !important;
+        align-items: flex-end !important;
+    }
+
+    .modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 24px 24px 0 0 !important;
+        padding: 20px !important;
+        margin: 0 !important;
+        max-height: 90vh;
+    }
+
+    /* --- 13. TOAST NOTIFICATIONS --- */
+    #alertContainer {
+        right: 10px !important;
+        left: 10px !important;
+        width: auto !important;
+    }
+
+    .alert-box {
+        min-width: auto !important;
+        width: 100%;
     }
 }

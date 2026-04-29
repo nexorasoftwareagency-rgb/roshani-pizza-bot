@@ -1,4 +1,9 @@
-const CACHE_NAME = 'roshani-rider-v5-premium';
+// Fail-fast if not on HTTPS (security best practice for Phase 2.20)
+if (self.location.protocol !== 'https:' && self.location.hostname !== 'localhost' && self.location.hostname !== '127.0.0.1') {
+  throw new Error('Service Worker requires HTTPS');
+}
+
+const CACHE_NAME = 'roshani-rider-v5.1-premium';
 const ASSETS = [
   './',
   './index.html',
