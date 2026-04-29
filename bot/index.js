@@ -19,6 +19,9 @@ const sessions = {};
 const processedStatus = {};
 const processedOTP = {};
 let reportInterval = null;
+let dailyReportSent = false;
+let weeklyReportSent = false;
+let monthlyReportSent = false;
 
 const SESSION_TTL = 30 * 60 * 1000;
 const STATUS_TTL = 24 * 60 * 60 * 1000;
@@ -303,22 +306,218 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 msg = `✅ *ORDER CONFIRMED!* #${id.slice(-5)}\n\n${formatOrderInvoice(id, order)}\n${getFoodFunnyProgress("Confirmed")}`;
                 img = botSettings.imgConfirmed;
             } else if (order.status === "Preparing") {
-                msg = `👨‍🍳 *CHEF IS PREPARING YOUR ORDER!*\n\n${getFoodFunnyProgress("Preparing")}`;
+                msg = `👨‍🍳 *CHEF IS PREPARING YOUR ORDER!* #${id.slice(-5)}\n\nYour order is being prepared with care!\n${getFoodFunnyProgress("Preparing")}`;
                 img = botSettings.imgPreparing;
-            } else if (order.status === "Cooked") {
-                msg = `🔥 *YOUR FOOD IS READY & PACKED!*\n\n${getFoodFunnyProgress("Cooked")}`;
+            } else if (order.status === "Cooked" || order.status === "Ready") {
+                msg = `🔥 *FOOD READY & PACKED!* #${id.slice(-5)}\n\nYour delicious order is ready! 🚀\n${getFoodFunnyProgress("Cooked")}`;
                 img = botSettings.imgCooked;
+                
+                // 🔔 NOTIFY RIDER via WhatsApp if assigned
+                if (order.assignedRider) {
+                    await notifyRiderPickup(sock, order, order.assignedRider);
+                }
             } else if (order.status === "Out for Delivery") {
-                msg = `🚀 *OUT FOR DELIVERY!*\n\nOur rider is on the way to your address.\n${getFoodFunnyProgress("Out for Delivery")}`;
+                msg = `🚀 *OUT FOR DELIVERY!* #${id.slice(-5)}\n\nOur rider is on the way to your address.\n${getFoodFunnyProgress("Out for Delivery")}`;
                 img = botSettings.imgOut;
             } else if (order.status === "Delivered") {
-                msg = `🎉 *DELIVERED!* 🎉\n\nHope you enjoy your meal! Please rate us.\n${getFunnyFoodJoke()}`;
+                msg = `🎉 *DELIVERED!* #${id.slice(-5)}\n\nHope you enjoy your meal! Please rate us.\n${getFunnyFoodJoke()}`;
                 img = botSettings.imgDelivered;
             }
 
-            if (msg) await sendImage(sock, jid, img, msg);
+if (msg) {
+                await sendImage(sock, jid, img, msg);
+                // Also send location to customer if out for delivery
+                if (order.status === "Out for Delivery" && order.lat && order.lng) {
+                    const locMsg = `📍 View delivery location: https://maps.google.com/?q=${order.lat},${order.lng}`;
+                    await sock.sendMessage(jid, { text: locMsg });
+                }
+            }
         }
     } catch (err) { console.error("Status Update Error:", err); }
+}
+
+// =============================
+// 4A. DAILY & MONTHLY REPORT FUNCTIONS
+// =============================
+
+async function sendDailyReport(sock) {
+    try {
+        const outlets = ['pizza', 'cake'];
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        
+        let totalOrders = 0;
+        let totalRevenue = 0;
+        let reportDetails = "";
+        
+        for (const outlet of outlets) {
+            const orders = await getData(`${outlet}/orders`);
+            if (!orders) continue;
+            
+            let outletOrders = 0;
+            let outletRevenue = 0;
+            
+            Object.values(orders).forEach(order => {
+                const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
+                if (orderTime >= startOfDay) {
+                    outletOrders++;
+                    outletRevenue += parseFloat(order.total || 0);
+                }
+            });
+            
+            if (outletOrders > 0) {
+                reportDetails += `\n🍕 *${outlet.toUpperCase()} OUTLET:*\n`;
+                reportDetails += `   📦 Orders: ${outletOrders}\n`;
+                reportDetails += `   💰 Revenue: ₹${outletRevenue.toLocaleString()}\n`;
+            }
+            
+            totalOrders += outletOrders;
+            totalRevenue += outletRevenue;
+        }
+        
+        const adminJid = formatJid("919876543210"); // Configure in settings
+        if (!adminJid) return;
+        
+        const msg = `📊 *DAILY SALES REPORT* 📊\n\n` +
+            `📅 Date: ${now.toLocaleDateString('en-IN')}\n\n` +
+            reportDetails + 
+            `\n\n💵 *TOTAL:* ₹${totalRevenue.toLocaleString()}\n` +
+            `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
+            `_Sent automatically by Roshani Bot_`;
+        
+        await sock.sendMessage(adminJid, { text: msg });
+        console.log("📊 Daily report sent");
+    } catch (err) { console.error("Daily Report Error:", err); }
+}
+
+async function sendMonthlyReport(sock) {
+    try {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+        
+        let totalOrders = 0;
+        let totalRevenue = 0;
+        let reportDetails = "";
+        
+        const outlets = ['pizza', 'cake'];
+        for (const outlet of outlets) {
+            const orders = await getData(`${outlet}/orders`);
+            if (!orders) continue;
+            
+            let outletOrders = 0;
+            let outletRevenue = 0;
+            
+            Object.values(orders).forEach(order => {
+                const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
+                if (orderTime >= startOfMonth) {
+                    outletOrders++;
+                    outletRevenue += parseFloat(order.total || 0);
+                }
+            });
+            
+            if (outletOrders > 0) {
+                reportDetails += `\n🎂 *${outlet.toUpperCase()} OUTLET:*\n`;
+                reportDetails += `   📦 Orders: ${outletOrders}\n`;
+                reportDetails += `   💰 Revenue: ₹${outletRevenue.toLocaleString()}\n`;
+            }
+            
+            totalOrders += outletOrders;
+            totalRevenue += outletRevenue;
+        }
+        
+        const devJid = formatJid("919876543210"); // Developer number
+        if (!devJid) return;
+        
+        const msg = `📈 *MONTHLY SALES REPORT* 📈\n\n` +
+            `📅 Month: ${now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}\n\n` +
+            reportDetails + 
+            `\n\n💵 *MONTHLY TOTAL:* ₹${totalRevenue.toLocaleString()}\n` +
+            `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
+            `_Sent automatically by Roshani Bot_`;
+        
+        await sock.sendMessage(devJid, { text: msg });
+        console.log("📈 Monthly report sent");
+    } catch (err) { console.error("Monthly Report Error:", err); }
+}
+
+async function sendWeeklyReport(sock) {
+    try {
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - 7);
+        const weekStartTime = startOfWeek.getTime();
+        
+        let totalOrders = 0;
+        let totalRevenue = 0;
+        let reportDetails = "";
+        
+        const outlets = ['pizza', 'cake'];
+        for (const outlet of outlets) {
+            const orders = await getData(`${outlet}/orders`);
+            if (!orders) continue;
+            
+            let outletOrders = 0;
+            let outletRevenue = 0;
+            
+            Object.values(orders).forEach(order => {
+                const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
+                if (orderTime >= weekStartTime) {
+                    outletOrders++;
+                    outletRevenue += parseFloat(order.total || 0);
+                }
+            });
+            
+            if (outletOrders > 0) {
+                reportDetails += `\n🍕 *${outlet.toUpperCase()} OUTLET:*\n`;
+                reportDetails += `   📦 Orders: ${outletOrders}\n`;
+                reportDetails += `   💰 Revenue: ₹${outletRevenue.toLocaleString()}\n`;
+            }
+            
+            totalOrders += outletOrders;
+            totalRevenue += outletRevenue;
+        }
+        
+        // Send to both Admin and Developer
+        const adminJid = formatJid("919876543210");
+        const devJid = formatJid("919876543210"); // Same for now, can use different numbers
+        
+        const msg = `📊 *WEEKLY SALES REPORT* 📊\n\n` +
+            `📅 Week: ${startOfWeek.toLocaleDateString('en-IN')} - ${now.toLocaleDateString('en-IN')}\n\n` +
+            reportDetails + 
+            `\n\n💵 *WEEKLY TOTAL:* ₹${totalRevenue.toLocaleString()}\n` +
+            `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
+            `_Sent automatically by Roshani Bot_`;
+        
+        if (adminJid) await sock.sendMessage(adminJid, { text: msg });
+        if (devJid && devJid !== adminJid) await sock.sendMessage(devJid, { text: msg });
+        console.log("📊 Weekly report sent");
+    } catch (err) { console.error("Weekly Report Error:", err); }
+}
+
+async function notifyRiderPickup(sock, order, riderEmail) {
+    try {
+        const rider = await getRiderByEmail(riderEmail, order.outlet || 'pizza');
+        if (!rider || !rider.phone) return;
+        
+        const riderJid = formatJid(rider.phone);
+        
+        let itemsText = (order.items || []).map(i => `• ${i.name} (${i.size}) x${i.quantity}`).join('\n');
+        
+        const locationMsg = order.lat && order.lng ? 
+            `\n📍 *Location:* https://maps.google.com/?q=${order.lat},${order.lng}` : 
+            `\n📍 *Address:* ${order.address}`;
+        
+        const msg = `🍕 *NEW PICKUP ORDER* 🍕\n\n` +
+            `🆔 Order: #${order.orderId?.slice(-5) || 'N/A'}\n` +
+            `👤 Customer: ${order.customerName}\n` +
+            `📞 Phone: ${order.phone}\n` +
+            `${locationMsg}\n\n` +
+            `📦 *ITEMS:*\n${itemsText}\n\n` +
+            `💰 *Total to Collect:* ₹${order.total}\n` +
+            `💳 *Payment:* ${order.paymentMethod}`;
+        
+        await sock.sendMessage(riderJid, { text: msg });
+    } catch (err) { console.error("Rider Pickup Notify Error:", err); }
 }
 
 // =============================
@@ -340,11 +539,40 @@ async function startBot() {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // Heartbeat & Cleanup
+    // Heartbeat & Cleanup & Report Scheduling
     if (reportInterval) clearInterval(reportInterval);
-    reportInterval = setInterval(() => {
+    reportInterval = setInterval(async () => {
         cleanupSessions();
         updateData('bot/status', { lastSeen: Date.now(), status: 'Online' }).catch(() => {});
+        
+        const now = new Date();
+        const hour = now.getHours();
+        const minute = now.getMinutes();
+        
+        // Daily Report at 8:00 PM (20:00) - Skip Sundays
+        if (hour === 20 && minute === 0 && !dailyReportSent && now.getDay() !== 0) {
+            await sendDailyReport(sock);
+            dailyReportSent = true;
+        }
+        
+        // Weekly Report every Sunday at 8:00 PM
+        if (now.getDay() === 0 && hour === 20 && minute === 0 && !weeklyReportSent) {
+            await sendWeeklyReport(sock);
+            weeklyReportSent = true;
+        }
+        
+        // Monthly Report on 1st of month at 8:00 AM
+        if (now.getDate() === 1 && hour === 8 && minute === 0 && !monthlyReportSent) {
+            await sendMonthlyReport(sock);
+            monthlyReportSent = true;
+        }
+        
+        // Reset flags at midnight
+        if (hour === 0 && minute === 0) {
+            dailyReportSent = false;
+            weeklyReportSent = false;
+            monthlyReportSent = false;
+        }
     }, 60000);
 
     // Firebase Listeners
@@ -388,10 +616,24 @@ async function startBot() {
             const pushName = msg.pushName || "";
 
             if (!sessions[sender]) {
-                sessions[sender] = { step: "START", current: {}, cart: [], pushName: pushName };
+                sessions[sender] = { step: "START", current: {}, cart: [], pushName: pushName, msgCount: 0, lastReset: Date.now() };
             }
             const user = sessions[sender];
             user.lastActivity = Date.now();
+
+            // --- RATE LIMITING ---
+            const now = Date.now();
+            if (now - user.lastReset > 60000) {
+                user.msgCount = 0;
+                user.lastReset = now;
+            }
+            user.msgCount++;
+            if (user.msgCount > 10) {
+                if (user.msgCount === 11) {
+                    await sock.sendMessage(sender, { text: "⚠️ *Too many messages.* Please wait a minute before trying again." });
+                }
+                return;
+            }
 
             if (text.toLowerCase() === "cancel" || text.toLowerCase() === "reset") {
                 sessions[sender] = { step: "START", current: {}, cart: [] };
@@ -531,11 +773,18 @@ async function startBot() {
                 if (!loc) return sock.sendMessage(sender, { text: "📍 Please share location." });
 
                 user.location = { lat: loc.degreesLatitude, lng: loc.degreesLongitude };
-                const delSettings = await getData("settings/Delivery") || {};
-                const outletCoords = { pizza: { lat: 25.887944, lng: 85.026194 }, cake: { lat: 25.887472, lng: 85.026861 } }[user.outlet];
+                 const [delSettings, storeSettings] = await Promise.all([
+                     getData("settings/Delivery", user.outlet) || {},
+                     getData("settings/Store", user.outlet) || {}
+                 ]);
                 
-                const dist = calculateDistance(user.location.lat, user.location.lng, outletCoords.lat, outletCoords.lng);
-                const fee = getFeeFromSlabs(dist, delSettings.slabs);
+                const outletCoords = {
+                    lat: parseFloat(storeSettings?.lat || (user.outlet === 'cake' ? 25.887472 : 25.887944)),
+                    lng: parseFloat(storeSettings?.lng || (user.outlet === 'cake' ? 85.026861 : 85.026194))
+                };
+                
+                 const dist = calculateDistance(user.location.lat, user.location.lng, outletCoords.lat, outletCoords.lng);
+                 const fee = getFeeFromSlabs(dist, delSettings.slabs || []);
                 
                 user.deliveryFee = fee;
                 const { lines, subtotal } = formatCartSummary(user.cart);

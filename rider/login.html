@@ -4,8 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self' https: data: blob:; connect-src 'self' https: wss:; style-src 'self' https: 'unsafe-inline'; font-src 'self' https:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob:; script-src 'self' https://www.gstatic.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' wss://*.firebaseio.com https://*.firebaseio.com https://*.googleapis.com;">
     <meta name="theme-color" content="#FF5200">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -131,21 +130,21 @@
         <div class="input-group">
             <label for="email">Mobile Number / Email</label>
             <div class="input-wrapper">
-                <i data-lucide="phone"></i>
-                <input type="text" id="email" placeholder="Enter mobile or email" autocomplete="username" required>
+                <i data-lucide="phone" aria-hidden="true"></i>
+                <input type="text" id="email" placeholder="Enter mobile or email" autocomplete="username" maxlength="50" required aria-required="true">
             </div>
         </div>
 
         <div class="input-group">
             <label for="password">Access Password</label>
             <div class="input-wrapper">
-                <i data-lucide="lock"></i>
+                <i data-lucide="lock" aria-hidden="true"></i>
                 <input type="password" id="password" placeholder="Enter secure password" autocomplete="current-password"
-                    required>
+                    maxlength="32" required aria-required="true">
             </div>
         </div>
 
-        <button class="btn-primary full-width mt-10" id="loginBtn">
+        <button class="btn-primary full-width mt-10" id="loginBtn" aria-label="Sign In to Rider Portal">
             AUTHENTICATE & START
         </button>
         <p id="loginError" class="error-msg hidden"></p>

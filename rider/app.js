@@ -3,9 +3,11 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 import { getDatabase, ref, onValue, get, set, update, runTransaction, query, orderByChild, equalTo, off, serverTimestamp, remove, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
+import { enablePersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyAAHuSGwulRO3QhrOD4zK3ZRISivBi7jOM",
+    apiKey: "AIzaSyCVQrRgQWjdPYq2gmGXbB6yzmh4g6trd88",
     authDomain: "prashant-pizza-e86e4.firebaseapp.com",
     databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
     projectId: "prashant-pizza-e86e4",
@@ -13,11 +15,37 @@ const firebaseConfig = {
     appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c"
 };
 
+const reCaptchaSiteKey = "6LeAlcwsAAAAAH4F3p5aCNvyPlhC3BRHOXTdDEGK";
+
 let app, auth, db, dbStorage, messaging;
 try {
     app = initializeApp(firebaseConfig);
+    
+    // Initialize App Check (Phase 2.16)
+    initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(reCaptchaSiteKey),
+        isTokenAutoRefreshEnabled: true
+    });
+    console.log("[App Check] Activated for Rider Portal");
+
     auth = getAuth(app);
     db = getDatabase(app);
+    
+    // Enable offline persistence (Phase 2.17)
+    if (enablePersistence) {
+        enablePersistence(db, { synchronizeTabs: true }).catch(err => {
+            if (err.code === 'failed-precondition') {
+                console.warn("[Firebase] Persistence already enabled");
+            } else if (err.code === 'unsupported-environment') {
+                console.warn("[Firebase] Persistence not supported");
+            } else {
+                console.error("[Firebase] Persistence error:", err);
+            }
+        });
+    } else {
+        console.warn("[Firebase] Persistence API not available");
+    }
+    
     dbStorage = getStorage(app);
     try {
         messaging = getMessaging(app);
@@ -69,14 +97,10 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-const escapeHtml = (unsafe) => {
-    if (!unsafe || typeof unsafe !== 'string') return unsafe;
-    return unsafe
-        .replace(/&/g, "&")
-        .replace(/</g, "<")
-        .replace(/>/g, ">")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+const escapeHtml = (text) => {
+    if (!text && text !== 0) return "";
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
 };
 
 const logError = (context, error) => {
@@ -113,9 +137,24 @@ window.activeOrderData = null;
 window.activeOrderId = null;
 window.activeOrderOutlet = null;
 window.orderCache = { pizza: {}, cake: {} };
+window.outletCoords = { pizza: { lat: 25.887944, lng: 85.026194 }, cake: { lat: 25.887472, lng: 85.026861 } };
 
-const ROSHANI_SUDHA_LAT = 25.88;
-const ROSHANI_SUDHA_LNG = 86.60;
+// Load outlet coordinates from Firebase on init
+async function loadOutletCoords() {
+    try {
+        const pizzaStore = await get(ref(db, 'pizza/settings/Store'));
+        const cakeStore = await get(ref(db, 'cake/settings/Store'));
+        if (pizzaStore.val()) {
+            window.outletCoords.pizza.lat = parseFloat(pizzaStore.val().lat) || 25.887944;
+            window.outletCoords.pizza.lng = parseFloat(pizzaStore.val().lng) || 85.026194;
+        }
+        if (cakeStore.val()) {
+            window.outletCoords.cake.lat = parseFloat(cakeStore.val().lat) || 25.887472;
+            window.outletCoords.cake.lng = parseFloat(cakeStore.val().lng) || 85.026861;
+        }
+        console.log("[Outlet] Coordinates loaded:", window.outletCoords);
+    } catch (e) { console.warn("[Outlet] Using default coordinates"); }
+}
 
 window.getDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371;
@@ -148,7 +187,7 @@ window.triggerWhatsAppAlert = (phone, orderId, actionType, extraData = {}) => {
     }
 
     const url = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
 };
 
 function resolvePath(path, outlet = null) {
@@ -330,8 +369,9 @@ window.acceptOrder = async (id, outletId) => {
     window.haptic(40);
     if (!window.riderLocation) return window.showToast("GPS Error. Ensure location is ON.", "error");
 
-    const distFromRest = window.getDistance(window.riderLocation.lat, window.riderLocation.lng, ROSHANI_SUDHA_LAT, ROSHANI_SUDHA_LNG);
-    if (distFromRest > 0.5) return window.showToast(`Must be within 500m! (You are ${distFromRest.toFixed(1)}km away)`, "error");
+    const outletCoords = window.outletCoords[outletId] || window.outletCoords.pizza;
+    const distFromRest = window.getDistance(window.riderLocation.lat, window.riderLocation.lng, outletCoords.lat, outletCoords.lng);
+    if (distFromRest > 0.5) return window.showToast(`Must be within 500m of outlet! (You are ${distFromRest.toFixed(1)}km away)`, "error");
 
     try {
         const orderPath = `${outletId}/orders/${id}`;
@@ -628,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = e.target.closest('[data-action]');
         if (!btn) return;
         const action = btn.dataset.action;
-        if (action === 'call') window.open(`tel:${btn.dataset.phone}`);
+        if (action === 'call') window.open(`tel:${btn.dataset.phone}`, '_blank', 'noopener,noreferrer');
         else if (action === 'msg') window.triggerWhatsAppAlert(btn.dataset.phone, btn.dataset.orderid, 'PICKED_UP');
         else if (action === 'otp') window.openOTPPanel();
     });
@@ -676,6 +716,7 @@ onAuthStateChanged(auth, async user => {
 
         if (window.currentUser.profile.profilePhoto) document.getElementById('r-profile-img').src = window.currentUser.profile.profilePhoto;
 
+        await loadOutletCoords();
         initLocationTracking();
         initRealtimeListeners();
 
