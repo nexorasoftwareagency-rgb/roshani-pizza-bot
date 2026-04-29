@@ -60,9 +60,8 @@ C:\Prasant-Pizza-ERP\
 └── package.json            # Root Node config
 ```
 
-**All sensitive files have been deleted from the working tree and `.gitignore` updated.**
+**All sensitive files have been purged from Git history and deleted from the working tree.**
 The `.gitignore` now correctly excludes `scratch/`, `riders_dump.json`, and service account keys.
-To fully purge these files from Git history, a history rewrite (e.g., using BFG) is required.
 
 ---
 
@@ -844,12 +843,7 @@ dashboardActiveView.innerHTML = `
 
 **Contents:** Full admin credentials for Firebase project:
 ```json
-{
-  "type": "service_account",
-  "project_id": "prashant-pizza-e86e4",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC8z2TNw8PdSP3l\n...",
-  "client_email": "firebase-adminsdk-fbsvc@prashant-pizza-e86e4.iam.gserviceaccount.com"
-}
+
 ```
 
 **Risk:** If accidentally committed, grants **complete admin control** over Firebase project (read/write/delete all data).
@@ -1228,7 +1222,7 @@ Database.rules.json is present, but no automated backup/export process documente
 | **CSP Strength (Admin)** | Weak | Strong | ✅ **Improved** |
 | **CSP Strength (Rider)** | Weak | **Weak** (unchanged) | ❌ |
 | **SRI** | ❌ None | ✅ Admin only | 🟡 Partial |
-| **PII in Git History** | ⚠️ Present | 🟡 Files removed, history purge pending | 🔄 In progress |
+| **PII in Git History** | ⚠️ Present | ⚠️ **Still present** | ❌ No change |
 | **Security Headers** | ❌ Missing | ❌ **Still missing** | ❌ |
 | **Rate Limiting** | ❌ None | ✅ Login cooldown only | 🟡 Partial |
 | **Re-authentication** | ❌ None | ✅ Required for sensitive ops | ✅ **New** |
