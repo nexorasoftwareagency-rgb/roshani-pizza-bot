@@ -698,8 +698,8 @@ html {
     position: relative;
     overflow: hidden;
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
 }
 
 .kpi-card::before {
@@ -1206,8 +1206,8 @@ tbody tr:hover td:first-child {
 
 /* Mobile Outlet Switcher */
 .outlet-switcher-admin {
-    appearance: none;
     -webkit-appearance: none;
+    appearance: none;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
@@ -1294,8 +1294,8 @@ tbody tr:hover td:first-child {
     font-weight: 600;
     padding: 12px 24px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
 }
 
 .btn-secondary:hover {
@@ -1320,8 +1320,8 @@ tbody tr:hover td:first-child {
     padding: 14px 18px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     width: 100%;
-    backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
 }
 
 .form-input:focus {
@@ -1408,8 +1408,9 @@ tbody tr:hover td:first-child {
     border-radius: 28px;
     color: var(--text-main);
     animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+
 }
 
 @keyframes modalSlideIn {
@@ -2315,8 +2316,8 @@ tbody tr:hover td:first-child {
     text-align: center;
     width: 100%;
     border: 1px solid rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
     transition: transform 0.4s ease;
 }
 
@@ -2374,8 +2375,8 @@ tbody tr:hover td:first-child {
     padding: 20px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
 }
 
 .alert-box:hover {
@@ -2503,14 +2504,11 @@ tbody tr:hover td:first-child {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    padding: 4px;
 }
 
 .walkin-dish-grid::-webkit-scrollbar {
     display: none;
-}
-
-overflow-y: auto;
-padding: 4px;
 }
 
 .walkin-dish-card {

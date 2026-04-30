@@ -182,3 +182,37 @@ export const enhanceTablesForMobile = (root = document) => {
         });
     });
 };
+
+export const showConfirm = (message) => {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'modal active flex';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 400px; text-align: center;">
+                <h3 style="margin-bottom: 20px;">Confirm</h3>
+                <p style="margin-bottom: 30px;">${escapeHtml(message)}</p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button class="btn-secondary cancel-dish-btn">Cancel</button>
+                    <button class="btn-primary" id="confirmYesBtn">Confirm</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        const cleanup = () => {
+            modal.remove();
+            off();
+        };
+        
+        const off = () => {
+            modal.querySelector('.cancel-dish-btn').removeEventListener('click', onCancel);
+            modal.querySelector('#confirmYesBtn').removeEventListener('click', onConfirm);
+        };
+        
+        const onCancel = () => { cleanup(); resolve(false); };
+        const onConfirm = () => { cleanup(); resolve(true); };
+        
+        modal.querySelector('.cancel-dish-btn').addEventListener('click', onCancel);
+        modal.querySelector('#confirmYesBtn').addEventListener('click', onConfirm);
+    });
+};

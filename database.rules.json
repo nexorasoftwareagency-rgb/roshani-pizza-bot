@@ -5,7 +5,7 @@
         "email"
       ],
       ".read": "auth != null && auth.token.email_verified === true && (auth.token.admin === true || root.child('admins/' + auth.uid).exists())",
-      ".write": "auth != null && ((!data.exists() && root.child('admins').numChildren() === 0) || root.child('admins/' + auth.uid).exists())",
+      ".write": "auth != null && ((!data.exists() && !root.child('admins').hasChildren()) || root.child('admins/' + auth.uid).exists())",
       "$adminId": {
         ".read": "auth != null && (auth.uid == $adminId || root.child('admins/' + auth.uid).exists())",
         ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).exists() || auth.uid == $adminId)",
