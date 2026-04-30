@@ -4,7 +4,7 @@
       ".indexOn": [
         "email"
       ],
-      ".read": "auth != null && auth.token.email_verified === true && (auth.token.admin === true || root.child('admins/' + auth.uid).exists())",
+      ".read": "auth != null",
       ".write": "auth != null && ((!data.exists() && !root.child('admins').hasChildren()) || root.child('admins/' + auth.uid).exists())",
       "$adminId": {
         ".read": "auth != null && (auth.uid == $adminId || root.child('admins/' + auth.uid).exists())",
@@ -61,8 +61,10 @@
       }
     },
     "logs": {
-      ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
-      ".write": "auth != null && root.child('admins/' + auth.uid).exists()",
+      ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || auth.token.admin === true)",
+      "audit": {
+        ".write": "auth != null"
+      },
       "riderErrors": {
         "$uid": {
           ".write": "auth != null && auth.uid == $uid && (!data.exists() || newData.child('timestamp').val() > data.child('timestamp').val() + 5000)"
@@ -88,7 +90,7 @@
           "status",
           "whatsappNumber"
         ],
-        ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || (query.orderByChild == 'assignedRider' && query.equalTo == auth.token.email))",
+        ".read": "auth != null",
         "$orderId": {
           ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || !data.child('assignedRider').exists() || data.child('assignedRider').val() == auth.token.email)",
           ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (data.child('assignedRider').val() == auth.token.email || !data.child('assignedRider').exists()))",
@@ -119,6 +121,18 @@
       "feedbacks": {
         ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
         ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
+      },
+      "categories": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
+      },
+      "lostSales": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      },
+      "customers": {
+        ".read": "auth != null",
+        ".write": "auth != null"
       }
     }
   }

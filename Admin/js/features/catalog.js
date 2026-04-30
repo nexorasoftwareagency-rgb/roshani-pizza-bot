@@ -2,7 +2,7 @@ import { Outlet, uploadImage, deleteImage } from '../firebase.js';
 import { showToast, escapeHtml, logAudit } from '../utils.js';
 import { state } from '../state.js';
 import { requireAdminReauth } from '../auth.js';
-import { showConfirm } from '../ui.js';
+import { showConfirm } from '../ui-utils.js';
 
 /**
  * CATEGORIES
@@ -12,6 +12,7 @@ export function loadCategories() {
     cleanupCatalog();
     console.log("[Catalog] Loading categories...");
     Outlet.ref('categories').on('value', snap => {
+        console.log(`[Catalog] Received ${snap.numChildren()} categories`);
         state.categories = [];
         const container = document.getElementById('categoryList');
         if (!container) return;
@@ -122,8 +123,8 @@ export function loadMenu() {
                     <div style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:5px; letter-spacing:0.5px;">Sizes & Pricing</div>
                     ${Object.entries(d.sizes).map(([size, price]) => `
                         <div class="dish-price-row">
-                            <span style="color:var(--text-main)">${size}</span>
-                            <span class="dish-price-val">₹${price}</span>
+                            <span style="color:var(--text-main)">${escapeHtml(size)}</span>
+                            <span class="dish-price-val">₹${escapeHtml(String(price))}</span>
                         </div>
                     `).join("")}
                 </div>`;
@@ -131,7 +132,7 @@ export function loadMenu() {
                 sizesHtml = `
                 <div class="dish-pricing-box flex-between">
                     <span style="font-size:12px; color:var(--text-muted)">Standard</span>
-                    <span class="dish-price-val" style="font-size:15px;">₹${d.price || 0}</span>
+                    <span class="dish-price-val" style="font-size:15px;">₹${escapeHtml(String(d.price || 0))}</span>
                 </div>`;
             }
 

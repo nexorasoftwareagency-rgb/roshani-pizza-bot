@@ -6,7 +6,19 @@
 import { showToast } from './utils.js';
 import { state } from './state.js';
 
-// 1. REFRESH CIRCUIT BREAKER
+// 1. REFRESH CIRCUIT BREAKER & COMPLETE REFRESH
+export const completeSiteRefresh = () => {
+    showToast("Refreshing system...", "info");
+    // Clear specific session state but keep auth
+    sessionStorage.removeItem('adminSelectedOutlet');
+    sessionStorage.removeItem('erp_refresh_log'); 
+    
+    // Add a small delay for the WOW factor (visual feedback)
+    setTimeout(() => {
+        window.location.reload();
+    }, 800);
+};
+
 (function () {
     const REFRESH_LIMIT = 5;
     const TIME_WINDOW = 10000;
@@ -28,6 +40,21 @@ import { state } from './state.js';
         throw new Error("Refresh Loop Halted");
     }
 })();
+
+// 2. PULL TO REFRESH (MOBILE)
+let touchStart = 0;
+window.addEventListener('touchstart', (e) => {
+    if (window.scrollY === 0) touchStart = e.touches[0].pageY;
+}, { passive: true });
+
+window.addEventListener('touchend', (e) => {
+    const touchEnd = e.changedTouches[0].pageY;
+    if (window.scrollY === 0 && touchEnd - touchStart > 180) {
+        // Trigger haptic if available
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+        completeSiteRefresh();
+    }
+}, { passive: true });
 
 // 2. PWA INSTALL LOGIC
 window.addEventListener('beforeinstallprompt', (e) => {

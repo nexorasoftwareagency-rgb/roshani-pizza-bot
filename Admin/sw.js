@@ -3,7 +3,7 @@ if (self.location.protocol !== 'https:' && self.location.hostname !== 'localhost
   throw new Error('Service Worker requires HTTPS');
 }
 
-const CACHE_NAME = 'roshani-erp-v3.4';
+const CACHE_NAME = 'roshani-erp-v4.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -62,6 +62,9 @@ self.addEventListener('activate', (event) => {
 
 // 3. Fetch Event: Network-First Strategy with Cache Fallback
 self.addEventListener('fetch', (event) => {
+  // Only cache GET requests
+  if (event.request.method !== 'GET') return;
+
   // Skip Firebase Realtime Database calls (must be live)
   if (event.request.url.includes('firebaseio.com')) return;
   

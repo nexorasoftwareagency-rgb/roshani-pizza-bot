@@ -66,12 +66,17 @@ function validateBackupCode(code) {
 export async function loadStoreSettings() {
     console.log("[Settings] Loading all store settings...");
     try {
-        const [store, del, bot, disp] = await Promise.all([
-            Outlet.get(SETTINGS_PATHS.STORE),
-            Outlet.get(SETTINGS_PATHS.DELIVERY),
-            Outlet.get(SETTINGS_PATHS.BOT),
-            Outlet.get(SETTINGS_PATHS.DISPLAY)
+        const [storeSnap, delSnap, botSnap, dispSnap] = await Promise.all([
+            Outlet.ref(SETTINGS_PATHS.STORE).once("value"),
+            Outlet.ref(SETTINGS_PATHS.DELIVERY).once("value"),
+            Outlet.ref(SETTINGS_PATHS.BOT).once("value"),
+            Outlet.ref(SETTINGS_PATHS.DISPLAY).once("value")
         ]);
+
+        const store = storeSnap.val();
+        const del = delSnap.val();
+        const bot = botSnap.val();
+        const disp = dispSnap.val();
 
         // 1. Store Info
         const s = store || {};

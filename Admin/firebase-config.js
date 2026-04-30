@@ -1,5 +1,5 @@
 window.firebaseConfig = {
-  apiKey: "AIzaSyCyTSwHvEkbmvIg88bxLcYKuUM1AVCEJCg",
+  apiKey: "AIzaSyCcbGywMiWTweomHZigtNkrAkVrv8-4tkM",
   authDomain: "prashant-pizza-e86e4.firebaseapp.com",
   databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
   projectId: "prashant-pizza-e86e4",

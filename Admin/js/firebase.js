@@ -3,29 +3,45 @@
  * Handles Firebase initialization, database references, and outlet scoping.
  */
 
-import { showToast } from './utils.js';
+import { showToast } from './ui-utils.js';
+
+// Helper to safely access global firebase (compat mode)
+const getFirebase = () => {
+    if (typeof firebase !== 'undefined') return firebase;
+    if (typeof window.firebase !== 'undefined') return window.firebase;
+    return null;
+};
+
+export const fb = getFirebase();
+
+if (!fb) {
+    console.error("[Firebase] SDK not found! Ensure compat scripts are loaded in index.html.");
+    throw new Error("Firebase SDK missing");
+}
 
 // Initialize Firebase if not already done
-if (!firebase.apps.length) {
+if (!fb.apps.length) {
     if (window.firebaseConfig) {
-        firebase.initializeApp(window.firebaseConfig);
-
-
-
+        fb.initializeApp(window.firebaseConfig);
+        console.log("[Firebase] Manual App Init Success");
     } else {
-        console.error("[Firebase] Configuration missing!");
+        console.error("[Firebase] Configuration missing! Falling back to empty init.");
+        fb.initializeApp({ apiKey: "MISSING", projectId: "MISSING" });
     }
 }
 
-export const db = firebase.database();
-export const auth = firebase.auth();
+export const db = fb.database();
+export const auth = fb.auth();
+export const ServerValue = fb.database.ServerValue;
+export const EmailAuthProvider = fb.auth.EmailAuthProvider;
 
 // Initialize App Check (Phase 2.16)
+/*
 if (window.reCaptchaSiteKey) {
     try {
-        const appCheck = firebase.appCheck();
+        const appCheck = fb.appCheck();
         appCheck.activate(
-            new firebase.appCheck.ReCaptchaV3Provider(window.reCaptchaSiteKey),
+            new fb.appCheck.ReCaptchaV3Provider(window.reCaptchaSiteKey),
             true // isTokenAutoRefreshEnabled
         );
         console.log("[App Check] Activated with site key:", window.reCaptchaSiteKey);
@@ -33,6 +49,7 @@ if (window.reCaptchaSiteKey) {
         console.error("[App Check] Initialization failed:", e);
     }
 }
+*/
 
 /**
  * OUTLET SEPARATION HELPER
@@ -49,10 +66,16 @@ export const Outlet = {
         const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'bot', 'logs'];
         const rootPath = path.split('/')[0];
 
-        if (shared.includes(rootPath)) return db.ref(path);
-
-        // Outlet-specific paths
-        return db.ref(`${this.current}/${path}`);
+        let finalPath;
+        if (shared.includes(rootPath)) {
+            finalPath = path;
+        } else {
+            // Outlet-specific paths
+            finalPath = `${this.current}/${path}`;
+        }
+        
+        console.log(`[Outlet] Resolving path: "${path}" -> "${finalPath}" (Outlet: ${this.current})`);
+        return db.ref(finalPath);
     }
 };
 
@@ -117,15 +140,15 @@ export function initSecondaryAuth() {
             return;
         }
 
-        if (firebase.apps.some(app => app.name === "secondary_auth")) {
-            secondaryAuth = firebase.app("secondary_auth").auth();
+        if (fb.apps.some(app => app.name === "secondary_auth")) {
+            secondaryAuth = fb.app("secondary_auth").auth();
         } else {
-            const secondaryApp = firebase.initializeApp(window.firebaseConfig, "secondary_auth");
+            const secondaryApp = fb.initializeApp(window.firebaseConfig, "secondary_auth");
             secondaryAuth = secondaryApp.auth();
         }
 
-        if (firebase.auth) {
-            secondaryAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+        if (fb.auth) {
+            secondaryAuth.setPersistence(fb.auth.Auth.Persistence.NONE);
         }
         secondaryAuthAvailable = true;
         console.log("Secondary Auth initialized successfully.");

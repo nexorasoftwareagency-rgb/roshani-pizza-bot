@@ -20,6 +20,7 @@ export function loadRiders() {
 
     // Listen for riders
     Outlet.ref("riders").on("value", snapshot => {
+        console.log(`[Riders] Received ${snapshot.numChildren()} riders`);
         const data = snapshot.val();
         state.ridersList = [];
         if (data) {

@@ -2,7 +2,6 @@ import { state } from './state.js';
 import { initRealtimeListeners } from './features/orders.js';
 import { ui } from './ui.js';
 
-const { switchTab } = ui;
 
 export function updateBranding() {
     const badge = document.getElementById('outletBadge');
@@ -62,7 +61,7 @@ export function switchOutlet(val) {
 
     // Refresh active tab
     const activeTabId = document.querySelector('.nav-links li.active')?.id.replace('menu-', '') || 'dashboard';
-    switchTab(activeTabId);
+    ui.switchTab(activeTabId);
     
     console.log("[Branding] Admin switched outlet to:", val);
 }

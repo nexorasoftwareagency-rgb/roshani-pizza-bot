@@ -1,4 +1,4 @@
-import { Outlet } from './firebase.js';
+import { Outlet, auth, ServerValue } from './firebase.js';
 
 export const haptic = (val = 10) => {
     if (window.navigator && window.navigator.vibrate) {
@@ -23,23 +23,8 @@ export const escapeHtml = (str) => {
         .replace(/'/g, '&#039;');
 };
 
-export const showToast = (message, type = 'success') => {
-    const container = document.getElementById('alertContainer');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerText = message;
-    
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100%)';
-        toast.style.transition = 'all 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-};
+import { showToast, showConfirm } from './ui-utils.js';
+export { showToast, showConfirm };
 
 export const playNotificationSound = () => {
     const audio = new Audio('assets/sounds/alert.mp3');
@@ -98,10 +83,10 @@ export const standardizeOrderData = (o) => {
 
 export const logAudit = async (action, details = {}) => {
     try {
-        const user = firebase.auth().currentUser;
+        const user = auth.currentUser;
         const auditRef = Outlet.ref('logs/audit').push();
         await auditRef.set({
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            timestamp: ServerValue.TIMESTAMP,
             user: user ? user.email : 'system',
             uid: user ? user.uid : 'system',
             action,
@@ -109,7 +94,10 @@ export const logAudit = async (action, details = {}) => {
             outlet: Outlet.current
         });
     } catch (e) {
-        console.error("[Audit] Log failed:", e);
+        // Silently fail for logAudit to avoid init crashes
+        if (!e.message?.includes('PERMISSION_DENIED')) {
+            console.warn("[Audit] Log failed:", e);
+        }
     }
 };
 
@@ -136,6 +124,8 @@ export const standardizeAuthError = (error) => {
             return "The password is too weak.";
         case 'auth/network-request-failed':
             return "Network error. Please check your internet connection or VPN settings.";
+        case 'auth/api-key-expired':
+            return "System Error: Firebase API Key has expired. Please contact the administrator to renew the API key.";
         default:
             return error.message || "Authentication failed.";
     }
@@ -180,39 +170,5 @@ export const enhanceTablesForMobile = (root = document) => {
                 }
             });
         });
-    });
-};
-
-export const showConfirm = (message) => {
-    return new Promise((resolve) => {
-        const modal = document.createElement('div');
-        modal.className = 'modal active flex';
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width: 400px; text-align: center;">
-                <h3 style="margin-bottom: 20px;">Confirm</h3>
-                <p style="margin-bottom: 30px;">${escapeHtml(message)}</p>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button class="btn-secondary cancel-dish-btn">Cancel</button>
-                    <button class="btn-primary" id="confirmYesBtn">Confirm</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        
-        const cleanup = () => {
-            modal.remove();
-            off();
-        };
-        
-        const off = () => {
-            modal.querySelector('.cancel-dish-btn').removeEventListener('click', onCancel);
-            modal.querySelector('#confirmYesBtn').removeEventListener('click', onConfirm);
-        };
-        
-        const onCancel = () => { cleanup(); resolve(false); };
-        const onConfirm = () => { cleanup(); resolve(true); };
-        
-        modal.querySelector('.cancel-dish-btn').addEventListener('click', onCancel);
-        modal.querySelector('#confirmYesBtn').addEventListener('click', onConfirm);
     });
 };

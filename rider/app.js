@@ -7,7 +7,7 @@ import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com
 import { enablePersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCyTSwHvEkbmvIg88bxLcYKuUM1AVCEJCg",
+    apiKey: "AIzaSyCcbGywMiWTweomHZigtNkrAkVrv8-4tkM",
     authDomain: "prashant-pizza-e86e4.firebaseapp.com",
     databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
     projectId: "prashant-pizza-e86e4",
@@ -273,6 +273,8 @@ window.showToast = (msg, type = "info") => {
 window.login = async () => {
     const identifier = document.getElementById('email').value.trim();
     const pass = document.getElementById('password').value;
+    const errEl = document.getElementById('loginError');
+    if (errEl) errEl.classList.add('hidden');
     if (!identifier || !pass) return;
 
     let loginEmail = /^\d{10}$/.test(identifier) ? `${identifier}@rider.com` : identifier;
@@ -280,10 +282,48 @@ window.login = async () => {
     try {
         await signInWithEmailAndPassword(auth, loginEmail, pass);
     } catch (e) {
+        console.error("Login Error:", e);
+        let msg = "Authentication failed. Check credentials.";
+        if (e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+            msg = "Incorrect mobile number or password.";
+        } else if (e.code === 'auth/too-many-requests') {
+            msg = "Too many failed attempts. Try again later.";
+        } else if (e.code === 'auth/network-request-failed') {
+            msg = "Network error. Check internet connection.";
+        } else if (e.code === 'auth/api-key-expired') {
+            msg = "System Error: API Key Expired. Contact Admin.";
+        }
+        
         const errEl = document.getElementById('loginError');
-        if (errEl) { errEl.innerText = "Invalid credentials"; errEl.classList.remove('hidden'); }
+        if (errEl) { 
+            errEl.innerText = msg; 
+            errEl.classList.remove('hidden'); 
+        }
+        window.showToast(msg, "error");
     }
 };
+
+window.completeSiteRefresh = () => {
+    window.showToast("Refreshing system...", "info");
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+    setTimeout(() => {
+        window.location.reload();
+    }, 800);
+};
+
+// PULL TO REFRESH (MOBILE)
+let touchStart = 0;
+window.addEventListener('touchstart', (e) => {
+    if (window.scrollY === 0) touchStart = e.touches[0].pageY;
+}, { passive: true });
+
+window.addEventListener('touchend', (e) => {
+    const touchEnd = e.changedTouches[0].pageY;
+    if (window.scrollY === 0 && touchEnd - touchStart > 180) {
+        window.completeSiteRefresh();
+    }
+}, { passive: true });
+
 
 window.logout = async () => {
     if (confirm("End your shift and logout?")) {
@@ -683,6 +723,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Login (if present)
     document.getElementById('loginBtn')?.addEventListener('click', window.login);
+    document.getElementById('btnRefreshApp')?.addEventListener('click', window.completeSiteRefresh);
+
 
     const dateOpts = { month: 'long', day: 'numeric', year: 'numeric' };
     const dateEl = document.getElementById('currentDate');

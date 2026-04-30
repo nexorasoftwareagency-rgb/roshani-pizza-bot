@@ -2,7 +2,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: "AIzaSyCVQrRgQWjdPYq2gmGXbB6yzmh4g6trd88",
+  apiKey: "AIzaSyCcbGywMiWTweomHZigtNkrAkVrv8-4tkM",
   authDomain: "prashant-pizza-e86e4.firebaseapp.com",
   databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
   projectId: "prashant-pizza-e86e4",

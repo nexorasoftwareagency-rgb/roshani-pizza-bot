@@ -1,50 +1,16 @@
-import { haptic, showToast } from './utils.js';
+import { haptic } from './utils.js';
+import { showToast, showConfirm } from './ui-utils.js';
 import { state } from './state.js';
 import { loadCategories, loadMenu, cleanupCatalog } from './features/catalog.js';
 import { loadRiders, cleanupRiders } from './features/riders.js';
 import { loadFeedbacks, cleanupFeedbacks } from './features/feedback.js';
 import { initLiveRiderTracker, cleanupLiveRiderTracker } from './features/tracker.js';
 import { loadWalkinMenu } from './features/pos.js';
-import { toggleNotificationSheet, updateNotificationUI } from './features/notifications.js';
-import { updateNotificationSettingsUI } from './features/settings.js';
+import { loadStoreSettings } from './features/settings.js';
+import { loadCustomers, loadReports, loadLostSales } from './features/customers.js';
+import { toggleNotificationSheet, updateNotificationUI, updateNotificationSettingsUI } from './features/notifications.js';
 
-export const showConfirm = (message, title = "Confirm Action") => {
-    return new Promise((resolve) => {
-        const overlay = document.createElement('div');
-        overlay.id = 'confirmOverlay';
-        overlay.style.cssText = `
-            position: fixed; inset: 0; z-index: 99999;
-            background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center;
-        `;
 
-        overlay.innerHTML = `
-            <div style="background: #1c1c1c; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
-                        padding: 32px; max-width: 360px; width: 90%; text-align: center;
-                        box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
-                <h3 id="confirmTitle" style="color: #fff; margin: 0 0 12px; font-size: 18px; font-weight: 700;"></h3>
-                <p id="confirmMessage" style="color: #aaa; font-size: 14px; margin: 0 0 24px;"></p>
-                <div style="display: flex; gap: 12px; justify-content: center;">
-                    <button id="confirmNo" style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #333; background: transparent; color: #aaa; cursor: pointer; font-size: 14px; font-weight: 600;">Cancel</button>
-                    <button id="confirmYes" style="flex: 1; padding: 12px; border-radius: 12px; border: none; background: var(--action-green); color: #fff; cursor: pointer; font-size: 14px; font-weight: 700;">Confirm</button>
-                </div>
-            </div>`;
-
-        overlay.querySelector('#confirmTitle').textContent = title;
-        overlay.querySelector('#confirmMessage').textContent = message;
-
-        document.body.appendChild(overlay);
-
-        const cleanup = (val) => {
-            overlay.remove();
-            resolve(val);
-        };
-
-        overlay.querySelector('#confirmNo').onclick = () => cleanup(false);
-        overlay.querySelector('#confirmYes').onclick = () => cleanup(true);
-        overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
-    });
-};
 
 export const toggleSidebar = () => {
     const sidebar = document.getElementById('sidebarNav');
@@ -143,7 +109,7 @@ export const switchTab = (tabId) => {
         // --- PHASE 3.25: PERFORMANCE ORCHESTRATION ---
         // 1. Cleanup all persistent background listeners (except Orders which stays active for alerts)
         if (tabId !== 'catalog' && tabId !== 'categories') cleanupCatalog();
-        if (tabId !== 'riders') cleanupRiders();
+        if (tabId !== 'riders' && tabId !== 'dashboard') cleanupRiders();
         if (tabId !== 'feedback') cleanupFeedbacks();
         if (tabId !== 'liveTracker') cleanupLiveRiderTracker();
 
@@ -154,6 +120,7 @@ export const switchTab = (tabId) => {
                 break;
             case 'catalog':
             case 'categories':
+            case 'menu':
                 loadCategories();
                 loadMenu();
                 break;
@@ -165,6 +132,18 @@ export const switchTab = (tabId) => {
                 break;
             case 'walkin':
                 loadWalkinMenu();
+                break;
+            case 'settings':
+                loadStoreSettings();
+                break;
+            case 'customers':
+                loadCustomers();
+                break;
+            case 'reports':
+                loadReports();
+                break;
+            case 'lostSales':
+                loadLostSales();
                 break;
         }
     }
