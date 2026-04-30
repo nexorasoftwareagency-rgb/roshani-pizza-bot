@@ -233,7 +233,13 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'toggleNotificationSheet': toggleNotificationSheet(); break;
             case 'toggleSidebar': toggleSidebar(); break;
             case 'openOutletInNewTab': openOutletInNewTab(); break;
+            case 'toggleTheme': {
+                const { themeManager } = await import('./ui.js');
+                themeManager.toggleTheme();
+                break;
+            }
             case 'userLogout': userLogout(); break;
+
             case 'installPWA': installPWA(); break;
             case 'removeRow': el.closest('tr').remove(); break;
             case 'addFeeSlab': addFeeSlab(); break;

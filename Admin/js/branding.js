@@ -14,11 +14,13 @@ export function updateBranding() {
     const primary = isPizza ? 'var(--primary-pizza)' : 'var(--primary-cake)';
     const primaryDark = isPizza ? 'var(--primary-dark-pizza)' : 'var(--primary-dark-cake)';
 
-    // Apply color variables
+    // Apply color variables via data-outlet
+    document.documentElement.setAttribute('data-outlet', brand);
+    
+    // Compatibility for any remaining hardcoded var usage
     const root = document.documentElement;
-    root.style.setProperty('--primary', primary);
     root.style.setProperty('--primary-orange', primary);
-    root.style.setProperty('--primary-dark', primaryDark);
+
 
     if (badge) {
         badge.innerText = label;
