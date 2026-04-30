@@ -169,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         bindFn('btnDownloadExcel', 'downloadExcel');
         bindFn('btnDownloadPDF', 'downloadPDF');
+    };
 
     // --- 2. Dynamic Event Delegation ---
     document.addEventListener('click', (e) => {
@@ -216,7 +217,11 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'walkinRemoveItem': walkinRemoveItem(id); break;
             case 'filterWalkinByCategory': filterWalkinByCategory(val, el); break;
             case 'selectPOSSize': selectPOSSize(name, parseFloat(price), el); break;
-            case 'triggerClick': const target = document.getElementById(val); if (target) target.click(); break;
+            case 'triggerClick': {
+                const target = document.getElementById(val);
+                if (target) target.click();
+                break;
+            }
             case 'markDelivered': markDelivered(id); break;
             case 'editDish': editDish(id); break;
             case 'deleteDish': deleteDish(id); break;

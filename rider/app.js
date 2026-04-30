@@ -7,10 +7,11 @@ import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com
 import { enablePersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCVQrRgQWjdPYq2gmGXbB6yzmh4g6trd88",
+    apiKey: "AIzaSyCyTSwHvEkbmvIg88bxLcYKuUM1AVCEJCg",
     authDomain: "prashant-pizza-e86e4.firebaseapp.com",
     databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
     projectId: "prashant-pizza-e86e4",
+    storageBucket: "prashant-pizza-e86e4.firebasestorage.app",
     messagingSenderId: "857471482885",
     appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c"
 };

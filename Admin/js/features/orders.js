@@ -4,7 +4,7 @@
  */
 
 import { db, Outlet } from '../firebase.js';
-import state from '../state.js';
+import { state } from '../state.js';
 import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit } from '../utils.js';
 import { showAlert, addNotification, highlightOrder } from './notifications.js';
 
