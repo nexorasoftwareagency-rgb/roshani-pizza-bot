@@ -156,3 +156,46 @@ export const ui = {
     closeSidebar,
     switchTab
 };
+
+/**
+ * THEME MANAGEMENT
+ */
+export class ThemeManager {
+    constructor() {
+        this.currentTheme = localStorage.getItem('erp-theme') || 'light';
+        this.init();
+    }
+
+    init() {
+        this.applyTheme(this.currentTheme);
+        
+        // Listen for system changes if set to auto (future)
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (this.currentTheme === 'auto') {
+                this.applyTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+    }
+
+    applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('erp-theme', theme);
+        this.currentTheme = theme;
+        
+        // Update Icons
+        const themeBtn = document.querySelector('[data-action="toggleTheme"] i');
+        if (themeBtn) {
+            themeBtn.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    }
+
+    toggleTheme() {
+        haptic(10);
+        const next = this.currentTheme === 'dark' ? 'light' : 'dark';
+        this.applyTheme(next);
+        showToast(`Switched to ${next} mode`, 'info');
+    }
+}
+
+export const themeManager = new ThemeManager();
