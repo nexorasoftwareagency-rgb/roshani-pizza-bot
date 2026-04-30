@@ -1,4 +1,5 @@
-import { state, Outlet } from '../state.js';
+import { state } from '../state.js';
+import { Outlet } from '../firebase.js';
 import { ui } from '../ui.js';
 import { logAudit, escapeHtml, formatDate, haptic } from '../utils.js';
 

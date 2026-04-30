@@ -3,8 +3,8 @@
  * Handles walk-in sales, menu selection, cart management, and receipt generation.
  */
 
-import { state, Outlet } from '../state.js';
-import { db, auth } from '../firebase.js';
+import { state } from '../state.js';
+import { db, auth, Outlet } from '../firebase.js';
 import { standardizeOrderData, haptic, escapeHtml, playSuccessSound, logAudit } from '../utils.js';
 import { ui } from '../ui.js';
 import { printOrderReceipt } from './printing.js';

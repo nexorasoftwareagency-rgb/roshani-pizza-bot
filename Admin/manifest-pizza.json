@@ -17,49 +17,49 @@
   ],
   "icons": [
     {
-      "src": "icon-pizza.png",
+      "src": "icon-pizza.webp",
       "sizes": "72x72",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-pizza.png",
+      "src": "icon-pizza.webp",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-pizza.png",
+      "src": "icon-pizza.webp",
       "sizes": "128x128",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-pizza.png",
+      "src": "icon-pizza.webp",
       "sizes": "144x144",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-pizza.png",
+      "src": "icon-pizza.webp",
       "sizes": "152x152",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-pizza.png",
+      "src": "icon-pizza.webp",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "icon-pizza.png",
+      "src": "icon-pizza.webp",
       "sizes": "384x384",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-pizza.png",
+      "src": "icon-pizza.webp",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
@@ -71,7 +71,7 @@
       "url": "./index.html?brand=pizza#dashboard",
       "icons": [
         {
-          "src": "icon-pizza.png",
+          "src": "icon-pizza.webp",
           "sizes": "192x192"
         }
       ]
@@ -81,7 +81,7 @@
       "url": "./index.html?brand=pizza#walkin",
       "icons": [
         {
-          "src": "icon-pizza.png",
+          "src": "icon-pizza.webp",
           "sizes": "192x192"
         }
       ]
