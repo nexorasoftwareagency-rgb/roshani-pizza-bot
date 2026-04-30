@@ -3,7 +3,7 @@
  * Handles real-time order synchronization, rendering, and status updates.
  */
 
-import { db, Outlet } from '../firebase.js';
+import { db, Outlet, ServerValue } from '../firebase.js';
 import { state } from '../state.js';
 import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit } from '../utils.js';
 import { showAlert, addNotification, highlightOrder } from './notifications.js';
@@ -26,8 +26,9 @@ export function initRealtimeListeners() {
     });
 
     if (_ordersValueCb) {
-        const ordersRef = Outlet.ref("orders");
-        ordersRef.off("value", _ordersValueCb);
+        ['pizza', 'cake'].forEach(o => {
+            db.ref(`${o}/orders`).off("value", _ordersValueCb);
+        });
     }
 
     let firstLoad = true;
@@ -71,10 +72,14 @@ export function initRealtimeListeners() {
     
     _ordersValueCb = snap => {
         firstLoad = false;
+        console.log(`[Orders] Received snapshot: ${snap.numChildren()} orders (Outlet: ${window.currentOutlet})`);
         renderOrders(snap);
     };
 
-    ordersRef.orderByChild("createdAt").limitToLast(limit).on("value", _ordersValueCb, err => console.error("Firebase Read Error:", err));
+    ordersRef.orderByChild("createdAt").limitToLast(limit).on("value", _ordersValueCb, err => {
+        console.error("[Orders] Firebase Read Error:", err);
+        showToast("Error loading orders: " + err.message, "error");
+    });
 }
 
 /**
@@ -100,25 +105,37 @@ export function renderOrders(snap) {
         'payments': document.getElementById('paymentsTable')
     };
 
-    // Clear and build map
-    Object.values(containers).forEach(c => { if (c) c.innerHTML = ""; });
-    window.ordersMap.clear();
+    // Build map for calculations
+    state.ordersMap.clear();
     snap.forEach(child => {
-        window.ordersMap.set(child.key, child.val());
+        state.ordersMap.set(child.key, child.val());
     });
 
-    const sortedOrders = Array.from(window.ordersMap.entries())
-        .map(([id, o]) => ({ id, ...o }))
-        .sort((a, b) => {
-            const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return timeB - timeA;
-        });
+    const allOrders = Array.from(state.ordersMap.entries())
+        .map(([id, o]) => ({ id, ...o }));
+
+    const sortedOrders = [...allOrders].sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
+    });
+
+    // Update Dashboard Elements regardless of current tab
+    updateDashboardStats(allOrders);
+    renderPriorityOrders(allOrders);
+    renderTopItems(allOrders);
+    renderTopCustomers(allOrders);
+
+    // Clear active containers
+    Object.values(containers).forEach(c => { if (c) c.innerHTML = ""; });
 
     let liveCount = 0;
     sortedOrders.forEach(o => {
         const id = o.id;
-        if (o.outlet && window.currentOutlet && o.outlet.toLowerCase() !== window.currentOutlet.toLowerCase()) return;
+        // Filter by outlet if needed (though Outlet.ref should handle it)
+        if (o.outlet && window.currentOutlet && o.outlet.toLowerCase() !== window.currentOutlet.toLowerCase()) {
+            return;
+        }
 
         const isLive = ["Placed", "Confirmed", "Preparing", "Cooked", "Out for Delivery"].includes(o.status);
         if (isLive) liveCount++;
@@ -137,34 +154,51 @@ export function renderOrders(snap) {
         const safeStatusClass = safeStatus.replace(/ /g, '');
         const truncatedAddress = o.address ? (o.address.length > 30 ? o.address.substring(0, 30) + "..." : o.address) : "Counter Sale";
 
-        tr.innerHTML = `
-            <td data-label="Order ID" class="font-mono font-600">#${safeOrderId}</td>
-            <td data-label="Customer">
-                ${safeCustomerName}<br>
-                <small class="text-muted">${escapeHtml(o.phone || 'Guest')}</small>
-                ${o.phone ? `<button data-action="chatOnWhatsapp" data-phone="${o.phone}" class="btn-chat">💬</button>` : ''}
-            </td>
-            <td data-label="Address">
-                <span title="${escapeHtml(o.address || '')}">${escapeHtml(truncatedAddress)}</span>
-                ${o.locationLink ? `<br><a href="${escapeHtml(o.locationLink)}" target="_blank" rel="noopener noreferrer" class="color-primary fs-11">📍 Map</a>` : ""}
-            </td>
-            <td data-label="Total" class="font-bold">₹${escapeHtml(o.total || '0')}</td>
-            <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
-            <td data-label="Actions">
-                <div class="flex-row flex-gap-5">
-                    <select data-action="updateStatus" data-id="${id}" class="status-select">
-                        <option value="">Status</option>
-                        <option value="Confirmed" ${safeStatus === "Confirmed" ? "selected" : ""}>Confirm</option>
-                        <option value="Preparing" ${safeStatus === "Preparing" ? "selected" : ""}>Preparing</option>
-                        <option value="Cooked" ${safeStatus === "Cooked" ? "selected" : ""}>Cooked</option>
-                        <option value="Out for Delivery" ${safeStatus === "Out for Delivery" ? "selected" : ""}>Out for Delivery</option>
-                        <option value="Delivered" ${safeStatus === "Delivered" ? "selected" : ""}>Delivered</option>
-                        <option value="Cancelled" ${safeStatus === "Cancelled" ? "selected" : ""}>Cancelled X</option>
-                    </select>
-                    <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-table-icon">🖨️</button>
-                </div>
-            </td>
-        `;
+        if (activeTab === 'dashboard') {
+            // Dashboard Table: ID, Customer, Total, Payment, Status (5 columns)
+            tr.innerHTML = `
+                <td class="font-mono font-600">#${safeOrderId}</td>
+                <td>
+                    <div class="flex-column">
+                        <span>${safeCustomerName}</span>
+                        <small class="text-muted">${escapeHtml(o.phone || 'Guest')}</small>
+                    </div>
+                </td>
+                <td class="font-bold">₹${escapeHtml(o.total || '0')}</td>
+                <td><span class="badge-payment">${escapeHtml(o.paymentMethod || 'Cash')}</span></td>
+                <td><span class="status ${safeStatusClass}">${safeStatus}</span></td>
+            `;
+        } else {
+            // Full Tables: ID, Customer, Address, Total, Status, Actions (6 columns)
+            tr.innerHTML = `
+                <td data-label="Order ID" class="font-mono font-600">#${safeOrderId}</td>
+                <td data-label="Customer">
+                    ${safeCustomerName}<br>
+                    <small class="text-muted">${escapeHtml(o.phone || 'Guest')}</small>
+                    ${o.phone ? `<button data-action="chatOnWhatsapp" data-phone="${o.phone}" class="btn-chat">💬</button>` : ''}
+                </td>
+                <td data-label="Address">
+                    <span title="${escapeHtml(o.address || '')}">${escapeHtml(truncatedAddress)}</span>
+                    ${o.locationLink ? `<br><a href="${escapeHtml(o.locationLink)}" target="_blank" rel="noopener noreferrer" class="color-primary fs-11">📍 Map</a>` : ""}
+                </td>
+                <td data-label="Total" class="font-bold">₹${escapeHtml(o.total || '0')}</td>
+                <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
+                <td data-label="Actions">
+                    <div class="flex-row flex-gap-5">
+                        <select data-action="updateStatus" data-id="${id}" class="status-select">
+                            <option value="">Status</option>
+                            <option value="Confirmed" ${safeStatus === "Confirmed" ? "selected" : ""}>Confirm</option>
+                            <option value="Preparing" ${safeStatus === "Preparing" ? "selected" : ""}>Preparing</option>
+                            <option value="Cooked" ${safeStatus === "Cooked" ? "selected" : ""}>Cooked</option>
+                            <option value="Out for Delivery" ${safeStatus === "Out for Delivery" ? "selected" : ""}>Out for Delivery</option>
+                            <option value="Delivered" ${safeStatus === "Delivered" ? "selected" : ""}>Delivered</option>
+                            <option value="Cancelled" ${safeStatus === "Cancelled" ? "selected" : ""}>Cancelled X</option>
+                        </select>
+                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-table-icon">🖨️</button>
+                    </div>
+                </td>
+            `;
+        }
 
         if (containers[activeTab]) containers[activeTab].appendChild(tr);
     });
@@ -172,13 +206,15 @@ export function renderOrders(snap) {
     // Add Load More Button if on 'orders' tab
     if (activeTab === 'orders' && snap.numChildren() >= (state.orderLimit || 50)) {
         const fullTable = containers['orders'];
-        const existingBtn = document.getElementById('loadMoreOrdersBtn');
-        if (!existingBtn) {
-            const footer = document.createElement('div');
-            footer.id = 'loadMoreContainer';
-            footer.className = 'flex-center p-20';
-            footer.innerHTML = `<button id="loadMoreOrdersBtn" class="btn-secondary" onclick="window.loadMoreOrders()">Load More Orders</button>`;
-            fullTable.parentNode.appendChild(footer);
+        if (fullTable) {
+            const existingBtn = document.getElementById('loadMoreOrdersBtn');
+            if (!existingBtn) {
+                const footer = document.createElement('div');
+                footer.id = 'loadMoreContainer';
+                footer.className = 'flex-center p-20';
+                footer.innerHTML = `<button id="loadMoreOrdersBtn" class="btn-secondary" onclick="window.loadMoreOrders()">Load More Orders</button>`;
+                fullTable.parentNode.appendChild(footer);
+            }
         }
     } else {
         const existingContainer = document.getElementById('loadMoreContainer');
@@ -188,6 +224,136 @@ export function renderOrders(snap) {
     const liveBadge = document.getElementById('liveCountBadge');
     if (liveBadge) liveBadge.innerText = liveCount;
 }
+
+/**
+ * DASHBOARD CALCULATIONS
+ */
+
+function updateDashboardStats(orders) {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const todayOrders = orders.filter(o => {
+        const date = o.createdAt ? new Date(o.createdAt).toISOString().split('T')[0] : "";
+        return date === today;
+    });
+
+    const revenue = todayOrders
+        .filter(o => o.status === "Delivered")
+        .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+
+    const pending = orders.filter(o => ["Placed", "Confirmed", "Preparing"].includes(o.status)).length;
+
+    // Update UI
+    const els = {
+        'statOrders': todayOrders.length,
+        'statPending': pending,
+        'statRevenue': `₹${revenue.toLocaleString()}`,
+        'statRidersActive': state.ridersList.filter(r => r.status === "Online" || r.status === "On Delivery").length
+    };
+
+    Object.entries(els).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+    });
+}
+
+function renderPriorityOrders(orders) {
+    const container = document.getElementById('priorityOrderList');
+    if (!container) return;
+
+    const priority = orders
+        .filter(o => ["Placed", "Confirmed", "Preparing"].includes(o.status))
+        .sort((a, b) => {
+            const weights = { "Placed": 3, "Confirmed": 2, "Preparing": 1 };
+            return (weights[b.status] || 0) - (weights[a.status] || 0);
+        })
+        .slice(0, 5);
+
+    if (priority.length === 0) {
+        container.innerHTML = `<div class="empty-state-mini">✅ All caught up! No pending orders.</div>`;
+        return;
+    }
+
+    container.innerHTML = priority.map(o => `
+        <div class="priority-card ${o.status.toLowerCase().replace(/ /g, '')}" onclick="window.openOrderDrawer('${o.id}')">
+            <div class="flex-row flex-between">
+                <div>
+                    <span class="p-id">#${escapeHtml(o.orderId || o.id.slice(-5))}</span>
+                    <h4 class="p-name">${escapeHtml(o.customerName || 'Walk-in')}</h4>
+                </div>
+                <div class="p-status-pill">${escapeHtml(o.status)}</div>
+            </div>
+            <div class="p-meta">
+                <span>₹${o.total}</span> • <span>${o.items ? Object.keys(o.items).length : 0} items</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderTopItems(orders) {
+    const container = document.getElementById('topItemsList');
+    if (!container) return;
+
+    const itemCounts = {};
+    orders.forEach(o => {
+        if (o.items) {
+            Object.values(o.items).forEach(item => {
+                const name = item.name;
+                itemCounts[name] = (itemCounts[name] || 0) + (Number(item.qty) || 1);
+            });
+        }
+    });
+
+    const topItems = Object.entries(itemCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+    if (topItems.length === 0) {
+        container.innerHTML = `<p class="text-muted-small">No sales data yet.</p>`;
+        return;
+    }
+
+    container.innerHTML = topItems.map(([name, qty], i) => `
+        <div class="top-item-row">
+            <span class="rank">#${i+1}</span>
+            <span class="name">${escapeHtml(name)}</span>
+            <span class="qty">${qty} sold</span>
+        </div>
+    `).join('');
+}
+
+function renderTopCustomers(orders) {
+    const container = document.getElementById('topCustomersList');
+    if (!container) return;
+
+    const custData = {};
+    orders.forEach(o => {
+        const phone = o.phone || "Walk-in";
+        if (!custData[phone]) custData[phone] = { name: o.customerName || "Walk-in", total: 0, count: 0 };
+        custData[phone].total += (Number(o.total) || 0);
+        custData[phone].count += 1;
+    });
+
+    const topCusts = Object.values(custData)
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
+
+    if (topCusts.length === 0) {
+        container.innerHTML = `<p class="text-muted-small">No customer data yet.</p>`;
+        return;
+    }
+
+    container.innerHTML = topCusts.map(c => `
+        <div class="top-cust-row">
+            <div class="cust-info">
+                <span class="name">${escapeHtml(c.name)}</span>
+                <small>${c.count} orders</small>
+            </div>
+            <span class="total">₹${c.total.toLocaleString()}</span>
+        </div>
+    `).join('');
+}
+
 
 /**
  * ORDER MANAGEMENT ACTIONS
@@ -220,7 +386,7 @@ export async function assignRider(id, riderId) {
             riderId: riderId,
             riderName: rider.name,
             riderPhone: rider.phone,
-            outForDeliveryAt: firebase.database.ServerValue.TIMESTAMP
+            outForDeliveryAt: ServerValue.TIMESTAMP
         });
         logAudit("Orders", `Assigned Rider: ${rider.name} to #${id.slice(-5)}`, id);
         showToast(`Assigned to ${rider.name}`, "success");
@@ -244,7 +410,7 @@ export async function saveDeliveredOrder(id, data) {
         await Outlet.ref(`orders/${id}`).update({
             ...data,
             status: "Delivered",
-            deliveredAt: firebase.database.ServerValue.TIMESTAMP
+            deliveredAt: ServerValue.TIMESTAMP
         });
         logAudit("Orders", `Order Delivered: #${id.slice(-5)}`, id);
         showToast("Order finalized and delivered!", "success");
@@ -257,7 +423,7 @@ export async function saveDeliveredOrder(id, data) {
  * ORDER DRAWER (DETAILS)
  */
 export async function openOrderDrawer(id) {
-    const order = window.ordersMap.get(id);
+    const order = state.ordersMap.get(id);
     if (!order) return;
 
     const drawer = document.getElementById('orderDrawer');

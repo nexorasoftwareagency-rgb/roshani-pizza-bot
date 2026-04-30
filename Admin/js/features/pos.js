@@ -4,7 +4,7 @@
  */
 
 import { state } from '../state.js';
-import { db, auth, Outlet } from '../firebase.js';
+import { db, auth, Outlet, ServerValue } from '../firebase.js';
 import { standardizeOrderData, haptic, escapeHtml, playSuccessSound, logAudit } from '../utils.js';
 import { ui } from '../ui.js';
 import { printOrderReceipt } from './printing.js';
@@ -30,7 +30,7 @@ export async function loadWalkinMenu() {
 
         // Load categories if not already loaded to render tabs
         if (state.categories.length === 0) {
-            const catSnap = await db.ref("categories").once("value");
+            const catSnap = await Outlet.ref("categories").once("value");
             state.categories = [];
             catSnap.forEach(c => {
                 state.categories.push({ id: c.key, ...c.val() });
@@ -441,7 +441,7 @@ export async function submitWalkinSale() {
         // --- PHASE 3.22: PRICE VALIDATION ---
         const [dishesSnap, categoriesSnap] = await Promise.all([
             Outlet.ref("dishes").once("value"),
-            db.ref("categories").once("value")
+            Outlet.ref("categories").once("value")
         ]);
         
         const freshDishes = dishesSnap.val() || {};
@@ -505,7 +505,7 @@ export async function submitWalkinSale() {
             customerNote: note,
             status: "Delivered",
             type: "Walk-in",
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            timestamp: ServerValue.TIMESTAMP,
             createdAt: new Date().toISOString(),
             outlet: Outlet.current,
             createdBy: auth.currentUser ? auth.currentUser.email : 'admin'

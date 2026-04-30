@@ -1,22 +1,21 @@
-import { previewImage, showToast } from './utils.js';
+import { previewImage, showToast, logAudit } from './utils.js';
 import { switchOutlet, openOutletInNewTab } from './branding.js';
 import { switchTab, toggleSidebar } from './ui.js';
 import { initAuth, doLogin as adminLogin, userLogout } from './auth.js';
-import { installPWA } from './pwa.js';
+import { installPWA, completeSiteRefresh } from './pwa.js';
 import { 
     updateStatus, assignRider, openOrderDrawer, markAsPaid, 
-    markDelivered, saveDeliveredOrder, updateStatusFromDrawer, closeOrderDrawer 
+    saveDeliveredOrder, closeOrderDrawer 
 } from './features/orders.js';
 import { 
     toggleNotificationSheet, clearAllNotifications, 
-    clearNotifications, requestNotificationPermission 
+    requestNotificationPermission 
 } from './features/notifications.js';
 import { 
-    adjustCardQty, addToWalkinCartFromCard, showAddonView, hideAddonView, 
-    openCartAddonPicker, walkinQtyChange, walkinRemoveItem, filterWalkinByCategory, 
+    openCartAddonPicker, walkinQtyChange, removeFromWalkinCart, filterWalkinByCategory, 
     selectPOSSize, clearWalkinCart, submitWalkinSale, setDiscount, setDiscountPct, 
-    selectWalkinPayment, togglePOSAddon, showPOSSelectionModal, addToWalkinCartFromModal, clearPos, 
-    posCheckout, adjustPosQty 
+    selectWalkinPayment, togglePOSAddon, openPOSSelectionModal, addToWalkinCartFromModal,
+    adjustPOSModalQty, hidePOSSelectionModal
 } from './features/pos.js';
 import { printReceiptById, reprintLastPosReceipt } from './features/printing.js';
 import { 
@@ -25,7 +24,7 @@ import {
 } from './features/riders.js';
 import { 
     editDish, deleteDish, editCategory, deleteCategory, 
-    showDishModal, saveDish, addCategory, addNewCategoryAddonField, 
+    showDishModal, saveDish, addCategory, addNewAddonField, 
     migrateAddonsToCategories, toggleDishAvailable, runImageMigration 
 } from './features/catalog.js';
 import { 
@@ -76,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', showDishModal);
         });
         document.getElementById('btnMigrateDishAddons')?.addEventListener('click', migrateAddonsToCategories);
-        document.getElementById('btnAddCatAddonField')?.addEventListener('click', addNewCategoryAddonField);
+        document.getElementById('btnAddCatAddonField')?.addEventListener('click', addNewAddonField);
         document.getElementById('btnAddCategory')?.addEventListener('click', addCategory);
         bindClickTo('btnChangeCatPhoto', 'catFile');
 
@@ -102,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Notifications & Logs
         document.getElementById('btnClearAllNotif')?.addEventListener('click', clearAllNotifications);
-        document.getElementById('btnClearNotificationsBottom')?.addEventListener('click', clearNotifications);
         document.getElementById('btnClearLostSales')?.addEventListener('click', clearLostSales);
         document.getElementById('btnEnableNotif')?.addEventListener('click', requestNotificationPermission);
 
@@ -123,13 +121,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btnRunImageMigration')?.addEventListener('click', runImageMigration);
 
         // POS (Walk-in)
-        document.getElementById('btnShowPOSSelection')?.addEventListener('click', showPOSSelectionModal);
-        document.getElementById('btnPosClear')?.addEventListener('click', clearPos);
-        document.getElementById('btnPosCheckout')?.addEventListener('click', posCheckout);
+        document.getElementById('btnShowPOSSelection')?.addEventListener('click', () => openPOSSelectionModal());
         document.getElementById('btnPosPrintLast')?.addEventListener('click', reprintLastPosReceipt);
 
-        document.getElementById('btnPosQtyDec')?.addEventListener('click', () => adjustPosQty(-1));
-        document.getElementById('btnPosQtyInc')?.addEventListener('click', () => adjustPosQty(1));
+        document.getElementById('btnPosQtyDec')?.addEventListener('click', () => adjustPOSModalQty(-1));
+        document.getElementById('btnPosQtyInc')?.addEventListener('click', () => adjustPOSModalQty(1));
         document.getElementById('posAddBtn')?.addEventListener('click', addToWalkinCartFromModal);
 
         // Dish Modal
@@ -191,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const price = el.getAttribute('data-price');
 
         switch (action) {
-            case 'updateStatusFromDrawer': updateStatusFromDrawer(id, val); break;
+            case 'updateStatusFromDrawer': updateStatus(id, val); break;
             case 'closeOrderDrawer': closeOrderDrawer(); break;
             case 'chatOnWhatsapp': /* window.chatOnWhatsapp(id); */ break; 
             case 'printReceiptById': printReceiptById(id); break;
@@ -207,14 +203,11 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'deleteRider': deleteRider(id); break;
             case 'saveSettings': saveStoreSettings(); break;
             case 'saveDeliveredOrder': saveDeliveredOrder(id, val); break;
-            case 'adjustCardQty': adjustCardQty(id, parseInt(val)); break;
-            case 'addToWalkinCartFromModal': addToWalkinCartFromModal(); break;
-            case 'addToWalkinCartFromCard': addToWalkinCartFromCard(id); break;
-            case 'showAddonView': showAddonView(id); break;
-            case 'hideAddonView': hideAddonView(); break;
+            case 'openPOSSelectionModal': openPOSSelectionModal(id); break;
+            case 'hidePOSSelectionModal': hidePOSSelectionModal(); break;
             case 'openCartAddonPicker': openCartAddonPicker(id); break;
             case 'walkinQtyChange': walkinQtyChange(id, parseInt(val)); break;
-            case 'walkinRemoveItem': walkinRemoveItem(id); break;
+            case 'walkinRemoveItem': removeFromWalkinCart(id); break;
             case 'filterWalkinByCategory': filterWalkinByCategory(val, el); break;
             case 'selectPOSSize': selectPOSSize(name, parseFloat(price), el); break;
             case 'triggerClick': {
@@ -222,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (target) target.click();
                 break;
             }
-            case 'markDelivered': markDelivered(id); break;
+            case 'markDelivered': updateStatus(id, 'Delivered'); break;
             case 'editDish': editDish(id); break;
             case 'deleteDish': deleteDish(id); break;
             case 'editCategory': editCategory(id); break;
@@ -236,6 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
             }
+            case 'completeSiteRefresh': completeSiteRefresh(); break;
             case 'toggleNotificationSheet': toggleNotificationSheet(); break;
             case 'toggleSidebar': toggleSidebar(); break;
             case 'openOutletInNewTab': openOutletInNewTab(); break;
@@ -345,3 +339,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 console.log("\uD83D\uDE80 Roshani Pizza ERP Modules Loaded");
+
+logAudit('SYSTEM_INIT', { 
+    agent: 'Antigravity',
+    version: '4.4.1',
+    timestamp: new Date().toISOString()
+});
