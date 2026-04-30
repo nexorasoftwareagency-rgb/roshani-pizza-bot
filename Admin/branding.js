@@ -36,7 +36,7 @@
             favicon.rel = 'icon';
             document.head.appendChild(favicon);
         }
-        favicon.href = isPizza ? 'icon-pizza.png' : 'icon-cake.png';
+        favicon.href = isPizza ? 'icon-pizza.webp' : 'icon-cake.webp';
 
         // Update Apple Touch Icon (PWA)
         let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
@@ -45,7 +45,7 @@
             appleIcon.rel = 'apple-touch-icon';
             document.head.appendChild(appleIcon);
         }
-        appleIcon.href = isPizza ? 'icon-pizza.png' : 'icon-cake.png';
+        appleIcon.href = isPizza ? 'icon-pizza.webp' : 'icon-cake.webp';
 
         // 4. CRITICAL: SWAP PWA MANIFEST
         // This ensures that when you "Add to Home Screen", you get the right app name/icon
