@@ -100,6 +100,15 @@
     --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.3);
 }
 
+/* 
+  PREVENT ACCIDENTAL REFRESH (PULL-TO-REFRESH)
+  Crucial for PWA and long scrolling lists on Mobile.
+*/
+html, body {
+    overscroll-behavior-y: none;
+    overscroll-behavior-x: none;
+}
+
 /* OUTLET THEMES */
 [data-outlet="pizza"] {
     --primary: var(--primary-pizza);

@@ -168,6 +168,9 @@ export function toggleNotificationSheet(show) {
         overlay.classList.add('active');
         state.isNotificationPending = false;
         updateNotificationUI();
+        
+        // Push state so back button closes the sheet
+        history.pushState({ action: 'closeUI', target: 'notifications' }, "", window.location.hash);
     }
 }
 
