@@ -46,7 +46,7 @@ function resolvePath(path, outlet = 'pizza') {
     if (!path) return '';
 
     // Shared nodes that remain at root level
-    const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'bot', 'logs'];
+    const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'bot', 'logs', 'botUsers'];
     const rootNode = path.split('/')[0];
 
     // If already absolute or shared, return as is
@@ -108,6 +108,26 @@ async function deleteData(path, outlet = 'pizza') {
     }
 }
 
+async function getUserProfile(jid) {
+    try {
+        const cleanJid = jid.replace(/[^0-9]/g, '');
+        const snap = await db.ref(`botUsers/${cleanJid}`).once('value');
+        return snap.val();
+    } catch (err) {
+        return null;
+    }
+}
+
+async function saveUserProfile(jid, data) {
+    try {
+        const cleanJid = jid.replace(/[^0-9]/g, '');
+        await db.ref(`botUsers/${cleanJid}`).update(data);
+        return true;
+    } catch (err) {
+        return false;
+    }
+}
+
 // =============================
 // EXPORT
 // =============================
@@ -118,5 +138,7 @@ module.exports = {
     setData,
     updateData,
     deleteData,
-    pushData
+    pushData,
+    getUserProfile,
+    saveUserProfile
 };
