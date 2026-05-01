@@ -9,6 +9,7 @@ import { loadWalkinMenu } from './features/pos.js';
 import { loadStoreSettings } from './features/settings.js';
 import { loadCustomers, loadReports, loadLostSales } from './features/customers.js';
 import { toggleNotificationSheet, updateNotificationUI, updateNotificationSettingsUI } from './features/notifications.js';
+import { renderOrders } from './features/orders.js';
 
 
 
@@ -144,6 +145,14 @@ export const switchTab = (tabId) => {
                 break;
             case 'lostSales':
                 loadLostSales();
+                break;
+            case 'live':
+                loadRiders();
+                if (state.lastOrdersSnap) renderOrders(state.lastOrdersSnap);
+                break;
+            case 'orders':
+            case 'dashboard':
+                if (state.lastOrdersSnap) renderOrders(state.lastOrdersSnap);
                 break;
         }
     }
