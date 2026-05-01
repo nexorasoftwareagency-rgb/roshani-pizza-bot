@@ -262,7 +262,7 @@ async function sendCategories(sock, sender, user) {
     user.categoryList = Object.entries(categories).map(([id, val]) => ({ id, ...val }));
     let msg = `🍽️ *SELECT CATEGORY - ${outlet.toUpperCase()}*\n\n`;
     user.categoryList.forEach((c, i) => { msg += `${i + 1}️⃣  ${c.name}\n`; });
-    msg += `\n0️⃣  *Back to Main Menu*`;
+    msg += `\n🛒 *9* View Cart\n🏠 *0* Main Menu`;
     
     user.step = "CATEGORY";
     const banner = (await getData("settings/Store", outlet))?.bannerImage;
@@ -677,8 +677,9 @@ async function startBot() {
                 welcome += `Delicious food, delivered fast to your doorstep! 🚀\n\n`;
                 welcome += `Please select an outlet:\n`;
                 welcome += `1️⃣ *Pizza Outlet* 🍕\n`;
-                welcome += `2️⃣ *Cake Outlet* 🎂\n\n`;
-                welcome += `_Reply with 1 or 2 to start_`;
+                welcome += `2️⃣ *Cake Outlet* 🎂\n`;
+                welcome += `3️⃣ *Track Order* 📊\n\n`;
+                welcome += `_Reply with 1, 2 or 3 to start_`;
                 
                 user.step = "OUTLET";
                 return await sendImage(sock, sender, settings?.bannerImage, welcome);
@@ -687,7 +688,11 @@ async function startBot() {
             if (user.step === "OUTLET") {
                 if (text === "1") user.outlet = "pizza";
                 else if (text === "2") user.outlet = "cake";
-                else return sock.sendMessage(sender, { text: "⚠️ Reply *1* for Pizza or *2* for Cake." });
+                else if (text === "3") {
+                    user.step = "TRACK_ORDER";
+                    return sock.sendMessage(sender, { text: "📊 *TRACK YOUR ORDER*\n\nChecking your latest orders... ⏳" });
+                }
+                else return sock.sendMessage(sender, { text: "⚠️ Reply *1*, *2* or *3*." });
 
                 const store = await getData("settings/Store", user.outlet) || {};
                 if (!isShopOpen(store.shopOpenTime, store.shopCloseTime, store.shopStatus)) {
@@ -696,8 +701,53 @@ async function startBot() {
                 return sendCategories(sock, sender, user);
             }
 
-            if (user.step === "CATEGORY") {
+            if (user.step === "TRACK_ORDER") {
+                const outlets = ['pizza', 'cake'];
+                let latestOrder = null;
+                let latestTime = 0;
+
+                for (const outlet of outlets) {
+                    const orders = await getData(`orders`, outlet);
+                    if (!orders) continue;
+                    Object.entries(orders).forEach(([id, order]) => {
+                        const phone = order.phone || order.whatsappNumber;
+                        if (phone && phone.slice(-10) === sender.split('@')[0].slice(-10)) {
+                            const time = new Date(order.createdAt).getTime();
+                            if (time > latestTime) {
+                                latestTime = time;
+                                latestOrder = { id, ...order };
+                            }
+                        }
+                    });
+                }
+
+                if (!latestOrder) {
+                    user.step = "START";
+                    return sock.sendMessage(sender, { text: "❌ *No active orders found.* Start a new order to get started!" });
+                }
+
+                let trackMsg = `📊 *ORDER STATUS*\n`;
+                trackMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+                trackMsg += `🆔 *Order ID:* #${latestOrder.id.slice(-5)}\n`;
+                trackMsg += `📅 *Date:* ${new Date(latestOrder.createdAt).toLocaleString()}\n`;
+                trackMsg += `📍 *Status:* *${latestOrder.status}*\n`;
+                trackMsg += `💰 *Total:* ₹${latestOrder.total}\n`;
+                trackMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+                trackMsg += getFoodFunnyProgress(latestOrder.status);
+                trackMsg += `\n0️⃣ *Back to Main Menu*`;
+
+                user.step = "TRACK_FINISH";
+                return sock.sendMessage(sender, { text: trackMsg });
+            }
+
+            if (user.step === "TRACK_FINISH") {
                 if (text === "0") { user.step = "START"; return sock.sendMessage(sender, { text: "Back to menu..." }); }
+                return sock.sendMessage(sender, { text: "Reply 0 to go back." });
+            }
+
+            if (user.step === "CATEGORY") {
+                if (text === "0") { user.step = "START"; return sock.sendMessage(sender, { text: "🏠 Returning to Main Menu..." }); }
+                if (text === "9") return sendCartView(sock, sender, user);
                 const cat = user.categoryList[parseInt(text) - 1];
                 if (!cat) return sock.sendMessage(sender, { text: "⚠️ Invalid selection." });
 
@@ -710,13 +760,14 @@ async function startBot() {
 
                 let dMsg = `🍽️ *${cat.name.toUpperCase()}*\n\n`;
                 user.dishList.forEach((d, i) => { dMsg += `${i + 1}️⃣  *${d.name}*\n💰 From ₹${d.price}\n\n`; });
-                dMsg += `0️⃣  *Back*`;
+                dMsg += `🛒 *9* View Cart\n🔙 *0* Back to Categories`;
                 user.step = "DISH";
                 return await sendImage(sock, sender, cat.image, dMsg);
             }
 
             if (user.step === "DISH") {
                 if (text === "0") return sendCategories(sock, sender, user);
+                if (text === "9") return sendCartView(sock, sender, user);
                 const dish = user.dishList[parseInt(text) - 1];
                 if (!dish) return sock.sendMessage(sender, { text: "⚠️ Invalid selection." });
 
