@@ -22,6 +22,7 @@ let reportInterval = null;
 let dailyReportSent = false;
 let weeklyReportSent = false;
 let monthlyReportSent = false;
+const startupTime = Date.now();
 
 const SESSION_TTL = 30 * 60 * 1000;
 const STATUS_TTL = 24 * 60 * 60 * 1000;
@@ -307,32 +308,38 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
             let msg = "";
             let img = null;
 
-            if (order.status === "Confirmed") {
-                msg = `✅ *ORDER CONFIRMED!* #${id.slice(-5)}\n\n${formatOrderInvoice(id, order)}\nYour order is being prepared with love! ❤️\n${getFoodFunnyProgress("Confirmed")}`;
+            if (order.status === "Placed") {
+                msg = `🎉 *ORDER PLACED!* 🍕\n━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n\nThank you for your order! 🙏\nWe have received it and our team is reviewing it now. ⏳\n\nYou will receive an update as soon as it's confirmed! ❤️\n${getFoodFunnyProgress("Placed")}`;
+                img = botSettings.imgPlaced || botSettings.imgConfirmed;
+            } else if (order.status === "Confirmed") {
+                msg = `✅ *ORDER CONFIRMED!* 🎊\n━━━━━━━━━━━━━━━━━━━━\n${formatOrderInvoice(id, order)}\nYour order is being prepared with love! ❤️\n${getFoodFunnyProgress("Confirmed")}`;
                 img = botSettings.imgConfirmed;
             } else if (order.status === "Preparing") {
-                msg = `👨‍🍳 *ORDER UPDATED!* #${id.slice(-5)}\n━━━━━━━━━━━━━━━━━━━━\nYour order is now **Preparing** in our kitchen! 👨‍🍳\n\nIt won't be long now! 🍕\n${getFoodFunnyProgress("Preparing")}`;
+                msg = `👨‍🍳 *NOW PREPARING!* 🔥\n━━━━━━━━━━━━━━━━━━━━\nYour order #${id.slice(-5)} is now in the kitchen! 👨‍🍳\n\nIt won't be long now! 🍕\n${getFoodFunnyProgress("Preparing")}`;
                 img = botSettings.imgPreparing;
             } else if (order.status === "Cooked" || order.status === "Ready") {
-                msg = `🔥 *FOOD READY & PACKED!* #${id.slice(-5)}\n━━━━━━━━━━━━━━━━━━━━\nYour delicious order is ready! 🚀\n\nIt's waiting for the rider to pick it up. 🛵\n${getFoodFunnyProgress("Cooked")}`;
+                msg = `🍱 *READY & PACKED!* 🍱\n━━━━━━━━━━━━━━━━━━━━\nYour delicious order #${id.slice(-5)} is ready! 🚀\n\nIt's waiting for the rider to pick it up. 🛵\n${getFoodFunnyProgress("Cooked")}`;
                 img = botSettings.imgCooked;
                 
-                if (order.assignedRider) {
-                    await notifyRiderPickup(sock, order, order.assignedRider);
+                if (order.assignedRider || order.riderId) {
+                    await notifyRiderPickup(sock, order, order.assignedRider || order.riderId);
                 }
             } else if (order.status === "Out for Delivery") {
                 let riderInfoText = "";
-                if (order.assignedRider) {
-                    const rider = await getRiderByEmail(order.assignedRider, order.outlet || 'pizza');
+                const riderId = order.riderId || order.assignedRider;
+                if (riderId) {
+                    const rider = (riderId.includes('@')) ? await getRiderByEmail(riderId, order.outlet || 'pizza') : { name: order.riderName, phone: order.riderPhone };
                     if (rider) {
-                        riderInfoText = `\n📞 *Rider:* ${rider.phone || ""} (${rider.name || "Ramesh"})`;
+                        riderInfoText = `\n📞 *Rider:* ${rider.name || "Delivery Partner"} (${rider.phone || ""})`;
                     }
                 }
-                msg = `🛵 *OUT FOR DELIVERY!* #${id.slice(-5)}\n━━━━━━━━━━━━━━━━━━━━\nOur rider is on the way to your location! 🚀\n\nPlease keep ₹${order.total} ready.${riderInfoText}\n${getFoodFunnyProgress("Out for Delivery")}`;
+                msg = `🛵 *OUT FOR DELIVERY!* 🚀\n━━━━━━━━━━━━━━━━━━━━\nOur rider is on the way to your location! 🛵💨\n\n🆔 Order: #${id.slice(-5)}\nPlease keep *₹${order.total}* ready.${riderInfoText}\n${getFoodFunnyProgress("Out for Delivery")}`;
                 img = botSettings.imgOut;
             } else if (order.status === "Delivered") {
-                msg = `✅ *ORDER DELIVERED SUCCESSFULLY!* 🍕\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n🤝 *Payment:* ${order.paymentMethod}\n💵 *Total Paid:* ₹${order.total}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*Thank you for choosing Roshani!* ❤️\n\n${getFunnyFoodJoke()}`;
+                msg = `✅ *DELIVERED SUCCESSFULLY!* 🍕❤️\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n🤝 *Payment:* ${order.paymentMethod}\n💵 *Total Paid:* ₹${order.total}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*Enjoy your meal!* 😋\n\n${getFunnyFoodJoke()}`;
                 img = botSettings.imgDelivered;
+            } else if (order.status === "Cancelled") {
+                msg = `❌ *ORDER CANCELLED* ❌\n━━━━━━━━━━━━━━━━━━━━\nWe're sorry, your order #${id.slice(-5)} has been cancelled.\n\nReason: ${order.cancelReason || "Store Busy / Technical Issue"}\n\nIf you have any questions, please contact us. 🙏`;
             }
 
 if (msg) {
@@ -596,9 +603,13 @@ async function startBot() {
         });
         orderRef.on("child_added", (snap) => {
             const order = snap.val();
-            // Only handle "new" orders if bot has been running for a few seconds
-            if (order && !processedStatus[snap.key]) {
+            // Only handle "new" orders if they were created after the bot started
+            const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
+            if (order && !processedStatus[snap.key] && orderTime > startupTime - 10000) {
                 handleOrderStatusUpdate(sock, snap.key, order, true);
+            } else if (order) {
+                // Just mark as processed without sending message
+                processedStatus[snap.key] = { status: order.status, timestamp: Date.now() };
             }
         });
     });
@@ -807,7 +818,7 @@ async function startBot() {
                 if (!addon) return sock.sendMessage(sender, { text: "⚠️ Invalid addon." });
                 if (user.current.addons.some(a => a.name === addon[0])) return sock.sendMessage(sender, { text: "Already added." });
                 user.current.addons.push({ name: addon[0], price: addon[1] });
-                return sock.sendMessage(sender, { text: `✅ Added ${addon[0]}. Send more numbers or 0 to finish.` });
+                return sock.sendMessage(sender, { text: `✅ *Added ${addon[0]}!* 🧀\n\n🔢 *Need more?* Send another number.\n🆗 *Finished?* Send *0* to set quantity.` });
             }
 
             if (user.step === "QUANTITY") {
