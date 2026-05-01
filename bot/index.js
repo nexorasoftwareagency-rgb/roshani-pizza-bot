@@ -299,9 +299,15 @@ async function notifyAdmin(sock, orderId, order, type = 'NEW') {
 async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
     try {
         const jid = formatJid(order.whatsappNumber || order.phone);
-        if (!jid) return;
+        if (!jid) {
+            console.error(`[Status Update] No JID for order ${id}. Phone: ${order.phone}, WhatsApp: ${order.whatsappNumber}`);
+            return;
+        }
+
+        console.log(`[Status Update] Checking order ${id}: ${order.status}. New: ${isNew}`);
 
         if (!processedStatus[id] || processedStatus[id].status !== order.status || isNew) {
+            console.log(`[Status Update] Sending notification for ${id} to ${jid}. Status: ${order.status}`);
             processedStatus[id] = { status: order.status, timestamp: Date.now() };
 
             const botSettings = await getData("settings/Bot", order.outlet) || {};
@@ -818,7 +824,7 @@ async function startBot() {
                 if (!addon) return sock.sendMessage(sender, { text: "⚠️ Invalid addon." });
                 if (user.current.addons.some(a => a.name === addon[0])) return sock.sendMessage(sender, { text: "Already added." });
                 user.current.addons.push({ name: addon[0], price: addon[1] });
-                return sock.sendMessage(sender, { text: `✅ *Added ${addon[0]}!* 🧀\n\n🔢 *Need more?* Send another number.\n🆗 *Finished?* Send *0* to set quantity.` });
+                return sock.sendMessage(sender, { text: `✅ *Added ${addon[0]}!* 🧀\n\n🔢 *Need more?* Send another number.\n🆗 *Finished?* Send *0* to proceed to quantity selection.` });
             }
 
             if (user.step === "QUANTITY") {
@@ -925,6 +931,7 @@ async function startBot() {
                     orderId, outlet: user.outlet, 
                     customerName: escapeHtml(user.name),
                     phone: user.phone, 
+                    whatsappNumber: sender, // Save sender JID for status updates
                     address: escapeHtml(user.address),
                     lat: user.location.lat, lng: user.location.lng,
                     subtotal, deliveryFee: user.deliveryFee, total: subtotal + user.deliveryFee,

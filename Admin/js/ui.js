@@ -35,9 +35,13 @@ export const closeSidebar = () => {
     if (overlay) overlay.classList.remove('active');
 };
 
-export const switchTab = (tabId) => {
+export const switchTab = (tabId, skipHistory = false) => {
     state.currentActiveTab = tabId;
     console.log(`[Navigation] Switching to: ${tabId}`);
+
+    if (!skipHistory) {
+        history.pushState({ tabId }, "", `#${tabId}`);
+    }
 
     closeSidebar();
     toggleNotificationSheet(false);
@@ -155,6 +159,12 @@ export const switchTab = (tabId) => {
                 if (state.lastOrdersSnap) renderOrders(state.lastOrdersSnap);
                 break;
         }
+
+        // --- PHASE 3.26: NAVIGATION ORCHESTRATION ---
+        if (['dashboard', 'orders', 'live'].includes(tabId)) {
+             console.log(`[Navigation] Active tab ${tabId} - ensuring UI refresh`);
+             if (state.lastOrdersSnap) renderOrders(state.lastOrdersSnap);
+        }
     }
 };
 
@@ -208,3 +218,15 @@ export class ThemeManager {
 }
 
 export const themeManager = new ThemeManager();
+
+// --- BROWSER HISTORY ORCHESTRATION ---
+window.addEventListener('popstate', (event) => {
+    if (event.state && event.state.tabId) {
+        console.log(`[History] Navigating back to: ${event.state.tabId}`);
+        switchTab(event.state.tabId, true);
+    } else {
+        const hash = window.location.hash.replace('#', '');
+        if (hash) switchTab(hash, true);
+        else switchTab('dashboard', true);
+    }
+});

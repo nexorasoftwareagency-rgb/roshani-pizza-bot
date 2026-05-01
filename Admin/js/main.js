@@ -44,6 +44,26 @@ import './features/tracker.js';
 document.addEventListener('DOMContentLoaded', () => {
     console.log("[Main] DOM Content Loaded. Initializing...");
     initGestures();
+
+    // Set default date range: Yesterday and Today for Orders History
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    
+    const formatDate = (d) => {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    };
+    
+    const fromInput = document.getElementById('orderFrom');
+    const toInput = document.getElementById('orderTo');
+    if (fromInput && toInput && !fromInput.value && !toInput.value) {
+        fromInput.value = formatDate(yesterday);
+        toInput.value = formatDate(today);
+    }
+
     initAuth();
 
     // 1. Static Event Binding
