@@ -36,6 +36,12 @@ export function loadRiders() {
             });
         }
         renderRiders();
+        
+        // --- PHASE 3.5: UPDATE LIVE OPS DROPDOWNS ---
+        // If we are on the live or orders tab, we need to refresh the "Assign Rider" selects
+        if (state.currentActiveTab === 'live' || state.currentActiveTab === 'orders') {
+            import('./orders.js').then(m => m.renderOrders(state.lastOrdersSnap));
+        }
     });
 }
 

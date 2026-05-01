@@ -109,17 +109,18 @@ export function renderWalkinDishGrid(dishes) {
         return;
     }
 
-    grid.innerHTML = dishes.map(d => `
-        <div class="dish-card-pos" data-action="openPOSSelectionModal" data-id="${d.id}">
-            <div class="dish-card-pos-img">
-                <img src="${d.image || 'assets/img/placeholder-dish.png'}" alt="${escapeHtml(d.name)}">
+    grid.innerHTML = dishes.map(d => {
+        const price = d.price || (d.sizes ? Object.values(d.sizes)[0] : 0);
+        return `
+            <div class="pos-dish-btn" data-action="openPOSSelectionModal" data-id="${d.id}">
+                <div class="pos-dish-icon">
+                    <img src="${d.image || 'assets/img/placeholder-dish.png'}" alt="${escapeHtml(d.name)}">
+                </div>
+                <div class="pos-dish-name">${escapeHtml(d.name)}</div>
+                <div class="pos-dish-price">₹${price}</div>
             </div>
-            <div class="dish-card-pos-info">
-                <div class="dish-card-pos-name">${escapeHtml(d.name)}</div>
-                <div class="dish-card-pos-price">\u20B9${d.price || (d.sizes ? Object.values(d.sizes)[0] : 0)}</div>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 /**
@@ -504,8 +505,8 @@ export async function submitWalkinSale() {
             customerName: name,
             phone: phone || "Walk-in",
             customerNote: note,
-            status: "Delivered",
-            type: "Walk-in",
+            status: "Confirmed",
+            type: "Dine-in",
             timestamp: ServerValue.TIMESTAMP,
             createdAt: new Date().toISOString(),
             outlet: Outlet.current,

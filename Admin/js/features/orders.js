@@ -8,6 +8,21 @@ import { state } from '../state.js';
 import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit } from '../utils.js';
 import { showAlert, addNotification, highlightOrder } from './notifications.js';
 
+/**
+ * STATUS WORKFLOW CONFIGURATION
+ */
+export const STATUS_SEQUENCE = ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Delivered"];
+export const STATUS_MAPPING = {
+    "New": 0, "Pending": 0, "Placed": 0,
+    "Confirmed": 1,
+    "Preparing": 2, "In Kitchen": 2,
+    "Cooked": 3,
+    "Ready": 4,
+    "Out for Delivery": 5, "Dispatched": 5,
+    "Delivered": 6,
+    "Cancelled": 99
+};
+
 // Order callback storage for safe detachment
 let _ordersRef = null;
 let _ordersValueCb = null;
@@ -104,6 +119,20 @@ export function initRealtimeListeners() {
         console.error("[Orders] Firebase Read Error:", err);
         showToast("Error loading orders: " + err.message, "error");
     });
+
+    // 4. PERSISTENT LIVE-OPS SYNC (Always active for recent data)
+    // We fetch the last 100 orders specifically for the 'Live Ops' tab to ensure it
+    // doesn't get empty if the main History tab is filtered to a specific old date.
+    _ordersRef.orderByChild("createdAt").limitToLast(100).on("value", snap => {
+        state.liveOrdersMap.clear();
+        snap.forEach(child => {
+            state.liveOrdersMap.set(child.key, child.val());
+        });
+        // If we are currently on the live tab, re-render immediately
+        if (state.currentActiveTab === 'live') {
+            renderOrders(state.lastOrdersSnap); 
+        }
+    });
 }
 
 /**
@@ -116,11 +145,38 @@ export function loadMoreOrders() {
 }
 
 /**
+ * GET STATUS OPTIONS
+ * Filters available status transitions based on current status
+ */
+function getStatusOptions(currentStatus) {
+    const currentLevel = STATUS_MAPPING[currentStatus] ?? 0;
+    const options = [];
+    
+    // Always show current status as selected
+    options.push({ value: currentStatus, label: currentStatus, selected: true });
+
+    // Show next step if exists
+    const nextStep = STATUS_SEQUENCE[currentLevel + 1];
+    if (nextStep) {
+        options.push({ value: nextStep, label: `Move to ${nextStep}`, selected: false });
+    }
+
+    // Always allow cancellation (unless already delivered or cancelled)
+    if (currentLevel < 6 && currentStatus !== "Cancelled") {
+        options.push({ value: "Cancelled", label: "Cancel Order X", selected: false });
+    }
+
+    return options.map(opt => `
+        <option value="${opt.value}" ${opt.selected ? 'selected disabled' : ''}>
+            ${opt.label}
+        </option>
+    `).join('');
+}
+
+/**
  * RENDER ORDERS
  */
 export function renderOrders(snap) {
-    if (!snap) return;
-
     const activeTab = state.currentActiveTab || 'dashboard';
     const containers = {
         'dashboard': document.getElementById('ordersTable'),
@@ -129,16 +185,27 @@ export function renderOrders(snap) {
         'payments': document.getElementById('paymentsTable')
     };
 
-    console.log(`[Orders] Rendering started for tab: ${activeTab}. Containers:`, Object.keys(containers).filter(k => containers[k]));
+    console.log(`[Orders] Rendering started for tab: ${activeTab}. Snap: ${snap ? 'Yes' : 'No'}. LiveMap: ${state.liveOrdersMap.size}`);
 
-    // Build map for calculations
-    state.ordersMap.clear();
-    snap.forEach(child => {
-        state.ordersMap.set(child.key, child.val());
-    });
+    // Update global maps
+    if (snap) {
+        state.ordersMap.clear();
+        snap.forEach(child => {
+            state.ordersMap.set(child.key, child.val());
+        });
+    }
 
-    const allOrders = Array.from(state.ordersMap.entries())
-        .map(([id, o]) => ({ id, ...o }));
+    // Decide which data source to use
+    let ordersToProcess = [];
+    if (activeTab === 'live') {
+        // Use live map if available, fallback to main map
+        const sourceMap = state.liveOrdersMap.size > 0 ? state.liveOrdersMap : state.ordersMap;
+        ordersToProcess = Array.from(sourceMap.entries()).map(([id, o]) => ({ id, ...o }));
+    } else {
+        ordersToProcess = Array.from(state.ordersMap.entries()).map(([id, o]) => ({ id, ...o }));
+    }
+
+    const allOrders = ordersToProcess;
 
     const fromDate = document.getElementById('orderFrom')?.value;
     const toDate = document.getElementById('orderTo')?.value;
@@ -259,13 +326,8 @@ export function renderOrders(snap) {
                 <td data-label="Actions">
                     <div class="flex-row flex-gap-5">
                         <select data-action="updateStatus" data-id="${id}" class="status-select">
-                            <option value="">Status</option>
-                            <option value="Confirmed" ${safeStatus === "Confirmed" ? "selected" : ""}>Confirm</option>
-                            <option value="Preparing" ${safeStatus === "Preparing" ? "selected" : ""}>Preparing</option>
-                            <option value="Cooked" ${safeStatus === "Cooked" ? "selected" : ""}>Cooked</option>
-                            <option value="Out for Delivery" ${safeStatus === "Out for Delivery" ? "selected" : ""}>Out for Delivery</option>
-                            <option value="Delivered" ${safeStatus === "Delivered" ? "selected" : ""}>Delivered</option>
-                            <option value="Cancelled" ${safeStatus === "Cancelled" ? "selected" : ""}>Cancelled X</option>
+                            <option value="">Actions</option>
+                            ${getStatusOptions(o.status || "Placed")}
                         </select>
                         <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-table-icon">🖨️</button>
                     </div>
@@ -292,13 +354,8 @@ export function renderOrders(snap) {
                 <td data-label="Actions">
                     <div class="flex-row flex-gap-5">
                         <select data-action="updateStatus" data-id="${id}" class="status-select">
-                            <option value="">Status</option>
-                            <option value="Confirmed" ${safeStatus === "Confirmed" ? "selected" : ""}>Confirm</option>
-                            <option value="Preparing" ${safeStatus === "Preparing" ? "selected" : ""}>Preparing</option>
-                            <option value="Cooked" ${safeStatus === "Cooked" ? "selected" : ""}>Cooked</option>
-                            <option value="Out for Delivery" ${safeStatus === "Out for Delivery" ? "selected" : ""}>Out for Delivery</option>
-                            <option value="Delivered" ${safeStatus === "Delivered" ? "selected" : ""}>Delivered</option>
-                            <option value="Cancelled" ${safeStatus === "Cancelled" ? "selected" : ""}>Cancelled X</option>
+                            <option value="">Actions</option>
+                            ${getStatusOptions(o.status || "Placed")}
                         </select>
                         <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-table-icon">🖨️</button>
                     </div>
@@ -491,27 +548,49 @@ function renderTopCustomers(orders) {
 export async function updateStatus(id, status) {
     if (!id || !status) return;
 
-    // Enforce Rider Assignment for Out for Delivery
-    if (status === "Out for Delivery") {
-        const order = state.ordersMap.get(id);
-        if (order && !order.riderId) {
-            showToast("⚠️ Please assign a Rider before marking as Out for Delivery", "error");
-            // Trigger a re-render to revert the select element if needed
-            renderOrders(state.lastOrdersSnap);
-            return;
+    const order = state.ordersMap.get(id) || (state.liveOrdersMap.get(id));
+    if (!order) return;
+
+    const currentStatus = order.status || "Placed";
+    const currentLevel = STATUS_MAPPING[currentStatus] ?? 0;
+    const nextLevel = STATUS_MAPPING[status] ?? 0;
+
+    // Rule 1: Allow cancellation from any state EXCEPT "Delivered"
+    const isCancelling = status === "Cancelled";
+    const canCancel = isCancelling && currentLevel < 6;
+
+    // Rule 2: Allow ONLY the exact next step in the sequence
+    const isNextStep = nextLevel === currentLevel + 1;
+
+    if (!isNextStep && !canCancel && status !== currentStatus) {
+        if (nextLevel <= currentLevel && !isCancelling) {
+            showToast(`⚠️ Status Reversal Blocked: Cannot go from ${currentStatus} to ${status}`, "error");
+        } else if (isCancelling && currentLevel >= 6) {
+            showToast(`⚠️ Cannot cancel an order that is already Delivered`, "error");
+        } else {
+            const expectedNext = STATUS_SEQUENCE[currentLevel + 1] || "None";
+            showToast(`⚠️ Sequence Violation: Next step must be "${expectedNext}" (not "${status}")`, "error");
         }
+        
+        // Re-render to reset select dropdowns
+        renderOrders(state.lastOrdersSnap);
+        return;
+    }
+
+    // Enforce Rider Assignment for Out for Delivery
+    if (status === "Out for Delivery" && !order.riderId) {
+        showToast("⚠️ Please assign a Rider before marking as Out for Delivery", "error");
+        renderOrders(state.lastOrdersSnap);
+        return;
     }
 
     try {
         await Outlet.ref(`orders/${id}`).update({ status });
         logAudit("Orders", `Updated Status: #${id.slice(-5)} -> ${status}`, id);
         showToast(`Order status updated to ${status}`, "success");
-        if (status === "Delivered") {
-            // Check if it's a home delivery to mark as paid if COD was selected?
-            // Actually usually we ask for payment method on delivery
-        }
     } catch (e) {
         showToast("Update failed: " + e.message, "error");
+        renderOrders(state.lastOrdersSnap);
     }
 }
 
@@ -522,15 +601,29 @@ export async function assignRider(id, riderId) {
         const rider = riderSnap.val();
         if (!rider) throw new Error("Rider not found");
 
-        await Outlet.ref(`orders/${id}`).update({
-            status: "Out for Delivery",
+        const order = state.ordersMap.get(id) || state.liveOrdersMap.get(id);
+        const currentStatus = order ? order.status : "Placed";
+        const currentLevel = STATUS_MAPPING[currentStatus] ?? 0;
+        const targetStatus = "Out for Delivery";
+        const targetLevel = STATUS_MAPPING[targetStatus];
+
+        const updateData = {
             riderId: riderId,
             riderName: rider.name,
-            riderPhone: rider.phone,
-            outForDeliveryAt: ServerValue.TIMESTAMP
-        });
+            riderPhone: rider.phone
+        };
+
+        // Only auto-advance status if it's the strict next step (Ready -> Out for Delivery)
+        if (currentLevel === targetLevel - 1) {
+            updateData.status = targetStatus;
+            updateData.outForDeliveryAt = ServerValue.TIMESTAMP;
+            showToast(`Rider ${rider.name} assigned & Order is Out for Delivery!`, "success");
+        } else {
+            showToast(`Rider ${rider.name} assigned. Manual status update required once Ready.`, "info");
+        }
+
+        await Outlet.ref(`orders/${id}`).update(updateData);
         logAudit("Orders", `Assigned Rider: ${rider.name} to #${id.slice(-5)}`, id);
-        showToast(`Assigned to ${rider.name}`, "success");
     } catch (e) {
         showToast("Assignment failed: " + e.message, "error");
     }
@@ -617,7 +710,29 @@ export async function openOrderDrawer(id) {
             </div>
             <div class="drawer-section">
                 <label>Rider Assignment</label>
-                ${order.riderName ? `<p>Assigned to: <strong>${escapeHtml(order.riderName)}</strong></p>` : `<p class="text-muted">No rider assigned</p>`}
+                <div class="flex-column flex-gap-10">
+                    ${order.riderName ? `<p class="m-0">Assigned to: <strong>${escapeHtml(order.riderName)}</strong></p>` : `<p class="m-0 text-muted">No rider assigned</p>`}
+                    
+                    <div class="flex-row flex-gap-10 m-t-10">
+                        <div class="flex-1">
+                            <small class="text-muted d-block m-b-5">Update Status</small>
+                            <select data-action="updateStatus" data-id="${id}" class="form-input w-100">
+                                <option value="">Select Next Step</option>
+                                ${getStatusOptions(order.status || "Placed")}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-row flex-gap-8 flex-center">
+                        <select data-action="assignRider" data-id="${id}" class="form-input flex-1">
+                            <option value="">${order.riderId ? 'Change Rider' : 'Select Rider'}</option>
+                            ${(state.ridersList || [])
+                                .filter(r => r.status === "Online" || r.status === "On Delivery")
+                                .map(r => `<option value="${r.id}" ${order.riderId === r.id ? 'selected' : ''}>${escapeHtml(r.name)}</option>`)
+                                .join('')}
+                        </select>
+                    </div>
+                </div>
             </div>
         </div>
     `;

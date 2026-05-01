@@ -17,6 +17,7 @@ export const state = {
     lastOrdersSnap: null,
     lastDishesSnap: null,
     ordersMap: new Map(),
+    liveOrdersMap: new Map(), // Dedicated map for ongoing/recent orders
     notifications: [],
     isNotificationPending: false,
     deferredPrompt: null,
