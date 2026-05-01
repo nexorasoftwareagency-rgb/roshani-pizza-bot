@@ -321,7 +321,14 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                     await notifyRiderPickup(sock, order, order.assignedRider);
                 }
             } else if (order.status === "Out for Delivery") {
-                msg = `🛵 *OUT FOR DELIVERY!* #${id.slice(-5)}\n━━━━━━━━━━━━━━━━━━━━\nOur rider is on the way to your location! 🚀\n\nPlease keep ₹${order.total} ready.\n${getFoodFunnyProgress("Out for Delivery")}`;
+                let riderInfoText = "";
+                if (order.assignedRider) {
+                    const rider = await getRiderByEmail(order.assignedRider, order.outlet || 'pizza');
+                    if (rider) {
+                        riderInfoText = `\n📞 *Rider:* ${rider.phone || ""} (${rider.name || "Ramesh"})`;
+                    }
+                }
+                msg = `🛵 *OUT FOR DELIVERY!* #${id.slice(-5)}\n━━━━━━━━━━━━━━━━━━━━\nOur rider is on the way to your location! 🚀\n\nPlease keep ₹${order.total} ready.${riderInfoText}\n${getFoodFunnyProgress("Out for Delivery")}`;
                 img = botSettings.imgOut;
             } else if (order.status === "Delivered") {
                 msg = `✅ *ORDER DELIVERED SUCCESSFULLY!* 🍕\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n🤝 *Payment:* ${order.paymentMethod}\n💵 *Total Paid:* ₹${order.total}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*Thank you for choosing Roshani!* ❤️\n\n${getFunnyFoodJoke()}`;
