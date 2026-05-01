@@ -201,19 +201,24 @@ function formatCartSummary(cart) {
 function formatOrderInvoice(orderId, order) {
     let itemsText = "";
     (order.items || []).forEach((item) => {
-        itemsText += `• *${item.name}* (${item.size}) x ${item.quantity} - ₹${item.lineTotal}\n`;
+        itemsText += `• *${item.name}* (${item.size}) x${item.quantity} - ₹${item.lineTotal || item.total}\n`;
         if (item.addons && item.addons.length > 0) {
             itemsText += `  _Addons: ${item.addons.map(a => a.name).join(", ")}_\n`;
         }
     });
     const displayId = orderId ? orderId.slice(-5) : "N/A";
-    let msg = `🧾 *ORDER SUMMARY*\n\n`;
+    let msg = `🧾 *ORDER SUMMARY*\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
     msg += `🆔 *Order ID:* #${displayId}\n`;
-    msg += `👤 *Customer:* ${order.customerName || "Guest"}\n\n`;
+    msg += `👤 *Customer:* ${order.customerName || "Guest"}\n`;
+    msg += `📍 *Type:* ${order.type || "Online"}\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
     msg += `📦 *ITEMS:*\n${itemsText}\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
     msg += `💰 *Subtotal:* ₹${order.subtotal || order.itemTotal || 0}\n`;
-    if (order.deliveryFee) msg += `🚚 *Delivery:* ₹${order.deliveryFee}\n`;
+    if (order.deliveryFee) msg += `🚚 *Shipping:* ₹${order.deliveryFee}\n`;
     msg += `💵 *TOTAL AMOUNT: ₹${order.total || 0}*\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
     return msg;
 }
 
@@ -303,24 +308,23 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
             let img = null;
 
             if (order.status === "Confirmed") {
-                msg = `✅ *ORDER CONFIRMED!* #${id.slice(-5)}\n\n${formatOrderInvoice(id, order)}\n${getFoodFunnyProgress("Confirmed")}`;
+                msg = `✅ *ORDER CONFIRMED!* #${id.slice(-5)}\n\n${formatOrderInvoice(id, order)}\nYour order is being prepared with love! ❤️\n${getFoodFunnyProgress("Confirmed")}`;
                 img = botSettings.imgConfirmed;
             } else if (order.status === "Preparing") {
-                msg = `👨‍🍳 *CHEF IS PREPARING YOUR ORDER!* #${id.slice(-5)}\n\nYour order is being prepared with care!\n${getFoodFunnyProgress("Preparing")}`;
+                msg = `👨‍🍳 *ORDER UPDATED!* #${id.slice(-5)}\n━━━━━━━━━━━━━━━━━━━━\nYour order is now **Preparing** in our kitchen! 👨‍🍳\n\nIt won't be long now! 🍕\n${getFoodFunnyProgress("Preparing")}`;
                 img = botSettings.imgPreparing;
             } else if (order.status === "Cooked" || order.status === "Ready") {
-                msg = `🔥 *FOOD READY & PACKED!* #${id.slice(-5)}\n\nYour delicious order is ready! 🚀\n${getFoodFunnyProgress("Cooked")}`;
+                msg = `🔥 *FOOD READY & PACKED!* #${id.slice(-5)}\n━━━━━━━━━━━━━━━━━━━━\nYour delicious order is ready! 🚀\n\nIt's waiting for the rider to pick it up. 🛵\n${getFoodFunnyProgress("Cooked")}`;
                 img = botSettings.imgCooked;
                 
-                // 🔔 NOTIFY RIDER via WhatsApp if assigned
                 if (order.assignedRider) {
                     await notifyRiderPickup(sock, order, order.assignedRider);
                 }
             } else if (order.status === "Out for Delivery") {
-                msg = `🚀 *OUT FOR DELIVERY!* #${id.slice(-5)}\n\nOur rider is on the way to your address.\n${getFoodFunnyProgress("Out for Delivery")}`;
+                msg = `🛵 *OUT FOR DELIVERY!* #${id.slice(-5)}\n━━━━━━━━━━━━━━━━━━━━\nOur rider is on the way to your location! 🚀\n\nPlease keep ₹${order.total} ready.\n${getFoodFunnyProgress("Out for Delivery")}`;
                 img = botSettings.imgOut;
             } else if (order.status === "Delivered") {
-                msg = `🎉 *DELIVERED!* #${id.slice(-5)}\n\nHope you enjoy your meal! Please rate us.\n${getFunnyFoodJoke()}`;
+                msg = `✅ *ORDER DELIVERED SUCCESSFULLY!* 🍕\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n🤝 *Payment:* ${order.paymentMethod}\n💵 *Total Paid:* ₹${order.total}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*Thank you for choosing Roshani!* ❤️\n\n${getFunnyFoodJoke()}`;
                 img = botSettings.imgDelivered;
             }
 
@@ -642,8 +646,16 @@ async function startBot() {
 
             // STATE MACHINE
             if (user.step === "START") {
-                const settings = await getData("settings/Store");
-                let welcome = `Hello *${pushName}*! 👋\n\n✨ *WELCOME TO ROSHANI PIZZA & CAKE* 🍕🎂\n\n1️⃣ *Pizza Outlet* 🍕\n2️⃣ *Cake Outlet* 🎂\n\n_Reply with 1 or 2_`;
+                const settings = await getData("settings/Store", user.outlet || 'pizza');
+                let welcome = `Hello *${pushName}*! 👋\n`;
+                welcome += `✨ *WELCOME TO ROSHANI PIZZA & CAKE* 🍕🎂\n`;
+                welcome += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                welcome += `Delicious food, delivered fast to your doorstep! 🚀\n\n`;
+                welcome += `Please select an outlet:\n`;
+                welcome += `1️⃣ *Pizza Outlet* 🍕\n`;
+                welcome += `2️⃣ *Cake Outlet* 🎂\n\n`;
+                welcome += `_Reply with 1 or 2 to start_`;
+                
                 user.step = "OUTLET";
                 return await sendImage(sock, sender, settings?.bannerImage, welcome);
             }
@@ -822,7 +834,15 @@ async function startBot() {
                 await setData(`orders/${orderId}`, finalOrder, user.outlet);
                 await notifyAdmin(sock, orderId, finalOrder, 'NEW');
 
-                await sock.sendMessage(sender, { text: `🎉 *ORDER PLACED!* 🎉\n\nID: #${orderId.slice(-5)}\nTotal: ₹${finalOrder.total}\n\nWait for confirmation...` });
+                let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY!* 🎉\n`;
+                successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                successMsg += `🆔 *Order ID:* #${orderId.slice(-5)}\n`;
+                successMsg += `🏪 *Shop:* Roshani ${user.outlet.toUpperCase()}\n`;
+                successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                successMsg += `*Please wait while the admin confirms your order!* ⏳\n\n`;
+                successMsg += `Total: ₹${finalOrder.total}`;
+
+                await sock.sendMessage(sender, { text: successMsg });
                 delete sessions[sender];
             }
 
