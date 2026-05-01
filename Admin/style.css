@@ -942,7 +942,7 @@ html {
     color: var(--text-main);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .panel-subtitle {
@@ -1338,7 +1338,7 @@ tbody tr:hover td:first-child {
     cursor: pointer;
     display: flex;
     font-weight: 600;
-    gap: 8px;
+    gap: 12px;
     padding: 12px 24px;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
@@ -1433,6 +1433,31 @@ tbody tr:hover td:first-child {
     transition: all 0.3s ease;
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
+}
+
+/* ORDER DRAWER MAP BUTTON */
+.btn-map-drawer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563EB !important;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    margin-top: 10px;
+    transition: all 0.3s ease;
+}
+
+.btn-map-drawer:hover {
+    background: #2563EB;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 
 .search-input-group:focus {
@@ -2496,7 +2521,7 @@ tbody tr:hover td:first-child {
     font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .alert-sub {
@@ -2589,8 +2614,8 @@ tbody tr:hover td:first-child {
 
 .walkin-dish-grid {
     display: grid;
-    gap: 8px;
-    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(125px, 1fr));
     max-height: 70vh;
     overflow-y: auto;
     scrollbar-width: none;
@@ -2601,17 +2626,64 @@ tbody tr:hover td:first-child {
     display: none;
 }
 
-.walkin-dish-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 14px;
-    cursor: default;
-    padding: 10px;
+.pos-dish-btn {
+    background: #ffffff;
+    border: 1.5px solid rgba(0, 0, 0, 0.05);
+    border-radius: 16px;
+    cursor: pointer;
+    padding: 12px 8px;
     text-align: center;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 145px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.pos-dish-btn:hover {
+    border-color: var(--primary);
+    box-shadow: 0 8px 20px rgba(249, 115, 22, 0.15);
+    transform: translateY(-3px);
+}
+
+.pos-dish-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    margin-bottom: 10px;
+    background: #fdfdfd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.pos-dish-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.pos-dish-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: #333;
+    line-height: 1.3;
+    margin-bottom: 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    height: 28px;
+}
+
+.pos-dish-price {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--primary);
 }
 
 .walkin-dish-card:hover {
@@ -4018,7 +4090,7 @@ body {
 /* Category management row for addons */
 .addon-row-small {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     margin-bottom: 8px;
     animation: fadeIn 0.3s ease;
 }
@@ -4508,7 +4580,7 @@ body {
 
 .rider-actions-cell {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     align-items: center;
 }
 
@@ -4681,7 +4753,7 @@ body {
 .status-indicator-wrapper {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .status-dot {
@@ -4761,7 +4833,7 @@ body {
 
 .action-buttons-flex {
     display: flex;
-    gap: 8px;
+    gap: 12px;
 }
 
 .btn-icon-premium {

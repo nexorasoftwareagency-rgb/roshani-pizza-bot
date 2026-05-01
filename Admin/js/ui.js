@@ -118,13 +118,19 @@ export const switchTab = (tabId, skipHistory = false) => {
         // --- PHASE 3.25: PERFORMANCE ORCHESTRATION ---
         // 1. Cleanup all persistent background listeners (except Orders which stays active for alerts)
         if (tabId !== 'catalog' && tabId !== 'categories') cleanupCatalog();
-        if (tabId !== 'riders' && tabId !== 'dashboard') cleanupRiders();
+        if (tabId !== 'riders' && tabId !== 'dashboard' && tabId !== 'live') cleanupRiders();
         if (tabId !== 'feedback') cleanupFeedbacks();
         if (tabId !== 'liveTracker') cleanupLiveRiderTracker();
 
         // --- PHASE 3.25: DATA REFRESH ---
         // Refresh appropriate data based on the tab
         switch (tabId) {
+            case 'dashboard':
+            case 'orders':
+            case 'live':
+                loadRiders(); // Need riders for live assignment
+                renderOrders(state.lastOrdersSnap);
+                break;
             case 'liveTracker':
                 setTimeout(() => initLiveRiderTracker(), 100);
                 break;

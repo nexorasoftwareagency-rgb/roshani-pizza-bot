@@ -44,6 +44,9 @@ function escapeHtml(str) {
 function formatJid(phone) {
     if (!phone) return null;
     let clean = String(phone).replace(/\D/g, '');
+    // Remove leading zero if present (common in Indian formats like 098...)
+    if (clean.startsWith('0')) clean = clean.substring(1);
+    // If it's 10 digits, it's a standard Indian mobile number without CC
     if (clean.length === 10) clean = '91' + clean;
     return (clean.length >= 10) ? (clean + "@s.whatsapp.net") : null;
 }
@@ -681,9 +684,9 @@ async function startBot() {
                 user.lastReset = now;
             }
             user.msgCount++;
-            if (user.msgCount > 10) {
-                if (user.msgCount === 11) {
-                    await sock.sendMessage(sender, { text: "⚠️ *Too many messages.* Please wait a minute before trying again." });
+            if (user.msgCount > 40) {
+                if (user.msgCount === 41) {
+                    await sock.sendMessage(sender, { text: "⚠️ *System Busy.* Please wait a moment before sending more messages." });
                 }
                 return;
             }
