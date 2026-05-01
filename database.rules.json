@@ -1,138 +1,105 @@
 {
   "rules": {
     "admins": {
-      ".indexOn": [
-        "email"
-      ],
-      ".read": "auth != null",
-      ".write": "auth != null && ((!data.exists() && !root.child('admins').hasChildren()) || root.child('admins/' + auth.uid).exists())",
-      "$adminId": {
-        ".read": "auth != null && (auth.uid == $adminId || root.child('admins/' + auth.uid).exists())",
-        ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).exists() || auth.uid == $adminId)",
-        ".validate": "newData.hasChildren(['name', 'email'])"
-      }
-    },
-    "riderStats": {
-      ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
-      ".write": "auth != null && root.child('admins/' + auth.uid).exists()",
-      "$riderId": {
-        ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || auth.uid == $riderId)",
-        ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (auth.uid == $riderId && (!data.exists() || newData.child('lastUpdate').val() > data.child('lastUpdate').val() + 5000)))"
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)",
+        ".validate": "newData.hasChildren(['email', 'outlet'])"
       }
     },
     "riders": {
-      ".indexOn": [
-        "email"
-      ],
-      "$uid": {
-        ".read": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())",
-        ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (auth.uid == $uid && newData.child('email').val() == data.child('email').val()))",
-        ".validate": "newData.hasChildren(['name', 'email']) && !newData.hasChild('isAdmin') && !newData.hasChild('role')",
-        "phone": { ".validate": "newData.isString() && newData.val().length >= 10" },
-        "aadharNo": { ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^[0-9]{12}$/))" },
-        "location": {
-          ".validate": "newData.hasChildren(['lat', 'lng'])",
-          "lat": { ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90" },
-          "lng": { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" }
-        },
-        "notifications": {
-          ".indexOn": [
-            "timestamp"
-          ],
-          ".read": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())",
-          ".write": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())",
-          "$notifId": {
-            ".validate": "newData.hasChildren(['title', 'body', 'timestamp'])"
-          }
-        },
-        "status": {
-          ".write": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())"
-        },
-        "fcmToken": {
-          ".write": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())"
-        },
-        "lastSeen": {
-          ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (auth.uid == $uid && (!data.exists() || newData.val() > data.val() + 10000)))"
-        },
-        "profilePhoto": {
-          ".write": "auth != null && (auth.uid == $uid || root.child('admins/' + auth.uid).exists())"
-        },
-        "$other": { ".validate": false }
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+    },
+    "riderStats": {
+      "$riderId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (auth.token.rider == true && auth.uid == $riderId))"
       }
     },
     "logs": {
-      ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || auth.token.admin === true)",
       "audit": {
-        ".write": "auth != null"
-      },
-      "riderErrors": {
-        "$uid": {
-          ".write": "auth != null && auth.uid == $uid && (!data.exists() || newData.child('timestamp').val() > data.child('timestamp').val() + 5000)"
+        ".read": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)",
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+        "$logId": {
+          ".validate": "newData.hasChildren(['action', 'timestamp', 'adminEmail']) && !data.exists()"
         }
       }
     },
     "bot": {
-      ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
-      ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).exists())"
+       ".read": "auth != null",
+       ".write": "auth != null"
     },
-    "$outlet": {
-      "settings": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('admins/' + auth.uid).exists()",
-        "Store": {
-            "lat": { ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= -90 && newData.val() <= 90)" },
-            "lng": { ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= -180 && newData.val() <= 180)" }
-        }
-      },
+    "migrationStatus": {
+       ".read": "auth != null",
+       ".write": "auth != null"
+    },
+    "pizza": {
       "orders": {
-        ".indexOn": [
-          "assignedRider",
-          "status",
-          "whatsappNumber"
-        ],
-        ".read": "auth != null",
+        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".indexOn": ["createdAt", "status", "riderId"],
         "$orderId": {
-          ".read": "auth != null && (root.child('admins/' + auth.uid).exists() || !data.child('assignedRider').exists() || data.child('assignedRider').val() == auth.token.email)",
-          ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (data.child('assignedRider').val() == auth.token.email || !data.child('assignedRider').exists()))",
-          ".validate": "newData.hasChildren(['status', 'total', 'items'])",
-          "total": { ".validate": "newData.isNumber() && newData.val() >= 0" },
-          "subtotal": { ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0)" },
-          "deliveryFee": { ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0)" },
-          "lat": { ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= -90 && newData.val() <= 90)" },
-          "lng": { ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= -180 && newData.val() <= 180)" },
-          "assignedRider": {
-            ".validate": "!root.child('admins/' + auth.uid).exists() || newData.val() == data.val() || (auth.token.email == newData.val() && !data.exists())"
-          }
+          ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (auth.token.rider == true && (!data.child('riderId').exists() || data.child('riderId').val() == auth.uid)))",
+          ".validate": "newData.hasChildren(['items', 'total', 'status', 'createdAt']) && (root.child('admins').child(auth.uid).exists() || (newData.child('items').val() == data.child('items').val() && newData.child('total').val() == data.child('total').val()))"
         }
       },
       "dishes": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('admins/' + auth.uid).exists()",
-        "$dishId": {
-           "price": { ".validate": "newData.isNumber() && newData.val() >= 0" }
-        }
+        ".read": "true",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
       },
-      "liveTracker": {
-        ".read": "auth != null",
-        "$riderId": {
-          ".write": "auth != null && (root.child('admins/' + auth.uid).exists() || (auth.uid == $riderId && (!data.exists() || newData.child('timestamp').val() > data.child('timestamp').val() + 3000)))"
-        }
-      },
-      "feedbacks": {
-        ".read": "auth != null && root.child('admins/' + auth.uid).exists()",
-        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
+      "Menu": {
+        ".read": "true",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
       },
       "categories": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('admins/' + auth.uid).exists()"
+        ".read": "true",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
       },
       "lostSales": {
-        ".read": "auth != null",
-        ".write": "auth != null"
+        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
       },
       "customers": {
+        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+      },
+      "settings": {
         ".read": "auth != null",
-        ".write": "auth != null"
+        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
+      },
+      "uiConfig": {
+        ".read": "true",
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+      }
+    },
+    "cake": {
+      "orders": {
+        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".indexOn": ["createdAt", "status", "riderId"],
+        "$orderId": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (auth.token.rider == true && (!data.child('riderId').exists() || data.child('riderId').val() == auth.uid)))",
+          ".validate": "newData.hasChildren(['items', 'total', 'status', 'createdAt']) && (root.child('admins').child(auth.uid).exists() || (newData.child('items').val() == data.child('items').val() && newData.child('total').val() == data.child('total').val()))"
+        }
+      },
+      "dishes": {
+        ".read": "true",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
+      },
+      "categories": {
+        ".read": "true",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
+      },
+      "lostSales": {
+        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+      },
+      "customers": {
+        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+      },
+      "settings": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
       }
     }
   }

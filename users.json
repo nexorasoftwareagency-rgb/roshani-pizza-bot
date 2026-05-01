@@ -1,0 +1,50 @@
+{
+  "users": [
+    {
+      "localId": "L9wM2voqxefzOQqosMnvxQRDju23",
+      "email": "admin-sudha@example.com",
+      "emailVerified": true,
+      "passwordHash": "[REDACTED]",
+      "salt": "[REDACTED]",
+      "lastSignedInAt": "0",
+      "createdAt": "0",
+      "disabled": false,
+      "customAttributes": "{\"admin\":true}",
+      "providerUserInfo": []
+    },
+    {
+      "localId": "TyDxZ1na1Adyi7gxbstiS9k4hhw2",
+      "email": "admin-cakes@example.com",
+      "emailVerified": false,
+      "passwordHash": "[REDACTED]",
+      "salt": "[REDACTED]",
+      "lastSignedInAt": "0",
+      "createdAt": "0",
+      "disabled": false,
+      "customAttributes": "{\"admin\":true}",
+      "providerUserInfo": []
+    },
+    {
+      "localId": "pK5JAEcksbezOXnxiVPeJ3PZKIz2",
+      "email": "admin-pizza@example.com",
+      "emailVerified": false,
+      "passwordHash": "[REDACTED]",
+      "salt": "[REDACTED]",
+      "lastSignedInAt": "0",
+      "createdAt": "0",
+      "disabled": false,
+      "customAttributes": "{\"admin\":true}",
+      "providerUserInfo": []
+    },
+    {
+      "localId": "test_user_1",
+      "email": "customer-1@example.com",
+      "emailVerified": false,
+      "passwordHash": "[REDACTED]",
+      "salt": "[REDACTED]",
+      "lastSignedInAt": "0",
+      "createdAt": "0",
+      "providerUserInfo": []
+    }
+  ]
+}

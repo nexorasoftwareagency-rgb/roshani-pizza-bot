@@ -24,9 +24,23 @@ if (!fb.apps.length) {
     if (window.firebaseConfig) {
         fb.initializeApp(window.firebaseConfig);
         console.log("[Firebase] Manual App Init Success");
+
+        // Initialize App Check immediately after app init
+        if (fb.appCheck && window.reCaptchaSiteKey) {
+            try {
+                const appCheck = fb.appCheck();
+                appCheck.activate(
+                    new fb.appCheck.ReCaptchaV3Provider(window.reCaptchaSiteKey),
+                    true
+                );
+                console.log("[App Check] ✅ Activated Successfully (Consolidated)");
+            } catch (e) {
+                console.warn("[App Check] ⚠️ Activation failed:", e);
+            }
+        }
     } else {
-        console.error("[Firebase] Configuration missing! Falling back to empty init.");
-        fb.initializeApp({ apiKey: "MISSING", projectId: "MISSING" });
+        console.error("[Firebase] Configuration missing! Firing fatal error.");
+        throw new Error("Firebase configuration (window.firebaseConfig) is missing. Check firebase-config.js.");
     }
 }
 
@@ -35,21 +49,106 @@ export const auth = fb.auth();
 export const ServerValue = fb.database.ServerValue;
 export const EmailAuthProvider = fb.auth.EmailAuthProvider;
 
-// Initialize App Check (Phase 2.16)
-/*
-if (window.reCaptchaSiteKey) {
-    try {
-        const appCheck = fb.appCheck();
-        appCheck.activate(
-            new fb.appCheck.ReCaptchaV3Provider(window.reCaptchaSiteKey),
-            true // isTokenAutoRefreshEnabled
-        );
-        console.log("[App Check] Activated with site key:", window.reCaptchaSiteKey);
-    } catch (e) {
-        console.error("[App Check] Initialization failed:", e);
+// Monitor Connection State
+const connectedRef = db.ref('.info/connected');
+connectedRef.on('value', (snap) => {
+    const connected = snap.val() === true;
+    console.log(`[Firebase] Connection status: ${connected ? '🟢 Connected' : '🔴 Disconnected'}`);
+
+    const indicator = document.getElementById('syncStatus');
+    if (indicator) {
+        if (connected) {
+            indicator.classList.remove('disconnected', 'connecting');
+            indicator.classList.add('connected');
+            indicator.title = "Firebase: Connected";
+        } else {
+            indicator.classList.remove('connected', 'connecting');
+            indicator.classList.add('disconnected');
+            indicator.title = "Firebase: Disconnected - Check Network";
+        }
     }
-}
-*/
+
+    if (typeof updateConnectionIndicator === 'function') {
+        updateConnectionIndicator(connected);
+    }
+
+    if (!connected) {
+        console.warn('[Firebase] Lost connection - data may not sync. Retrying...');
+        // Proactively try to reconnect
+        setTimeout(() => {
+            if (db) db.goOnline();
+        }, 5000);
+    } else {
+        console.log('[Firebase] Connection restored.');
+    }
+});
+
+// Proactive Connection Heartbeat (Every 30 seconds)
+setInterval(() => {
+    if (db) {
+        db.ref('.info/connected').once('value', snap => {
+            if (!snap.val()) {
+                console.log("[Firebase Heartbeat] Disconnected, forcing online...");
+                db.goOnline();
+            }
+        });
+    }
+}, 30000);
+
+// Test database connectivity
+setTimeout(() => {
+    console.log("[Firebase] Testing database connectivity...");
+    db.ref('test').once('value')
+        .then(snap => console.log("[Firebase] Database test successful:", snap.val() || "null"))
+        .catch(err => console.error("[Firebase] Database test failed:", err));
+}, 2000);
+
+// Diagnostic function for debugging data loading issues
+window.diagnoseDatabase = async () => {
+    console.log("🔍 DATABASE DIAGNOSTIC START");
+    console.log("1. Firebase initialized:", !!fb);
+    console.log("2. Database reference:", !!db);
+    console.log("3. Current user:", auth.currentUser?.email || "Not logged in");
+    console.log("4. Current outlet:", window.currentOutlet || "Not set");
+    console.log("5. Outlet resolved path:", Outlet.ref("orders").toString());
+
+    // Test basic connectivity
+    try {
+        const testRef = db.ref('.info/connected');
+        const connected = (await testRef.once('value')).val();
+        console.log("6. Connection status:", connected ? "🟢 Connected" : "🔴 Disconnected");
+    } catch (e) {
+        console.error("6. Connection test failed:", e);
+    }
+
+    // Test admin access
+    if (auth.currentUser) {
+        try {
+            const adminSnap = await Outlet.ref(`admins/${auth.currentUser.uid}`).once('value');
+            console.log("7. Admin data exists:", adminSnap.exists());
+            console.log("8. Admin data:", adminSnap.val());
+        } catch (e) {
+            console.error("7. Admin data fetch failed:", e);
+        }
+    }
+
+    // Test orders access
+    try {
+        const ordersRef = Outlet.ref("orders");
+        const ordersSnap = await ordersRef.limitToLast(1).once('value');
+        console.log("9. Orders path:", ordersRef.path.toString());
+        console.log("10. Orders accessible:", ordersSnap.exists());
+        console.log("11. Sample order count:", ordersSnap.numChildren());
+        if (ordersSnap.exists()) {
+            console.log("12. Sample order data:", Object.keys(ordersSnap.val())[0]);
+        }
+    } catch (e) {
+        console.error("9. Orders fetch failed:", e);
+    }
+
+    console.log("🔍 DATABASE DIAGNOSTIC COMPLETE");
+    console.log("💡 If issues found, check Firebase Console and database rules");
+};
 
 /**
  * OUTLET SEPARATION HELPER
@@ -57,26 +156,44 @@ if (window.reCaptchaSiteKey) {
  */
 export const Outlet = {
     get current() {
-        return (window.currentOutlet || 'pizza').toLowerCase();
+        // Fallback chain: Window -> SessionStorage -> Default
+        let outlet = window.currentOutlet || sessionStorage.getItem('adminSelectedOutlet') || 'pizza';
+        outlet = outlet.toLowerCase().trim();
+        if (!outlet) outlet = 'pizza';
+        return outlet;
     },
     ref(path) {
         if (!path) return db.ref();
 
         // Shared paths that stay at root level
-        const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'bot', 'logs'];
-        const rootPath = path.split('/')[0];
+        const globalPaths = ['admins', 'riders', 'logs', 'bot', 'riderStats', 'migrationStatus', 'admins_list'];
 
-        let finalPath;
-        if (shared.includes(rootPath)) {
-            finalPath = path;
-        } else {
-            // Outlet-specific paths
-            finalPath = `${this.current}/${path}`;
-        }
+        // Normalize path and get first segment
+        const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+        const firstSegment = cleanPath.split('/')[0];
         
-        console.log(`[Outlet] Resolving path: "${path}" -> "${finalPath}" (Outlet: ${this.current})`);
+        let finalPath;
+
+        // If path is global, do not prefix
+        if (globalPaths.includes(firstSegment)) {
+            finalPath = cleanPath;
+            console.log(`[Outlet] Global Path: "${path}" -> "${finalPath}"`);
+        } else {
+            // All other paths are outlet-specific
+            finalPath = `${this.current}/${cleanPath}`;
+            console.log(`[Outlet] Scoped Path: "${path}" -> "${finalPath}" (Outlet: ${this.current})`);
+        }
+
         return db.ref(finalPath);
     }
+};
+
+// Emergency debugging tool
+window.forceOutlet = (name) => {
+    console.warn(`[Outlet] EMERGENCY OVERRIDE: ${name}`);
+    window.currentOutlet = name;
+    sessionStorage.setItem('adminSelectedOutlet', name);
+    if (window.diagnoseDatabase) window.diagnoseDatabase();
 };
 
 /**

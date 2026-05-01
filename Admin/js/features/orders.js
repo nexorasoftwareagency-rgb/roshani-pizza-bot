@@ -9,6 +9,7 @@ import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit } f
 import { showAlert, addNotification, highlightOrder } from './notifications.js';
 
 // Order callback storage for safe detachment
+let _ordersRef = null;
 let _ordersValueCb = null;
 let _ordersChildCb = null;
 let _ordersChangedCb = null;
@@ -25,10 +26,10 @@ export function initRealtimeListeners() {
         if (_ordersChangedCb) r.off("child_changed", _ordersChangedCb);
     });
 
-    if (_ordersValueCb) {
-        ['pizza', 'cake'].forEach(o => {
-            db.ref(`${o}/orders`).off("value", _ordersValueCb);
-        });
+    if (_ordersValueCb && _ordersRef) {
+        _ordersRef.off("value", _ordersValueCb);
+        _ordersRef = null;
+        _ordersValueCb = null;
     }
 
     let firstLoad = true;
@@ -67,16 +68,39 @@ export function initRealtimeListeners() {
     db.ref("cake/orders").on("child_changed", _ordersChangedCb);
 
     // 3. Main Value Sync (Rendering) with Pagination
-    const ordersRef = Outlet.ref("orders");
+    const fromDate = document.getElementById("orderFrom")?.value;
+    const toDate = document.getElementById("orderTo")?.value;
+
+    try {
+        _ordersRef = Outlet.ref("orders");
+        if (!_ordersRef) throw new Error("Could not resolve orders reference");
+    } catch (err) {
+        console.error("[Orders] Fatal: Failed to initialize orders reference:", err);
+        return;
+    }
+
+    console.log(`[Orders] Initializing listeners for: ${_ordersRef.toString()} (Filter: ${fromDate || 'ALL'} to ${toDate || 'ALL'})`);
     const limit = state.orderLimit || 50;
     
     _ordersValueCb = snap => {
         firstLoad = false;
-        console.log(`[Orders] Received snapshot: ${snap.numChildren()} orders (Outlet: ${window.currentOutlet})`);
+        console.log(`[Orders] Received snapshot: ${snap.numChildren()} orders`);
+        state.lastOrdersSnap = snap;
         renderOrders(snap);
     };
 
-    ordersRef.orderByChild("createdAt").limitToLast(limit).on("value", _ordersValueCb, err => {
+    let query = _ordersRef.orderByChild("createdAt");
+    
+    if (fromDate && toDate) {
+        // Query by date range (inclusive)
+        // We append 'T00:00:00.000Z' and 'T23:59:59.999Z' to cover the whole day
+        query = query.startAt(`${fromDate}T00:00:00.000Z`).endAt(`${toDate}T23:59:59.999Z`);
+    } else {
+        // Fallback to recent 50
+        query = query.limitToLast(limit);
+    }
+
+    query.on("value", _ordersValueCb, err => {
         console.error("[Orders] Firebase Read Error:", err);
         showToast("Error loading orders: " + err.message, "error");
     });
@@ -114,7 +138,14 @@ export function renderOrders(snap) {
     const allOrders = Array.from(state.ordersMap.entries())
         .map(([id, o]) => ({ id, ...o }));
 
-    const sortedOrders = [...allOrders].sort((a, b) => {
+    const fromDate = document.getElementById('orderFrom')?.value;
+    const toDate = document.getElementById('orderTo')?.value;
+
+    const sortedOrders = [...allOrders].filter(o => {
+        if (!fromDate || !toDate) return true;
+        const oDate = new Date(o.createdAt).toISOString().split('T')[0];
+        return oDate >= fromDate && oDate <= toDate;
+    }).sort((a, b) => {
         const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return timeB - timeA;
@@ -132,10 +163,23 @@ export function renderOrders(snap) {
     let liveCount = 0;
     sortedOrders.forEach(o => {
         const id = o.id;
-        // Filter by outlet if needed (though Outlet.ref should handle it)
-        if (o.outlet && window.currentOutlet && o.outlet.toLowerCase() !== window.currentOutlet.toLowerCase()) {
-            return;
+        // Normalize items for rendering and calculations
+        let items = [];
+        if (Array.isArray(o.cart)) {
+            items = o.cart;
+        } else if (o.items) {
+            items = Array.isArray(o.items) ? o.items : Object.values(o.items);
+        } else if (o.item) {
+            // Legacy single-item format
+            items = [{
+                name: o.item,
+                size: o.size || 'Regular',
+                addon: o.addon || 'None',
+                qty: 1,
+                price: o.total || 0
+            }];
         }
+        o.normalizedItems = items;
 
         const isLive = ["Placed", "Confirmed", "Preparing", "Cooked", "Out for Delivery"].includes(o.status);
         if (isLive) liveCount++;
@@ -230,10 +274,11 @@ export function renderOrders(snap) {
  */
 
 function updateDashboardStats(orders) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('sv-SE'); // Local YYYY-MM-DD
     
     const todayOrders = orders.filter(o => {
-        const date = o.createdAt ? new Date(o.createdAt).toISOString().split('T')[0] : "";
+        if (!o.createdAt) return false;
+        const date = new Date(o.createdAt).toLocaleDateString('sv-SE');
         return date === today;
     });
 
@@ -248,7 +293,7 @@ function updateDashboardStats(orders) {
         'statOrders': todayOrders.length,
         'statPending': pending,
         'statRevenue': `₹${revenue.toLocaleString()}`,
-        'statRidersActive': state.ridersList.filter(r => r.status === "Online" || r.status === "On Delivery").length
+        'statRidersActive': (state.ridersList || []).filter(r => r.status === "Online" || r.status === "On Delivery").length
     };
 
     Object.entries(els).forEach(([id, val]) => {
@@ -260,6 +305,17 @@ function updateDashboardStats(orders) {
 function renderPriorityOrders(orders) {
     const container = document.getElementById('priorityOrderList');
     if (!container) return;
+
+    // Remove old listener if any and add delegation
+    if (!container.dataset.hasListener) {
+        container.addEventListener('click', (e) => {
+            const card = e.target.closest('.priority-card');
+            if (card && card.dataset.orderId) {
+                window.openOrderDrawer(card.dataset.orderId);
+            }
+        });
+        container.dataset.hasListener = "true";
+    }
 
     const priority = orders
         .filter(o => ["Placed", "Confirmed", "Preparing"].includes(o.status))
@@ -275,7 +331,7 @@ function renderPriorityOrders(orders) {
     }
 
     container.innerHTML = priority.map(o => `
-        <div class="priority-card ${o.status.toLowerCase().replace(/ /g, '')}" onclick="window.openOrderDrawer('${o.id}')">
+        <div class="priority-card ${o.status.toLowerCase().replace(/ /g, '')}" data-order-id="${o.id}">
             <div class="flex-row flex-between">
                 <div>
                     <span class="p-id">#${escapeHtml(o.orderId || o.id.slice(-5))}</span>
@@ -296,12 +352,13 @@ function renderTopItems(orders) {
 
     const itemCounts = {};
     orders.forEach(o => {
-        if (o.items) {
-            Object.values(o.items).forEach(item => {
-                const name = item.name;
+        const items = o.normalizedItems || (Array.isArray(o.cart) ? o.cart : (o.items ? Object.values(o.items) : []));
+        items.forEach(item => {
+            const name = (item.name && String(item.name).trim()) || (item.item && String(item.item).trim()) || item.sku || item.id;
+            if (name) {
                 itemCounts[name] = (itemCounts[name] || 0) + (Number(item.qty) || 1);
-            });
-        }
+            }
+        });
     });
 
     const topItems = Object.entries(itemCounts)
@@ -432,17 +489,19 @@ export async function openOrderDrawer(id) {
     const content = document.getElementById('orderDrawerContent');
     if (!content) return;
 
-    // Render items
-    const itemsHtml = order.items.map(item => `
+    // Render items using normalized array
+    const items = order.normalizedItems || [];
+    const itemsHtml = items.map(item => `
         <div class="drawer-item">
             <div class="flex-between">
                 <div>
-                    <span class="font-600">${escapeHtml(item.name)}</span>
-                    <span class="text-muted fs-11">(${escapeHtml(item.size)})</span>
+                    <span class="font-600">${escapeHtml(item.name || "Item")}</span>
+                    <span class="text-muted fs-11">(${escapeHtml(item.size || 'N/A')})</span>
                 </div>
-                <div class="font-600">₹${item.price} x ${item.qty}</div>
+                <div class="font-600">₹${item.price || item.total || 0} x ${item.qty || 1}</div>
             </div>
-            ${item.addons ? `<div class="text-muted-small">+ ${item.addons.map(a => a.name).join(', ')}</div>` : ''}
+            ${item.addon && item.addon !== 'None' ? `<div class="text-muted-small">+ ${escapeHtml(item.addon)}</div>` : ''}
+            ${item.addons && Array.isArray(item.addons) ? `<div class="text-muted-small">+ ${item.addons.map(a => escapeHtml(a.name || '')).filter(n => n).join(', ')}</div>` : ''}
         </div>
     `).join('');
 

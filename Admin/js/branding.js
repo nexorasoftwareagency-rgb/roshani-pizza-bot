@@ -51,6 +51,7 @@ export function updateBranding() {
 export function switchOutlet(val) {
     sessionStorage.setItem('adminSelectedOutlet', val);
     state.currentOutlet = val;
+    window.currentOutlet = val;
 
     // Sync switchers
     const desktopSwitcher = document.getElementById('outletSwitcher');

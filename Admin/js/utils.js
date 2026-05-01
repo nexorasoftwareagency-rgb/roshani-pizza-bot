@@ -53,12 +53,28 @@ export const standardizeOrderData = (o) => {
     if (!o) return null;
 
     const orderId = o.orderId || o.id || (o.key ? o.key.slice(-8).toUpperCase() : "ORD-N/A");
+    
+    // Normalize items from various formats
+    let rawItems = [];
+    if (Array.isArray(o.cart)) {
+        rawItems = o.cart;
+    } else if (o.items) {
+        rawItems = Array.isArray(o.items) ? o.items : Object.values(o.items);
+        rawItems = [{
+            name: o.item,
+            size: o.size || 'Regular',
+            addon: o.addon || 'None',
+            qty: 1,
+            price: o.price || o.unitPrice || o.total || 0
+        }];
+    }
 
-    const items = (o.items || []).map(i => ({
-        name: i.name || "Unknown Item",
+    const items = rawItems.map(i => ({
+        name: i.name || i.item || "Unknown Item",
         size: i.size || "",
-        quantity: parseInt(i.quantity) || 1,
-        price: parseFloat(i.price || i.unitPrice || 0)
+        quantity: parseInt(i.qty || i.quantity || 1, 10),
+        price: parseFloat(i.price || i.unitPrice || i.total || 0),
+        addon: i.addon || (i.addons && Array.isArray(i.addons) ? i.addons.map(a => a.name).join(', ') : "")
     }));
 
     const orderDate = o.createdAt ? new Date(o.createdAt) : new Date();
@@ -70,14 +86,16 @@ export const standardizeOrderData = (o) => {
         customerName: o.customerName || "Walk-in Customer",
         phone: o.phone || o.whatsappNumber || "",
         address: o.address || "",
-        customerNote: o.customerNote || "",
+        customerNote: o.customerNote || o.note || "",
         items: items,
         subtotal: parseFloat(o.subtotal || o.itemTotal || 0),
         discount: parseFloat(o.discount || 0),
         deliveryFee: parseFloat(o.deliveryFee || 0),
         total: parseFloat(o.total || 0),
         paymentMethod: o.paymentMethod || "Cash",
-        type: o.type === "Walk-in" ? "Dine-in" : "Online Booked"
+        type: o.type === "Walk-in" ? "Dine-in" : (o.type || "Online Booked"),
+        status: o.status || "Placed",
+        outlet: o.outlet || (window.currentOutlet ? (window.currentOutlet.charAt(0).toUpperCase() + window.currentOutlet.slice(1)) : "Pizza")
     };
 };
 
@@ -95,7 +113,7 @@ export const logAudit = async (action, details = {}) => {
         });
     } catch (e) {
         // Silently fail for logAudit to avoid init crashes
-        if (!e.message?.includes('PERMISSION_DENIED')) {
+        if (e?.code !== 'permission-denied') {
             console.warn("[Audit] Log failed:", e);
         }
     }

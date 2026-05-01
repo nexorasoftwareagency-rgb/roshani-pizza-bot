@@ -11,16 +11,23 @@ export function loadRiders() {
     // Detach previous listeners
     cleanupRiders();
 
-    console.log("[Riders] Attaching real-time listeners...");
+    const ridersRef = Outlet.ref("riders");
+    const statsRef = Outlet.ref("riderStats");
+    
+    console.log(`[Riders] Initializing listeners at: ${ridersRef.toString()}`);
+    
+    // Ensure we are online
+    db.goOnline();
+
     // Listen for performance stats
-    Outlet.ref("riderStats").on("value", s => {
+    statsRef.on("value", s => {
         state.riderStatsData = s.val() || {};
         if (state.ridersList.length > 0) renderRiders();
     });
 
     // Listen for riders
-    Outlet.ref("riders").on("value", snapshot => {
-        console.log(`[Riders] Received ${snapshot.numChildren()} riders`);
+    ridersRef.on("value", snapshot => {
+        console.log(`[Riders] Data received: ${snapshot.numChildren()} items`);
         const data = snapshot.val();
         state.ridersList = [];
         if (data) {
@@ -92,20 +99,28 @@ export function renderRiders(searchTerm = "") {
         if (table) {
             const tr = document.createElement('tr');
             tr.className = "rider-row";
+            
+            // Mask phone for privacy in general list
+            const maskedPhone = r.phone ? '******' + escapeHtml(r.phone.slice(-4)) : 'N/A';
+            const safeEmail = escapeHtml(r.email || "");
+            const safeName = escapeHtml(r.name || "Unnamed Rider");
+            const safePhoto = (r.profilePhoto || profileImg).replace(/"/g, '&quot;');
+            const safeId = escapeHtml(r.id);
+
             tr.innerHTML = `
                 <td>
                     <div class="rider-identity-cell">
-                        <img src="${profileImg}" class="rider-avatar-large" alt="${escapeHtml(r.name)}">
+                        <img src="${safePhoto}" class="rider-avatar-large" alt="${safeName}">
                         <div class="rider-identity-text">
-                            <span class="rider-name-bold">${escapeHtml(r.name)}</span>
-                            <span class="rider-subtext"><i data-lucide="phone" style="width:10px;"></i> ${r.phone ? '******' + escapeHtml(r.phone.slice(-4)) : 'N/A'}</span>
+                            <span class="rider-name-bold">${safeName}</span>
+                            <span class="rider-subtext"><i data-lucide="phone" style="width:10px;"></i> ${maskedPhone}</span>
                         </div>
                     </div>
                 </td>
                 <td>
                     <div class="credential-tag">
                         <span class="tag-label">ID:</span>
-                        <span class="tag-value">${escapeHtml(r.email)}</span>
+                        <span class="tag-value">${safeEmail}</span>
                     </div>
                 </td>
                 <td>
@@ -118,7 +133,7 @@ export function renderRiders(searchTerm = "") {
                     <div class="quick-stats-grid">
                         <div class="stat-mini">
                             <span class="mini-label">Orders</span>
-                            <span class="mini-value">${stats.totalOrders}</span>
+                            <span class="mini-value">${parseInt(stats.totalOrders || 0, 10)}</span>
                         </div>
                         <div class="stat-mini">
                             <span class="mini-label">Wallet</span>
@@ -139,13 +154,13 @@ export function renderRiders(searchTerm = "") {
                 </td>
                 <td>
                     <div class="action-buttons-flex">
-                        <button data-action="editRider" data-id="${r.id}" class="btn-icon-premium" title="Edit Rider">
+                        <button data-action="editRider" data-id="${safeId}" class="btn-icon-premium" title="Edit Rider">
                             <i data-lucide="edit-2"></i>
                         </button>
-                        <button data-action="resetRiderPassword" data-email="${r.email}" class="btn-icon-premium text-warning" title="Reset Password">
+                        <button data-action="resetRiderPassword" data-email="${safeEmail}" class="btn-icon-premium text-warning" title="Reset Password">
                             <i data-lucide="key"></i>
                         </button>
-                        <button data-action="deleteRider" data-id="${r.id}" class="btn-icon-premium text-danger" title="Delete Rider">
+                        <button data-action="deleteRider" data-id="${safeId}" class="btn-icon-premium text-danger" title="Delete Rider">
                             <i data-lucide="trash-2"></i>
                         </button>
                     </div>
@@ -158,17 +173,21 @@ export function renderRiders(searchTerm = "") {
         if (activeDashboard) {
             const card = document.createElement('div');
             card.className = `rider-status-card ${statusClass}`;
+            const safeName = escapeHtml(r.name || "Rider");
+            const safePhoto = (r.profilePhoto || profileImg).replace(/"/g, '&quot;');
+            const safeStatus = escapeHtml(displayStatus);
+
             card.innerHTML = `
                 <div class="rider-card-header">
-                    <img src="${profileImg}" alt="${escapeHtml(r.name)}">
+                    <img src="${safePhoto}" alt="${safeName}">
                     <div class="rider-info">
-                        <h4>${escapeHtml(r.name)}</h4>
-                        <p>${escapeHtml(displayStatus)}</p>
+                        <h4>${safeName}</h4>
+                        <p>${safeStatus}</p>
                     </div>
                 </div>
-                ${displayStatus === 'On Delivery' ? `
+                ${displayStatus === 'On Delivery' && r.currentOrder ? `
                     <div class="active-task-pulse">
-                        <span>Current: Order #${r.currentOrder.slice(-5)}</span>
+                        <span>Current: Order #${escapeHtml(String(r.currentOrder).slice(-5))}</span>
                     </div>
                 ` : ''}
             `;

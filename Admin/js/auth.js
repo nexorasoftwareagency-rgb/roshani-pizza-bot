@@ -4,6 +4,7 @@ import { showToast, logAudit } from './utils.js';
 import * as ui from './ui.js';
 import { initRealtimeListeners } from './features/orders.js';
 import { loadRiders } from './features/riders.js';
+import { updateBranding } from './branding.js';
 
 let idleTimer;
 const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
@@ -12,35 +13,24 @@ function resetIdleTimer() {
     clearTimeout(idleTimer);
     idleTimer = setTimeout(() => {
         showToast("Session expired due to inactivity", "info");
-        auth.signOut();
+        userLogout();
     }, IDLE_TIMEOUT);
 }
 
-function updateBranding() {
-    const brand = window.currentOutlet === 'cake' ? 'cake' : 'pizza';
-    const primary = brand === 'pizza' ? '#F97316' : '#EC4899';
-    const bg = brand === 'pizza' ? '#F8FAFC' : '#FFF1F2';
-    
-    document.documentElement.style.setProperty('--primary', primary);
-    document.documentElement.style.setProperty('--bg-secondary', bg);
-    
-    const badge = document.getElementById('outletBadge');
-    const mobileBadge = document.getElementById('mobileOutletBadge');
-    const label = brand === 'pizza' ? '🍕 PIZZA OUTLET' : '🎂 CAKE OUTLET';
-    
-    if (badge) {
-        badge.innerText = label;
-        badge.className = `outlet-badge ${brand}`;
-    }
-    if (mobileBadge) {
-        mobileBadge.innerText = label;
-        mobileBadge.className = `outlet-badge ${brand}`;
-    }
+function initActivityListeners() {
+    const events = ['mousemove', 'keydown', 'click', 'touchstart', 'visibilitychange'];
+    events.forEach(e => window.addEventListener(e, resetIdleTimer, { passive: true }));
 }
+
+function removeActivityListeners() {
+    const events = ['mousemove', 'keydown', 'click', 'touchstart', 'visibilitychange'];
+    events.forEach(e => window.removeEventListener(e, resetIdleTimer));
+}
+
 
 export function initAuth() {
     console.log("[Auth] Initializing State Listener...");
-    
+
     // Setup login form listener
     const loginForm = document.getElementById("loginForm");
     if (loginForm) {
@@ -56,31 +46,72 @@ export function initAuth() {
         };
     }
 
+    // Add diagnostic button to login form (Gated for non-production/debug only)
+    const isDebuggable = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || localStorage.getItem('DEBUG_MODE') === 'true';
+    const loginCard = document.querySelector('.login-card');
+    if (loginCard && isDebuggable && !document.getElementById('diagnosticBtn')) {
+        const diagBtn = document.createElement('button');
+        diagBtn.id = 'diagnosticBtn';
+        diagBtn.type = 'button';
+        diagBtn.innerText = '🔍 Run Diagnostics';
+        diagBtn.style.cssText = 'margin-top: 15px; background: #666; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 12px;';
+        diagBtn.onclick = () => {
+            if (window.diagnoseDatabase) {
+                window.diagnoseDatabase();
+            } else {
+                console.log("Diagnostic function not loaded yet");
+            }
+        };
+        loginCard.appendChild(diagBtn);
+    }
+
     auth.onAuthStateChanged(async (user) => {
+        console.log("[Auth] State change detected:", user ? `Logged in as ${user.email}` : "Logged out");
         if (!user) {
             console.log("[Auth] State: Logged Out");
             state.adminData = null;
             const overlay = document.getElementById("authOverlay");
             const layout = document.querySelector(".layout");
+            const loginBtn = document.querySelector("#loginForm button");
+            
             if (overlay) overlay.classList.remove('hidden');
             if (layout) layout.classList.add('hidden');
+            if (loginBtn) {
+                loginBtn.disabled = false;
+                loginBtn.innerText = "Sign In";
+            }
             return;
         }
 
         console.log("[Auth] State Change:", user.email, "Verified:", user.emailVerified);
+        console.log(`[Auth] User Logged In: ${user.email} (UID: ${user.uid})`);
         
         let adminData = null;
         try {
             console.log("[Auth] Fetching admin record for:", user.uid);
-            
+            console.log(`[Auth] Fetching profile from: admins/${user.uid}`);
+            console.log("[Auth] Current outlet:", window.currentOutlet);
+
             // Use a promise with timeout to prevent hang
             const adminSnap = await Promise.race([
                 Outlet.ref(`admins/${user.uid}`).once("value"),
-                new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000))
+                new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000))
             ]);
+            console.log("[Auth] Admin snapshot exists:", adminSnap.exists());
+            if (adminSnap.exists()) {
+                const rawVal = adminSnap.val();
+                const sanitized = { id: rawVal.id || user.uid, email: rawVal.email, role: rawVal.role, outlet: rawVal.outlet };
+                console.log("[Auth] Admin snapshot (sanitized):", sanitized);
+            }
             
             adminData = adminSnap.val();
             console.log("[Auth] Admin Data Received:", adminData ? "OK" : "MISSING");
+            
+            if (!adminData) {
+                console.error("[Auth] Access Denied: No profile found for UID", user.uid);
+                throw new Error("ACCESS_DENIED");
+            }
+            console.log("[Auth] Profile loaded successfully:", adminData.name, "(Outlet:", adminData.outlet, ")");
         } catch (e) {
             console.error("[Auth] Admin Profile Fetch Error:", e);
             // Check custom claims for emergency super admin access
@@ -96,8 +127,36 @@ export function initAuth() {
         }
 
         if (!adminData) {
+            console.error("[Auth] No admin data found after profile fetch and claims check.");
             showToast("ACCESS DENIED: Unauthorized Account", "error");
-            setTimeout(() => auth.signOut(), 1500);
+            
+            const overlay = document.getElementById("authOverlay");
+            if (overlay) {
+                overlay.innerHTML = ''; // Clear previous content
+                const modal = document.createElement('div');
+                modal.className = 'auth-modal';
+                
+                const title = document.createElement('h2');
+                title.className = 'text-danger';
+                title.textContent = 'ACCESS DENIED';
+                
+                const msg = document.createElement('p');
+                msg.textContent = 'No administrative profile found for this account.';
+                
+                const uidInfo = document.createElement('p');
+                uidInfo.className = 'fs-12 text-muted';
+                uidInfo.textContent = `UID: ${user.uid}`;
+                
+                const retryBtn = document.createElement('button');
+                retryBtn.className = 'btn-primary mt-20';
+                retryBtn.textContent = 'Try Another Account';
+                retryBtn.addEventListener('click', () => location.reload());
+                
+                modal.append(title, msg, uidInfo, retryBtn);
+                overlay.appendChild(modal);
+            }
+            
+            setTimeout(() => auth.signOut(), 3000);
             return;
         }
 
@@ -105,9 +164,11 @@ export function initAuth() {
         state.adminData = adminData;
         logAudit('LOGIN_SUCCESS', { email: user.email });
         resetIdleTimer();
+        initActivityListeners();
 
         const savedOutlet = sessionStorage.getItem('adminSelectedOutlet') || adminData.outlet || 'pizza';
         window.currentOutlet = savedOutlet.toLowerCase();
+        state.currentOutlet = window.currentOutlet;
 
         // Handle Multi-Outlet Logic
         if (adminData.isSuper) {
@@ -129,13 +190,6 @@ export function initAuth() {
             }
         }
 
-        // Sync Branding
-        const brandType = window.currentOutlet === 'cake' ? 'cake' : 'pizza';
-        if (sessionStorage.getItem('admin_brand') !== brandType) {
-            sessionStorage.setItem('admin_brand', brandType);
-            location.reload();
-            return;
-        }
 
         // Show UI
         const authOverlay = document.getElementById("authOverlay");
@@ -169,7 +223,11 @@ export function requireAdminReauth(onSuccess) {
     const passInput = document.getElementById('reauthPassword');
     const confirmBtn = document.getElementById('btnConfirmReauth');
 
-    if (!modal || !passInput || !confirmBtn) return;
+    if (!modal || !passInput || !confirmBtn) {
+        console.warn("[Auth] Reauth modal elements missing, bypassing...");
+        if (typeof onSuccess === 'function') onSuccess();
+        return;
+    }
 
     modal.classList.remove('hidden');
     passInput.value = "";
@@ -198,6 +256,8 @@ export function requireAdminReauth(onSuccess) {
  */
 export function userLogout() {
     logAudit('LOGOUT', { email: auth.currentUser?.email });
+    removeActivityListeners();
+    clearTimeout(idleTimer);
     auth.signOut();
 }
 
@@ -211,8 +271,8 @@ export async function doLogin(email, pass) {
             btn.disabled = true;
             btn.innerText = "Authenticating...";
         }
-        await auth.signInWithEmailAndPassword(email, pass);
         logAudit('LOGIN_ATTEMPT', { email });
+        await auth.signInWithEmailAndPassword(email, pass);
     } catch (error) {
         console.error("Login Error:", error);
         showToast(error.message, "error");

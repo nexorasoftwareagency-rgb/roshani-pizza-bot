@@ -31,6 +31,7 @@ self.addEventListener('activate', (e) => {
       );
     })
   );
+  self.clients.claim();
 });
 
 // Fetch Event - Handle offline routing

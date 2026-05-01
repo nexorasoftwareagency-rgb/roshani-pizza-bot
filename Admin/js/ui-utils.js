@@ -27,20 +27,20 @@ export const showConfirm = (message, title = "Confirm Action") => {
         `;
 
         overlay.innerHTML = `
-            <div style="background: #1c1c1c; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+            <div class="confirm-box" style="background: #1c1c1c; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
                         padding: 32px; max-width: 360px; width: 90%; text-align: center;
                         box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
-                <h3 id="confirmTitle" style="color: #fff; margin: 0 0 12px; font-size: 18px; font-weight: 700;"></h3>
-                <p id="confirmMessage" style="color: #aaa; font-size: 14px; margin: 0 0 24px;"></p>
+                <h3 class="confirm-title" style="color: #fff; margin: 0 0 12px; font-size: 18px; font-weight: 700;"></h3>
+                <p class="confirm-message" style="color: #aaa; font-size: 14px; margin: 0 0 24px;"></p>
                 <div style="display: flex; gap: 12px; justify-content: center;">
-                    <button id="confirmNo" style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #333; background: transparent; color: #aaa; cursor: pointer; font-size: 14px; font-weight: 600;">Cancel</button>
-                    <button id="confirmYes" style="flex: 1; padding: 12px; border-radius: 12px; border: none; background: var(--action-green); color: #fff; cursor: pointer; font-size: 14px; font-weight: 700;">Confirm</button>
+                    <button class="confirm-no" style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #333; background: transparent; color: #aaa; cursor: pointer; font-size: 14px; font-weight: 600;">Cancel</button>
+                    <button class="confirm-yes" style="flex: 1; padding: 12px; border-radius: 12px; border: none; background: var(--action-green); color: #fff; cursor: pointer; font-size: 14px; font-weight: 700;">Confirm</button>
                 </div>
             </div>`;
 
         document.body.appendChild(overlay);
-        document.getElementById('confirmTitle').innerText = title;
-        document.getElementById('confirmMessage').innerText = message;
+        overlay.querySelector('.confirm-title').innerText = title;
+        overlay.querySelector('.confirm-message').innerText = message;
 
         const cleanup = (val) => {
             overlay.style.opacity = '0';
@@ -50,8 +50,8 @@ export const showConfirm = (message, title = "Confirm Action") => {
             }, 200);
         };
 
-        document.getElementById('confirmYes').onclick = () => cleanup(true);
-        document.getElementById('confirmNo').onclick = () => cleanup(false);
+        overlay.querySelector('.confirm-yes').onclick = () => cleanup(true);
+        overlay.querySelector('.confirm-no').onclick = () => cleanup(false);
         overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
     });
 };

@@ -24,11 +24,16 @@ export function showAlert(data, type = 'info') {
         const order = data;
         const orderKey = order.orderId || order.id;
         const outletIcon = order.outlet === 'cake' ? '🎂' : '🍕';
+        
+        // Calculate item count from any format (cart, items, or single item)
+        const cartItems = order.cart ? (Array.isArray(order.cart) ? order.cart : Object.values(order.cart)) : null;
+        const itemsList = cartItems || (order.items ? (Array.isArray(order.items) ? order.items : Object.values(order.items)) : []);
+        const itemCount = itemsList.length || (order.item ? 1 : 0);
 
         div.innerHTML = `
             <div class="alert-content" data-action="switchTab" data-tab="orders">
                 <div class="alert-title">${outletIcon} New Order #${escapeHtml(orderKey.slice(-5))}</div>
-                <div class="alert-sub">₹${escapeHtml(order.total)} • ${(order.items || []).length} item(s)</div>
+                <div class="alert-sub">₹${escapeHtml(order.total)} • ${itemCount} item(s)</div>
             </div>
             <button class="alert-print-btn" data-action="printReceiptById" data-id="${escapeHtml(orderKey)}">🖨️ Print</button>
         `;
