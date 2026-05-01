@@ -298,9 +298,15 @@ async function notifyAdmin(sock, orderId, order, type = 'NEW') {
 
 async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
     try {
-        const jid = formatJid(order.whatsappNumber || order.phone);
+        // FIX: Prefer the original sender JID (whatsappNumber) directly without formatting if it exists.
+        // This avoids issues with prefixes like +91 or non-standard number lengths.
+        let jid = order.whatsappNumber;
+        if (!jid || !jid.includes('@')) {
+            jid = formatJid(order.whatsappNumber || order.phone);
+        }
+
         if (!jid) {
-            console.error(`[Status Update] ❌ FAILED: No JID for order ${id}. Phone: ${order.phone}, JID: ${order.whatsappNumber}`);
+            console.error(`[Status Update] ❌ FAILED: No valid JID for order ${id}. Phone: ${order.phone}, whatsappNumber: ${order.whatsappNumber}`);
             return;
         }
 

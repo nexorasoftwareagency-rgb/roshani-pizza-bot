@@ -25,6 +25,10 @@ export const toggleSidebar = () => {
     } else {
         const isActive = sidebar.classList.toggle('active');
         if (overlay) overlay.classList.toggle('active', isActive);
+        
+        if (isActive) {
+            history.pushState({ action: 'closeUI', target: 'sidebar' }, "", window.location.hash);
+        }
     }
 };
 
@@ -221,10 +225,16 @@ export const themeManager = new ThemeManager();
 window.addEventListener('popstate', (event) => {
     const state = event.state;
     
-    // 1. Handle UI Component closing (Back button closes drawer first)
-    if (state && state.action === 'closeDrawer') {
-        const el = document.getElementById(state.targetId);
-        if (el) el.classList.remove('active');
+    // 1. Handle UI Component closing (Back button closes drawer/sidebar first)
+    if (state && (state.action === 'closeDrawer' || state.action === 'closeUI')) {
+        if (state.action === 'closeDrawer') {
+            const el = document.getElementById(state.targetId);
+            if (el) el.classList.remove('active');
+        } else if (state.target === 'sidebar') {
+            closeSidebar();
+        } else if (state.target === 'notifications') {
+            toggleNotificationSheet(false);
+        }
         return;
     }
 
