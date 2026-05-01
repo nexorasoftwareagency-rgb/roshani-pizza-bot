@@ -118,7 +118,8 @@ export const switchTab = (tabId, skipHistory = false) => {
         if (tabId !== 'feedback') cleanupFeedbacks();
         if (tabId !== 'liveTracker') cleanupLiveRiderTracker();
 
-        // 2. Initialize/Load listeners ONLY for the active tab
+        // --- PHASE 3.25: DATA REFRESH ---
+        // Refresh appropriate data based on the tab
         switch (tabId) {
             case 'liveTracker':
                 setTimeout(() => initLiveRiderTracker(), 100);
@@ -151,19 +152,16 @@ export const switchTab = (tabId, skipHistory = false) => {
                 loadLostSales();
                 break;
             case 'live':
-                loadRiders();
-                if (state.lastOrdersSnap) renderOrders(state.lastOrdersSnap);
-                break;
-            case 'orders':
-            case 'dashboard':
-                if (state.lastOrdersSnap) renderOrders(state.lastOrdersSnap);
+                loadRiders(); // For rider assignment dropdowns
                 break;
         }
 
-        // --- PHASE 3.26: NAVIGATION ORCHESTRATION ---
+        // Global Order Refresh for core tabs
         if (['dashboard', 'orders', 'live'].includes(tabId)) {
-             console.log(`[Navigation] Active tab ${tabId} - ensuring UI refresh`);
-             if (state.lastOrdersSnap) renderOrders(state.lastOrdersSnap);
+            console.log(`[Navigation] Refreshing orders for ${tabId}`);
+            if (state.lastOrdersSnap) {
+                renderOrders(state.lastOrdersSnap);
+            }
         }
     }
 };
@@ -221,9 +219,19 @@ export const themeManager = new ThemeManager();
 
 // --- BROWSER HISTORY ORCHESTRATION ---
 window.addEventListener('popstate', (event) => {
-    if (event.state && event.state.tabId) {
-        console.log(`[History] Navigating back to: ${event.state.tabId}`);
-        switchTab(event.state.tabId, true);
+    const state = event.state;
+    
+    // 1. Handle UI Component closing (Back button closes drawer first)
+    if (state && state.action === 'closeDrawer') {
+        const el = document.getElementById(state.targetId);
+        if (el) el.classList.remove('active');
+        return;
+    }
+
+    // 2. Handle Tab Navigation
+    if (state && state.tabId) {
+        console.log(`[History] Navigating to tab: ${state.tabId}`);
+        switchTab(state.tabId, true);
     } else {
         const hash = window.location.hash.replace('#', '');
         if (hash) switchTab(hash, true);

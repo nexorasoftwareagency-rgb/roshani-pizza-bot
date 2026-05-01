@@ -3,12 +3,16 @@
  * Handles service worker, installation prompt, and refresh circuit breaker.
  */
 
-import { showToast } from './utils.js';
-import { state } from './state.js';
+import { showConfirm } from './ui-utils.js';
 
 // 1. REFRESH CIRCUIT BREAKER & COMPLETE REFRESH
 export const completeSiteRefresh = async () => {
-    if (!confirm("⚠️ NUCLEAR REFRESH\n\nThis will purge all local caches, unregister the app, and reset all UI states. You will stay logged in, but the site will reload completely.\n\nAre you sure?")) return;
+    const ok = await showConfirm(
+        "This will purge all local caches, unregister the app, and reset UI states. You will NOT be logged out. Are you sure?",
+        "⚠️ Nuclear Refresh"
+    );
+    
+    if (!ok) return;
 
     showToast("Initializing Nuclear Refresh...", "warning");
     
@@ -36,6 +40,7 @@ export const completeSiteRefresh = async () => {
         
         // Identify and remove all keys EXCEPT Firebase Auth tokens
         Object.keys(localStorage).forEach(key => {
+            // Firebase Auth usually uses keys starting with 'firebase:authUser'
             if (!key.startsWith('firebase:')) {
                 localStorage.removeItem(key);
             }
@@ -73,32 +78,12 @@ export const completeSiteRefresh = async () => {
     if (refreshData.count > REFRESH_LIMIT) {
         console.error("CRITICAL: Infinite redirect loop detected. Stopping.");
         sessionStorage.setItem('erp_refresh_log', '{"count": 0, "first": 0}');
-        // Do NOT throw — a thrown error inside a module kills the entire module graph.
-        // Just log and prevent further reloads silently.
         return;
     }
 })();
 
-// 2. PULL TO REFRESH (MOBILE)
-let touchStart = -1;
-window.addEventListener('touchstart', (e) => {
-    if (window.scrollY === 0) touchStart = e.touches[0].pageY;
-    else touchStart = -1;
-}, { passive: true });
-
-window.addEventListener('touchend', (e) => {
-    if (touchStart === -1) return;
-    const touchEnd = e.changedTouches[0].pageY;
-    if (window.scrollY === 0 && touchEnd - touchStart > 120) {
-        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
-        completeSiteRefresh();
-    }
-    touchStart = -1;
-}, { passive: true });
-
-window.addEventListener('touchcancel', () => {
-    touchStart = -1;
-});
+// Note: Manual pull-to-refresh for Nuclear Refresh has been REMOVED to prevent accidental triggers.
+// It can only be triggered via the menu.
 
 // 2. PWA INSTALL LOGIC
 window.addEventListener('beforeinstallprompt', (e) => {
