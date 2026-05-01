@@ -8,6 +8,8 @@ import { state } from './state.js';
 
 // 1. REFRESH CIRCUIT BREAKER & COMPLETE REFRESH
 export const completeSiteRefresh = async () => {
+    if (!confirm("⚠️ NUCLEAR REFRESH\n\nThis will purge all local caches, unregister the app, and reset all UI states. You will stay logged in, but the site will reload completely.\n\nAre you sure?")) return;
+
     showToast("Initializing Nuclear Refresh...", "warning");
     
     try {
@@ -29,19 +31,24 @@ export const completeSiteRefresh = async () => {
             }
         }
 
-        // 3. Clear Storage
+        // 3. Selective Storage Wipe (Preserve Auth)
         sessionStorage.clear();
-        // localStorage.clear(); // Use with caution, maybe just specific keys?
-        // Let's clear specific persistent UI states
-        localStorage.removeItem('adminSelectedOutlet');
-        localStorage.removeItem('activeTab');
         
-        showToast("Caches Purged. Reloading...", "success");
+        // Identify and remove all keys EXCEPT Firebase Auth tokens
+        Object.keys(localStorage).forEach(key => {
+            if (!key.startsWith('firebase:')) {
+                localStorage.removeItem(key);
+            }
+        });
+        
+        console.log("[PWA] Local storage cleared (Preserving Auth).");
+        showToast("Caches Purged. Site Updated. Reloading...", "success");
 
-        // Delay for visual feedback
+        // Delay for visual feedback and ensure storage operations finish
         setTimeout(() => {
-            window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
-        }, 1000);
+            // Force a reload with a unique timestamp to bypass any ISP/Browser proxies
+            window.location.href = window.location.origin + window.location.pathname + '?nuclear=' + Date.now();
+        }, 1200);
 
     } catch (err) {
         console.error("Refresh failed:", err);

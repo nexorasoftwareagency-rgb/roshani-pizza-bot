@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { initRealtimeListeners } from './features/orders.js';
-import { ui } from './ui.js';
+import * as ui from './ui.js';
 
 
 export function updateBranding() {

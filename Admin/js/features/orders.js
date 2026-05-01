@@ -122,12 +122,15 @@ export function renderOrders(snap) {
     if (!snap) return;
 
     const activeTab = state.currentActiveTab || 'dashboard';
+    console.log(`[Orders] rendering started for tab: ${activeTab}`);
     const containers = {
         'dashboard': document.getElementById('ordersTable'),
         'orders': document.getElementById('ordersTableFull'),
         'live': document.getElementById('liveOrdersTable'),
         'payments': document.getElementById('paymentsTable')
     };
+
+    console.log(`[Orders] rendering started for tab: ${activeTab}. Containers found: ${Object.keys(containers).filter(k => containers[k]).join(', ')}`);
 
     // Build map for calculations
     state.ordersMap.clear();
@@ -142,14 +145,19 @@ export function renderOrders(snap) {
     const toDate = document.getElementById('orderTo')?.value;
 
     const sortedOrders = [...allOrders].filter(o => {
+        // Live tab should ALWAYS show its orders regardless of date range
+        if (activeTab === 'live') return true;
+        
         if (!fromDate || !toDate) return true;
-        const oDate = new Date(o.createdAt).toISOString().split('T')[0];
-        return oDate >= fromDate && oDate <= toDate;
+        const oDate = o.createdAt ? new Date(o.createdAt).toISOString().split('T')[0] : null;
+        return oDate && oDate >= fromDate && oDate <= toDate;
     }).sort((a, b) => {
         const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return timeB - timeA;
     });
+
+    console.log(`[Orders] Total orders: ${allOrders.length}, Filtered orders for ${activeTab}: ${sortedOrders.length}`);
 
     // Update Dashboard Elements regardless of current tab
     updateDashboardStats(allOrders);
@@ -181,11 +189,17 @@ export function renderOrders(snap) {
         }
         o.normalizedItems = items;
 
-        const isLive = ["Placed", "Confirmed", "Preparing", "Cooked", "Out for Delivery"].includes(o.status);
+        const status = (o.status || "Unknown").trim();
+        const isLive = ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Pending"].some(s => s.toLowerCase() === status.toLowerCase());
         if (isLive) liveCount++;
 
         // Filter for Live Tab: Only show live orders
-        if (activeTab === 'live' && !isLive) return;
+        if (activeTab === 'live') {
+            if (!isLive) {
+                return;
+            }
+            console.log(`[Orders] Rendering live order: #${id.slice(-5)} (Status: ${status})`);
+        }
 
         const tr = document.createElement('tr');
         tr.id = `row-${id}`;
@@ -308,8 +322,15 @@ export function renderOrders(snap) {
         if (existingContainer) existingContainer.remove();
     }
 
-    const liveBadge = document.getElementById('liveCountBadge');
-    if (liveBadge) liveBadge.innerText = liveCount;
+    const liveBadge = document.getElementById('badge-live');
+    if (liveBadge) {
+        liveBadge.innerText = liveCount;
+        if (liveCount > 0) {
+            liveBadge.classList.remove('hidden');
+        } else {
+            liveBadge.classList.add('hidden');
+        }
+    }
 }
 
 /**
@@ -360,13 +381,16 @@ function renderPriorityOrders(orders) {
         container.dataset.hasListener = "true";
     }
 
+    const priorityStatuses = ["placed", "confirmed", "preparing", "cooked", "ready", "pending"];
     const priority = orders
-        .filter(o => ["Placed", "Confirmed", "Preparing"].includes(o.status))
+        .filter(o => priorityStatuses.includes(String(o.status || "").toLowerCase()))
         .sort((a, b) => {
-            const weights = { "Placed": 3, "Confirmed": 2, "Preparing": 1 };
-            return (weights[b.status] || 0) - (weights[a.status] || 0);
+            const weights = { "placed": 6, "confirmed": 5, "preparing": 4, "cooked": 3, "pending": 2, "ready": 1 };
+            const statusA = String(a.status || "").toLowerCase();
+            const statusB = String(b.status || "").toLowerCase();
+            return (weights[statusB] || 0) - (weights[statusA] || 0);
         })
-        .slice(0, 5);
+        .slice(0, 8); // Show a few more on dashboard
 
     if (priority.length === 0) {
         container.innerHTML = `<div class="empty-state-mini">✅ All caught up! No pending orders.</div>`;
@@ -461,6 +485,18 @@ function renderTopCustomers(orders) {
 
 export async function updateStatus(id, status) {
     if (!id || !status) return;
+
+    // Enforce Rider Assignment for Out for Delivery
+    if (status === "Out for Delivery") {
+        const order = state.ordersMap.get(id);
+        if (order && !order.riderId) {
+            showToast("⚠️ Please assign a Rider before marking as Out for Delivery", "error");
+            // Trigger a re-render to revert the select element if needed
+            renderOrders(state.lastOrdersSnap);
+            return;
+        }
+    }
+
     try {
         await Outlet.ref(`orders/${id}`).update({ status });
         logAudit("Orders", `Updated Status: #${id.slice(-5)} -> ${status}`, id);
