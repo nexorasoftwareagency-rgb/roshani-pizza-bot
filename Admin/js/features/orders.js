@@ -80,23 +80,23 @@ export function initRealtimeListeners() {
     }
 
     console.log(`[Orders] Initializing listeners for: ${_ordersRef.toString()} (Filter: ${fromDate || 'ALL'} to ${toDate || 'ALL'})`);
-    const limit = state.orderLimit || 50;
+    const limit = state.orderLimit || 100;
     
     _ordersValueCb = snap => {
         firstLoad = false;
-        console.log(`[Orders] Received snapshot: ${snap.numChildren()} orders`);
+        console.log(`[Orders] Received snapshot: ${snap.numChildren()} orders at ${_ordersRef.toString()}`);
         state.lastOrdersSnap = snap;
         renderOrders(snap);
     };
 
     let query = _ordersRef.orderByChild("createdAt");
     
+    // For Live Ops stability, we fetch at least the last 2 days even if date filter is narrow
+    // but we honor the manual date filter for the "Orders" tab history
     if (fromDate && toDate) {
-        // Query by date range (inclusive)
-        // We append 'T00:00:00.000Z' and 'T23:59:59.999Z' to cover the whole day
         query = query.startAt(`${fromDate}T00:00:00.000Z`).endAt(`${toDate}T23:59:59.999Z`);
     } else {
-        // Fallback to recent 50
+        // Fallback to recent 100 orders
         query = query.limitToLast(limit);
     }
 
@@ -122,7 +122,6 @@ export function renderOrders(snap) {
     if (!snap) return;
 
     const activeTab = state.currentActiveTab || 'dashboard';
-    console.log(`[Orders] rendering started for tab: ${activeTab}`);
     const containers = {
         'dashboard': document.getElementById('ordersTable'),
         'orders': document.getElementById('ordersTableFull'),
@@ -130,7 +129,7 @@ export function renderOrders(snap) {
         'payments': document.getElementById('paymentsTable')
     };
 
-    console.log(`[Orders] rendering started for tab: ${activeTab}. Containers found: ${Object.keys(containers).filter(k => containers[k]).join(', ')}`);
+    console.log(`[Orders] Rendering started for tab: ${activeTab}. Containers:`, Object.keys(containers).filter(k => containers[k]));
 
     // Build map for calculations
     state.ordersMap.clear();
@@ -157,7 +156,8 @@ export function renderOrders(snap) {
         return timeB - timeA;
     });
 
-    console.log(`[Orders] Total orders: ${allOrders.length}, Filtered orders for ${activeTab}: ${sortedOrders.length}`);
+    console.log(`[Orders] Processed ${allOrders.length} total orders from snapshot.`);
+    console.log(`[Orders] Filtered ${sortedOrders.length} orders for current tab: ${activeTab}`);
 
     // Update Dashboard Elements regardless of current tab
     updateDashboardStats(allOrders);
@@ -190,7 +190,9 @@ export function renderOrders(snap) {
         o.normalizedItems = items;
 
         const status = (o.status || "Unknown").trim();
-        const isLive = ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Pending"].some(s => s.toLowerCase() === status.toLowerCase());
+        const liveStatuses = ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Pending", "New", "Dispatched", "In Kitchen"];
+        const isLive = liveStatuses.some(s => s.toLowerCase() === status.toLowerCase());
+        
         if (isLive) liveCount++;
 
         // Filter for Live Tab: Only show live orders
@@ -280,7 +282,10 @@ export function renderOrders(snap) {
                 </td>
                 <td data-label="Address">
                     <span title="${escapeHtml(o.address || '')}">${escapeHtml(truncatedAddress)}</span>
-                    ${o.locationLink ? `<br><a href="${escapeHtml(o.locationLink)}" target="_blank" rel="noopener noreferrer" class="color-primary fs-11">📍 Map</a>` : ""}
+                    ${(o.locationLink || (o.lat && o.lng)) ? 
+                        `<br><a href="${escapeHtml(o.locationLink || `https://www.google.com/maps?q=${o.lat},${o.lng}`)}" target="_blank" rel="noopener noreferrer" class="color-primary fs-11">📍 View Location</a>` 
+                        : ""
+                    }
                 </td>
                 <td data-label="Total" class="font-bold">₹${escapeHtml(o.total || '0')}</td>
                 <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
@@ -595,6 +600,10 @@ export async function openOrderDrawer(id) {
                 <p><strong>${escapeHtml(order.customerName || 'Guest')}</strong></p>
                 <p>${escapeHtml(order.phone || 'No Phone')}</p>
                 <p class="fs-12 text-muted">${escapeHtml(order.address || 'Walk-in')}</p>
+                ${(order.locationLink || (order.lat && order.lng)) ? 
+                    `<a href="${escapeHtml(order.locationLink || `https://www.google.com/maps?q=${order.lat},${order.lng}`)}" target="_blank" rel="noopener noreferrer" class="btn-map-drawer">📍 View on Google Maps</a>` 
+                    : ""
+                }
             </div>
             <div class="drawer-section">
                 <label>Items</label>
@@ -614,6 +623,9 @@ export async function openOrderDrawer(id) {
     `;
 
     drawer.classList.add('active');
+    
+    // Push state so back button closes the drawer
+    history.pushState({ action: 'closeDrawer', targetId: 'orderDrawer' }, "", window.location.hash);
 }
 
 export function closeOrderDrawer() {

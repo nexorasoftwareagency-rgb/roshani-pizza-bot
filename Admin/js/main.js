@@ -339,6 +339,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
+    // --- 3. REFRESH & SESSION SAFETY ---
+    window.addEventListener('beforeunload', (e) => {
+        // Only trigger if we are logged in and not in the middle of a nuclear refresh
+        if (state.currentUser && !window.location.search.includes('nuclear')) {
+            e.preventDefault();
+            e.returnValue = ''; // Standard way to show confirmation
+        }
+    });
+
     logAudit('SYSTEM_INIT', { 
         agent: 'Antigravity',
         version: '4.4.12',

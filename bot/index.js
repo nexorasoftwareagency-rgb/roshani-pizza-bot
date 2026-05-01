@@ -300,15 +300,17 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
     try {
         const jid = formatJid(order.whatsappNumber || order.phone);
         if (!jid) {
-            console.error(`[Status Update] No JID for order ${id}. Phone: ${order.phone}, WhatsApp: ${order.whatsappNumber}`);
+            console.error(`[Status Update] ❌ FAILED: No JID for order ${id}. Phone: ${order.phone}, JID: ${order.whatsappNumber}`);
             return;
         }
 
-        console.log(`[Status Update] Checking order ${id}: ${order.status}. New: ${isNew}`);
+        const currentStatus = (order.status || "").trim();
+        console.log(`[Status Update] 🔍 Processing Order #${id.slice(-5)} | Status: ${currentStatus} | Target: ${jid}`);
 
-        if (!processedStatus[id] || processedStatus[id].status !== order.status || isNew) {
-            console.log(`[Status Update] Sending notification for ${id} to ${jid}. Status: ${order.status}`);
-            processedStatus[id] = { status: order.status, timestamp: Date.now() };
+        const statusKey = `${id}_${currentStatus}`;
+        if (!processedStatus[id] || processedStatus[id].status !== currentStatus || isNew) {
+            console.log(`[Status Update] 📤 SENDING MESSAGE: #${id.slice(-5)} -> ${currentStatus} to ${jid}`);
+            processedStatus[id] = { status: currentStatus, timestamp: Date.now() };
 
             const botSettings = await getData("settings/Bot", order.outlet) || {};
             let msg = "";
@@ -344,7 +346,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
             } else if (order.status === "Delivered") {
                 msg = `✅ *DELIVERED SUCCESSFULLY!* 🍕❤️\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n🤝 *Payment:* ${order.paymentMethod}\n💵 *Total Paid:* ₹${order.total}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*Enjoy your meal!* 😋\n\n${getFunnyFoodJoke()}`;
                 img = botSettings.imgDelivered;
-            } else if (order.status === "Cancelled") {
+            } else if (currentStatus === "Cancelled") {
                 msg = `❌ *ORDER CANCELLED* ❌\n━━━━━━━━━━━━━━━━━━━━\nWe're sorry, your order #${id.slice(-5)} has been cancelled.\n\nReason: ${order.cancelReason || "Store Busy / Technical Issue"}\n\nIf you have any questions, please contact us. 🙏`;
             }
 
@@ -819,12 +821,29 @@ async function startBot() {
             }
 
             if (user.step === "ADDONS") {
-                if (text === "0") { user.step = "QUANTITY"; return sock.sendMessage(sender, { text: "🔢 *HOW MANY?* (Enter 1-50):" }); }
-                const addon = user.addonList[parseInt(text) - 1];
-                if (!addon) return sock.sendMessage(sender, { text: "⚠️ Invalid addon." });
-                if (user.current.addons.some(a => a.name === addon[0])) return sock.sendMessage(sender, { text: "Already added." });
-                user.current.addons.push({ name: addon[0], price: addon[1] });
-                return sock.sendMessage(sender, { text: `✅ *Added ${addon[0]}!* 🧀\n\n🔢 *Need more?* Send another number.\n🆗 *Finished?* Send *0* to proceed to quantity selection.` });
+                if (text === "0") { 
+                    user.step = "QUANTITY"; 
+                    return sock.sendMessage(sender, { text: "🔢 *HOW MANY?* (Enter 1-50):" }); 
+                }
+                
+                const addonIndex = parseInt(text) - 1;
+                const addon = user.addonList[addonIndex];
+                if (!addon) return sock.sendMessage(sender, { text: "⚠️ Invalid selection. Please reply with a number or 0." });
+
+                const addedName = addon[0];
+                if (user.current.addons.some(a => a.name === addedName)) {
+                    return sock.sendMessage(sender, { text: `⚠️ *${addedName}* is already added.` });
+                }
+                
+                user.current.addons.push({ name: addedName, price: addon[1] });
+                
+                let addonConfirm = `✅ *ADDED: ${addedName.toUpperCase()}* 🧀\n`;
+                addonConfirm += `━━━━━━━━━━━━━━━━━━━━\n`;
+                addonConfirm += `Current Add-ons: ${user.current.addons.map(a => a.name).join(", ")}\n\n`;
+                addonConfirm += `🔢 *Add More?* Reply with another number\n`;
+                addonConfirm += `🆗 *Next Step?* Reply *0* for Quantity selection`;
+                
+                return sock.sendMessage(sender, { text: addonConfirm });
             }
 
             if (user.step === "QUANTITY") {
@@ -843,7 +862,10 @@ async function startBot() {
                 });
 
                 user.step = "ADDED_TO_CART";
-                return sock.sendMessage(sender, { text: `✅ Added!\n\n1️⃣ Add more\n2️⃣ View Cart / Checkout` });
+                let addedMsg = `✅ *ADDED TO CART!*\n\n`;
+                addedMsg += `1️⃣ *Add more items* 🍕\n`;
+                addedMsg += `2️⃣ *View Cart & Checkout* 🛒`;
+                return sock.sendMessage(sender, { text: addedMsg });
             }
 
             if (user.step === "ADDED_TO_CART") {
