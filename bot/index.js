@@ -12,7 +12,7 @@ const {
 
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
-const { getData, setData, updateData, db, pushData } = require('./firebase');
+const { getData, setData, updateData, db, pushData, getUserProfile, saveUserProfile } = require('./firebase');
 
 // --- GLOBAL STATE ---
 const sessions = {};
@@ -627,7 +627,24 @@ async function startBot() {
             const pushName = msg.pushName || "";
 
             if (!sessions[sender]) {
-                sessions[sender] = { step: "START", current: {}, cart: [], pushName: pushName, msgCount: 0, lastReset: Date.now() };
+                const profile = await getUserProfile(sender);
+                sessions[sender] = { 
+                    step: "START", 
+                    current: {}, 
+                    cart: [], 
+                    pushName: pushName, 
+                    msgCount: 0, 
+                    lastReset: Date.now(),
+                    profile: profile || null,
+                    name: profile?.name || null,
+                    phone: profile?.phone || sender.split('@')[0].slice(-10),
+                    address: profile?.address || null,
+                    location: profile?.location || null
+                };
+                
+                if (profile && profile.name) {
+                    await sock.sendMessage(sender, { text: `Welcome back, *${profile.name}*! 👋\n\nYour favorite items are ready for you. 🍕` });
+                }
             }
             const user = sessions[sender];
             user.lastActivity = Date.now();
@@ -767,8 +784,42 @@ async function startBot() {
             }
 
             if (user.step === "CART_VIEW") {
-                if (text === "1") { user.step = "NAME"; return sock.sendMessage(sender, { text: "👤 *Your Name?*" }); }
-                if (text === "2") { sessions[sender] = { step: "START", current: {}, cart: [] }; return sock.sendMessage(sender, { text: "🗑️ Cart cleared." }); }
+                if (text === "1") { 
+                    if (user.profile && user.profile.name) {
+                        user.step = "REUSE_PROFILE";
+                        let profileMsg = `👤 *REUSE YOUR SAVED DETAILS?*\n\n`;
+                        profileMsg += `Name: ${user.profile.name}\n`;
+                        profileMsg += `Phone: ${user.profile.phone}\n`;
+                        profileMsg += `Address: ${user.profile.address || "N/A"}\n\n`;
+                        profileMsg += `1️⃣ Yes, use these details\n`;
+                        profileMsg += `2️⃣ No, enter new details`;
+                        return sock.sendMessage(sender, { text: profileMsg });
+                    }
+                    user.step = "NAME"; 
+                    return sock.sendMessage(sender, { text: "👤 *Your Name?*" }); 
+                }
+                if (text === "2") { 
+                    sessions[sender] = { step: "START", current: {}, cart: [], profile: user.profile }; 
+                    return sock.sendMessage(sender, { text: "🗑️ Cart cleared." }); 
+                }
+            }
+
+            if (user.step === "REUSE_PROFILE") {
+                if (text === "1") {
+                    user.name = user.profile.name;
+                    user.phone = user.profile.phone;
+                    user.address = user.profile.address;
+                    user.location = user.profile.location;
+                    
+                    if (user.location) {
+                        user.step = "PLACE_ORDER_PREP"; // Internal transition
+                        return handleCheckoutFinal(sock, sender, user);
+                    }
+                    user.step = "LOCATION";
+                    return sock.sendMessage(sender, { text: "📍 *Share your Location* for delivery calculation (Paperclip -> Location)" });
+                }
+                user.step = "NAME";
+                return sock.sendMessage(sender, { text: "👤 *Your Name?*" });
             }
 
             if (user.step === "NAME") {
@@ -792,25 +843,7 @@ async function startBot() {
                 if (!loc) return sock.sendMessage(sender, { text: "📍 Please share location." });
 
                 user.location = { lat: loc.degreesLatitude, lng: loc.degreesLongitude };
-                 const [delSettings, storeSettings] = await Promise.all([
-                     getData("settings/Delivery", user.outlet) || {},
-                     getData("settings/Store", user.outlet) || {}
-                 ]);
-                
-                const outletCoords = {
-                    lat: parseFloat(storeSettings?.lat || (user.outlet === 'cake' ? 25.887472 : 25.887944)),
-                    lng: parseFloat(storeSettings?.lng || (user.outlet === 'cake' ? 85.026861 : 85.026194))
-                };
-                
-                 const dist = calculateDistance(user.location.lat, user.location.lng, outletCoords.lat, outletCoords.lng);
-                 const fee = getFeeFromSlabs(dist, delSettings.slabs || []);
-                
-                user.deliveryFee = fee;
-                const { lines, subtotal } = formatCartSummary(user.cart);
-                user.step = "CONFIRM_PAY";
-
-                let sum = `🧾 *INVOICE*\n\n${lines}\n💰 Subtotal: ₹${subtotal}\n🚚 Delivery: ₹${fee}\n💵 *Total: ₹${subtotal + fee}*\n\n1️⃣ Confirm\n2️⃣ Cancel`;
-                return sock.sendMessage(sender, { text: sum });
+                return handleCheckoutFinal(sock, sender, user);
             }
 
             if (user.step === "CONFIRM_PAY") {
@@ -841,6 +874,15 @@ async function startBot() {
                 await setData(`orders/${orderId}`, finalOrder, user.outlet);
                 await notifyAdmin(sock, orderId, finalOrder, 'NEW');
 
+                // Save user profile for next time
+                await saveUserProfile(sender, {
+                    name: user.name,
+                    phone: user.phone,
+                    address: user.address,
+                    location: user.location,
+                    lastOutlet: user.outlet
+                });
+
                 let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY!* 🎉\n`;
                 successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                 successMsg += `🆔 *Order ID:* #${orderId.slice(-5)}\n`;
@@ -855,6 +897,42 @@ async function startBot() {
 
         } catch (err) { console.error("Message Handler Error:", err); }
     });
+}
+
+async function handleCheckoutFinal(sock, sender, user) {
+    try {
+        const [delSettings, storeSettings] = await Promise.all([
+            getData("settings/Delivery", user.outlet) || {},
+            getData("settings/Store", user.outlet) || {}
+        ]);
+
+        const outletCoords = {
+            lat: parseFloat(storeSettings?.lat || (user.outlet === 'cake' ? 25.887472 : 25.887944)),
+            lng: parseFloat(storeSettings?.lng || (user.outlet === 'cake' ? 85.026861 : 85.026194))
+        };
+
+        const dist = calculateDistance(user.location.lat, user.location.lng, outletCoords.lat, outletCoords.lng);
+        const fee = getFeeFromSlabs(dist, delSettings.slabs || []);
+
+        user.deliveryFee = fee;
+        const { lines, subtotal } = formatCartSummary(user.cart);
+        user.step = "CONFIRM_PAY";
+
+        let sum = `🧾 *INVOICE*\n`;
+        sum += `━━━━━━━━━━━━━━━━━━━━\n`;
+        sum += `${lines}`;
+        sum += `━━━━━━━━━━━━━━━━━━━━\n`;
+        sum += `💰 Subtotal: ₹${subtotal}\n`;
+        sum += `🚚 Delivery (${dist.toFixed(1)}km): ₹${fee}\n`;
+        sum += `💵 *TOTAL: ₹${subtotal + fee}*\n\n`;
+        sum += `1️⃣ Confirm Order\n`;
+        sum += `2️⃣ Cancel`;
+        
+        return sock.sendMessage(sender, { text: sum });
+    } catch (e) {
+        console.error("Checkout Final Error:", e);
+        return sock.sendMessage(sender, { text: "❌ Error calculating delivery fee. Please try again." });
+    }
 }
 
 startBot();
