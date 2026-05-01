@@ -184,6 +184,9 @@ export function renderOrders(snap) {
         const isLive = ["Placed", "Confirmed", "Preparing", "Cooked", "Out for Delivery"].includes(o.status);
         if (isLive) liveCount++;
 
+        // Filter for Live Tab: Only show live orders
+        if (activeTab === 'live' && !isLive) return;
+
         const tr = document.createElement('tr');
         tr.id = `row-${id}`;
         tr.onclick = (e) => {
@@ -212,8 +215,48 @@ export function renderOrders(snap) {
                 <td><span class="badge-payment">${escapeHtml(o.paymentMethod || 'Cash')}</span></td>
                 <td><span class="status ${safeStatusClass}">${safeStatus}</span></td>
             `;
+        } else if (activeTab === 'live') {
+            // Live Ops Table: ID, Customer, Items, Total, Status, Assign Rider, Actions (7 columns)
+            const itemSummary = items.length > 0 ? `${items.length} Items` : "No Items";
+            
+            // Rider options
+            const onlineRiders = (state.ridersList || []).filter(r => r.status === "Online" || r.status === "On Delivery");
+            const riderOptions = onlineRiders.map(r => `
+                <option value="${r.id}" ${o.riderId === r.id ? 'selected' : ''}>${escapeHtml(r.name)}</option>
+            `).join('');
+
+            tr.innerHTML = `
+                <td data-label="Order ID" class="font-mono font-600">#${safeOrderId}</td>
+                <td data-label="Customer">
+                    ${safeCustomerName}<br>
+                    <small class="text-muted">${escapeHtml(o.phone || 'Guest')}</small>
+                </td>
+                <td data-label="Items">${itemSummary}</td>
+                <td data-label="Total" class="font-bold">₹${escapeHtml(o.total || '0')}</td>
+                <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
+                <td data-label="Assign Rider">
+                    <select data-action="assignRider" data-id="${id}" class="status-select">
+                        <option value="">Select Rider</option>
+                        ${riderOptions}
+                    </select>
+                </td>
+                <td data-label="Actions">
+                    <div class="flex-row flex-gap-5">
+                        <select data-action="updateStatus" data-id="${id}" class="status-select">
+                            <option value="">Status</option>
+                            <option value="Confirmed" ${safeStatus === "Confirmed" ? "selected" : ""}>Confirm</option>
+                            <option value="Preparing" ${safeStatus === "Preparing" ? "selected" : ""}>Preparing</option>
+                            <option value="Cooked" ${safeStatus === "Cooked" ? "selected" : ""}>Cooked</option>
+                            <option value="Out for Delivery" ${safeStatus === "Out for Delivery" ? "selected" : ""}>Out for Delivery</option>
+                            <option value="Delivered" ${safeStatus === "Delivered" ? "selected" : ""}>Delivered</option>
+                            <option value="Cancelled" ${safeStatus === "Cancelled" ? "selected" : ""}>Cancelled X</option>
+                        </select>
+                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-table-icon">🖨️</button>
+                    </div>
+                </td>
+            `;
         } else {
-            // Full Tables: ID, Customer, Address, Total, Status, Actions (6 columns)
+            // Full Tables (Orders/Payments): ID, Customer, Address, Total, Status, Actions (6 columns)
             tr.innerHTML = `
                 <td data-label="Order ID" class="font-mono font-600">#${safeOrderId}</td>
                 <td data-label="Customer">
