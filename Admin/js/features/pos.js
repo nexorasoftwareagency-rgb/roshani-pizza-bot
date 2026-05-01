@@ -19,6 +19,7 @@ export async function loadWalkinMenu() {
     try {
         grid.innerHTML = '<div class="pos-loader">Loading Menu...</div>';
         const snap = await Outlet.ref("dishes").once("value");
+        console.log(`[POS] Fetched ${snap.numChildren()} dishes from ${snap.ref.toString()}`);
         state.allWalkinDishes = [];
 
         snap.forEach(child => {

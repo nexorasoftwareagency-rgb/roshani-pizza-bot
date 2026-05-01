@@ -7,16 +7,46 @@ import { showToast } from './utils.js';
 import { state } from './state.js';
 
 // 1. REFRESH CIRCUIT BREAKER & COMPLETE REFRESH
-export const completeSiteRefresh = () => {
-    showToast("Refreshing system...", "info");
-    // Clear specific session state but keep auth
-    sessionStorage.removeItem('adminSelectedOutlet');
-    sessionStorage.removeItem('erp_refresh_log'); 
+export const completeSiteRefresh = async () => {
+    showToast("Initializing Nuclear Refresh...", "warning");
     
-    // Add a small delay for the WOW factor (visual feedback)
-    setTimeout(() => {
+    try {
+        // 1. Unregister all service workers
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+                await registration.unregister();
+                console.log("[PWA] Service Worker Unregistered");
+            }
+        }
+
+        // 2. Clear all caches
+        if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            for (let name of cacheNames) {
+                await caches.delete(name);
+                console.log(`[PWA] Cache Cleared: ${name}`);
+            }
+        }
+
+        // 3. Clear Storage
+        sessionStorage.clear();
+        // localStorage.clear(); // Use with caution, maybe just specific keys?
+        // Let's clear specific persistent UI states
+        localStorage.removeItem('adminSelectedOutlet');
+        localStorage.removeItem('activeTab');
+        
+        showToast("Caches Purged. Reloading...", "success");
+
+        // Delay for visual feedback
+        setTimeout(() => {
+            window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+        }, 1000);
+
+    } catch (err) {
+        console.error("Refresh failed:", err);
         window.location.reload();
-    }, 800);
+    }
 };
 
 (function () {
@@ -36,25 +66,32 @@ export const completeSiteRefresh = () => {
     if (refreshData.count > REFRESH_LIMIT) {
         console.error("CRITICAL: Infinite redirect loop detected. Stopping.");
         sessionStorage.setItem('erp_refresh_log', '{"count": 0, "first": 0}');
-        showToast("System detected a refresh loop. Please clear cache.", "error");
-        throw new Error("Refresh Loop Halted");
+        // Do NOT throw — a thrown error inside a module kills the entire module graph.
+        // Just log and prevent further reloads silently.
+        return;
     }
 })();
 
 // 2. PULL TO REFRESH (MOBILE)
-let touchStart = 0;
+let touchStart = -1;
 window.addEventListener('touchstart', (e) => {
     if (window.scrollY === 0) touchStart = e.touches[0].pageY;
+    else touchStart = -1;
 }, { passive: true });
 
 window.addEventListener('touchend', (e) => {
+    if (touchStart === -1) return;
     const touchEnd = e.changedTouches[0].pageY;
-    if (window.scrollY === 0 && touchEnd - touchStart > 180) {
-        // Trigger haptic if available
+    if (window.scrollY === 0 && touchEnd - touchStart > 120) {
         if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
         completeSiteRefresh();
     }
+    touchStart = -1;
 }, { passive: true });
+
+window.addEventListener('touchcancel', () => {
+    touchStart = -1;
+});
 
 // 2. PWA INSTALL LOGIC
 window.addEventListener('beforeinstallprompt', (e) => {

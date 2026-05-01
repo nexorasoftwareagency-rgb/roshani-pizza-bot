@@ -7,7 +7,7 @@ import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com
 import { enablePersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCcbGywMiWTweomHZigtNkrAkVrv8-4tkM",
+    apiKey: "AIzaSyDcx-SN5eak8PAs-8NtTGelJ_sICr5yb7Y",
     authDomain: "prashant-pizza-e86e4.firebaseapp.com",
     databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
     projectId: "prashant-pizza-e86e4",
@@ -92,11 +92,63 @@ window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
 });
 
+// NUCLEAR REFRESH CIRCUIT BREAKER
+window.completeSiteRefresh = async () => {
+    window.haptic(20);
+    window.showToast("Initializing Deep Refresh...", "info");
+    
+    try {
+        // 1. Unregister all service workers
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+                await registration.unregister();
+            }
+        }
+
+        // 2. Clear all caches
+        if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            for (let name of cacheNames) {
+                await caches.delete(name);
+            }
+        }
+
+        // 3. Clear storage data that might be stuck
+        sessionStorage.clear();
+        localStorage.removeItem('activeOrderId');
+        localStorage.removeItem('activeOrderData');
+        
+        window.showToast("Caches Purged. Reloading...", "success");
+
+        // Force reload from server with cache-busting query
+        setTimeout(() => {
+            window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+        }, 1000);
+
+    } catch (err) {
+        console.error("Refresh failed:", err);
+        window.location.reload();
+    }
+};
+
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => console.error('SW failed', err));
+        // Use cache-busting for SW registration itself
+        navigator.serviceWorker.register('sw.js?v=4.4.3').catch(err => console.error('SW failed', err));
     });
 }
+
+// Bind Refresh Button
+document.addEventListener('DOMContentLoaded', () => {
+    const refreshBtn = document.getElementById('btnRefreshApp');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.completeSiteRefresh();
+        });
+    }
+});
 
 const escapeHtml = (text) => {
     if (!text && text !== 0) return "";
@@ -303,26 +355,51 @@ window.login = async () => {
     }
 };
 
-window.completeSiteRefresh = () => {
-    window.showToast("Refreshing system...", "info");
+window.completeSiteRefresh = async () => {
+    window.showToast("Initializing Deep Refresh...", "info");
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
-    setTimeout(() => {
+    
+    try {
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+                await registration.unregister();
+            }
+        }
+        if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            for (let name of cacheNames) {
+                await caches.delete(name);
+            }
+        }
+        window.showToast("Caches Purged. Reloading...", "success");
+        setTimeout(() => {
+            window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+        }, 800);
+    } catch (e) {
         window.location.reload();
-    }, 800);
+    }
 };
 
 // PULL TO REFRESH (MOBILE)
-let touchStart = 0;
+let touchStart = -1;
 window.addEventListener('touchstart', (e) => {
     if (window.scrollY === 0) touchStart = e.touches[0].pageY;
+    else touchStart = -1;
 }, { passive: true });
 
 window.addEventListener('touchend', (e) => {
+    if (touchStart === -1) return;
     const touchEnd = e.changedTouches[0].pageY;
     if (window.scrollY === 0 && touchEnd - touchStart > 180) {
         window.completeSiteRefresh();
     }
+    touchStart = -1;
 }, { passive: true });
+
+window.addEventListener('touchcancel', () => {
+    touchStart = -1;
+});
 
 
 window.logout = async () => {
@@ -335,11 +412,12 @@ window.logout = async () => {
 };
 
 window.toggleRiderStatus = async () => {
-    if (currentUser.profile.isAdmin) return window.showToast("Status toggle disabled for Admin.", "warning");
-    const newStatus = currentUser.profile.status === "Online" ? "Offline" : "Online";
+    if (!window.currentUser || !window.currentUser.profile) return window.showToast("Authentication error. Please login again.", "error");
+    if (window.currentUser.profile.isAdmin) return window.showToast("Status toggle disabled for Admin.", "warning");
+    const newStatus = window.currentUser.profile.status === "Online" ? "Offline" : "Online";
     try {
-        await update(ref(db, resolvePath(`riders/${currentUser.profile.id}`)), { status: newStatus, lastSeen: serverTimestamp() });
-        currentUser.profile.status = newStatus;
+        await update(ref(db, resolvePath(`riders/${window.currentUser.profile.id}`)), { status: newStatus, lastSeen: serverTimestamp() });
+        window.currentUser.profile.status = newStatus;
 
         const dot = document.querySelector('.pulse-dot');
         const txt = document.getElementById('statusBadge');
@@ -408,6 +486,7 @@ function stopLocationTracking() {
 // CORE DELIVERY LOGIC
 window.acceptOrder = async (id, outletId) => {
     window.haptic(40);
+    if (!window.currentUser) return window.showToast("Authentication error. Please login again.", "error");
     if (!window.riderLocation) return window.showToast("GPS Error. Ensure location is ON.", "error");
 
     const outletCoords = window.outletCoords[outletId] || window.outletCoords.pizza;
@@ -418,7 +497,7 @@ window.acceptOrder = async (id, outletId) => {
         const orderPath = `${outletId}/orders/${id}`;
         const result = await runTransaction(ref(db, orderPath), current => {
             if (current && current.assignedRider) return;
-            return { ...current, status: "Arriving at Restaurant", deliveryOTP: Math.floor(100000 + Math.random() * 900000).toString(), assignedRider: currentUser.email.toLowerCase(), acceptedAt: Date.now() };
+            return { ...current, status: "Arriving at Restaurant", deliveryOTP: Math.floor(100000 + Math.random() * 900000).toString(), assignedRider: window.currentUser.email.toLowerCase(), acceptedAt: Date.now() };
         });
         if (result.committed) {
             window.showSection('home');
@@ -508,8 +587,9 @@ window.verifyOTP = async () => {
 };
 
 window.finalizeDeliverySequence = async (orderPath, matchesFallback, order) => {
+    if (!window.currentUser || !window.currentUser.profile) return window.showToast("Authentication error. Please login again.", "error");
     await update(ref(db, orderPath), { status: "Delivered", deliveredAt: serverTimestamp(), verifiedBy: matchesFallback ? 'ADMIN_FALLBACK' : 'OTP', paymentCollected: true });
-    const riderId = currentUser.profile.id;
+    const riderId = window.currentUser.profile.id;
     const commission = Number(order.deliveryFee || 0);
     await runTransaction(ref(db, resolvePath(`riderStats/${riderId}`)), (current) => {
         if (!current) return { totalOrders: 1, totalEarnings: commission };
@@ -600,7 +680,7 @@ window.renderAllOrders = () => {
     const dashboardActiveView = document.getElementById('dashboardActiveDeliveryView');
     const pickupBadge = document.getElementById('navPickupBadge');
 
-    if (!unassignedList || !dashboardActiveView) return;
+    if (!unassignedList || !dashboardActiveView || !window.currentUser) return;
 
     unassignedList.innerHTML = '';
     dashboardActiveView.innerHTML = '';
@@ -615,22 +695,28 @@ window.renderAllOrders = () => {
             const o = orders[id];
             if (!o) return;
             const status = (o.status || "").toLowerCase();
-            const isMine = (o.assignedRider || "").toLowerCase() === currentUser.email.toLowerCase();
+            const isMine = (window.currentUser && o.assignedRider) ? (o.assignedRider.toLowerCase() === window.currentUser.email.toLowerCase()) : false;
 
             if ((status === "ready" || status === "cooked") && !o.assignedRider) {
+                const safeOrderId = escapeHtml((o.orderId || id.slice(-6)).toUpperCase());
+                const safeAddress = escapeHtml(o.address || 'Unknown');
+                const safeFee = escapeHtml(String(o.deliveryFee || 0));
+                const safeId = escapeHtml(id);
+                const safeOutlet = escapeHtml(outletId);
+
                 unassignedList.innerHTML += `
                     <div class="order-card-premium">
                         <div class="incoming-request-header">
                             <div class="new-order-badge">NEW ORDER</div>
-                            <div class="order-id-chip">#${escapeHtml((o.orderId || id.slice(-6)).toUpperCase())}</div>
+                            <div class="order-id-chip">#${safeOrderId}</div>
                         </div>
                         <div class="incoming-request-body">
-                            <h3 class="rest-name">Drop-off: ${escapeHtml(o.address || 'Unknown')}</h3>
+                            <h3 class="rest-name">Drop-off: ${safeAddress}</h3>
                             <div class="trip-summary-stats mt-15" style="background:#f8fafc; padding:10px; border-radius:10px;">
-                                <div class="trip-stat"><span class="text-muted text-small font-bold uppercase">Earning</span><br><span class="text-orange font-bold" style="font-size:1.2rem;">₹${escapeHtml(String(o.deliveryFee || 0))}</span></div>
+                                <div class="trip-stat"><span class="text-muted text-small font-bold uppercase">Earning</span><br><span class="text-orange font-bold" style="font-size:1.2rem;">₹${safeFee}</span></div>
                             </div>
                         </div>
-                        <button class="btn-primary full-width mt-15" data-action="accept" data-id="${escapeHtml(id)}" data-outlet="${escapeHtml(outletId)}">ACCEPT ORDER</button>
+                        <button class="btn-primary full-width mt-15" data-action="accept" data-id="${safeId}" data-outlet="${safeOutlet}">ACCEPT ORDER</button>
                     </div>`;
                 unassignedCount++;
             }
@@ -644,23 +730,30 @@ window.renderAllOrders = () => {
                 const cPhone = (o.customerPhone || o.phone || '').replace(/\D/g, '').slice(-10);
                 const oId = (o.orderId || id.slice(-6)).toUpperCase();
 
+                const safeName = escapeHtml(cName);
+                const safeAdd = escapeHtml(cAdd);
+                const safeStatus = escapeHtml(o.status.toUpperCase());
+                const safePhone = escapeHtml(cPhone);
+                const safeOrderId = escapeHtml(oId);
+                const initial = escapeHtml(cName.charAt(0).toUpperCase());
+
                 dashboardActiveView.innerHTML = `
                     <div class="active-delivery-mock-card">
                         <div class="active-del-header">
-                            <div class="active-del-title">Active Delivery <span class="text-muted text-small">#${escapeHtml(oId)}</span></div>
+                            <div class="active-del-title">Active Delivery <span class="text-muted text-small">#${safeOrderId}</span></div>
                             <div class="active-badge">1 ACTIVE TRIP</div>
                         </div>
                         <div class="customer-info-row">
-                            <div class="cust-avatar">${escapeHtml(cName.charAt(0).toUpperCase())}</div>
+                            <div class="cust-avatar">${initial}</div>
                             <div class="cust-details">
-                                <h3>${escapeHtml(cName)}</h3>
-                                <p><i data-lucide="map-pin"></i> ${escapeHtml(cAdd)}</p>
-                                <p class="text-orange text-small mt-10 font-bold">${escapeHtml(o.status.toUpperCase())}</p>
+                                <h3>${safeName}</h3>
+                                <p><i data-lucide="map-pin"></i> ${safeAdd}</p>
+                                <p class="text-orange text-small mt-10 font-bold">${safeStatus}</p>
                             </div>
                         </div>
                         <div class="action-pill-row">
-                            <button class="action-pill" data-action="call" data-phone="${escapeHtml(cPhone)}"><i data-lucide="phone"></i>CALL</button>
-                            <button class="action-pill" data-action="msg" data-phone="${escapeHtml(cPhone)}" data-orderid="${escapeHtml(oId)}"><i data-lucide="message-circle"></i>MSG</button>
+                            <button class="action-pill" data-action="call" data-phone="${safePhone}"><i data-lucide="phone"></i>CALL</button>
+                            <button class="action-pill" data-action="msg" data-phone="${safePhone}" data-orderid="${safeOrderId}"><i data-lucide="message-circle"></i>MSG</button>
                             <button class="action-pill" data-action="otp"><i data-lucide="key-round"></i>OTP</button>
                         </div>
                     </div>

@@ -3221,6 +3221,18 @@ body {
         border-bottom: none;
     }
 
+    .drawer-content::before {
+        content: '';
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 4px;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 2px;
+    }
+
     .drawer-content {
         position: fixed;
         bottom: 0;
@@ -3856,6 +3868,17 @@ body {
     border-color: var(--primary);
     box-shadow: 0 4px 12px var(--primary-glow);
     transform: translateY(-2px);
+}
+
+@media screen and (max-width: 768px) {
+    input, select, textarea {
+        font-size: 16px !important; /* Prevents iOS auto-zoom on focus */
+    }
+    
+    .tab-content {
+        padding: 12px;
+        margin-bottom: 80px; /* Space for bottom nav */
+    }
 }
 
 @media (max-width: 768px) {
@@ -5178,3 +5201,10 @@ body {
   box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
 }
 
+
+/* CONNECTION STATUS INDICATOR */
+.status-indicator { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; transition: all 0.3s ease; }
+.status-indicator.connected { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.status-indicator.disconnected { background: var(--error); box-shadow: 0 0 8px var(--error); }
+.status-indicator.connecting { background: var(--warning); animation: pulse 1s infinite; }
+@keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }

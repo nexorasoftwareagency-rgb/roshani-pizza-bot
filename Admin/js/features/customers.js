@@ -98,7 +98,10 @@ export function generateCustomReport() {
 
     tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px;'>🔔 Collecting sales data...</td></tr>";
 
-    Outlet.ref("orders").once("value", snap => {
+    const ordersRef = Outlet.ref("orders");
+    console.log(`[Reports] Generating report from path: ${ordersRef.toString()}`);
+    
+    ordersRef.once("value", snap => {
         let totalRev = 0;
         let totalOrd = 0;
         salesData = [];
@@ -154,9 +157,12 @@ export function generateCustomReport() {
                 <td data-label="Total" class="report-cell report-total-cell">₹${o.total || 0}</td>
                 <td data-label="Method" class="report-cell"><span class="badge badge-secondary">${escapeHtml(o.paymentMethod || 'COD')}</span></td>
                 <td data-label="Items" class="report-cell">
-                     <div class="text-muted-small text-truncate" style="max-width:250px;" title="${o.items ? o.items.map(i => `${escapeHtml(i.name)} x${i.quantity}`).join(', ') : ''}">
-                        ${o.items ? o.items.map(i => `${escapeHtml(i.name)} x${i.quantity}`).join(', ') : 'Empty'}
-                    </div>
+                     ${(() => {
+                         const rawList = o.cart || (Array.isArray(o.items) ? o.items : Object.values(o.items || {}));
+                         const itemsList = rawList.length ? rawList : (o.item ? [{name: o.item, qty: 1}] : []);
+                         const displayStr = itemsList.length ? itemsList.map(i => `${escapeHtml(i.name || i.item)} x${i.qty || i.quantity || 1}`).join(', ') : 'Empty';
+                         return `<div class="text-muted-small text-truncate" style="max-width:250px;" title="${displayStr}">${displayStr}</div>`;
+                     })()}
                 </td>
             </tr>
         `).join('') || "<tr><td colspan='5' class='report-cell text-center py-30 text-muted'>No orders found for this range</td></tr>";
@@ -243,7 +249,11 @@ export function downloadExcel() {
         Total: o.total || 0,
         Method: o.paymentMethod || 'COD',
         Status: o.status,
-        Items: o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : ''
+        Items: (() => {
+            const rawItems = o.cart || (Array.isArray(o.items) ? o.items : Object.values(o.items || {}));
+            const items = rawItems.length ? rawItems : (o.item ? [{name: o.item, qty: 1}] : []);
+            return items.map(i => `${i.name || i.item} x${i.qty || i.quantity || 1}`).join(', ');
+        })()
     }));
 
     // XLSX is assumed to be globally available via script tag
@@ -293,7 +303,11 @@ export function downloadPDF() {
         o.customerName || 'Guest',
         `Rs. ${o.total}`,
         o.paymentMethod || 'COD',
-        o.items ? o.items.map(i => `${i.name} x${i.quantity}`).join(', ') : ''
+        (() => {
+            const rawItems = o.cart || (Array.isArray(o.items) ? o.items : Object.values(o.items || {}));
+            const items = rawItems.length ? rawItems : (o.item ? [{name: o.item, qty: 1}] : []);
+            return items.map(i => `${i.name || i.item} x${i.qty || i.quantity || 1}`).join(', ');
+        })()
     ]);
 
     doc.autoTable({
@@ -321,7 +335,9 @@ export async function loadLostSales() {
     if (!tbody) return;
 
     try {
-        const snap = await Outlet.ref('lostSales').once('value');
+        const lostRef = Outlet.ref('lostSales');
+        console.log(`[Lost Sales] Fetching from path: ${lostRef.toString()}`);
+        const snap = await lostRef.once('value');
         const data = snap.val();
 
         tbody.innerHTML = '';
@@ -342,7 +358,9 @@ export async function loadLostSales() {
             const val = record.total || 0;
             totalLost += val;
 
-            const itemsStr = (record.items || []).map(i => `${i.name} (${i.size || 'N/A'})`).join(', ');
+            const rawItems = record.cart || (Array.isArray(record.items) ? record.items : Object.values(record.items || {}));
+            const items = rawItems.length ? rawItems : (record.item ? [{name: record.item, size: record.size}] : []);
+            const itemsStr = items.map(i => `${i.name || i.item} (${i.size || 'N/A'})`).join(', ');
             const ts = formatDate(record.cancelledAt);
             const source = record.sourceStep || 'Checkout';
 

@@ -1,11 +1,12 @@
 import { previewImage, showToast, logAudit } from './utils.js';
 import { switchOutlet, openOutletInNewTab } from './branding.js';
-import { switchTab, toggleSidebar } from './ui.js';
+import { switchTab, toggleSidebar, themeManager } from './ui.js';
+import { initGestures } from './gestures.js';
 import { initAuth, doLogin as adminLogin, userLogout } from './auth.js';
 import { installPWA, completeSiteRefresh } from './pwa.js';
 import { 
     updateStatus, assignRider, openOrderDrawer, markAsPaid, 
-    saveDeliveredOrder, closeOrderDrawer 
+    saveDeliveredOrder, closeOrderDrawer, filterOrders 
 } from './features/orders.js';
 import { 
     toggleNotificationSheet, clearAllNotifications, 
@@ -15,7 +16,7 @@ import {
     openCartAddonPicker, walkinQtyChange, removeFromWalkinCart, filterWalkinByCategory, 
     selectPOSSize, clearWalkinCart, submitWalkinSale, setDiscount, setDiscountPct, 
     selectWalkinPayment, togglePOSAddon, openPOSSelectionModal, addToWalkinCartFromModal,
-    adjustPOSModalQty, hidePOSSelectionModal
+    adjustPOSModalQty, hidePOSSelectionModal, applyWalkinFilters
 } from './features/pos.js';
 import { printReceiptById, reprintLastPosReceipt } from './features/printing.js';
 import { 
@@ -25,11 +26,11 @@ import {
 import { 
     editDish, deleteDish, editCategory, deleteCategory, 
     showDishModal, saveDish, addCategory, addNewAddonField, 
-    migrateAddonsToCategories, toggleDishAvailable, runImageMigration 
+    migrateAddonsToCategories, toggleDishAvailable, runImageMigration, filterMenu, filterCategories
 } from './features/catalog.js';
 import { 
     clearLostSales, generateCustomReport as generateReport, 
-    downloadExcel, downloadPDF 
+    downloadExcel, downloadPDF, filterCustomers 
 } from './features/customers.js';
 import { saveStoreSettings, quickUpdateOutletStatus, addFeeSlab } from './features/settings.js';
 
@@ -41,7 +42,10 @@ import './features/feedback.js';
 import './features/tracker.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("[Main] DOM Content Loaded. Initializing...");
+    initGestures();
     initAuth();
+
     // 1. Static Event Binding
     const setupStaticListeners = () => {
         // Global Image Error Handler (CSP Compliant)
@@ -109,7 +113,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loginForm) {
             loginForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                adminLogin();
+                console.log("[Auth] Login form submitted");
+                const email = document.getElementById("adminEmail")?.value.trim();
+                const pass = document.getElementById("adminPassword")?.value;
+                if (email && pass) {
+                    adminLogin(email, pass);
+                } else {
+                    showToast("Please enter email and password", "warning");
+                }
             });
         }
 
@@ -169,185 +180,151 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 2. Dynamic Event Delegation ---
     document.addEventListener('click', (e) => {
-        const el = e.target.closest('[data-action], [data-tab]');
-        if (!el) return;
+        try {
+            const el = e.target.closest('[data-action], [data-tab]');
+            if (!el) return;
 
-        const action = el.getAttribute('data-action');
-        const tab = el.getAttribute('data-tab');
+            const action = el.getAttribute('data-action');
+            const tab = el.getAttribute('data-tab');
 
-        if (tab) {
-            switchTab(tab);
-            return;
-        }
-
-        if (!action) return;
-        const id = el.getAttribute('data-id');
-        const val = el.getAttribute('data-val');
-        const name = el.getAttribute('data-name');
-        const price = el.getAttribute('data-price');
-
-        switch (action) {
-            case 'updateStatusFromDrawer': updateStatus(id, val); break;
-            case 'closeOrderDrawer': closeOrderDrawer(); break;
-            case 'chatOnWhatsapp': /* window.chatOnWhatsapp(id); */ break; 
-            case 'printReceiptById': printReceiptById(id); break;
-            case 'updateStatus': updateStatus(id, val); break;
-            case 'assignRider': assignRider(id, val); break;
-            case 'openOrderDrawer': openOrderDrawer(id); break;
-            case 'markAsPaid': markAsPaid(id); break;
-            case 'deleteCategory': deleteCategory(id); break;
-            case 'removeParent': el.parentElement.remove(); break;
-            case 'removeGrandparent': el.parentElement.parentElement.remove(); break;
-            case 'editRider': editRider(id); break;
-            case 'resetRiderPassword': resetRiderPassword(el.getAttribute('data-email')); break;
-            case 'deleteRider': deleteRider(id); break;
-            case 'saveSettings': saveStoreSettings(); break;
-            case 'saveDeliveredOrder': saveDeliveredOrder(id, val); break;
-            case 'openPOSSelectionModal': openPOSSelectionModal(id); break;
-            case 'hidePOSSelectionModal': hidePOSSelectionModal(); break;
-            case 'openCartAddonPicker': openCartAddonPicker(id); break;
-            case 'walkinQtyChange': walkinQtyChange(id, parseInt(val)); break;
-            case 'walkinRemoveItem': removeFromWalkinCart(id); break;
-            case 'filterWalkinByCategory': filterWalkinByCategory(val, el); break;
-            case 'selectPOSSize': selectPOSSize(name, parseFloat(price), el); break;
-            case 'triggerClick': {
-                const target = document.getElementById(val);
-                if (target) target.click();
-                break;
+            if (tab) {
+                switchTab(tab);
+                return;
             }
-            case 'markDelivered': updateStatus(id, 'Delivered'); break;
-            case 'editDish': editDish(id); break;
-            case 'deleteDish': deleteDish(id); break;
-            case 'editCategory': editCategory(id); break;
-            case 'showRiderModal':
-            case 'showAddRiderModal': showRiderModal(); break;
-            case 'closeModal': {
-                const modal = el.closest('.modal');
-                if (modal) {
-                    modal.classList.add('hidden');
-                    modal.classList.remove('active', 'flex');
+
+            if (!action) return;
+            const id = el.getAttribute('data-id');
+            const val = el.getAttribute('data-val');
+            const name = el.getAttribute('data-name');
+            const price = el.getAttribute('data-price');
+
+            switch (action) {
+                case 'updateStatusFromDrawer': updateStatus(id, val); break;
+                case 'closeOrderDrawer': closeOrderDrawer(); break;
+                case 'chatOnWhatsapp': /* window.chatOnWhatsapp(id); */ break; 
+                case 'printReceiptById': printReceiptById(id); break;
+                case 'updateStatus': updateStatus(id, val); break;
+                case 'assignRider': assignRider(id, val); break;
+                case 'openOrderDrawer': openOrderDrawer(id); break;
+                case 'markAsPaid': markAsPaid(id); break;
+                case 'deleteCategory': deleteCategory(id); break;
+                case 'removeParent': el.parentElement.remove(); break;
+                case 'removeGrandparent': el.parentElement.parentElement.remove(); break;
+                case 'editRider': editRider(id); break;
+                case 'resetRiderPassword': resetRiderPassword(el.getAttribute('data-email')); break;
+                case 'deleteRider': deleteRider(id); break;
+                case 'saveSettings': saveStoreSettings(); break;
+                case 'saveDeliveredOrder': saveDeliveredOrder(id, val); break;
+                case 'openPOSSelectionModal': openPOSSelectionModal(id); break;
+                case 'hidePOSSelectionModal': hidePOSSelectionModal(); break;
+                case 'openCartAddonPicker': openCartAddonPicker(id); break;
+                case 'walkinQtyChange': walkinQtyChange(id, parseInt(val, 10)); break;
+                case 'walkinRemoveItem': removeFromWalkinCart(id); break;
+                case 'filterWalkinByCategory': filterWalkinByCategory(val, el); break;
+                case 'selectPOSSize': selectPOSSize(name, parseFloat(price), el); break;
+                case 'triggerClick': {
+                    const target = document.getElementById(val);
+                    if (target) target.click();
+                    break;
                 }
-                break;
+                case 'markDelivered': updateStatus(id, 'Delivered'); break;
+                case 'editDish': editDish(id); break;
+                case 'deleteDish': deleteDish(id); break;
+                case 'editCategory': editCategory(id); break;
+                case 'showRiderModal':
+                case 'showAddRiderModal': showRiderModal(); break;
+                case 'closeModal': {
+                    const modal = el.closest('.modal');
+                    if (modal) {
+                        modal.classList.add('hidden');
+                        modal.classList.remove('active', 'flex');
+                    }
+                    break;
+                }
+                case 'completeSiteRefresh': completeSiteRefresh(); break;
+                case 'toggleNotificationSheet': toggleNotificationSheet(); break;
+                case 'toggleSidebar': toggleSidebar(); break;
+                case 'openOutletInNewTab': openOutletInNewTab(); break;
+                case 'toggleTheme': themeManager.toggleTheme(); break;
+                case 'userLogout': userLogout(); break;
+                case 'installPWA': installPWA(); break;
+                case 'removeRow': el.closest('tr').remove(); break;
+                case 'addFeeSlab': addFeeSlab(); break;
+                case 'migrateAddons': migrateAddonsToCategories(); break;
+                case 'runImageMigration': runImageMigration(); break;
+                case 'clearWalkinCart': clearWalkinCart(); break;
+                case 'submitWalkinSale': submitWalkinSale(); break;
+                case 'addCategory': addCategory(); break;
+                case 'saveRiderAccount': saveRiderAccount(); break;
+                case 'applyWalkinDiscount': {
+                    const amt = el.getAttribute('data-amount');
+                    const pct = el.getAttribute('data-pct');
+                    if (amt) setDiscount(parseFloat(amt));
+                    else if (pct) setDiscountPct(parseFloat(pct));
+                    break;
+                }
+                case 'selectWalkinPayment': {
+                    const method = el.getAttribute('data-method');
+                    selectWalkinPayment(method, el);
+                    break;
+                }
             }
-            case 'completeSiteRefresh': completeSiteRefresh(); break;
-            case 'toggleNotificationSheet': toggleNotificationSheet(); break;
-            case 'toggleSidebar': toggleSidebar(); break;
-            case 'openOutletInNewTab': openOutletInNewTab(); break;
-            case 'toggleTheme': {
-                const { themeManager } = await import('./ui.js');
-                themeManager.toggleTheme();
-                break;
-            }
-            case 'userLogout': userLogout(); break;
-
-            case 'installPWA': installPWA(); break;
-            case 'removeRow': el.closest('tr').remove(); break;
-            case 'addFeeSlab': addFeeSlab(); break;
-            case 'migrateAddons': migrateAddonsToCategories(); break;
-            case 'runImageMigration': runImageMigration(); break;
-            case 'clearWalkinCart': clearWalkinCart(); break;
-            case 'submitWalkinSale': submitWalkinSale(); break;
-            case 'addCategory': addCategory(); break;
-            case 'saveRiderAccount': saveRiderAccount(); break;
-            case 'applyWalkinDiscount': {
-                const amt = el.getAttribute('data-amount');
-                const pct = el.getAttribute('data-pct');
-                if (amt) setDiscount(parseFloat(amt));
-                else if (pct) setDiscountPct(parseFloat(pct));
-                break;
-            }
-            case 'selectWalkinPayment': {
-                const method = el.getAttribute('data-method');
-                selectWalkinPayment(method, el);
-                break;
-            }
+        } catch (err) {
+            console.error("[Main] Click Event Error:", err);
+            showToast("An error occurred: " + err.message, "error");
         }
     });
 
     document.addEventListener('change', (e) => {
-        const el = e.target;
-        const action = el.getAttribute('data-action');
-        if (!action) return;
-        const id = el.getAttribute('data-id');
-        const val = el.value;
+        try {
+            const el = e.target;
+            const action = el.getAttribute('data-action');
+            if (!action) return;
+            const id = el.getAttribute('data-id');
+            const val = el.value;
 
-        switch (action) {
-            case 'updateStatus': updateStatus(id, val); break;
-            case 'assignRider': assignRider(id, val); break;
-            case 'toggleDish': toggleDishAvailable(id, el.checked); break;
-            case 'togglePOSAddon':
-                togglePOSAddon(el.getAttribute('data-name'), parseFloat(el.getAttribute('data-price')), el);
-                break;
-            case 'previewImage':
-                previewImage(el, el.getAttribute('data-preview-id'));
-                break;
-            case 'switchOutlet': switchOutlet(val); break;
+            switch (action) {
+                case 'updateStatus': updateStatus(id, val); break;
+                case 'assignRider': assignRider(id, val); break;
+                case 'toggleDish': toggleDishAvailable(id, el.checked); break;
+                case 'togglePOSAddon':
+                    togglePOSAddon(el.getAttribute('data-name'), parseFloat(el.getAttribute('data-price')), el);
+                    break;
+                case 'previewImage':
+                    previewImage(el, el.getAttribute('data-preview-id'));
+                    break;
+                case 'switchOutlet': switchOutlet(val); break;
+            }
+        } catch (err) {
+            console.error("[Main] Change Event Error:", err);
         }
     });
 
-    // Search input for POS - real-time filter
-    const walkinSearch = document.getElementById('walkinDishSearch');
-    if (walkinSearch) {
-        walkinSearch.addEventListener('input', async () => {
-            const { applyWalkinFilters } = await import('./features/pos.js');
-            applyWalkinFilters();
-        });
-    }
-
-    // Orders filter
-    const orderSearch = document.getElementById('orderSearch');
-    if (orderSearch) {
-        orderSearch.addEventListener('input', async () => {
-            const { filterOrders } = await import('./features/orders.js');
-            filterOrders(orderSearch.value);
-        });
-    }
-
-    // Customers filter
-    const customerSearch = document.getElementById('customerSearch');
-    if (customerSearch) {
-        customerSearch.addEventListener('input', async () => {
-            const { filterCustomers } = await import('./features/customers.js');
-            filterCustomers(customerSearch.value);
-        });
-    }
-
-    // Menu filter (desktop)
-    const menuSearch = document.getElementById('menuSearch');
-    if (menuSearch) {
-        menuSearch.addEventListener('input', async () => {
-            const { filterMenu } = await import('./features/catalog.js');
-            filterMenu(menuSearch.value);
-        });
-    }
-
-    // Menu filter (mobile)
-    const menuSearchMobile = document.getElementById('menuSearchMobile');
-    if (menuSearchMobile) {
-        menuSearchMobile.addEventListener('input', async () => {
-            const { filterMenu } = await import('./features/catalog.js');
-            filterMenu(menuSearchMobile.value);
-        });
-    }
-
-    // Category filter
-    const categorySearch = document.getElementById('categorySearch');
-    if (categorySearch) {
-        categorySearch.addEventListener('input', async () => {
-            const { filterCategories } = await import('./features/catalog.js');
-            filterCategories(categorySearch.value);
-        });
-    }
+    // Search inputs - simplified with static imports
+    document.getElementById('walkinDishSearch')?.addEventListener('input', applyWalkinFilters);
+    document.getElementById('orderSearch')?.addEventListener('input', (e) => filterOrders(e.target.value));
+    document.getElementById('customerSearch')?.addEventListener('input', (e) => filterCustomers(e.target.value));
+    document.getElementById('menuSearch')?.addEventListener('input', (e) => filterMenu(e.target.value));
+    document.getElementById('menuSearchMobile')?.addEventListener('input', (e) => filterMenu(e.target.value));
+    document.getElementById('categorySearch')?.addEventListener('input', (e) => filterCategories(e.target.value));
+    
+    // Order Filters
+    const triggerOrderRender = () => {
+        import('./features/orders.js').then(o => o.initRealtimeListeners());
+    };
+    document.getElementById('orderFrom')?.addEventListener('change', triggerOrderRender);
+    document.getElementById('orderTo')?.addEventListener('change', triggerOrderRender);
 
     setupStaticListeners();
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    logAudit('SYSTEM_INIT', { 
+        agent: 'Antigravity',
+        version: '4.4.12',
+        timestamp: new Date().toISOString()
+    });
 });
 
 console.log("\uD83D\uDE80 Roshani Pizza ERP Modules Loaded");
 
-logAudit('SYSTEM_INIT', { 
-    agent: 'Antigravity',
-    version: '4.4.1',
-    timestamp: new Date().toISOString()
-});
