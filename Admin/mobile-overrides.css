@@ -188,7 +188,7 @@
         flex: 1 !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
-        padding: 10px !important;
+        padding: 5px !important;
     }
 
      /* --- 6. POS (WALK-IN) OPTIMIZATIONS --- */
@@ -197,7 +197,7 @@
         flex-direction: column !important;
         height: auto !important;
         min-height: auto !important;
-        padding-bottom: 120px !important;
+        padding-bottom: 140px !important;
     }
 
     #tab-walkin .walkin-picker {
@@ -211,12 +211,13 @@
     /* Search - Floating style */
     .walkin-picker .panel-header {
         position: sticky;
-        top: 60px; /* Below mobile header */
+        top: 64px; /* Exactly below mobile header */
         background: #fff;
-        padding: 8px 0;
-        margin-bottom: 10px;
-        border-radius: 12px;
+        padding: 4px 0;
+        margin-bottom: 4px;
+        border-radius: 0;
         z-index: 100;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
     }
 
     /* Dish Grid - 4 columns for mobile */
@@ -414,9 +415,9 @@
     .category-tabs-container {
         display: flex !important;
         overflow-x: auto !important;
-        gap: 10px !important;
-        padding: 8px 0 12px !important;
-        margin-bottom: 8px !important;
+        gap: 8px !important;
+        padding: 4px 0 8px !important;
+        margin-bottom: 4px !important;
         -webkit-overflow-scrolling: touch !important;
         scrollbar-width: none;
         scroll-behavior: smooth;
@@ -455,9 +456,9 @@
     /* Search input */
     .search-input-group {
         width: 100% !important;
-        margin: 8px 0 12px !important;
+        margin: 4px 0 8px !important;
         font-size: 14px !important;
-        padding: 12px 16px !important;
+        padding: 10px 16px !important;
         border-radius: 12px !important;
         border: 2px solid #e2e8f0 !important;
         background: #fff !important;

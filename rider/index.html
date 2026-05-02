@@ -267,15 +267,28 @@
     <div id="otpPanel" class="modal-overlay hidden">
         <div class="modal-card text-center">
             <h2 class="mb-10 text-orange">TRIP COMPLETE</h2>
-            <p class="text-muted mb-20">Enter 6-digit verification code from customer</p>
-            <input type="text" id="otpInput" class="otp-input" placeholder="000000" maxlength="6" inputmode="numeric">
+            <p class="text-muted mb-20">Enter 4-digit verification code from customer</p>
+            <input type="text" id="otpInput" class="otp-input" placeholder="0000" maxlength="4" inputmode="numeric">
             <button id="btnResendOTP" class="btn-outline full-width mb-15">&#128233;
-                RESEND OTP</button>
+                REGENERATE & SEND OTP</button>
             <div class="flex-row gap-10">
-                <button id="btnConfirmOTP" class="btn-primary flex-1">CONFIRM</button>
+                <button id="btnConfirmOTP" class="btn-primary flex-1">VERIFY</button>
                 <button id="btnCloseOTP" class="btn-outline flex-1">LATER</button>
             </div>
             <button id="emergencyBtn" class="btn-ghost-small full-width mt-20 text-danger hidden">EMERGENCY OVERRIDE (ADMIN)</button>
+        </div>
+    </div>
+
+    <div id="paymentPanel" class="modal-overlay hidden">
+        <div class="modal-card text-center">
+            <h2 class="mb-10 text-orange">COLLECT PAYMENT</h2>
+            <p class="text-muted mb-20" id="paymentTotalTxt">Total to collect: ₹0</p>
+            <div class="payment-options-grid">
+                <button class="payment-btn" data-method="Cash"><i data-lucide="banknote"></i> <span>CASH</span></button>
+                <button class="payment-btn" data-method="UPI"><i data-lucide="smartphone"></i> <span>UPI</span></button>
+                <button class="payment-btn" data-method="Card"><i data-lucide="credit-card"></i> <span>CARD</span></button>
+            </div>
+            <button id="btnCancelPayment" class="btn-ghost-small full-width mt-15">CANCEL</button>
         </div>
     </div>
 

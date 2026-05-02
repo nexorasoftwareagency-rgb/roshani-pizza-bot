@@ -51,6 +51,36 @@ function formatJid(phone) {
     return (clean.length >= 10) ? (clean + "@s.whatsapp.net") : null;
 }
 
+async function getReportRecipients() {
+    const recipients = new Set();
+    const fallback = "919876543210";
+    
+    try {
+        // Try to get from pizza outlet settings (primary)
+        const settings = await getData("settings/Delivery", "pizza") || {};
+        const nums = [settings.reportPhone, settings.notifyPhone, settings.developerPhone];
+        
+        nums.forEach(n => {
+            const jid = formatJid(n);
+            if (jid) recipients.add(jid);
+        });
+        
+        // Also check cake outlet for any additional numbers
+        const cakeSettings = await getData("settings/Delivery", "cake") || {};
+        const cakeNums = [cakeSettings.reportPhone, cakeSettings.notifyPhone];
+        cakeNums.forEach(n => {
+            const jid = formatJid(n);
+            if (jid) recipients.add(jid);
+        });
+        
+    } catch (e) {
+        console.error("[Reports] Recipient Resolution Error:", e);
+    }
+    
+    if (recipients.size === 0) recipients.add(formatJid(fallback));
+    return Array.from(recipients);
+}
+
 function cleanupSessions() {
     const now = Date.now();
     for (const sender in sessions) {
@@ -292,9 +322,8 @@ async function sendCartView(sock, sender, user) {
 async function notifyAdmin(sock, orderId, order, type = 'NEW') {
     try {
         const outlet = order.outlet || 'pizza';
-        const settings = await getData("settings/Delivery", outlet) || {};
-        const adminJid = formatJid(settings.notifyPhone || settings.developerPhone || "919876543210");
-        if (!adminJid) return;
+        const jids = await getReportRecipients();
+        if (!jids || jids.length === 0) return;
 
         let msg = "";
         if (type === 'CANCELLED') {
@@ -306,7 +335,9 @@ async function notifyAdmin(sock, orderId, order, type = 'NEW') {
             msg = adminMsg;
         }
         
-        await sock.sendMessage(adminJid, { text: msg });
+        for (const jid of jids) {
+            await sock.sendMessage(jid, { text: msg });
+        }
     } catch (err) { console.error("Admin Notify Error:", err); }
 }
 
@@ -327,12 +358,25 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
         const currentStatus = (order.status || "").trim();
         const orderType = order.type || "Unknown";
         const phoneDisplay = order.phone || order.whatsappNumber || "N/A";
-        console.log(`[Status Update] 🔍 Processing Order #${id.slice(-5)} | Type: ${orderType} | Status: ${currentStatus} | Target: ${jid} (${phoneDisplay})`);
+        
+        // Track OTP changes to trigger resend notifications even if status is same
+        const storedOTP = order.deliveryOTP || order.otp || order.otpCode;
+        const isOtpChanged = processedStatus[id] && 
+                            processedStatus[id].status === "Out for Delivery" && 
+                            currentStatus === "Out for Delivery" && 
+                            processedStatus[id].lastOtp && 
+                            processedStatus[id].lastOtp !== storedOTP;
 
-        const statusKey = `${id}_${currentStatus}`;
-        if (!processedStatus[id] || processedStatus[id].status !== currentStatus || isNew) {
-            console.log(`[Status Update] 📤 SENDING MESSAGE: #${id.slice(-5)} -> ${currentStatus} to ${jid}`);
-            processedStatus[id] = { status: currentStatus, timestamp: Date.now() };
+        console.log(`[Status Update] 🔍 Processing Order #${id.slice(-5)} | Status: ${currentStatus} | OTP Changed: ${isOtpChanged} | Target: ${jid}`);
+
+        if (!processedStatus[id] || processedStatus[id].status !== currentStatus || isNew || isOtpChanged) {
+            console.log(`[Status Update] 📤 SENDING MESSAGE: #${id.slice(-5)} -> ${currentStatus}${isOtpChanged ? ' (New OTP)' : ''} to ${jid}`);
+            
+            processedStatus[id] = { 
+                status: currentStatus, 
+                timestamp: Date.now(),
+                lastOtp: storedOTP 
+            };
 
             const botSettings = await getData("settings/Bot", order.outlet) || {};
             let msg = "";
@@ -348,24 +392,23 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 msg = `👨‍🍳 *NOW PREPARING!* 🔥\n━━━━━━━━━━━━━━━━━━━━\nYour order #${id.slice(-5)} is now in the kitchen! 👨‍🍳\n\nIt won't be long now! 🍕\n${getFoodFunnyProgress("Preparing")}`;
                 img = botSettings.imgPreparing;
             } else if (order.status === "Cooked") {
-                msg = `👨‍🍳 *FRESHLY COOKED!* 🔥\n━━━━━━━━━━━━━━━━━━━━\nYour delicious order #${id.slice(-5)} is now ready and being quality checked! 🍕\n\nIt won't be long now! ❤️\n${getFoodFunnyProgress("Cooked")}`;
+                msg = `🔥 *KITCHEN FINISHED!* 🔥\n━━━━━━━━━━━━━━━━━━━━\nChef has finished cooking your order #${id.slice(-5)}! 🍕\n\nMoving to packing station... ❤️\n${getFoodFunnyProgress("Cooked")}`;
                 img = botSettings.imgCooked;
             } else if (order.status === "Ready") {
                 const isDineIn = orderType === 'Dine-in';
-                msg = `🍱 *READY & PACKED!* 🍱\n━━━━━━━━━━━━━━━━━━━━\nYour delicious order #${id.slice(-5)} is ready! 🚀\n\n${isDineIn ? "It's ready to be served! 🍽️" : "It's waiting for the rider to pick it up. 🛵"}\n${getFoodFunnyProgress("Ready")}`;
-                img = botSettings.imgCooked; // Reuse cooked image if ready image not found
+                msg = `📦 *PACKED & READY!* 🚀\n━━━━━━━━━━━━━━━━━━━━\nYour delicious order #${id.slice(-5)} is ready and packed! 🍱\n\n${isDineIn ? "It's ready to be served! 🍽️" : "Waiting for the rider to pick it up. 🛵"}\n${getFoodFunnyProgress("Ready")}`;
+                img = botSettings.imgReady || botSettings.imgCooked;
                 
-                if (!isDineIn && (order.assignedRider || order.riderId)) {
-                    await notifyRiderPickup(sock, order, order.assignedRider || order.riderId);
+                if (!isDineIn && order.riderPhone) {
+                    await notifyRiderPickup(sock, order);
                 }
             } else if (order.status === "Out for Delivery") {
-                if (orderType === 'Dine-in') return; // Skip for Dine-in
+                if (orderType === 'Dine-in') return;
                 
-                // Generate OTP if not present
-                let otp = order.otp;
+                let otp = storedOTP;
                 if (!otp) {
                     otp = Math.floor(1000 + Math.random() * 9000).toString();
-                    await setData(`${order.outlet}/orders/${id}/otp`, otp);
+                    await updateData(`${order.outlet}/orders/${id}`, { otp: otp, deliveryOTP: otp });
                 }
 
                 let riderInfoText = "";
@@ -376,8 +419,17 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                         riderInfoText = `\n📞 *Rider:* ${rider.name || "Delivery Partner"} (${rider.phone || ""})`;
                     }
                 }
-                msg = `🛵 *OUT FOR DELIVERY!* 🚀\n━━━━━━━━━━━━━━━━━━━━\nOur rider is on the way to your location! 🛵💨\n\n🆔 Order: #${id.slice(-5)}\n🔑 *OTP:* ${otp} (Share with rider only)${riderInfoText}\n💰 *Total:* ₹${order.total}\n${getFoodFunnyProgress("Out for Delivery")}`;
+
+                if (isOtpChanged) {
+                    msg = `🔑 *NEW DELIVERY OTP!* 🔄\n━━━━━━━━━━━━━━━━━━━━\nYour previous code is now invalid. Please use the new one below for your delivery #${id.slice(-5)}:\n\n🔑 *NEW OTP:* ${otp}${riderInfoText}\n💰 *Total:* ₹${order.total}\n\n_Share this code ONLY with the rider upon arrival._`;
+                } else {
+                    msg = `🛵 *OUT FOR DELIVERY!* 🚀\n━━━━━━━━━━━━━━━━━━━━\nOur rider is on the way to your location! 🛵💨\n\n🆔 Order: #${id.slice(-5)}\n🔑 *OTP:* ${otp} (Share with rider only)${riderInfoText}\n💰 *Total:* ₹${order.total}\n${getFoodFunnyProgress("Out for Delivery")}`;
+                }
                 img = botSettings.imgOut;
+                
+                if (order.riderPhone) {
+                    await notifyRiderPickup(sock, order);
+                }
             } else if (order.status === "Delivered") {
                 const isDineIn = orderType === 'Dine-in';
                 msg = `✅ *${isDineIn ? 'SERVED' : 'DELIVERED'} SUCCESSFULLY!* 🍕❤️\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n🤝 *Payment:* ${order.paymentMethod}\n💵 *Total Paid:* ₹${order.total}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*Enjoy your meal!* 😋\n\n${getFunnyFoodJoke()}`;
@@ -437,8 +489,7 @@ async function sendDailyReport(sock) {
             totalRevenue += outletRevenue;
         }
         
-        const adminJid = formatJid("919876543210"); // Configure in settings
-        if (!adminJid) return;
+        const jids = await getReportRecipients();
         
         const msg = `📊 *DAILY SALES REPORT* 📊\n\n` +
             `📅 Date: ${now.toLocaleDateString('en-IN')}\n\n` +
@@ -447,8 +498,10 @@ async function sendDailyReport(sock) {
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
             `_Sent automatically by Roshani Bot_`;
         
-        await sock.sendMessage(adminJid, { text: msg });
-        console.log("📊 Daily report sent");
+        for (const jid of jids) {
+            await sock.sendMessage(jid, { text: msg });
+        }
+        console.log(`📊 Daily report broadcast to ${jids.length} numbers`);
     } catch (err) { console.error("Daily Report Error:", err); }
 }
 
@@ -487,8 +540,7 @@ async function sendMonthlyReport(sock) {
             totalRevenue += outletRevenue;
         }
         
-        const devJid = formatJid("919876543210"); // Developer number
-        if (!devJid) return;
+        const jids = await getReportRecipients();
         
         const msg = `📈 *MONTHLY SALES REPORT* 📈\n\n` +
             `📅 Month: ${now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}\n\n` +
@@ -497,8 +549,10 @@ async function sendMonthlyReport(sock) {
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
             `_Sent automatically by Roshani Bot_`;
         
-        await sock.sendMessage(devJid, { text: msg });
-        console.log("📈 Monthly report sent");
+        for (const jid of jids) {
+            await sock.sendMessage(jid, { text: msg });
+        }
+        console.log(`📈 Monthly report broadcast to ${jids.length} numbers`);
     } catch (err) { console.error("Monthly Report Error:", err); }
 }
 
@@ -539,9 +593,7 @@ async function sendWeeklyReport(sock) {
             totalRevenue += outletRevenue;
         }
         
-        // Send to both Admin and Developer
-        const adminJid = formatJid("919876543210");
-        const devJid = formatJid("919876543210"); // Same for now, can use different numbers
+        const jids = await getReportRecipients();
         
         const msg = `📊 *WEEKLY SALES REPORT* 📊\n\n` +
             `📅 Week: ${startOfWeek.toLocaleDateString('en-IN')} - ${now.toLocaleDateString('en-IN')}\n\n` +
@@ -550,34 +602,33 @@ async function sendWeeklyReport(sock) {
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
             `_Sent automatically by Roshani Bot_`;
         
-        if (adminJid) await sock.sendMessage(adminJid, { text: msg });
-        if (devJid && devJid !== adminJid) await sock.sendMessage(devJid, { text: msg });
-        console.log("📊 Weekly report sent");
+        for (const jid of jids) {
+            await sock.sendMessage(jid, { text: msg });
+        }
+        console.log(`📊 Weekly report broadcast to ${jids.length} numbers`);
     } catch (err) { console.error("Weekly Report Error:", err); }
 }
 
-async function notifyRiderPickup(sock, order, riderEmail) {
+async function notifyRiderPickup(sock, order) {
     try {
-        const rider = await getRiderByEmail(riderEmail, order.outlet || 'pizza');
-        if (!rider || !rider.phone) return;
+        if (!order.riderPhone) return;
         
-        const riderJid = formatJid(rider.phone);
+        const riderJid = formatJid(order.riderPhone);
         
         let itemsText = (order.normalizedItems || order.items || []).map(i => `• ${i.name || i.item} (${i.size}) x${i.qty || i.quantity}`).join('\n');
         
         const locationMsg = order.lat && order.lng ? 
-            `📍 *Location:* https://maps.google.com/?q=${order.lat},${order.lng}` : 
+            `📍 *Location:* https://www.google.com/maps?q=${order.lat},${order.lng}` : 
             `📍 *Address:* ${order.address}`;
         
         const msg = `🛵 *NEW PICKUP ASSIGNED* 🛵\n━━━━━━━━━━━━━━━━━━━━\n` +
             `🆔 *Order:* #${order.orderId?.slice(-5) || 'N/A'}\n` +
             `👤 *Customer:* ${order.customerName}\n` +
             `📞 *Phone:* ${order.phone}\n` +
-            `${locationMsg}\n` +
+            `${locationMsg}\n\n` +
             `📝 *Note:* ${order.customerNote || 'None'}\n\n` +
-            `📦 *ITEMS:*\n${itemsText}\n\n` +
-            `💰 *Total to Collect:* ₹${order.total}\n` +
-            `💳 *Payment:* ${order.paymentMethod}\n` +
+            `📦 *INVOICE DETAILS:*\n${itemsText}\n\n` +
+            `💰 *Total:* ₹${order.total} (${order.paymentMethod})\n` +
             `🔑 *OTP:* ${order.otp || 'N/A'} (Ask customer at delivery)\n` +
             `━━━━━━━━━━━━━━━━━━━━\n_Please confirm pickup on your portal!_`;
         
@@ -980,25 +1031,28 @@ async function startBot() {
                     // Record Lost Sale
                     const lostId = "L-" + Date.now();
                     const { subtotal } = formatCartSummary(user.cart);
-                    await setData(`logs/lostSales/${lostId}`, {
+                    const lostData = {
                         timestamp: new Date().toISOString(),
-                        customer: user.name,
-                        phone: user.phone,
-                        subtotal,
+                        customer: user.name || "Anonymous",
+                        phone: user.phone || "N/A",
+                        total: subtotal, // Changed subtotal to total for report compatibility
+                        subtotal: subtotal,
                         reason: "Cancelled at final invoice step",
-                        outlet: user.outlet
-                    });
+                        outlet: user.outlet || "pizza"
+                    };
+                    
+                    await setData(`logs/lostSales/${lostId}`, lostData);
                     
                     // Notify Admin
                     await notifyAdmin(sock, lostId, { 
-                        customerName: user.name, 
-                        phone: user.phone, 
+                        customerName: user.name || "Anonymous", 
+                        phone: user.phone || "N/A", 
                         total: subtotal,
-                        outlet: user.outlet
+                        outlet: user.outlet || "pizza"
                     }, 'CANCELLED');
 
                     delete sessions[sender]; 
-                    return sock.sendMessage(sender, { text: "❌ Cancelled. We hope to serve you next time! 🙏" }); 
+                    return sock.sendMessage(sender, { text: "❌ Order Cancelled. We hope to serve you next time! 🙏" }); 
                 }
                 if (text === "1") {
                     user.step = "PLACE_ORDER";
@@ -1036,6 +1090,20 @@ async function startBot() {
                     location: user.location,
                     lastOutlet: user.outlet
                 });
+                
+                // Save complete profile to outlet's customers node for POS access
+                if (user.phone) {
+                    const cleanPhone = String(user.phone).replace(/\D/g, '').slice(-10);
+                    const custData = {
+                        name: user.name,
+                        phone: cleanPhone,
+                        address: user.address || "",
+                        location: user.location || null,
+                        mapsLink: user.location ? `https://maps.google.com/?q=${user.location.lat},${user.location.lng}` : "",
+                        lastOrderDate: new Date().toISOString()
+                    };
+                    await updateData(`customers/${cleanPhone}`, custData, user.outlet);
+                }
 
                 let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY!* 🎉\n`;
                 successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
