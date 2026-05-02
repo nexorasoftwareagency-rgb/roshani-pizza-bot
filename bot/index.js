@@ -172,23 +172,36 @@ async function generateOrderId(outlet = 'pizza') {
     return `${dateStr}-${seqNum.toString().padStart(4, '0')}`;
 }
 
-async function sendImage(sock, to, image, text) {
+async function appendContactInfo(text, outlet = 'pizza') {
+    if (!text) return '';
+    try {
+        const storeSettings = await getData("settings/Store", outlet) || {};
+        const deliverySettings = await getData("settings/Delivery", outlet) || {};
+        const adminNum = storeSettings.phone || deliverySettings.reportPhone || "919876543210";
+        return `${text}\n\n━━━━━━━━━━━━━━━━━━━━\nIf you have any Doubt Contact Admin: *${adminNum}*`;
+    } catch (e) {
+        return text;
+    }
+}
+
+async function sendImage(sock, to, image, text, outlet = 'pizza') {
+    const finalMsg = await appendContactInfo(text, outlet);
     if (!image) {
-        await sock.sendMessage(to, { text });
+        await sock.sendMessage(to, { text: finalMsg });
         return;
     }
     try {
         let payload;
         if (typeof image === 'string' && image.startsWith('data:image')) {
             const base64Data = image.split(',')[1];
-            payload = { image: Buffer.from(base64Data, 'base64'), caption: text };
+            payload = { image: Buffer.from(base64Data, 'base64'), caption: finalMsg };
         } else {
-            payload = { image: { url: image }, caption: text };
+            payload = { image: { url: image }, caption: finalMsg };
         }
         await sock.sendMessage(to, payload);
     } catch (err) {
         console.error("Image Send Error:", err);
-        await sock.sendMessage(to, { text });
+        await sock.sendMessage(to, { text: finalMsg });
     }
 }
 
@@ -349,9 +362,7 @@ async function sendCategories(sock, sender, user) {
     const emoji = outlet === 'pizza' ? "🍕" : "🎂";
     const headerEmoji = outlet === 'pizza' ? "🔥" : "✨";
     
-    let msg = `${headerEmoji} ━━━━━━━━━━━━━━━━━━ ${headerEmoji}\n`;
-    msg += `${emoji} *${storeName.toUpperCase()}* ${emoji}\n`;
-    msg += `${headerEmoji} ━━━━━━━━━━━━━━━━━━ ${headerEmoji}\n\n`;
+    let msg = `✨ *${storeName.toUpperCase()}* ✨\n`;
     msg += `🍽️ *SELECT CATEGORY - ${outlet.toUpperCase()}*\n\n`;
     
     user.categoryList.forEach((c, i) => { 
@@ -379,11 +390,12 @@ async function sendCartView(sock, sender, user) {
     const { lines, subtotal } = formatCartSummary(user.cart);
     let msg = `🛒 *YOUR CART SUMMARY*\n\n${lines}`;
     msg += `💰 *Subtotal: ₹${subtotal}*\n\n`;
-    msg += `1️⃣  *Proceed to Checkout* 🚀\n`;
-    msg += `2️⃣  *Clear Cart* 🗑️\n\n`;
-    msg += `_Reply with 1 or 2_`;
+    msg += `1️⃣  *Add another item* 🍕\n`;
+    msg += `2️⃣  *Proceed to Checkout* 🚀\n`;
+    msg += `3️⃣  *Clear Cart* 🗑️\n\n`;
+    msg += `_Reply with 1, 2 or 3_`;
     user.step = "CART_VIEW";
-    return sock.sendMessage(sender, { text: msg });
+    return sock.sendMessage(sender, { text: await appendContactInfo(msg, user.outlet) });
 }
 
 async function notifyAdmin(sock, orderId, order, type = 'NEW') {
@@ -505,8 +517,8 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 msg = `❌ *ORDER CANCELLED* ❌\n━━━━━━━━━━━━━━━━━━━━\nWe're sorry, your order #${id.slice(-5)} has been cancelled.\n\nReason: ${order.cancelReason || "Store Busy / Technical Issue"}\n\nIf you have any questions, please contact us. 🙏`;
             }
 
-if (msg) {
-                await sendImage(sock, jid, img, msg);
+            if (msg) {
+                await sendImage(sock, jid, img, msg, order.outlet || 'pizza');
             }
         }
     } catch (err) { console.error("Status Update Error:", err); }
@@ -985,7 +997,7 @@ async function startBot() {
             if (user.step === "ADDONS") {
                 if (text === "0") { 
                     user.step = "QUANTITY"; 
-                    return sock.sendMessage(sender, { text: "🔢 *HOW MANY?* (Enter 1-50):" }); 
+                    return sock.sendMessage(sender, { text: await appendContactInfo("🔢 *Enter How Many Quantity you Want of this item:*\n\n_Example: Reply with 1, 2, etc._", user.outlet) }); 
                 }
                 
                 const addonIndex = parseInt(text) - 1;
@@ -1024,10 +1036,10 @@ async function startBot() {
                 });
 
                 user.step = "ADDED_TO_CART";
-                let addedMsg = `✅ *ADDED TO CART!*\n\n`;
-                addedMsg += `1️⃣ *Add more items* 🍕\n`;
+                let addedMsg = `✅ *ADDED TO CART!* 🛒\n\n`;
+                addedMsg += `1️⃣ *Add another item* 🍕\n`;
                 addedMsg += `2️⃣ *View Cart & Checkout* 🛒`;
-                return sock.sendMessage(sender, { text: addedMsg });
+                return sock.sendMessage(sender, { text: await appendContactInfo(addedMsg, user.outlet) });
             }
 
             if (user.step === "ADDED_TO_CART") {
@@ -1043,7 +1055,8 @@ async function startBot() {
             }
 
             if (user.step === "CART_VIEW") {
-                if (text === "1") { 
+                if (text === "1") return sendCategories(sock, sender, user);
+                if (text === "2") { 
                     if (user.profile && user.profile.name) {
                         user.step = "REUSE_PROFILE";
                         let profileMsg = `👤 *REUSE YOUR SAVED DETAILS?*\n\n`;
@@ -1052,14 +1065,14 @@ async function startBot() {
                         profileMsg += `Address: ${user.profile.address || "N/A"}\n\n`;
                         profileMsg += `1️⃣ Yes, use these details\n`;
                         profileMsg += `2️⃣ No, enter new details`;
-                        return sock.sendMessage(sender, { text: profileMsg });
+                        return sock.sendMessage(sender, { text: await appendContactInfo(profileMsg, user.outlet) });
                     }
                     user.step = "NAME"; 
-                    return sock.sendMessage(sender, { text: "👤 *Your Name?*" }); 
+                    return sock.sendMessage(sender, { text: await appendContactInfo("👤 *Enter your Name:*", user.outlet) }); 
                 }
-                if (text === "2") { 
+                if (text === "3") { 
                     sessions[sender] = { step: "START", current: {}, cart: [], profile: user.profile }; 
-                    return sock.sendMessage(sender, { text: "🗑️ Cart cleared. Reply with any message to start again." }); 
+                    return sock.sendMessage(sender, { text: await appendContactInfo("🗑️ Cart cleared. Reply with any message to start again.", user.outlet) }); 
                 }
                 return sendInvalidInputHelp(sock, sender, user);
             }
@@ -1072,11 +1085,18 @@ async function startBot() {
                     // Note: We intentionally DO NOT reuse user.location here as per request
                     
                     user.step = "LOCATION";
-                    return sock.sendMessage(sender, { text: "📍 *Share your Location* for delivery calculation (Paperclip -> Location)" });
+                    let locMsg = `📍 *SHARE YOUR LOCATION* 🌍\n\n`;
+                    locMsg += `Please share your *Live* or *Current* Location so we can calculate the delivery fee.\n\n`;
+                    locMsg += `*How to share:*\n`;
+                    locMsg += `1️⃣ Click the 📎 (Paperclip) or *+* button in WhatsApp\n`;
+                    locMsg += `2️⃣ Select 'Location'\n`;
+                    locMsg += `3️⃣ Choose 'Send Your Current Location'\n\n`;
+                    locMsg += `_This step is mandatory for delivery calculation._`;
+                    return sock.sendMessage(sender, { text: await appendContactInfo(locMsg, user.outlet) });
                 }
                 if (text === "2") {
                     user.step = "NAME";
-                    return sock.sendMessage(sender, { text: "👤 *Your Name?*" });
+                    return sock.sendMessage(sender, { text: await appendContactInfo("👤 *Enter your Name:*", user.outlet) });
                 }
                 return sendInvalidInputHelp(sock, sender, user);
             }
@@ -1086,18 +1106,25 @@ async function startBot() {
                 if (user.name) {
                     await saveUserProfile(sender, { name: user.name, phone: user.phone || "" });
                 }
-                return sock.sendMessage(sender, { text: "📞 *Mobile Number?*" });
+                return sock.sendMessage(sender, { text: await appendContactInfo("📞 *Enter your 10 digit mobile number:*", user.outlet) });
             }
 
             if (user.step === "PHONE") {
                 user.phone = text;
                 user.step = "ADDRESS";
-                return sock.sendMessage(sender, { text: "🏠 *Delivery Address?*" });
+                return sock.sendMessage(sender, { text: await appendContactInfo("🏠 *Enter your Delivery Address:*", user.outlet) });
             }
 
             if (user.step === "ADDRESS") {
                 user.address = text; user.step = "LOCATION";
-                return sock.sendMessage(sender, { text: "📍 *Share your Location* (Paperclip -> Location)" });
+                let locMsg = `📍 *SHARE YOUR LOCATION* 🌍\n\n`;
+                locMsg += `Please share your *Live* or *Current* Location so we can calculate the delivery fee.\n\n`;
+                locMsg += `*How to share:*\n`;
+                locMsg += `1️⃣ Click the 📎 (Paperclip) or *+* button in WhatsApp\n`;
+                locMsg += `2️⃣ Select 'Location'\n`;
+                locMsg += `3️⃣ Choose 'Send Your Current Location'\n\n`;
+                locMsg += `_This step is mandatory for delivery calculation._`;
+                return sock.sendMessage(sender, { text: await appendContactInfo(locMsg, user.outlet) });
             }
 
             if (user.step === "LOCATION") {
@@ -1134,11 +1161,11 @@ async function startBot() {
                     }, 'CANCELLED');
 
                     delete sessions[sender]; 
-                    return sock.sendMessage(sender, { text: "❌ Order Cancelled. We hope to serve you next time! 🙏" }); 
+                    return sock.sendMessage(sender, { text: await appendContactInfo("❌ Order Cancelled. We hope to serve you next time! 🙏", user.outlet) }); 
                 }
                 if (text === "1") {
                     user.step = "PLACE_ORDER";
-                    return sock.sendMessage(sender, { text: "💳 *Payment Method?*\n\n1️⃣ Cash\n2️⃣ UPI" });
+                    return sock.sendMessage(sender, { text: await appendContactInfo("💳 *Payment Method?*\n\n1️⃣ Cash\n2️⃣ UPI", user.outlet) });
                 }
                 return sendInvalidInputHelp(sock, sender, user);
             }
@@ -1198,7 +1225,7 @@ async function startBot() {
                 successMsg += `*Please wait while the admin confirms your order!* ⏳\n\n`;
                 successMsg += `Total: ₹${finalOrder.total}`;
 
-                await sock.sendMessage(sender, { text: successMsg });
+                await sock.sendMessage(sender, { text: await appendContactInfo(successMsg, user.outlet) });
                 delete sessions[sender];
             }
 
@@ -1236,7 +1263,7 @@ async function handleCheckoutFinal(sock, sender, user) {
         sum += `1️⃣ Confirm Order\n`;
         sum += `2️⃣ Cancel`;
         
-        return sock.sendMessage(sender, { text: sum });
+        return sock.sendMessage(sender, { text: await appendContactInfo(sum, user.outlet) });
     } catch (e) {
         console.error("Checkout Final Error:", e);
         return sock.sendMessage(sender, { text: "❌ Error calculating delivery fee. Please try again." });
