@@ -488,20 +488,43 @@ function renderPriorityOrders(orders) {
         return;
     }
 
-    container.innerHTML = priority.map(o => `
-        <div class="priority-card ${o.status.toLowerCase().replace(/ /g, '')}" data-order-id="${o.id}">
-            <div class="flex-row flex-between">
-                <div>
-                    <span class="p-id">#${escapeHtml(o.orderId || o.id.slice(-5))}</span>
-                    <h4 class="p-name">${escapeHtml(o.customerName || 'Walk-in')}</h4>
+    container.innerHTML = priority.map(o => {
+        const id = o.id;
+        const status = o.status || "Placed";
+        const type = o.type || 'Online';
+        const safeStatusClass = status.replace(/ /g, '');
+        
+        // Rider options for this card
+        const onlineRiders = (state.ridersList || []).filter(r => r.status === "Online" || r.status === "On Delivery");
+        const riderOptions = onlineRiders.map(r => `
+            <option value="${r.id}" ${o.riderId === r.id ? 'selected' : ''}>${escapeHtml(r.name)}</option>
+        `).join('');
+
+        return `
+            <div class="priority-card ${safeStatusClass.toLowerCase()}" data-order-id="${id}">
+                <div class="flex-row flex-between">
+                    <div>
+                        <span class="p-id">#${escapeHtml(o.orderId || id.slice(-5))}</span>
+                        <h4 class="p-name">${escapeHtml(o.customerName || 'Walk-in')}</h4>
+                    </div>
+                    <div class="p-status-pill ${safeStatusClass}">${escapeHtml(status)}</div>
                 </div>
-                <div class="p-status-pill">${escapeHtml(o.status)}</div>
+                <div class="p-meta">
+                    <span>₹${o.total}</span> • <span>${o.normalizedItems ? o.normalizedItems.length : 0} items</span>
+                </div>
+                
+                <div class="priority-actions flex-row flex-gap-5 mt-10" onclick="event.stopPropagation()">
+                    <select data-action="assignRider" data-id="${id}" class="status-select-mini" ${type === 'Dine-in' ? 'disabled' : ''}>
+                        <option value="">Rider</option>
+                        ${riderOptions}
+                    </select>
+                    <select data-action="updateStatus" data-id="${id}" class="status-select-mini">
+                        ${getStatusOptions(status, type)}
+                    </select>
+                </div>
             </div>
-            <div class="p-meta">
-                <span>₹${o.total}</span> • <span>${o.items ? Object.keys(o.items).length : 0} items</span>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function renderTopItems(orders) {
