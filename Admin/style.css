@@ -1,35 +1,35 @@
 :root {
-    /* ENHANCED PRIMARY PALETTE */
-    --primary: #FF6B35;           /* Warm coral orange */
-    --primary-rgb: 255, 107, 53;
-    --primary-dark: #E55A2B;      /* Deeper orange */
-    --primary-darker: #CC4A24;    /* For strong accents */
-    --primary-light: #FFF0EB;     /* Very light background */
-    --primary-lighter: rgba(255, 107, 53, 0.08);
-    --primary-glow: rgba(255, 107, 53, 0.15);
+    /* VIBRANT ELECTRIC PALETTE (ZOMATO STYLE) */
+    --primary: #FF4D00;           /* Electric Orange */
+    --primary-rgb: 255, 77, 0;
+    --primary-dark: #E64500;      /* Deep Electric */
+    --primary-darker: #CC3D00;    /* For deep accents */
+    --primary-light: #FFF2EB;     /* Soft peach tint */
+    --primary-lighter: rgba(255, 77, 0, 0.1);
+    --primary-glow: rgba(255, 77, 0, 0.2);
     
     /* Enhanced Outlet Colors */
-    --primary-pizza: #FF6B35;
-    --primary-cake: #E91E63;
-    --primary-dark-pizza: #E55A2B;
-    --primary-dark-cake: #C2185B;
+    --primary-pizza: #FF4D00;
+    --primary-cake: #FF006E;      /* Electric Rose */
+    --primary-dark-pizza: #E64500;
+    --primary-dark-cake: #D1005B;
     
-    /* ENHANCED SEMANTIC COLORS */
-    --success: #00C853;
-    --success-light: #E8F5E8;
-    --success-dark: #009624;
+    /* NEON SEMANTIC COLORS */
+    --success: #00D166;           /* Electric Green */
+    --success-light: #E6FBF0;
+    --success-dark: #00A350;
     
-    --warning: #FF9800;
-    --warning-light: #FFF3E0;
-    --warning-dark: #E65100;
+    --warning: #FFB800;           /* Vivid Amber */
+    --warning-light: #FFF8E6;
+    --warning-dark: #E6A600;
     
-    --info: #2196F3;
-    --info-light: #E3F2FD;
-    --info-dark: #1565C0;
+    --info: #3D8BFF;              /* Electric Blue */
+    --info-light: #ECF4FF;
+    --info-dark: #2E6BCC;
     
-    --error: #F44336;
+    --error: #FF3366;             /* Vivid Rose/Red */
     --error-light: #FFEBEE;
-    --error-dark: #C62828;
+    --error-dark: #D62B57;
 
     /* Neutrals */
     --neutral-50: #FAFAFA;
@@ -65,13 +65,14 @@
     --header-height: 80px;
     --header-offset: var(--header-height);
 
-    /* SHADOWS & GLASS */
-    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.05);
-    --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.08);
-    --shadow-strong: 0 20px 40px rgba(0, 0, 0, 0.12);
+    /* VIBRANT SHADOWS (Primary Tinted) */
+    --shadow-soft: 0 4px 12px rgba(255, 77, 0, 0.05);
+    --shadow-medium: 0 12px 30px rgba(255, 77, 0, 0.1);
+    --shadow-strong: 0 24px 50px rgba(255, 77, 0, 0.15);
     --glass-bg: rgba(255, 255, 255, 0.85);
-    --glass-border: rgba(0, 0, 0, 0.06);
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+    --glass-border: rgba(0, 0, 0, 0.12);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+    --border-color: rgba(0, 0, 0, 0.12);
 }
 
 /* DARK MODE THEME */
@@ -93,7 +94,7 @@
     --neutral-300: #333333;
     
     --glass-bg: rgba(42, 42, 42, 0.8);
-    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
     --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     
     --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -108,9 +109,9 @@
 
 body {
     background:
-        radial-gradient(ellipse at top left, rgba(249, 115, 22, 0.04) 0%, transparent 50%),
-        radial-gradient(ellipse at bottom right, rgba(236, 72, 153, 0.03) 0%, transparent 50%),
-        linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+        radial-gradient(ellipse at top left, rgba(255, 77, 0, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse at bottom right, rgba(255, 0, 110, 0.04) 0%, transparent 60%),
+        linear-gradient(135deg, #FFFFFF 0%, #F5F7FA 100%);
     color: var(--text-main);
     font-family: 'Inter', 'Outfit', sans-serif;
     height: 100dvh; /* Dynamic viewport height for mobile */
@@ -813,7 +814,7 @@ html, body {
 .kpi-card {
     align-items: center;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.7));
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 24px;
     box-shadow:
         0 4px 20px rgba(0, 0, 0, 0.06),
@@ -944,10 +945,8 @@ html, body {
 
 /* PANEL BLOCKS */
 .panel {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.6));
-    -webkit-backdrop-filter: blur(16px);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 24px;
     box-shadow:
         0 8px 32px rgba(0, 0, 0, 0.08),
@@ -970,7 +969,7 @@ html, body {
     justify-content: space-between;
     margin-bottom: 14px;
     padding-bottom: 14px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .panel-title {
@@ -1152,7 +1151,7 @@ tbody tr:hover td:first-child {
 .btn-table-icon {
     padding: 6px 10px;
     font-size: 14px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color);
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
     color: var(--text-main);
     cursor: pointer;
@@ -1413,7 +1412,7 @@ tbody tr:hover td:first-child {
 
 .btn-secondary {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     color: var(--text-main);
     cursor: pointer;
@@ -1438,7 +1437,7 @@ tbody tr:hover td:first-child {
 
 .form-input {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color);
     border-radius: 14px;
     color: var(--text-main);
     font-size: 14px;
@@ -1462,7 +1461,7 @@ tbody tr:hover td:first-child {
 
 .search-input-group {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     color: inherit;
     padding: 12px 16px;
@@ -1547,7 +1546,7 @@ tbody tr:hover td:first-child {
 
 .modal-content {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95));
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.15);
     box-shadow:
         0 25px 60px rgba(0, 0, 0, 0.25),
         0 0 80px rgba(249, 115, 22, 0.08);
@@ -1599,7 +1598,7 @@ tbody tr:hover td:first-child {
 
 .close-btn {
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.02));
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color);
     border-radius: 14px;
     color: var(--text-muted);
     cursor: pointer;
@@ -3042,7 +3041,7 @@ tbody tr:hover td:first-child {
     width: 26px;
     height: 26px;
     border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color);
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
     font-size: 14px;
     font-weight: 700;
@@ -3129,7 +3128,7 @@ tbody tr:hover td:first-child {
 .hamburger-btn {
     align-items: center;
     background: var(--white);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     box-shadow: var(--shadow-soft);
     color: var(--action-green);
@@ -4281,7 +4280,7 @@ body {
 }
 
 .border-ghost-visible {
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color);
 }
 
 /* ADDITIONAL UTILITIES */

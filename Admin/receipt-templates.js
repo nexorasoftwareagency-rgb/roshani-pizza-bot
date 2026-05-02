@@ -126,7 +126,7 @@ window.ReceiptTemplates = {
                         <span>₹${order.subtotal.toFixed(2)}</span>
                     </div>
                     ${order.deliveryFee > 0 ? `<div class="summary-row"><span>Delivery:</span> <span>₹${order.deliveryFee.toFixed(2)}</span></div>` : ''}
-                    ${order.discount > 0 ? `<div class="summary-row"><span>Discount:</span> <span style="color:#000;">-₹${order.discount.toFixed(2)}</span></div>` : ''}
+                    ${order.discount > 0 ? `<div class="summary-row"><span class="bold">Discount Allotted:</span> <span class="bold">-₹${order.discount.toFixed(2)}</span></div>` : ''}
                     
                     <div class="summary-row grand-total">
                         <span>NET PAYABLE</span>
