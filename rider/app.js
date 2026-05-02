@@ -308,6 +308,11 @@ window.showSection = (sectionId) => {
     const nav = document.getElementById('sidebarNav');
     if (nav && nav.classList.contains('active')) window.toggleRiderSidebar();
     if (window.lucide) lucide.createIcons();
+
+    // Re-init map if switching to active section
+    if (sectionId === 'active' && window.activeOrderData) {
+        setTimeout(() => window.initActiveMap(window.activeOrderData), 200);
+    }
 };
 
 window.showToast = (msg, type = "info") => {
@@ -449,9 +454,119 @@ window.confirmPickup = async () => {
         const modal = document.getElementById('verificationModal');
         if (modal) modal.classList.add('hidden');
         window.showToast("Order Picked Up! Drive safe. 🛵", "success");
+        
+        // Auto-switch to LIVE section
+        window.showSection('active');
     } catch (e) {
         logError("confirmPickup", e);
         window.showToast("Failed to update status.", "error");
+    }
+};
+
+let activeMap = null;
+let customerMarker = null;
+let riderMarker = null;
+
+window.initActiveMap = (order) => {
+    const mapContainer = document.getElementById('activeTripMap');
+    if (!mapContainer || !order) return;
+
+    const lat = order.lat || order.latitude;
+    const lng = order.lng || order.longitude;
+    if (!lat || !lng) return;
+
+    if (!activeMap) {
+        activeMap = L.map('activeTripMap', { zoomControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(activeMap);
+    }
+
+    if (customerMarker) activeMap.removeLayer(customerMarker);
+    customerMarker = L.marker([lat, lng]).addTo(activeMap).bindPopup("Customer Location");
+
+    const bounds = L.latLngBounds([lat, lng]);
+
+    if (window.riderLocation) {
+        if (riderMarker) activeMap.removeLayer(riderMarker);
+        riderMarker = L.circleMarker([window.riderLocation.lat, window.riderLocation.lng], {
+            color: '#FF5200',
+            fillColor: '#FF5200',
+            fillOpacity: 0.8,
+            radius: 8
+        }).addTo(activeMap).bindPopup("You are here");
+        bounds.extend([window.riderLocation.lat, window.riderLocation.lng]);
+    }
+
+    activeMap.fitBounds(bounds, { padding: [50, 50] });
+    activeMap.invalidateSize();
+};
+
+window.renderNotifications = () => {
+    const list = document.getElementById('notifList');
+    const badge = document.getElementById('notifBadge');
+    if (!list) return;
+
+    const notifs = Object.entries(window.riderNotifications || {})
+        .sort((a, b) => b[1].timestamp - a[1].timestamp);
+
+    const unreadCount = notifs.filter(([id, n]) => !n.read).length;
+    if (badge) {
+        badge.innerText = unreadCount;
+        badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+    }
+
+    if (notifs.length === 0) {
+        list.innerHTML = `
+            <div class="empty-notif">
+                <i data-lucide="bell-off"></i>
+                <p>No new notifications</p>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    list.innerHTML = notifs.map(([id, n]) => `
+        <div class="notif-item ${n.read ? '' : 'unread'}" onclick="window.markNotifRead('${id}')">
+            <div class="notif-icon ${n.type || 'info'}">
+                <i data-lucide="${n.icon || 'bell'}"></i>
+            </div>
+            <div class="notif-body">
+                <h4>${n.title}</h4>
+                <p>${n.body}</p>
+                <span class="notif-time">${new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            ${!n.read ? '<div class="unread-dot"></div>' : ''}
+        </div>
+    `).join('');
+
+    if (window.lucide) lucide.createIcons();
+};
+
+window.markNotifRead = async (id) => {
+    const safeEmail = window.currentUser.email.replace(/\./g, '_');
+    await update(ref(db, `riders/${safeEmail}/notifications/${id}`), { read: true });
+};
+
+window.clearAllNotifications = async () => {
+    if (!confirm("Clear all notifications?")) return;
+    const safeEmail = window.currentUser.email.replace(/\./g, '_');
+    await remove(ref(db, `riders/${safeEmail}/notifications`));
+    window.showToast("Notifications cleared", "success");
+};
+
+window.toggleNotifSheet = () => {
+    const sheet = document.getElementById('notifSheet');
+    const overlay = document.querySelector('.sidebar-overlay');
+    if (!sheet) return;
+    
+    sheet.classList.toggle('active');
+    if (overlay) {
+        overlay.classList.toggle('active');
+        if (sheet.classList.contains('active')) {
+            overlay.onclick = window.toggleNotifSheet;
+        }
     }
 };
 
@@ -497,7 +612,15 @@ window.acceptOrder = async (id, outletId) => {
             if (current && current.assignedRider) return;
             // Changed from 4-digit to 4-digit OTP for consistency across system
             const initialOTP = Math.floor(1000 + Math.random() * 9000).toString();
-            return { ...current, status: "Arriving at Restaurant", deliveryOTP: initialOTP, otp: initialOTP, assignedRider: window.currentUser.email.toLowerCase(), acceptedAt: Date.now() };
+            return { 
+                ...current, 
+                status: "Arriving at Restaurant", 
+                deliveryOTP: initialOTP, 
+                otp: initialOTP, 
+                assignedRider: window.currentUser.email.toLowerCase(), 
+                riderPhone: window.currentUser.profile.phone || "",
+                acceptedAt: Date.now() 
+            };
         });
         if (result.committed) {
             window.showSection('home');
@@ -726,23 +849,53 @@ function initRealtimeListeners() {
 
         const q1 = query(ref(db, ordersPath), orderByChild('assignedRider'), equalTo(null));
         window._activeListeners.push({ ref: q1, type: 'value' });
-        onValue(q1, snap => updateCache(snap.val() || {}, 'unassigned'));
+        onValue(q1, snap => updateCache(snap.val() || {}, 'unassigned'), error => {
+            console.error(`[Firebase] Unassigned Read Error (${outletId}):`, error);
+            if (error.code === 'PERMISSION_DENIED') {
+                console.warn("Security Rules are blocking this rider from reading orders.");
+            }
+        });
 
         const q2 = query(ref(db, ordersPath), orderByChild('assignedRider'), equalTo(currentEmail));
         window._activeListeners.push({ ref: q2, type: 'value' });
-        onValue(q2, snap => { window._lastOrderCache = window.orderCache; updateCache(snap.val() || {}, 'mine'); });
+        onValue(q2, snap => { 
+            window._lastOrderCache = window.orderCache; 
+            updateCache(snap.val() || {}, 'mine'); 
+        }, error => {
+            console.error(`[Firebase] Assigned Read Error (${outletId}):`, error);
+        });
+    });
+
+    // Listen to Notifications
+    const safeEmail = currentEmail.replace(/\./g, '_');
+    const notifPath = `riders/${safeEmail}/notifications`;
+    const notifRef = ref(db, notifPath);
+    window._activeListeners.push({ ref: notifRef, type: 'value' });
+    onValue(notifRef, snap => {
+        window.riderNotifications = snap.val() || {};
+        window.renderNotifications();
+    }, error => {
+        console.error("[Firebase] Notification Read Error:", error);
     });
 }
 
 window.renderAllOrders = () => {
     const unassignedList = document.getElementById('unassignedOrdersList');
     const dashboardActiveView = document.getElementById('dashboardActiveDeliveryView');
+    const activeOrderView = document.getElementById('activeOrderView');
     const pickupBadge = document.getElementById('navPickupBadge');
 
     if (!unassignedList || !dashboardActiveView || !window.currentUser) return;
 
     unassignedList.innerHTML = '';
     dashboardActiveView.innerHTML = '';
+    if (activeOrderView) {
+        activeOrderView.innerHTML = `
+            <div class="glass-panel empty-state-glass">
+                <p>No active trip currently.</p>
+            </div>
+        `;
+    }
 
     let unassignedCount = 0;
     let todayOrders = 0; let todayPay = 0; let totalCash = 0;
@@ -759,23 +912,45 @@ window.renderAllOrders = () => {
             if ((status === "ready" || status === "cooked") && !o.assignedRider) {
                 const safeOrderId = escapeHtml((o.orderId || id.slice(-6)).toUpperCase());
                 const safeAddress = escapeHtml(o.address || 'Unknown');
+                const safeName = escapeHtml(o.customerName || 'Guest');
+                const safePhone = escapeHtml(o.phone || o.customerPhone || 'N/A');
                 const safeFee = escapeHtml(String(o.deliveryFee || 0));
+                const safeTotal = escapeHtml(String(o.total || 0));
                 const safeId = escapeHtml(id);
                 const safeOutlet = escapeHtml(outletId);
+                
+                const itemsList = (o.normalizedItems || o.items || []).map(i => 
+                    `<div class="pickup-item-row">• ${escapeHtml(i.name || i.item)} (${escapeHtml(i.size)}) x${i.qty || i.quantity}</div>`
+                ).join('');
 
                 unassignedList.innerHTML += `
                     <div class="order-card-premium">
                         <div class="incoming-request-header">
-                            <div class="new-order-badge">NEW ORDER</div>
+                            <div class="new-order-badge">AVAILABLE</div>
                             <div class="order-id-chip">#${safeOrderId}</div>
                         </div>
                         <div class="incoming-request-body">
                             <h3 class="rest-name">Drop-off: ${safeAddress}</h3>
+                            <div class="customer-info-mini mt-10">
+                                <p><strong>Customer:</strong> ${safeName}</p>
+                                <p><strong>Phone:</strong> ${safePhone}</p>
+                            </div>
+                            <div class="pickup-items-list mt-10">
+                                <p class="text-small font-bold mb-5 uppercase text-muted">Invoice Details:</p>
+                                ${itemsList}
+                            </div>
                             <div class="trip-summary-stats mt-15" style="background:#f8fafc; padding:10px; border-radius:10px;">
-                                <div class="trip-stat"><span class="text-muted text-small font-bold uppercase">Earning</span><br><span class="text-orange font-bold" style="font-size:1.2rem;">₹${safeFee}</span></div>
+                                <div class="trip-stat">
+                                    <span class="text-muted text-small font-bold uppercase">Earning</span><br>
+                                    <span class="text-orange font-bold" style="font-size:1.2rem;">₹${safeFee}</span>
+                                </div>
+                                <div class="trip-stat">
+                                    <span class="text-muted text-small font-bold uppercase">Collect</span><br>
+                                    <span class="text-pink font-bold" style="font-size:1.2rem;">₹${safeTotal}</span>
+                                </div>
                             </div>
                         </div>
-                        <button class="btn-primary full-width mt-15" data-action="accept" data-id="${safeId}" data-outlet="${safeOutlet}">ACCEPT ORDER</button>
+                        <button class="btn-primary full-width mt-15" data-action="accept" data-id="${safeId}" data-outlet="${safeOutlet}">PICK UP ORDER</button>
                     </div>`;
                 unassignedCount++;
             }
@@ -798,6 +973,10 @@ window.renderAllOrders = () => {
                 const safeId = escapeHtml(id);
                 const safeOutlet = escapeHtml(outletId);
 
+                const itemsList = (o.normalizedItems || o.items || []).map(i => 
+                    `<div class="pickup-item-row">• ${escapeHtml(i.name || i.item)} (${escapeHtml(i.size)}) x${i.qty || i.quantity}</div>`
+                ).join('');
+
                 let actionButtons = "";
                 const currentStatus = (o.status || "").toLowerCase();
 
@@ -807,7 +986,7 @@ window.renderAllOrders = () => {
                     actionButtons = `<button class="btn-primary full-width mt-10" style="background:#10B981;" data-action="navigate" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="navigation"></i> LET'S GO TO DELIVER</button>`;
                 }
 
-                dashboardActiveView.innerHTML = `
+                const activeContent = `
                     <div class="active-delivery-mock-card">
                         <div class="active-del-header">
                             <div class="active-del-title">Active Delivery <span class="text-muted text-small">#${safeOrderId}</span></div>
@@ -821,7 +1000,11 @@ window.renderAllOrders = () => {
                                 <p class="text-orange text-small mt-10 font-bold">${safeStatus}</p>
                             </div>
                         </div>
-                        <div class="action-pill-row">
+                        <div class="pickup-items-list mt-10" style="background:#f1f5f9; border-radius:10px; padding:10px;">
+                            <p class="text-small font-bold mb-5 uppercase text-muted">Invoice Details:</p>
+                            ${itemsList}
+                        </div>
+                        <div class="action-pill-row mt-15">
                             <button class="action-pill" data-action="call" data-phone="${safePhone}"><i data-lucide="phone"></i>CALL</button>
                             <button class="action-pill" data-action="msg" data-phone="${safePhone}" data-orderid="${safeOrderId}"><i data-lucide="message-circle"></i>MSG</button>
                             <button class="action-pill" data-action="otp"><i data-lucide="key-round"></i>OTP</button>
@@ -829,6 +1012,14 @@ window.renderAllOrders = () => {
                         ${actionButtons}
                     </div>
                 `;
+
+                dashboardActiveView.innerHTML = activeContent;
+                if (activeOrderView) activeOrderView.innerHTML = activeContent;
+                
+                // Initialize/Update Map if in LIVE section
+                if (document.getElementById('sec-active').classList.contains('active')) {
+                    setTimeout(() => window.initActiveMap(o), 100);
+                }
             }
             else if (status === "delivered" && isMine) {
                 const fee = Number(o.deliveryFee || 0);
@@ -838,8 +1029,12 @@ window.renderAllOrders = () => {
         });
     });
 
-    if (pickupBadge) { pickupBadge.innerText = unassignedCount; pickupBadge.classList.toggle('hidden', unassignedCount === 0); }
-    document.getElementById('pickupCount').innerText = `${unassignedCount} Orders`;
+    if (pickupBadge) { 
+        pickupBadge.innerText = unassignedCount; 
+        pickupBadge.classList.toggle('hidden', unassignedCount === 0); 
+    }
+    const pCountEl = document.getElementById('pickupCount');
+    if (pCountEl) pCountEl.innerText = `${unassignedCount} Orders`;
 
     document.getElementById('stats-delivered').innerText = todayOrders;
     document.getElementById('stats-earnings').innerText = `₹${todayPay.toLocaleString()}`;
@@ -877,6 +1072,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (action === 'msg') window.triggerWhatsAppAlert(btn.dataset.phone, btn.dataset.orderid, 'PICKED_UP');
         else if (action === 'otp') window.openOTPPanel();
         else if (action === 'pickup') window.confirmPickup();
+        else if (action === 'accept') window.acceptOrder(btn.dataset.id, btn.dataset.outlet);
         else if (action === 'navigate') window.startNavigation(btn.dataset.id, btn.dataset.outlet);
     });
 

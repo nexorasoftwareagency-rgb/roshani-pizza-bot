@@ -41,10 +41,10 @@
     },
     "pizza": {
       "orders": {
-        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-        ".indexOn": ["createdAt", "status", "riderId"],
+        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || root.child('riders').child(auth.uid).exists())",
+        ".indexOn": ["createdAt", "status", "riderId", "assignedRider"],
         "$orderId": {
-          ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (auth.token.rider == true && (!data.child('riderId').exists() || data.child('riderId').val() == auth.uid)))",
+          ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && (!data.child('riderId').exists() || data.child('riderId').val() == auth.uid)))",
           ".validate": "newData.hasChildren(['items', 'total', 'status', 'createdAt']) && (root.child('admins').child(auth.uid).exists() || (newData.child('items').val() == data.child('items').val() && newData.child('total').val() == data.child('total').val()))"
         }
       },
@@ -79,10 +79,10 @@
     },
     "cake": {
       "orders": {
-        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-        ".indexOn": ["createdAt", "status", "riderId"],
+        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || root.child('riders').child(auth.uid).exists())",
+        ".indexOn": ["createdAt", "status", "riderId", "assignedRider"],
         "$orderId": {
-          ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (auth.token.rider == true && (!data.child('riderId').exists() || data.child('riderId').val() == auth.uid)))",
+          ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && (!data.child('riderId').exists() || data.child('riderId').val() == auth.uid)))",
           ".validate": "newData.hasChildren(['items', 'total', 'status', 'createdAt']) && (root.child('admins').child(auth.uid).exists() || (newData.child('items').val() == data.child('items').val() && newData.child('total').val() == data.child('total').val()))"
         }
       },
