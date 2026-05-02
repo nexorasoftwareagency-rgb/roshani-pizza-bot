@@ -127,7 +127,7 @@ export const logAudit = async (action, details = {}) => {
         const auditRef = Outlet.ref('logs/audit').push();
         await auditRef.set({
             timestamp: ServerValue.TIMESTAMP,
-            user: user ? user.email : 'system',
+            adminEmail: user ? user.email : 'system',
             uid: user ? user.uid : 'system',
             action,
             details,

@@ -96,8 +96,8 @@ self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : { title: 'New Alert', body: 'Check your dashboard.' };
   const options = {
     body: data.body,
-    icon: './icon-pizza.png',
-    badge: './icon-pizza.png',
+    icon: './icon-pizza.webp',
+    badge: './icon-pizza.webp',
     vibrate: [100, 50, 100],
     data: { url: './index.html' },
     actions: [

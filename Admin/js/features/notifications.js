@@ -194,7 +194,7 @@ export function showNativeNotification(title, body) {
     if (Notification.permission !== "granted") return;
 
     const brandPrefix = state.currentOutlet === 'cake' ? '🎂 CAKE: ' : '🍕 PIZZA: ';
-    const icon = state.currentOutlet === 'cake' ? 'icon-cake.png' : 'icon-pizza.png';
+    const icon = state.currentOutlet === 'cake' ? 'icon-cake.webp' : 'icon-pizza.webp';
 
     const options = {
         body,
