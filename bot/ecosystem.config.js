@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'roshani-bot',
-    script: 'index.js',
+    script: 'bot/index.js',
     instances: 1,
     autorestart: true,
     watch: false,
