@@ -266,23 +266,14 @@
 
     /* Cart - Bottom Sheet Style */
     .walkin-cart {
-        position: fixed !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        height: 80vh !important;
-        border-radius: 24px 24px 0 0 !important;
-        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25) !important;
-        z-index: 6000 !important;
-        background: #fff !important;
-        transform: translateY(100%) !important;
-        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    }
-
-    .walkin-cart.active {
-        transform: translateY(0) !important;
+        position: relative !important;
+        transform: none !important;
+        height: auto !important;
+        z-index: 1 !important;
+        background: var(--bg-secondary) !important;
+        box-shadow: none !important;
+        border-top: 5px solid var(--primary-color) !important;
+        padding-bottom: 100px !important; /* Space for footer */
     }
 
     /* Mobile Cart Summary Pill */
@@ -338,41 +329,16 @@
         flex-direction: column;
     }
 
-    /* Cart handle */
+    /* Cart handle - Hidden as it's no longer a drawer */
     .walkin-cart::before {
-        content: '';
-        display: block;
-        width: 36px;
-        height: 4px;
-        background: #cbd5e1;
-        border-radius: 10px;
-        margin: 8px auto;
-    }
-
-    /* Cart header */
-    .sticky-cart .panel-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding-bottom: 10px;
-        border-bottom: 1px solid #e2e8f0;
-        flex-shrink: 0;
-    }
-
-    .sticky-cart .panel-title {
-        font-size: 16px;
-    }
-
-    .sticky-cart .btn-text-danger {
-        padding: 6px 12px;
+        display: none !important;
     }
 
     /* Cart Items */
     .cart-items-container {
-        flex: 1;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        min-height: 100px;
+        flex: none !important;
+        overflow-y: visible !important;
+        min-height: 50px;
     }
 
     .walkin-cart-item {

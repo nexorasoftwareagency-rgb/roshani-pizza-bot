@@ -4007,8 +4007,8 @@ body {
 
 @media (max-width: 768px) {
     .category-tabs-container {
-        padding: 8px;
-        margin-bottom: 10px;
+        padding: 4px 0;
+        margin-bottom: 5px;
     }
 
     .category-tab {
@@ -5045,13 +5045,25 @@ body {
     /* POS Mobile Adjustments */
     .walkin-layout {
         flex-direction: column !important;
+        padding: 0 !important;
+        gap: 0 !important;
     }
 
     .walkin-picker {
         width: 100% !important;
         border-right: none !important;
-        border-bottom: 1px solid var(--border-color) !important;
-        max-height: 40vh !important;
+        border-bottom: 2px solid var(--border-color) !important;
+        max-height: none !important; /* Allow natural flow */
+    }
+
+    .walkin-picker .panel {
+        margin: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .walkin-picker .panel-header {
+        padding: 10px 15px !important;
     }
 
     .walkin-cart {
@@ -5059,8 +5071,9 @@ body {
     }
 
     .menu-grid {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
-        gap: 12px !important;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+        gap: 10px !important;
+        padding: 10px !important;
     }
 }
 
