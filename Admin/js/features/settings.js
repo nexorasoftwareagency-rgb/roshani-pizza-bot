@@ -111,7 +111,7 @@ export async function loadStoreSettings() {
         // Render Fee Slabs
         renderFeeSlabs(d.slabs || []);
 
-        // 3. Bot Aesthetics
+        // 3. Bot Aesthetics & Marketing
         const b = bot || {};
         const botPreviews = {
             'botImgConfirmedPreview': b.imgConfirmed,
@@ -119,12 +119,17 @@ export async function loadStoreSettings() {
             'botImgCookedPreview': b.imgCooked,
             'botImgOutPreview': b.imgOut,
             'botImgDeliveredPreview': b.imgDelivered,
-            'botImgFeedbackPreview': b.imgFeedback
+            'botImgFeedbackPreview': b.imgFeedback,
+            'greetingImgPreview': b.greetingImage,
+            'menuImgPreview': b.menuImage
         };
         for (const [id, url] of Object.entries(botPreviews)) {
             if (url) {
                 const el = document.getElementById(id);
                 if (el) el.src = url;
+                // Also update hidden inputs for Marketing images
+                if (id === 'greetingImgPreview') document.getElementById('settingGreetingUrl').value = url;
+                if (id === 'menuImgPreview') document.getElementById('settingMenuUrl').value = url;
             }
         }
 
@@ -239,6 +244,8 @@ export async function saveStoreSettings() {
             imgOut: document.getElementById('botImgOutPreview').src,
             imgDelivered: document.getElementById('botImgDeliveredPreview').src,
             imgFeedback: document.getElementById('botImgFeedbackPreview').src,
+            greetingImage: document.getElementById('settingGreetingUrl').value,
+            menuImage: document.getElementById('settingMenuUrl').value,
             socialInsta: document.getElementById('botSocialInsta').value,
             socialFb: document.getElementById('botSocialFb').value,
             socialReview: document.getElementById('botSocialReview').value,
@@ -389,6 +396,9 @@ function showStatusAlert(newStatus) {
 // Bind image uploads for Settings
 document.addEventListener('change', (e) => {
     if (e.target.id === 'settingQRFile') previewSettingsImage('settingQRFile', 'qrPreview', 'settingQRUrl');
+    if (e.target.id === 'settingGreetingFile') previewSettingsImage('settingGreetingFile', 'greetingImgPreview', 'settingGreetingUrl');
+    if (e.target.id === 'settingMenuFile') previewSettingsImage('settingMenuFile', 'menuImgPreview', 'settingMenuUrl');
+    
     if (e.target.id.startsWith('botImg')) {
         const id = e.target.id;
         const previewId = id.replace('File', 'Preview');
@@ -398,11 +408,16 @@ document.addEventListener('change', (e) => {
 
 document.addEventListener('click', (e) => {
     if (e.target.id === 'btnChangeQR') document.getElementById('settingQRFile').click();
+    if (e.target.id === 'btnChangeGreetingImg') document.getElementById('settingGreetingFile').click();
+    if (e.target.id === 'btnChangeMenuImg') document.getElementById('settingMenuFile').click();
+    
     if (e.target.classList.contains('btn-upload-bot-img')) {
         const targetId = e.target.getAttribute('data-target');
-        document.getElementById(targetId).click();
+        const input = document.getElementById(targetId);
+        if (input) input.click();
     }
     if (e.target.getAttribute('data-action') === 'removeFeeSlab') {
-        e.target.closest('tr').remove();
+        const row = e.target.closest('tr');
+        if (row) row.remove();
     }
 });
