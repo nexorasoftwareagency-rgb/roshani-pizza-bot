@@ -946,11 +946,9 @@ html, body {
 /* PANEL BLOCKS */
 .panel {
     background: #FFFFFF;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid var(--primary-lighter);
     border-radius: 24px;
-    box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.08),
-        0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+    box-shadow: var(--shadow-medium);
     margin-bottom: 16px;
     padding: 20px;
     width: 100%;
@@ -958,9 +956,9 @@ html, body {
 }
 
 .panel:hover {
-    box-shadow:
-        0 12px 40px rgba(0, 0, 0, 0.12),
-        0 0 0 1px rgba(249, 115, 22, 0.1) inset;
+    box-shadow: var(--shadow-strong);
+    border-color: var(--primary);
+    transform: translateY(-2px);
 }
 
 .panel-header {
@@ -1412,7 +1410,7 @@ tbody tr:hover td:first-child {
 
 .btn-secondary {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--primary-lighter);
     border-radius: 12px;
     color: var(--text-main);
     cursor: pointer;
@@ -1437,7 +1435,7 @@ tbody tr:hover td:first-child {
 
 .form-input {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--primary-lighter);
     border-radius: 14px;
     color: var(--text-main);
     font-size: 14px;
@@ -1461,7 +1459,7 @@ tbody tr:hover td:first-child {
 
 .search-input-group {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--primary-lighter);
     border-radius: 12px;
     color: inherit;
     padding: 12px 16px;
@@ -1509,8 +1507,8 @@ tbody tr:hover td:first-child {
 
     -webkit-backdrop-filter: blur(var(--glass-blur));
     backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow);
+    border: 1px solid var(--primary-lighter);
+    box-shadow: var(--shadow-soft);
 }
 
 .modal {
@@ -1739,7 +1737,7 @@ tbody tr:hover td:first-child {
 }
 
 .bg-ghost {
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(255, 77, 0, 0.04);
 }
 
 .br-10 {

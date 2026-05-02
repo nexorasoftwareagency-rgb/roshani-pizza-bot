@@ -595,8 +595,8 @@
         border-radius: 20px !important;
         margin-bottom: 20px !important;
         padding: 15px !important;
-        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.1) !important;
-        border: 1.5px solid rgba(0, 0, 0, 0.08) !important;
+        box-shadow: var(--shadow-medium) !important;
+        border: 1.5px solid var(--primary-lighter) !important;
         position: relative !important;
         margin-top: 10px !important;
     }
@@ -606,7 +606,7 @@
         justify-content: space-between !important;
         align-items: center !important;
         padding: 10px 0 !important;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+        border-bottom: 1px solid var(--primary-lighter) !important;
         font-size: 13px !important;
         text-align: right !important;
         gap: 15px !important;
