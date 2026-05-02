@@ -732,7 +732,7 @@ export async function assignRider(id, riderId) {
 
         const updateData = {
             riderId: riderId,
-            assignedRider: rider.email, // Essential for Rider Panel filtering
+            assignedRider: rider.email.toLowerCase(), // Essential for Rider Panel filtering
             riderName: rider.name,
             riderPhone: rider.phone,
             assignedAt: ServerValue.TIMESTAMP

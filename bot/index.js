@@ -369,8 +369,7 @@ async function sendCategories(sock, sender, user) {
         msg += `${i + 1}️⃣  ${c.name}\n`; 
     });
     
-    msg += `\n🛒 *9* View Cart\n🏠 *0* Main Menu\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `\n🛒 *9* View Cart\n🏠 *0* Main Menu\n\n`;
     msg += `_Reply with a number to browse_`;
     
     user.step = "CATEGORY";
@@ -997,7 +996,11 @@ async function startBot() {
             if (user.step === "ADDONS") {
                 if (text === "0") { 
                     user.step = "QUANTITY"; 
-                    return sock.sendMessage(sender, { text: await appendContactInfo("🔢 *Enter How Many Quantity you Want of this item:*\n\n_Example: Reply with 1, 2, etc._", user.outlet) }); 
+                    let qtyMsg = `🔢 *STEP 4: ENTER QUANTITY* 🍕\n\n`;
+                    qtyMsg += `*How many of this item would you like to order?*\n\n`;
+                    qtyMsg += `_Example: Reply with 1, 2, 5, etc._\n`;
+                    qtyMsg += `_Reply *0* if you want to cancel this item._`;
+                    return sock.sendMessage(sender, { text: await appendContactInfo(qtyMsg, user.outlet) }); 
                 }
                 
                 const addonIndex = parseInt(text) - 1;
@@ -1022,6 +1025,10 @@ async function startBot() {
 
             if (user.step === "QUANTITY") {
                 const qty = parseInt(text);
+                if (qty === 0) {
+                    user.step = "CATEGORY";
+                    return sendCategories(sock, sender, user);
+                }
                 if (isNaN(qty) || qty < 1 || qty > 50) return sendInvalidInputHelp(sock, sender, user);
 
                 const addonTotal = user.current.addons.reduce((s, a) => s + a.price, 0);
@@ -1068,7 +1075,10 @@ async function startBot() {
                         return sock.sendMessage(sender, { text: await appendContactInfo(profileMsg, user.outlet) });
                     }
                     user.step = "NAME"; 
-                    return sock.sendMessage(sender, { text: await appendContactInfo("👤 *Enter your Name:*", user.outlet) }); 
+                    let nameMsg = `👤 *STEP 1: ENTER YOUR FULL NAME* ✨\n\n`;
+                    nameMsg += `Please provide your name so we can address you correctly and prepare your order.\n\n`;
+                    nameMsg += `_Example: Rajesh Kumar_`;
+                    return sock.sendMessage(sender, { text: await appendContactInfo(nameMsg, user.outlet) }); 
                 }
                 if (text === "3") { 
                     sessions[sender] = { step: "START", current: {}, cart: [], profile: user.profile }; 
@@ -1106,13 +1116,13 @@ async function startBot() {
                 if (user.name) {
                     await saveUserProfile(sender, { name: user.name, phone: user.phone || "" });
                 }
-                return sock.sendMessage(sender, { text: await appendContactInfo("📞 *Enter your 10 digit mobile number:*", user.outlet) });
+                return sock.sendMessage(sender, { text: await appendContactInfo("📞 *STEP 2: ENTER YOUR 10 DIGIT MOBILE NUMBER*\n\n_Example: 9876543210. We will use this to contact you regarding your order._", user.outlet) });
             }
 
             if (user.step === "PHONE") {
                 user.phone = text;
                 user.step = "ADDRESS";
-                return sock.sendMessage(sender, { text: await appendContactInfo("🏠 *Enter your Delivery Address:*", user.outlet) });
+                return sock.sendMessage(sender, { text: await appendContactInfo("🏠 *STEP 3: ENTER YOUR DELIVERY ADDRESS*\n\n_Please provide your complete address including landmark, house number, etc._", user.outlet) });
             }
 
             if (user.step === "ADDRESS") {

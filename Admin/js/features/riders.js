@@ -299,7 +299,7 @@ export function hideRiderModal() {
  */
 export async function saveRiderAccount() {
     const name = document.getElementById('riderName').value.trim();
-    let email = document.getElementById('riderEmail').value.trim();
+    let email = document.getElementById('riderEmail').value.trim().toLowerCase();
     const phone = document.getElementById('riderPhone').value.trim();
     let pass = document.getElementById('riderPass').value;
 
