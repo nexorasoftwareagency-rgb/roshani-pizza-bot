@@ -487,9 +487,9 @@ window.acceptOrder = async (id, outletId) => {
     if (!window.currentUser) return window.showToast("Authentication error. Please login again.", "error");
     if (!window.riderLocation) return window.showToast("GPS Error. Ensure location is ON.", "error");
 
-    const outletCoords = window.outletCoords[outletId] || window.outletCoords.pizza;
-    const distFromRest = window.getDistance(window.riderLocation.lat, window.riderLocation.lng, outletCoords.lat, outletCoords.lng);
-    if (distFromRest > 0.5) return window.showToast(`Must be within 500m of outlet! (You are ${distFromRest.toFixed(1)}km away)`, "error");
+    // Proximity policy removed as per user request
+    // const distFromRest = window.getDistance(window.riderLocation.lat, window.riderLocation.lng, outletCoords.lat, outletCoords.lng);
+    // if (distFromRest > 0.5) return window.showToast(`Must be within 500m of outlet! (You are ${distFromRest.toFixed(1)}km away)`, "error");
 
     try {
         const orderPath = `${outletId}/orders/${id}`;
@@ -606,6 +606,11 @@ window.finalizeDeliverySequence = async (orderPath, matchesFallback, order, paym
 
     await update(ref(db, orderPath), updates);
     
+    // Auto-open navigation if this was a "Picked Up" transition
+    if (updates.status === "Picked Up") {
+        window.startNavigation(orderPath.split('/').pop(), orderPath.split('/')[0]);
+    }
+    
     const riderId = window.currentUser.profile.id;
     const commission = Number(order.deliveryFee || 0);
     
@@ -660,6 +665,36 @@ window.regenerateOTP = async () => {
         // Removed triggerWhatsAppAlert from here to hide OTP from Rider.
         // The WhatsApp Bot will detect the field change and send the alert instead.
     } catch (e) { window.showToast("Failed to regenerate OTP.", "error"); }
+};
+
+window.startNavigation = async (id, outletId) => {
+    window.haptic(20);
+    try {
+        const orderPath = `${outletId}/orders/${id}`;
+        const snap = await get(ref(db, orderPath));
+        const order = snap.val();
+        
+        if (!order) return window.showToast("Order not found.", "error");
+        
+        const lat = order.lat || order.latitude;
+        const lng = order.lng || order.longitude;
+        
+        if (lat && lng) {
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+            window.open(url, '_blank');
+        } else {
+            const address = order.address || "";
+            if (address) {
+                const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+                window.open(url, '_blank');
+            } else {
+                window.showToast("No delivery location found.", "error");
+            }
+        }
+    } catch (e) {
+        logError("startNavigation", e);
+        window.showToast("Navigation failed.", "error");
+    }
 };
 
 // REALTIME LISTENERS & PREMIUM UI RENDERER
@@ -760,6 +795,17 @@ window.renderAllOrders = () => {
                 const safePhone = escapeHtml(cPhone);
                 const safeOrderId = escapeHtml(oId);
                 const initial = escapeHtml(cName.charAt(0).toUpperCase());
+                const safeId = escapeHtml(id);
+                const safeOutlet = escapeHtml(outletId);
+
+                let actionButtons = "";
+                const currentStatus = (o.status || "").toLowerCase();
+
+                if (currentStatus === "ready" || currentStatus === "cooked" || currentStatus === "arriving at restaurant" || currentStatus === "confirmed") {
+                    actionButtons = `<button class="btn-primary full-width mt-10" data-action="pickup" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="package-check"></i> CONFIRM PICKUP</button>`;
+                } else if (currentStatus === "picked up" || currentStatus === "out for delivery") {
+                    actionButtons = `<button class="btn-primary full-width mt-10" style="background:#10B981;" data-action="navigate" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="navigation"></i> LET'S GO TO DELIVER</button>`;
+                }
 
                 dashboardActiveView.innerHTML = `
                     <div class="active-delivery-mock-card">
@@ -780,6 +826,7 @@ window.renderAllOrders = () => {
                             <button class="action-pill" data-action="msg" data-phone="${safePhone}" data-orderid="${safeOrderId}"><i data-lucide="message-circle"></i>MSG</button>
                             <button class="action-pill" data-action="otp"><i data-lucide="key-round"></i>OTP</button>
                         </div>
+                        ${actionButtons}
                     </div>
                 `;
             }
@@ -829,6 +876,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (action === 'call') window.open(`tel:${btn.dataset.phone}`, '_blank', 'noopener,noreferrer');
         else if (action === 'msg') window.triggerWhatsAppAlert(btn.dataset.phone, btn.dataset.orderid, 'PICKED_UP');
         else if (action === 'otp') window.openOTPPanel();
+        else if (action === 'pickup') window.confirmPickup();
+        else if (action === 'navigate') window.startNavigation(btn.dataset.id, btn.dataset.outlet);
     });
 
     // Modals

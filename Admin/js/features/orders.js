@@ -24,6 +24,7 @@ export const STATUS_MAPPING = {
     "Preparing": 2, "In Kitchen": 2,
     "Cooked": 3,
     "Ready": 4,
+    "Picked Up": 5,
     "Out for Delivery": 5, "Dispatched": 5,
     "Delivered": 6,
     "Cancelled": 99
@@ -739,14 +740,8 @@ export async function assignRider(id, riderId) {
             riderPhone: rider.phone
         };
 
-        // Only auto-advance status if it's the strict next step (Ready -> Out for Delivery)
-        if (currentLevel === targetLevel - 1) {
-            updateData.status = targetStatus;
-            updateData.outForDeliveryAt = ServerValue.TIMESTAMP;
-            showToast(`Rider ${rider.name} assigned & Order is Out for Delivery!`, "success");
-        } else {
-            showToast(`Rider ${rider.name} assigned. Manual status update required once Ready.`, "info");
-        }
+        // Manual assignment only - Rider will handle status advancement via "PICKUP"
+        showToast(`Rider ${rider.name} assigned. Rider will update status upon pickup.`, "success");
 
         await Outlet.ref(`orders/${id}`).update(updateData);
         logAudit("Orders", `Assigned Rider: ${rider.name} to #${id.slice(-5)}`, id);
