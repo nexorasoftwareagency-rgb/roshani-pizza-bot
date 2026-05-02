@@ -5,8 +5,9 @@
 
 import { db, Outlet, ServerValue } from '../firebase.js';
 import { state } from '../state.js';
-import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit } from '../utils.js';
+import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit, calculateDistance, getFeeFromSlabs } from '../utils.js';
 import { showAlert, addNotification, highlightOrder } from './notifications.js';
+import { showPaymentPicker } from '../ui-utils.js';
 
 /**
  * STATUS WORKFLOW CONFIGURATION
@@ -617,7 +618,10 @@ export async function updateStatus(id, status) {
     // Rule 2: Allow ONLY the exact next step in the sequence
     const isNextStep = nextLevel === currentLevel + 1;
 
-    if (!isNextStep && !canCancel && status !== currentStatus) {
+    // Rule 3: Allow "Resurrection" from Cancelled to Placed
+    const isResurrecting = currentStatus === "Cancelled" && status === "Placed";
+
+    if (!isNextStep && !canCancel && !isResurrecting && status !== currentStatus) {
         if (nextLevel <= currentLevel && nextLevel !== -1 && !isCancelling) {
             showToast(`⚠️ Status Reversal Blocked: Cannot go from ${currentStatus} to ${status}`, "error");
         } else if (isCancelling && currentStatus === "Delivered") {
@@ -639,8 +643,47 @@ export async function updateStatus(id, status) {
         return;
     }
 
+    // Payment Confirmation for Delivered
+    let paymentMethod = order.paymentMethod || "Cash";
+    let paymentStatus = order.paymentStatus || "Pending";
+
+    if (status === "Delivered") {
+        const method = await showPaymentPicker(order.total);
+        if (!method) {
+            renderOrders(state.lastOrdersSnap);
+            return; // Cancelled payment selection
+        }
+        paymentMethod = method;
+        paymentStatus = "Paid";
+    }
+
+    // Recalculate Delivery Fee for Resurrection
+    let updates = { status, paymentMethod, paymentStatus };
+    if (isResurrecting && order.lat && order.lng) {
+        try {
+            const delSnap = await db.ref(`${order.outlet || 'pizza'}/settings/Delivery`).once('value');
+            const storeSnap = await db.ref(`${order.outlet || 'pizza'}/settings/Store`).once('value');
+            const delSettings = delSnap.val() || {};
+            const storeSettings = storeSnap.val() || {};
+
+            const outletCoords = {
+                lat: parseFloat(storeSettings.lat || (order.outlet === 'cake' ? 25.887472 : 25.887944)),
+                lng: parseFloat(storeSettings.lng || (order.outlet === 'cake' ? 85.026861 : 85.026194))
+            };
+
+            const dist = calculateDistance(order.lat, order.lng, outletCoords.lat, outletCoords.lng);
+            const fee = getFeeFromSlabs(dist, delSettings.slabs || []);
+            
+            updates.deliveryFee = fee;
+            updates.total = (order.subtotal || 0) + fee - (order.discount || 0);
+            showToast(`Re-calculated delivery fee: ₹${fee} for ${dist.toFixed(1)}km`, "info");
+        } catch (err) {
+            console.error("Resurrection recalc error:", err);
+        }
+    }
+
     try {
-        await Outlet.ref(`orders/${id}`).update({ status });
+        await Outlet.ref(`orders/${id}`).update(updates);
         logAudit("Orders", `Updated Status: #${id.slice(-5)} -> ${status}`, id);
         showToast(`Order status updated to ${status}`, "success");
     } catch (e) {
