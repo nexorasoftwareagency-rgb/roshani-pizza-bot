@@ -4,7 +4,7 @@ import { getDatabase, ref, onValue, get, set, update, runTransaction, query, ord
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
-import { enablePersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+// Firebase Database modular SDK does not export enablePersistence for RTDB on Web
 
 const firebaseConfig = {
     apiKey: "AIzaSyDcx-SN5eak8PAs-8NtTGelJ_sICr5yb7Y",
@@ -32,20 +32,9 @@ try {
     auth = getAuth(app);
     db = getDatabase(app);
     
-    // Enable offline persistence (Phase 2.17)
-    if (enablePersistence) {
-        enablePersistence(db, { synchronizeTabs: true }).catch(err => {
-            if (err.code === 'failed-precondition') {
-                console.warn("[Firebase] Persistence already enabled");
-            } else if (err.code === 'unsupported-environment') {
-                console.warn("[Firebase] Persistence not supported");
-            } else {
-                console.error("[Firebase] Persistence error:", err);
-            }
-        });
-    } else {
-        console.warn("[Firebase] Persistence API not available");
-    }
+    // Offline persistence is handled automatically by the browser/SDK for RTDB metadata, 
+    // but disk persistence is not available in the Web Modular SDK for RTDB.
+    console.log("[Firebase] Modular SDK initialized");
     
     dbStorage = getStorage(app);
     try {
