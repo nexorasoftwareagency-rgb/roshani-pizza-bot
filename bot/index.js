@@ -290,6 +290,48 @@ function getFoodFunnyProgress(status, name = "") {
     return `\n*Progress:* [ ${bar} ]\n`;
 }
 
+async function sendInvalidInputHelp(sock, sender, user) {
+    let helpMsg = "⚠️ *Invalid Selection.* ";
+    switch (user.step) {
+        case "OUTLET":
+            helpMsg += "Please reply with *1* for Pizza Outlet, *2* for Cake Outlet, or *3* to Track Order.";
+            break;
+        case "CATEGORY":
+            helpMsg += "Please reply with a *Category Number* from the list above.\n\n🛒 *9* View Cart\n🏠 *0* Main Menu";
+            break;
+        case "DISH":
+            helpMsg += "Please reply with an *Item Number* from the list above.\n\n🛒 *9* View Cart\n🔙 *0* Back to Categories";
+            break;
+        case "SIZE":
+            helpMsg += "Please select a *Size Number* (1, 2, etc.) from the options above.";
+            break;
+        case "ADDONS":
+            helpMsg += "Reply with an *Add-on Number* to add it, or *0* (Zero) if you are *DONE*.";
+            break;
+        case "QUANTITY":
+            helpMsg += "Please enter a quantity between *1* and *50*.";
+            break;
+        case "LOCATION":
+            helpMsg += "To continue, please share your *Live/Current Location* using the 📎 (Paperclip) or + button in WhatsApp and selecting 'Location'.";
+            break;
+        case "CONFIRM_PAY":
+            helpMsg += "Please reply with *1* to Confirm Order or *2* to Cancel.";
+            break;
+        case "PLACE_ORDER":
+            helpMsg += "Please reply with *1* for Cash or *2* for UPI.";
+            break;
+        case "CART_VIEW":
+            helpMsg += "Please reply with *1* to Proceed to Checkout or *2* to Clear Cart.";
+            break;
+        case "REUSE_PROFILE":
+            helpMsg += "Please reply with *1* to use your saved details or *2* to enter new ones.";
+            break;
+        default:
+            helpMsg += "Please follow the instructions in the message above or reply *RESET* to start over.";
+    }
+    return sock.sendMessage(sender, { text: helpMsg });
+}
+
 // =============================
 // 3. CORE BOT LOGIC (SOCKET WRAPPER)
 // =============================
@@ -319,6 +361,14 @@ async function sendCategories(sock, sender, user) {
 }
 
 async function sendCartView(sock, sender, user) {
+    if (!user.cart || user.cart.length === 0) {
+        let msg = `🛒 *YOUR CART IS EMPTY*\n\n`;
+        msg += `You haven't added anything to your cart yet. 🍕\n\n`;
+        msg += `1️⃣  *Browse Menu* 🍽️\n`;
+        msg += `🏠 *0* Main Menu`;
+        user.step = "EMPTY_CART_VIEW";
+        return sock.sendMessage(sender, { text: msg });
+    }
     const { lines, subtotal } = formatCartSummary(user.cart);
     let msg = `🛒 *YOUR CART SUMMARY*\n\n${lines}`;
     msg += `💰 *Subtotal: ₹${subtotal}*\n\n`;
@@ -749,7 +799,8 @@ async function startBot() {
                 };
                 
                 if (profile && profile.name) {
-                    await sock.sendMessage(sender, { text: `Welcome back, *${profile.name}*! 👋\n\nYour favorite items are ready for you. 🍕` });
+                    // We will send the combined welcome message in the START step logic
+                    sessions[sender].hasProfile = true;
                 }
             }
             const user = sessions[sender];
@@ -780,7 +831,14 @@ async function startBot() {
                 const store = await getData("settings/Store", outlet);
                 const bot = await getData("settings/Bot", outlet);
                 
-                let welcome = `Hello *${pushName}*! 👋\n`;
+                let welcome = "";
+                if (user.hasProfile && user.name) {
+                    welcome += `Welcome back, *${user.name}*! 👋\n`;
+                    welcome += `Your favorite items are ready for you. 🍕\n\n`;
+                } else {
+                    welcome += `Hello *${pushName}*! 👋\n`;
+                }
+                
                 welcome += `✨ *WELCOME TO ROSHANI PIZZA & CAKE* 🍕🎂\n`;
                 welcome += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                 welcome += `Delicious food, delivered fast to your doorstep! 🚀\n\n`;
@@ -802,7 +860,7 @@ async function startBot() {
                     user.step = "TRACK_ORDER";
                     return sock.sendMessage(sender, { text: "📊 *TRACK YOUR ORDER*\n\nChecking your latest orders... ⏳" });
                 }
-                else return sock.sendMessage(sender, { text: "⚠️ Reply *1*, *2* or *3*." });
+                else return sendInvalidInputHelp(sock, sender, user);
 
                 const store = await getData("settings/Store", user.outlet) || {};
                 if (!isShopOpen(store.shopOpenTime, store.shopCloseTime, store.shopStatus)) {
@@ -852,14 +910,14 @@ async function startBot() {
 
             if (user.step === "TRACK_FINISH") {
                 if (text === "0") { user.step = "START"; return sock.sendMessage(sender, { text: "Back to menu..." }); }
-                return sock.sendMessage(sender, { text: "Reply 0 to go back." });
+                return sock.sendMessage(sender, { text: "⚠️ Reply *0* to go back." });
             }
 
             if (user.step === "CATEGORY") {
                 if (text === "0") { user.step = "START"; return sock.sendMessage(sender, { text: "🏠 Returning to Main Menu..." }); }
                 if (text === "9") return sendCartView(sock, sender, user);
                 const cat = user.categoryList[parseInt(text) - 1];
-                if (!cat) return sock.sendMessage(sender, { text: "⚠️ Invalid selection." });
+                if (!cat) return sendInvalidInputHelp(sock, sender, user);
 
                 const dishes = await getData(`dishes`, user.outlet) || {};
                 user.dishList = Object.entries(dishes)
@@ -879,7 +937,7 @@ async function startBot() {
                 if (text === "0") return sendCategories(sock, sender, user);
                 if (text === "9") return sendCartView(sock, sender, user);
                 const dish = user.dishList[parseInt(text) - 1];
-                if (!dish) return sock.sendMessage(sender, { text: "⚠️ Invalid selection." });
+                if (!dish) return sendInvalidInputHelp(sock, sender, user);
 
                 user.current = { dish };
                 user.sizeList = Object.entries(dish.sizes || { "Regular": dish.price });
@@ -891,7 +949,7 @@ async function startBot() {
 
             if (user.step === "SIZE") {
                 const [size, price] = user.sizeList[parseInt(text) - 1] || [];
-                if (!size) return sock.sendMessage(sender, { text: "⚠️ Invalid size." });
+                if (!size) return sendInvalidInputHelp(sock, sender, user);
 
                 user.current.size = size;
                 user.current.unitPrice = price;
@@ -911,7 +969,6 @@ async function startBot() {
                 return sock.sendMessage(sender, { text: "🔢 *HOW MANY?* (Enter 1-50):" });
             }
 
-            if (user.step === "ADDONS") {
                 if (text === "0") { 
                     user.step = "QUANTITY"; 
                     return sock.sendMessage(sender, { text: "🔢 *HOW MANY?* (Enter 1-50):" }); 
@@ -919,7 +976,7 @@ async function startBot() {
                 
                 const addonIndex = parseInt(text) - 1;
                 const addon = user.addonList[addonIndex];
-                if (!addon) return sock.sendMessage(sender, { text: "⚠️ Invalid selection. Please reply with a number or 0." });
+                if (!addon) return sendInvalidInputHelp(sock, sender, user);
 
                 const addedName = addon[0];
                 if (user.current.addons.some(a => a.name === addedName)) {
@@ -939,7 +996,7 @@ async function startBot() {
 
             if (user.step === "QUANTITY") {
                 const qty = parseInt(text);
-                if (isNaN(qty) || qty < 1 || qty > 50) return sock.sendMessage(sender, { text: "⚠️ Enter 1-50." });
+                if (isNaN(qty) || qty < 1 || qty > 50) return sendInvalidInputHelp(sock, sender, user);
 
                 const addonTotal = user.current.addons.reduce((s, a) => s + a.price, 0);
                 user.cart.push({
@@ -962,6 +1019,13 @@ async function startBot() {
             if (user.step === "ADDED_TO_CART") {
                 if (text === "1") return sendCategories(sock, sender, user);
                 if (text === "2") return sendCartView(sock, sender, user);
+                return sock.sendMessage(sender, { text: "⚠️ Reply *1* to add more or *2* to view cart." });
+            }
+
+            if (user.step === "EMPTY_CART_VIEW") {
+                if (text === "1") return sendCategories(sock, sender, user);
+                if (text === "0") { user.step = "START"; return sock.sendMessage(sender, { text: "🏠 Returning to Main Menu..." }); }
+                return sock.sendMessage(sender, { text: "⚠️ Reply *1* to browse menu or *0* for main menu." });
             }
 
             if (user.step === "CART_VIEW") {
@@ -981,8 +1045,9 @@ async function startBot() {
                 }
                 if (text === "2") { 
                     sessions[sender] = { step: "START", current: {}, cart: [], profile: user.profile }; 
-                    return sock.sendMessage(sender, { text: "🗑️ Cart cleared." }); 
+                    return sock.sendMessage(sender, { text: "🗑️ Cart cleared. Reply with any message to start again." }); 
                 }
+                return sendInvalidInputHelp(sock, sender, user);
             }
 
             if (user.step === "REUSE_PROFILE") {
@@ -999,34 +1064,19 @@ async function startBot() {
                     user.step = "LOCATION";
                     return sock.sendMessage(sender, { text: "📍 *Share your Location* for delivery calculation (Paperclip -> Location)" });
                 }
-                user.step = "NAME";
-                return sock.sendMessage(sender, { text: "👤 *Your Name?*" });
+                if (text === "2") {
+                    user.step = "NAME";
+                    return sock.sendMessage(sender, { text: "👤 *Your Name?*" });
+                }
+                return sendInvalidInputHelp(sock, sender, user);
             }
 
-            if (user.step === "NAME") {
-                user.name = text;
-                user.step = "PHONE";
-                // Trigger a temporary profile save if we have the name
                 if (user.name) {
                     await saveUserProfile(sender, { name: user.name, phone: user.phone || "" });
                 }
                 return sock.sendMessage(sender, { text: "📞 *Mobile Number?*" });
             }
 
-            if (user.step === "PHONE") {
-                user.phone = text.replace(/\D/g, '').slice(-10);
-                user.step = "ADDRESS";
-                
-                // Save to customer node immediately for lead tracking
-                if (user.phone && user.phone.length >= 10) {
-                    const cleanPhone = user.phone;
-                    const custData = {
-                        name: user.name || "Customer",
-                        phone: cleanPhone,
-                        lastSeen: new Date().toISOString()
-                    };
-                    await updateData(`customers/${cleanPhone}`, custData, user.outlet || 'pizza');
-                    await saveUserProfile(sender, { name: user.name, phone: cleanPhone });
                 }
                 
                 return sock.sendMessage(sender, { text: "🏠 *Delivery Address?*" });
@@ -1039,7 +1089,7 @@ async function startBot() {
 
             if (user.step === "LOCATION") {
                 const loc = msg.message?.locationMessage;
-                if (!loc) return sock.sendMessage(sender, { text: "📍 Please share location." });
+                if (!loc) return sendInvalidInputHelp(sock, sender, user);
 
                 user.location = { lat: loc.degreesLatitude, lng: loc.degreesLongitude };
                 return handleCheckoutFinal(sock, sender, user);
@@ -1049,7 +1099,7 @@ async function startBot() {
                 if (text === "2") { 
                     // Record Lost Sale
                     const lostId = "L-" + Date.now();
-                    const { subtotal } = formatCartSummary(user.cart);
+                    const { lines, subtotal } = formatCartSummary(user.cart);
                     const lostData = {
                         timestamp: new Date().toISOString(),
                         customer: user.name || "Anonymous",
@@ -1077,9 +1127,12 @@ async function startBot() {
                     user.step = "PLACE_ORDER";
                     return sock.sendMessage(sender, { text: "💳 *Payment Method?*\n\n1️⃣ Cash\n2️⃣ UPI" });
                 }
+                return sendInvalidInputHelp(sock, sender, user);
             }
 
             if (user.step === "PLACE_ORDER") {
+                if (text !== "1" && text !== "2") return sendInvalidInputHelp(sock, sender, user);
+                
                 const method = text === "2" ? "UPI" : "Cash";
                 const orderId = await generateOrderId(user.outlet);
                 const { subtotal } = formatCartSummary(user.cart);
