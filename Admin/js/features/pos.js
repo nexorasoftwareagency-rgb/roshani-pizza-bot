@@ -387,16 +387,12 @@ export function updateMobileCartSummaryState(count, total) {
 /**
  * Toggles the full-screen cart sheet on mobile
  */
-export function toggleMobileCart(forceState) {
+export function toggleMobileCart() {
     const cart = document.querySelector('.walkin-cart');
     if (!cart) return;
     
     haptic(10);
-    if (typeof forceState === 'boolean') {
-        cart.classList.toggle('active', forceState);
-    } else {
-        cart.classList.toggle('active');
-    }
+    cart.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 

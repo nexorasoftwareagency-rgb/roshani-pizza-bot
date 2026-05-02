@@ -205,9 +205,14 @@ function formatCartSummary(cart) {
 function formatOrderInvoice(orderId, order) {
     let itemsText = "";
     (order.items || []).forEach((item) => {
-        itemsText += `• *${item.name}* (${item.size}) x${item.quantity} - ₹${item.lineTotal || item.total}\n`;
+        const qty = item.quantity || item.qty || 1;
+        const price = item.lineTotal || item.total || (item.price * qty) || 0;
+        itemsText += `• *${item.name}* (${item.size || 'Regular'}) x${qty} - ₹${price}\n`;
         if (item.addons && item.addons.length > 0) {
-            itemsText += `  _Addons: ${item.addons.map(a => a.name).join(", ")}_\n`;
+            const addonNames = Array.isArray(item.addons) 
+                ? item.addons.map(a => a.name).join(", ")
+                : Object.keys(item.addons).join(", ");
+            itemsText += `  _Addons: ${addonNames}_\n`;
         }
     });
     const displayId = orderId ? orderId.slice(-5) : "N/A";
@@ -315,7 +320,8 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
 
         const currentStatus = (order.status || "").trim();
         const orderType = order.type || "Unknown";
-        console.log(`[Status Update] 🔍 Processing Order #${id.slice(-5)} | Type: ${orderType} | Status: ${currentStatus} | Target: ${jid}`);
+        const phoneDisplay = order.phone || order.whatsappNumber || "N/A";
+        console.log(`[Status Update] 🔍 Processing Order #${id.slice(-5)} | Type: ${orderType} | Status: ${currentStatus} | Target: ${jid} (${phoneDisplay})`);
 
         const statusKey = `${id}_${currentStatus}`;
         if (!processedStatus[id] || processedStatus[id].status !== currentStatus || isNew) {
