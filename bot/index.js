@@ -928,6 +928,7 @@ async function startBot() {
                 return sock.sendMessage(sender, { text: "🔢 *HOW MANY?* (Enter 1-50):" });
             }
 
+            if (user.step === "ADDONS") {
                 if (text === "0") { 
                     user.step = "QUANTITY"; 
                     return sock.sendMessage(sender, { text: "🔢 *HOW MANY?* (Enter 1-50):" }); 
@@ -1010,6 +1011,7 @@ async function startBot() {
             }
 
             if (user.step === "REUSE_PROFILE") {
+                if (text === "1") {
                     user.name = user.profile.name;
                     user.phone = user.profile.phone;
                     user.address = user.profile.address;
@@ -1024,15 +1026,18 @@ async function startBot() {
                 }
                 return sendInvalidInputHelp(sock, sender, user);
             }
-
+            if (user.step === "NAME") {
+                user.name = text;
+                user.step = "PHONE";
                 if (user.name) {
                     await saveUserProfile(sender, { name: user.name, phone: user.phone || "" });
                 }
                 return sock.sendMessage(sender, { text: "📞 *Mobile Number?*" });
             }
 
-                }
-                
+            if (user.step === "PHONE") {
+                user.phone = text;
+                user.step = "ADDRESS";
                 return sock.sendMessage(sender, { text: "🏠 *Delivery Address?*" });
             }
 
