@@ -442,7 +442,6 @@ if (msg) {
                 await sendImage(sock, jid, img, msg);
             }
         }
-        }
     } catch (err) { console.error("Status Update Error:", err); }
 }
 
