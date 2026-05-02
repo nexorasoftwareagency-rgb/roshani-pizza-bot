@@ -4,6 +4,15 @@ import { getDatabase, ref, onValue, get, set, update, runTransaction, query, ord
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
+// Utility for haptic feedback
+window.haptic = (pattern) => {
+    try {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate(pattern);
+        }
+    } catch (e) {}
+};
+
 // Firebase Database modular SDK does not export enablePersistence for RTDB on Web
 
 const firebaseConfig = {
