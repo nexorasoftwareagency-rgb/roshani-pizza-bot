@@ -979,48 +979,12 @@ async function startBot() {
                 user.current.unitPrice = price;
                 user.current.addons = [];
 
-                const addons = user.current.dish.addons || {};
-                user.addonList = Object.entries(addons);
-
-                if (user.addonList.length > 0) {
-                    let aMsg = `✨ *WANT EXTRA TOPPINGS?* 🧀\n\n`;
-                    user.addonList.forEach(([n, p], i) => { aMsg += `${i + 1}️⃣  ${n} (+₹${p})\n`; });
-                    aMsg += `\n👉 Reply with a *Number* to add extras\n🚀 Reply *0* (Zero) if you are *DONE*`;
-                    user.step = "ADDONS";
-                    return sock.sendMessage(sender, { text: aMsg });
-                }
                 user.step = "QUANTITY";
-                return sock.sendMessage(sender, { text: "🔢 *HOW MANY?* (Enter 1-50):" });
-            }
-
-            if (user.step === "ADDONS") {
-                if (text === "0") { 
-                    user.step = "QUANTITY"; 
-                    let qtyMsg = `🔢 *STEP 4: ENTER QUANTITY* 🍕\n\n`;
-                    qtyMsg += `*How many of this item would you like to order?*\n\n`;
-                    qtyMsg += `_Example: Reply with 1, 2, 5, etc._\n`;
-                    qtyMsg += `_Reply *0* if you want to cancel this item._`;
-                    return sock.sendMessage(sender, { text: await appendContactInfo(qtyMsg, user.outlet) }); 
-                }
-                
-                const addonIndex = parseInt(text) - 1;
-                const addon = user.addonList[addonIndex];
-                if (!addon) return sendInvalidInputHelp(sock, sender, user);
-
-                const addedName = addon[0];
-                if (user.current.addons.some(a => a.name === addedName)) {
-                    return sock.sendMessage(sender, { text: `⚠️ *${addedName}* is already added.` });
-                }
-                
-                user.current.addons.push({ name: addedName, price: addon[1] });
-                
-                let addonConfirm = `✅ *ADDED: ${addedName.toUpperCase()}* 🧀\n`;
-                addonConfirm += `━━━━━━━━━━━━━━━━━━━━\n`;
-                addonConfirm += `*Current Add-ons:* ${user.current.addons.map(a => a.name).join(", ")}\n\n`;
-                addonConfirm += `🔢 *Add More?* Reply with another number\n`;
-                addonConfirm += `🆗 *Next Step?* Reply *0* (Zero) to set Quantity`;
-                
-                return sock.sendMessage(sender, { text: addonConfirm });
+                let qtyMsg = `🔢 *STEP 4: ENTER QUANTITY* 🍕\n\n`;
+                qtyMsg += `*How many of this item would you like to order?*\n\n`;
+                qtyMsg += `_Example: Reply with 1, 2, 5, etc._\n`;
+                qtyMsg += `_Reply *0* if you want to cancel this item._`;
+                return sock.sendMessage(sender, { text: await appendContactInfo(qtyMsg, user.outlet) }); 
             }
 
             if (user.step === "QUANTITY") {
