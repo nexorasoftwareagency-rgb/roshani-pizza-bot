@@ -335,7 +335,7 @@ export async function loadLostSales() {
     if (!tbody) return;
 
     try {
-        const lostRef = Outlet.ref('lostSales');
+        const lostRef = Outlet.ref('logs/lostSales');
         console.log(`[Lost Sales] Fetching from path: ${lostRef.toString()}`);
         const snap = await lostRef.once('value');
         const data = snap.val();
@@ -410,7 +410,7 @@ export async function clearLostSales() {
 
     haptic(20);
     try {
-        await Outlet.ref('lostSales').remove();
+        await Outlet.ref('logs/lostSales').remove();
         logAudit("Maintenance", "Cleared All Lost Sales Logs", "Global");
         ui.showToast("Logs cleared successfully", "success");
         loadLostSales();

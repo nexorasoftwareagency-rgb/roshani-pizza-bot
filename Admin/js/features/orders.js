@@ -659,26 +659,54 @@ export async function updateStatus(id, status) {
 
     // Recalculate Delivery Fee for Resurrection
     let updates = { status, paymentMethod, paymentStatus };
-    if (isResurrecting && order.lat && order.lng) {
-        try {
-            const delSnap = await db.ref(`${order.outlet || 'pizza'}/settings/Delivery`).once('value');
-            const storeSnap = await db.ref(`${order.outlet || 'pizza'}/settings/Store`).once('value');
-            const delSettings = delSnap.val() || {};
-            const storeSettings = storeSnap.val() || {};
+    if (isResurrecting) {
+        let lat = order.lat;
+        let lng = order.lng;
+        let address = order.address;
 
-            const outletCoords = {
-                lat: parseFloat(storeSettings.lat || (order.outlet === 'cake' ? 25.887472 : 25.887944)),
-                lng: parseFloat(storeSettings.lng || (order.outlet === 'cake' ? 85.026861 : 85.026194))
-            };
+        // Fetch from customer if missing
+        if ((!lat || !lng) && order.phone && order.phone.length >= 10) {
+            try {
+                let cleanPhone = String(order.phone).replace(/\D/g, '').slice(-10);
+                const custSnap = await Outlet.ref(`customers/${cleanPhone}`).once('value');
+                const c = custSnap.val();
+                if (c && c.location && c.location.lat && c.location.lng) {
+                    lat = c.location.lat;
+                    lng = c.location.lng;
+                    address = c.address || address;
+                    updates.lat = lat;
+                    updates.lng = lng;
+                    updates.address = address;
+                    showToast("Restored saved customer location.", "info");
+                }
+            } catch (err) {
+                console.error("Failed to load customer loc:", err);
+            }
+        }
 
-            const dist = calculateDistance(order.lat, order.lng, outletCoords.lat, outletCoords.lng);
-            const fee = getFeeFromSlabs(dist, delSettings.slabs || []);
-            
-            updates.deliveryFee = fee;
-            updates.total = (order.subtotal || 0) + fee - (order.discount || 0);
-            showToast(`Re-calculated delivery fee: ₹${fee} for ${dist.toFixed(1)}km`, "info");
-        } catch (err) {
-            console.error("Resurrection recalc error:", err);
+        if (lat && lng) {
+            try {
+                const outletKey = (order.outlet || 'pizza').toLowerCase();
+                const delSnap = await db.ref(`${outletKey}/settings/Delivery`).once('value');
+                const storeSnap = await db.ref(`${outletKey}/settings/Store`).once('value');
+                const delSettings = delSnap.val() || {};
+                const storeSettings = storeSnap.val() || {};
+
+                const outletCoords = {
+                    lat: parseFloat(storeSettings.lat || (outletKey === 'cake' ? 25.887472 : 25.887944)),
+                    lng: parseFloat(storeSettings.lng || (outletKey === 'cake' ? 85.026861 : 85.026194))
+                };
+
+                const dist = calculateDistance(lat, lng, outletCoords.lat, outletCoords.lng);
+                const fee = getFeeFromSlabs(dist, delSettings.slabs || []);
+                
+                const subtotal = parseFloat(order.subtotal || order.itemTotal || 0);
+                updates.deliveryFee = fee;
+                updates.total = subtotal + fee - (order.discount || 0);
+                showToast(`Re-calculated delivery fee: ₹${fee} for ${dist.toFixed(1)}km`, "info");
+            } catch (err) {
+                console.error("Resurrection recalc error:", err);
+            }
         }
     }
 

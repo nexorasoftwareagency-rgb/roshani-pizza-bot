@@ -36,9 +36,9 @@ export const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 export const getFeeFromSlabs = (dist, slabs) => {
     if (!slabs || slabs.length === 0) return 0;
-    const sorted = [...slabs].sort((a, b) => a.upTo - b.upTo);
+    const sorted = [...slabs].sort((a, b) => a.km - b.km);
     for (const s of sorted) {
-        if (dist <= s.upTo) return s.fee;
+        if (dist <= s.km) return s.fee;
     }
     return sorted[sorted.length - 1].fee;
 };

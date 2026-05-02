@@ -231,10 +231,10 @@ window.triggerWhatsAppAlert = (phone, orderId, actionType, extraData = {}) => {
         message = `Great news! I have picked up your order #${orderId}. If you need anything, you can call me at ${riderPhone}. I am on my way! 🍕🎂`;
     }
     else if (actionType === "SEND_OTP") {
-        message = `Your Roshani Sudha order #${orderId} has arrived! 📍 \n\nTo safely receive your order, please provide this 6-digit OTP to the rider: *${extraData.otp}* ✅`;
+        message = `Your Roshani Sudha order #${orderId} has arrived! 📍 \n\nTo safely receive your order, please provide this 4-digit OTP to the rider: *${extraData.otp}* ✅`;
     }
     else if (actionType === "ARRIVED") {
-        message = `I have arrived with your order #${orderId}! Please have your 6-digit OTP ready. ✅`;
+        message = `I have arrived with your order #${orderId}! Please have your 4-digit OTP ready. ✅`;
     }
 
     const url = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`;
@@ -495,7 +495,9 @@ window.acceptOrder = async (id, outletId) => {
         const orderPath = `${outletId}/orders/${id}`;
         const result = await runTransaction(ref(db, orderPath), current => {
             if (current && current.assignedRider) return;
-            return { ...current, status: "Arriving at Restaurant", deliveryOTP: Math.floor(100000 + Math.random() * 900000).toString(), assignedRider: window.currentUser.email.toLowerCase(), acceptedAt: Date.now() };
+            // Changed from 4-digit to 4-digit OTP for consistency across system
+            const initialOTP = Math.floor(1000 + Math.random() * 9000).toString();
+            return { ...current, status: "Arriving at Restaurant", deliveryOTP: initialOTP, otp: initialOTP, assignedRider: window.currentUser.email.toLowerCase(), acceptedAt: Date.now() };
         });
         if (result.committed) {
             window.showSection('home');
@@ -558,18 +560,12 @@ window.verifyOTP = async () => {
         if (matchesCustomer || matchesFallback) {
             await remove(ref(db, otpAttemptsPath));
             window.closeOTPPanel();
-
-            const totalToCollect = order.total || 0;
-            const pm = order.paymentMethod || "CASH";
-
-            if (pm.toUpperCase() === "CASH" || pm.toUpperCase() === "COD") {
-                if (confirm(`Collect ₹${totalToCollect} in CASH from the customer. Click OK once collected.`)) {
-                    await window.finalizeDeliverySequence(orderPath, matchesFallback, order);
-                } else window.showToast("Delivery paused. Please collect payment.", "warning");
-            } else {
-                alert(`Order is Pre-Paid. No cash collection needed.`);
-                await window.finalizeDeliverySequence(orderPath, matchesFallback, order);
-            }
+            
+            // Success! Now ask for payment mode
+            window.activeOrderForPayment = { path: orderPath, data: order, matchesFallback };
+            document.getElementById('paymentTotalTxt').innerText = `Total to collect: ₹${order.total || 0}`;
+            document.getElementById('paymentPanel').classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
         } else {
             const result = await runTransaction(ref(db, otpAttemptsPath), (current) => {
                 const data = current || { count: 0, lastTry: 0, blockedUntil: 0 };
@@ -581,30 +577,59 @@ window.verifyOTP = async () => {
             if (failData.blockedUntil > now) window.showToast("10 failed attempts! Blocked for 60s.", "error");
             else window.showToast(`Incorrect OTP! ${10 - failData.count} attempts left.`, "error");
         }
-    } catch (e) { window.showToast("System error during verification.", "error"); }
+    } catch (e) { console.error(e); window.showToast("System error during verification.", "error"); }
 };
 
-window.finalizeDeliverySequence = async (orderPath, matchesFallback, order) => {
+window.recordPaymentAndComplete = async (method) => {
+    if (!window.activeOrderForPayment) return;
+    const { path, data, matchesFallback } = window.activeOrderForPayment;
+    
+    try {
+        await window.finalizeDeliverySequence(path, matchesFallback, data, method);
+        document.getElementById('paymentPanel').classList.add('hidden');
+        window.activeOrderForPayment = null;
+    } catch (e) {
+        window.showToast("Failed to complete delivery.", "error");
+    }
+};
+
+window.finalizeDeliverySequence = async (orderPath, matchesFallback, order, paymentMethod = 'CASH') => {
     if (!window.currentUser || !window.currentUser.profile) return window.showToast("Authentication error. Please login again.", "error");
-    await update(ref(db, orderPath), { status: "Delivered", deliveredAt: serverTimestamp(), verifiedBy: matchesFallback ? 'ADMIN_FALLBACK' : 'OTP', paymentCollected: true });
+    
+    const updates = { 
+        status: "Delivered", 
+        deliveredAt: serverTimestamp(), 
+        verifiedBy: matchesFallback ? 'ADMIN_FALLBACK' : 'OTP', 
+        paymentCollected: true,
+        paymentMethod: paymentMethod.toUpperCase()
+    };
+
+    await update(ref(db, orderPath), updates);
+    
     const riderId = window.currentUser.profile.id;
     const commission = Number(order.deliveryFee || 0);
+    
     await runTransaction(ref(db, resolvePath(`riderStats/${riderId}`)), (current) => {
         if (!current) return { totalOrders: 1, totalEarnings: commission };
         return { ...current, totalOrders: (current.totalOrders || 0) + 1, totalEarnings: (current.totalEarnings || 0) + commission };
     });
+    
     window.showSection('home');
-    window.showToast("Delivery successfully verified and completed! ✅", "success");
+    window.showToast(`Order delivered! Payment: ${paymentMethod} ✅`, "success");
 };
 
 window.emergencyOverride = async () => {
-    if (!currentUser || !currentUser.profile || !currentUser.profile.isAdmin) return window.showToast("Unauthorized access attempt.", "error");
+    if (!currentUser || !currentUser.profile || !currentUser.profile.isAdmin) return window.showToast("Unauthorized access.", "error");
     if (confirm("FORCE COMPLETE: Bypass customer OTP?")) {
         window.haptic([50, 50, 50]);
         const orderPath = `${window._currentOrderOutlet || 'pizza'}/orders/${currentOrderId}`;
         const snap = await get(ref(db, orderPath));
-        await window.finalizeDeliverySequence(orderPath, true, snap.val());
+        const order = snap.val();
+        
         window.closeOTPPanel();
+        window.activeOrderForPayment = { path: orderPath, data: order, matchesFallback: true };
+        document.getElementById('paymentTotalTxt').innerText = `Total to collect: ₹${order.total || 0}`;
+        document.getElementById('paymentPanel').classList.remove('hidden');
     }
 };
 
@@ -623,7 +648,8 @@ window.regenerateOTP = async () => {
 
     try {
         const orderPath = `${outletId}/orders/${currentOrderId}`;
-        const newOTP = Math.floor(100000 + Math.random() * 900000).toString();
+        // Generate 4-digit OTP for consistency with bot
+        const newOTP = Math.floor(1000 + Math.random() * 9000).toString();
         await update(ref(db, orderPath), { deliveryOTP: newOTP, otp: newOTP });
         await runTransaction(ref(db, otpAttemptsPath), (current) => {
             const data = current || { count: 0, lastTry: 0, blockedUntil: 0 };
@@ -631,8 +657,8 @@ window.regenerateOTP = async () => {
             return data;
         });
         window.showToast("New OTP generated and sent to customer!", "success");
-        const snap = await get(ref(db, orderPath));
-        window.triggerWhatsAppAlert(snap.val().customerPhone || snap.val().phone, snap.val().orderId || currentOrderId, "SEND_OTP", { otp: newOTP });
+        // Removed triggerWhatsAppAlert from here to hide OTP from Rider.
+        // The WhatsApp Bot will detect the field change and send the alert instead.
     } catch (e) { window.showToast("Failed to regenerate OTP.", "error"); }
 };
 
@@ -811,6 +837,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnCloseOTP')?.addEventListener('click', window.closeOTPPanel);
     document.getElementById('btnResendOTP')?.addEventListener('click', window.regenerateOTP);
     document.getElementById('emergencyBtn')?.addEventListener('click', window.emergencyOverride);
+    document.getElementById('btnCancelPayment')?.addEventListener('click', () => {
+        document.getElementById('paymentPanel').classList.add('hidden');
+        window.activeOrderForPayment = null;
+    });
+
+    document.querySelectorAll('.payment-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const method = btn.dataset.method;
+            window.recordPaymentAndComplete(method);
+        });
+    });
 
     // Login (if present)
     document.getElementById('loginBtn')?.addEventListener('click', window.login);
