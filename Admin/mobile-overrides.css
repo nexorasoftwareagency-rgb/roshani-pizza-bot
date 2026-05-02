@@ -10,19 +10,95 @@
     }
 
     * {
-        -webkit-tap-highlight-color: transparent;
+        -webkit-tap-highlight-color: rgba(249, 115, 22, 0.15);
         touch-action: manipulation;
         box-sizing: border-box;
         max-width: 100%;
     }
 
     html, body {
-        position: relative;
-        overflow-x: hidden;
-        overflow-y: auto;
-        height: 100dvh;
-        height: 100%;
-        -webkit-overflow-scrolling: touch;
+        position: relative !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        height: auto !important;
+        min-height: 100dvh !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: auto !important;
+        background: var(--bg-primary) !important;
+    }
+
+    /* Fix for touch events not firing */
+    button, 
+    .btn-primary, 
+    .btn-secondary,
+    .nav-btn,
+    [data-action],
+    [data-tab] {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: rgba(249, 115, 22, 0.3);
+        cursor: pointer;
+    }
+
+    .layout {
+        height: auto !important;
+        min-height: 100dvh !important;
+        overflow: visible !important;
+        display: flex !important;
+        flex-direction: column !important;
+        pointer-events: none !important; /* Let children handle it */
+    }
+
+    .main {
+        touch-action: auto !important;
+        pointer-events: auto !important;
+        position: relative !important;
+        z-index: 10 !important;
+        overflow: visible !important;
+        height: auto !important;
+        min-height: 100% !important;
+        width: 100% !important;
+        padding-bottom: 100px !important; /* Space for bottom nav */
+    }
+
+    .tab-content, 
+    .section,
+    .panel,
+    .mobile-header,
+    .bottom-nav {
+        pointer-events: auto !important;
+        z-index: 20 !important;
+    }
+
+    .bottom-nav {
+        z-index: 3000 !important;
+    }
+
+    .mobile-header {
+        z-index: 2000 !important;
+    }
+
+    /* Ensure tab contents are clickable */
+    .tab-content,
+    .tab-pane {
+        pointer-events: auto !important;
+        touch-action: manipulation;
+    }
+
+    /* Force overlays to not block when inactive */
+    .sidebar-overlay:not(.active),
+    .drawer-overlay:not(.active),
+    .sheet-overlay:not(.active),
+    .modal-overlay:not(.active),
+    .drawer-content:not(.active),
+    .bottom-sheet:not(.active),
+    .sidebar:not(.active),
+    #authOverlay.hidden,
+    .modal:not(.active) {
+        pointer-events: none !important;
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        z-index: -1 !important;
     }
 
     .desktop-only {

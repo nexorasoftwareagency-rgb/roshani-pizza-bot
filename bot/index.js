@@ -466,8 +466,12 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 msg = `📦 *PACKED & READY!* 🚀\n━━━━━━━━━━━━━━━━━━━━\nYour delicious order #${id.slice(-5)} is ready and packed! 🍱\n\n${isDineIn ? "It's ready to be served! 🍽️" : "Waiting for the rider to pick it up. 🛵"}\n${getFoodFunnyProgress("Ready")}`;
                 img = botSettings.imgReady || botSettings.imgCooked;
                 
-                if (!isDineIn && order.riderPhone) {
-                    await notifyRiderPickup(sock, order);
+                if (!isDineIn) {
+                    if (order.riderPhone) {
+                        await notifyRiderPickup(sock, order);
+                    } else {
+                        await broadcastPickupAvailable(sock, id, order);
+                    }
                 }
             } else if (order.status === "Picked Up" || order.status === "Out for Delivery") {
                 if (orderType === 'Dine-in') return;
@@ -688,6 +692,56 @@ async function notifyRiderPickup(sock, order) {
         
         await sock.sendMessage(riderJid, { text: msg });
     } catch (err) { console.error("Rider Pickup Notify Error:", err); }
+}
+
+async function addInAppNotification(riderUid, title, body, type = 'info', icon = 'bell', outlet = 'pizza') {
+    try {
+        const notifPath = `riders/${riderUid}/notifications/${Date.now()}`;
+        await setData(notifPath, {
+            title,
+            body,
+            type,
+            icon,
+            outlet,
+            timestamp: Date.now(),
+            read: false
+        });
+    } catch (err) { console.error("Add In-App Notification Error:", err); }
+}
+
+async function broadcastPickupAvailable(sock, orderId, order) {
+    try {
+        const riders = await getData("riders") || {};
+        // Filter for riders who are Online and have a phone number
+        const onlineRiders = Object.entries(riders)
+            .map(([uid, data]) => ({ uid, ...data }))
+            .filter(r => r.status === "Online" && r.phone);
+        
+        if (onlineRiders.length === 0) return;
+
+        let itemsText = (order.normalizedItems || order.items || []).map(i => `• ${i.name || i.item} (${i.size}) x${i.qty || i.quantity}`).join('\n');
+        
+        const msg = `🔔 *PICKUP AVAILABLE* 🔔\n━━━━━━━━━━━━━━━━━━━━\n` +
+            `🆔 *Order:* #${orderId.slice(-5)}\n` +
+            `🏪 *Outlet:* ${(order.outlet || 'pizza').toUpperCase()}\n` +
+            `👤 *Customer:* ${order.customerName || 'Guest'}\n` +
+            `📞 *Phone:* ${order.phone || 'N/A'}\n` +
+            `📍 *Address:* ${order.address || 'N/A'}\n\n` +
+            `📦 *INVOICE:*\n${itemsText}\n\n` +
+            `💰 *Earning:* ₹${order.deliveryFee || 0}\n` +
+            `💵 *Total to Collect:* ₹${order.total || 0}\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `🚀 *Go to Rider Portal now to Accept!*`;
+
+        for (const rider of onlineRiders) {
+            const riderJid = formatJid(rider.phone);
+            if (riderJid) {
+                await sock.sendMessage(riderJid, { text: msg });
+                // Also add in-app notification
+                await addInAppNotification(rider.uid, "New Pickup Available!", `Order #${orderId.slice(-5)} is ready for pickup.`, 'success', 'shopping-bag', order.outlet);
+            }
+        }
+    } catch (err) { console.error("Broadcast Error:", err); }
 }
 
 // =============================
