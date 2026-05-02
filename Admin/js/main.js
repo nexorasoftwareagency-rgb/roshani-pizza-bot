@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Menu & Categories
         document.querySelectorAll('.btn-show-dish-modal').forEach(btn => {
-            btn.addEventListener('click', showDishModal);
+            btn.addEventListener('click', () => showDishModal());
         });
         document.getElementById('btnMigrateDishAddons')?.addEventListener('click', migrateAddonsToCategories);
         document.getElementById('btnAddCatAddonField')?.addEventListener('click', addNewAddonField);
