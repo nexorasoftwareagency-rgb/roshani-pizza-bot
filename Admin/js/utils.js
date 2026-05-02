@@ -80,6 +80,8 @@ export const standardizeOrderData = (o) => {
         rawItems = o.cart;
     } else if (o.items) {
         rawItems = Array.isArray(o.items) ? o.items : Object.values(o.items);
+    } else if (o.item) {
+        // Fallback for very old or simplified order objects
         rawItems = [{
             name: o.item,
             size: o.size || 'Regular',

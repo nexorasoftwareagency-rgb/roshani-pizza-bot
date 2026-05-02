@@ -25,9 +25,9 @@ export const STATUS_MAPPING = {
     "Cooked": 3,
     "Ready": 4,
     "Picked Up": 5,
-    "Out for Delivery": 5, "Dispatched": 5,
-    "Delivered": 6,
-    "Cancelled": 99
+    "Out for Delivery": 6,
+    "Delivered": 7,
+    "Cancelled": 0
 };
 
 // Order callback storage for safe detachment
@@ -729,15 +729,13 @@ export async function assignRider(id, riderId) {
         if (!rider) throw new Error("Rider not found");
 
         const order = state.ordersMap.get(id) || state.liveOrdersMap.get(id);
-        const currentStatus = order ? order.status : "Placed";
-        const currentLevel = STATUS_MAPPING[currentStatus] ?? 0;
-        const targetStatus = "Out for Delivery";
-        const targetLevel = STATUS_MAPPING[targetStatus];
 
         const updateData = {
             riderId: riderId,
+            assignedRider: rider.email, // Essential for Rider Panel filtering
             riderName: rider.name,
-            riderPhone: rider.phone
+            riderPhone: rider.phone,
+            assignedAt: ServerValue.TIMESTAMP
         };
 
         // Manual assignment only - Rider will handle status advancement via "PICKUP"
@@ -825,7 +823,7 @@ export async function openOrderDrawer(id) {
             </div>
             <div class="drawer-section">
                 <div class="flex-between m-b-5"><span class="text-muted">Subtotal</span><span>₹${order.subtotal || 0}</span></div>
-                <div class="flex-between m-b-5"><span class="text-muted">Discount</span><span>-₹${order.discount || 0}</span></div>
+                <div class="flex-between m-b-5"><span class="text-muted">Discount Allotted</span><span>-₹${order.discount || 0}</span></div>
                 <div class="flex-between m-b-5"><span class="text-muted">Delivery</span><span>₹${order.deliveryFee || 0}</span></div>
                 <div class="flex-between font-bold fs-16"><span class="color-primary">Total</span><span>₹${order.total || 0}</span></div>
             </div>

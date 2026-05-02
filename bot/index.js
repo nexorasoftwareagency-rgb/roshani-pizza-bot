@@ -256,6 +256,7 @@ function formatOrderInvoice(orderId, order) {
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
     msg += `💰 *Subtotal:* ₹${order.subtotal || order.itemTotal || 0}\n`;
     if (order.deliveryFee) msg += `🚚 *Shipping:* ₹${order.deliveryFee}\n`;
+    if (order.discount) msg += `🎁 *Discount Allotted:* -₹${order.discount}\n`;
     msg += `💵 *TOTAL AMOUNT: ₹${order.total || 0}*\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
     return msg;
@@ -402,7 +403,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 if (!isDineIn && order.riderPhone) {
                     await notifyRiderPickup(sock, order);
                 }
-            } else if (order.status === "Out for Delivery") {
+            } else if (order.status === "Picked Up" || order.status === "Out for Delivery") {
                 if (orderType === 'Dine-in') return;
                 
                 let otp = storedOTP;
@@ -426,10 +427,6 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                     msg = `🛵 *OUT FOR DELIVERY!* 🚀\n━━━━━━━━━━━━━━━━━━━━\nOur rider is on the way to your location! 🛵💨\n\n🆔 Order: #${id.slice(-5)}\n🔑 *OTP:* ${otp} (Share with rider only)${riderInfoText}\n💰 *Total:* ₹${order.total}\n${getFoodFunnyProgress("Out for Delivery")}`;
                 }
                 img = botSettings.imgOut;
-                
-                if (order.riderPhone) {
-                    await notifyRiderPickup(sock, order);
-                }
             } else if (order.status === "Delivered") {
                 const isDineIn = orderType === 'Dine-in';
                 msg = `✅ *${isDineIn ? 'SERVED' : 'DELIVERED'} SUCCESSFULLY!* 🍕❤️\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n🤝 *Payment:* ${order.paymentMethod}\n💵 *Total Paid:* ₹${order.total}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*Enjoy your meal!* 😋\n\n${getFunnyFoodJoke()}`;
@@ -612,15 +609,11 @@ async function notifyRiderPickup(sock, order) {
         
         let itemsText = (order.normalizedItems || order.items || []).map(i => `• ${i.name || i.item} (${i.size}) x${i.qty || i.quantity}`).join('\n');
         
-        const locationMsg = order.lat && order.lng ? 
-            `📍 *Location:* https://www.google.com/maps?q=${order.lat},${order.lng}` : 
-            `📍 *Address:* ${order.address}`;
-        
         const msg = `🛵 *NEW PICKUP ASSIGNED* 🛵\n━━━━━━━━━━━━━━━━━━━━\n` +
             `🆔 *Order:* #${order.orderId?.slice(-5) || 'N/A'}\n` +
             `👤 *Customer:* ${order.customerName}\n` +
             `📞 *Phone:* ${order.phone}\n` +
-            `${locationMsg}\n\n` +
+            `📍 *Address:* ${order.address}\n\n` +
             `📝 *Note:* ${order.customerNote || 'None'}\n\n` +
             `📦 *INVOICE DETAILS:*\n${itemsText}\n\n` +
             `💰 *Total:* ₹${order.total} (${order.paymentMethod})\n` +
@@ -895,9 +888,9 @@ async function startBot() {
                 user.addonList = Object.entries(addons);
 
                 if (user.addonList.length > 0) {
-                    let aMsg = `🧀 *ADD-ONS*\n\n`;
+                    let aMsg = `✨ *WANT EXTRA TOPPINGS?* 🧀\n\n`;
                     user.addonList.forEach(([n, p], i) => { aMsg += `${i + 1}️⃣  ${n} (+₹${p})\n`; });
-                    aMsg += `\n0️⃣  *Done*`;
+                    aMsg += `\n👉 Reply with a *Number* to add extras\n🚀 Reply *0* (Zero) if you are *DONE*`;
                     user.step = "ADDONS";
                     return sock.sendMessage(sender, { text: aMsg });
                 }
@@ -924,9 +917,9 @@ async function startBot() {
                 
                 let addonConfirm = `✅ *ADDED: ${addedName.toUpperCase()}* 🧀\n`;
                 addonConfirm += `━━━━━━━━━━━━━━━━━━━━\n`;
-                addonConfirm += `Current Add-ons: ${user.current.addons.map(a => a.name).join(", ")}\n\n`;
+                addonConfirm += `*Current Add-ons:* ${user.current.addons.map(a => a.name).join(", ")}\n\n`;
                 addonConfirm += `🔢 *Add More?* Reply with another number\n`;
-                addonConfirm += `🆗 *Next Step?* Reply *0* for Quantity selection`;
+                addonConfirm += `🆗 *Next Step?* Reply *0* (Zero) to set Quantity`;
                 
                 return sock.sendMessage(sender, { text: addonConfirm });
             }
@@ -998,13 +991,31 @@ async function startBot() {
             }
 
             if (user.step === "NAME") {
-                user.name = text; user.step = "PHONE";
+                user.name = text;
+                user.step = "PHONE";
+                // Trigger a temporary profile save if we have the name
+                if (user.name) {
+                    await saveUserProfile(sender, { name: user.name, phone: user.phone || "" });
+                }
                 return sock.sendMessage(sender, { text: "📞 *Mobile Number?*" });
             }
 
             if (user.step === "PHONE") {
                 user.phone = text.replace(/\D/g, '').slice(-10);
                 user.step = "ADDRESS";
+                
+                // Save to customer node immediately for lead tracking
+                if (user.phone && user.phone.length >= 10) {
+                    const cleanPhone = user.phone;
+                    const custData = {
+                        name: user.name || "Customer",
+                        phone: cleanPhone,
+                        lastSeen: new Date().toISOString()
+                    };
+                    await updateData(`customers/${cleanPhone}`, custData, user.outlet || 'pizza');
+                    await saveUserProfile(sender, { name: user.name, phone: cleanPhone });
+                }
+                
                 return sock.sendMessage(sender, { text: "🏠 *Delivery Address?*" });
             }
 
@@ -1141,7 +1152,8 @@ async function handleCheckoutFinal(sock, sender, user) {
         sum += `━━━━━━━━━━━━━━━━━━━━\n`;
         sum += `💰 Subtotal: ₹${subtotal}\n`;
         sum += `🚚 Delivery (${dist.toFixed(1)}km): ₹${fee}\n`;
-        sum += `💵 *TOTAL: ₹${subtotal + fee}*\n\n`;
+        if (user.discount) sum += `🎁 Discount Allotted: -₹${user.discount}\n`;
+        sum += `💵 *TOTAL: ₹${subtotal + fee - (user.discount || 0)}*\n\n`;
         sum += `1️⃣ Confirm Order\n`;
         sum += `2️⃣ Cancel`;
         

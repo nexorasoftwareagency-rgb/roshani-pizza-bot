@@ -301,6 +301,9 @@ export function clearWalkinCart() {
     if (document.getElementById('walkinCustPhone')) document.getElementById('walkinCustPhone').value = "";
     if (document.getElementById('walkinCustName')) document.getElementById('walkinCustName').value = "";
     if (document.getElementById('walkinCustNote')) document.getElementById('walkinCustNote').value = "";
+    if (document.getElementById('walkinDiscountRow')) document.getElementById('walkinDiscountRow').classList.add('hidden');
+    if (document.getElementById('walkinDiscountVal')) document.getElementById('walkinDiscountVal').innerText = "-₹0";
+    if (document.getElementById('walkinDiscount')) document.getElementById('walkinDiscount').value = "0";
     renderWalkinCart();
 }
 
@@ -354,6 +357,16 @@ export function renderWalkinCart() {
     const finalTotal = Math.max(0, subtotal - discountValue);
 
     document.getElementById("walkinSubtotal").innerText = `₹${subtotal.toLocaleString()}`;
+    
+    const discRow = document.getElementById("walkinDiscountRow");
+    const discVal = document.getElementById("walkinDiscountVal");
+    if (discountValue > 0) {
+        if (discRow) discRow.classList.remove('hidden');
+        if (discVal) discVal.innerText = `-₹${discountValue.toLocaleString()}`;
+    } else {
+        if (discRow) discRow.classList.add('hidden');
+    }
+
     document.getElementById("walkinTotal").innerText = `₹${finalTotal.toLocaleString()}`;
 
     // Calculate total qty for mobile summary

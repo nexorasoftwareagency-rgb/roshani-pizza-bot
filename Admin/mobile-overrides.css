@@ -13,6 +13,7 @@
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
         box-sizing: border-box;
+        max-width: 100%;
     }
 
     html, body {
@@ -60,7 +61,7 @@
         z-index: 10000 !important;
         transform: translateX(-100%) !important;
         transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-        box-shadow: 20px 0 60px rgba(0, 0, 0, 0.4) !important;
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.1) !important;
         background: white !important;
         display: flex !important;
         flex-direction: column !important;
@@ -192,12 +193,13 @@
     }
 
      /* --- 6. POS (WALK-IN) OPTIMIZATIONS --- */
+    #tab-walkin .walkin-container,
     #tab-walkin .walkin-layout {
         display: flex !important;
         flex-direction: column !important;
-        height: auto !important;
+        gap: 0 !important;
         min-height: auto !important;
-        padding-bottom: 140px !important;
+        padding-bottom: 80px !important; /* Space for bottom nav */
     }
 
     #tab-walkin .walkin-picker {
@@ -208,16 +210,33 @@
         padding: 10px !important;
     }
 
-    /* Search - Floating style */
+    /* Search - Sticky style */
     .walkin-picker .panel-header {
-        position: sticky;
-        top: 64px; /* Exactly below mobile header */
-        background: #fff;
-        padding: 4px 0;
-        margin-bottom: 4px;
-        border-radius: 0;
-        z-index: 100;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
+        position: sticky !important;
+        top: 64px !important; /* Matches Mobile Header height */
+        background: #fff !important;
+        padding: 10px 15px !important;
+        margin-bottom: 0 !important;
+        border-radius: 0 !important;
+        z-index: 1000 !important;
+        border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 10px !important;
+    }
+
+    /* Adjust the 'Select Items' text and search input to fit one line if possible */
+    .walkin-picker .panel-header .panel-title {
+        font-size: 14px !important;
+        white-space: nowrap !important;
+    }
+
+    #walkinDishSearch {
+        width: 150px !important;
+        margin-bottom: 0 !important;
+        padding: 8px 12px !important;
     }
 
     /* Dish Grid - 4 columns for mobile */
@@ -234,7 +253,8 @@
         padding: 8px 4px !important;
         border-radius: 12px !important;
         background: #fff !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+        box-shadow: 0 4px 12px rgba(255, 77, 0, 0.1) !important;
+        border: 1px solid rgba(0, 0, 0, 0.08) !important;
         min-height: 90px !important;
         display: flex !important;
         flex-direction: column !important;
@@ -411,16 +431,21 @@
         border-radius: 14px !important;
     }
 
-    /* --- Mobile Category Tabs - Filter Pills --- */
+    /* --- Mobile Category Tabs - Filter Pills (Sticky) --- */
     .category-tabs-container {
+        position: sticky !important;
+        top: 112px !important; /* Header (64) + Search Bar (~48) */
+        z-index: 999 !important;
+        background: #fff !important;
         display: flex !important;
         overflow-x: auto !important;
         gap: 8px !important;
-        padding: 4px 0 8px !important;
-        margin-bottom: 4px !important;
+        padding: 10px 15px !important;
+        margin-bottom: 0 !important;
         -webkit-overflow-scrolling: touch !important;
         scrollbar-width: none;
         scroll-behavior: smooth;
+        border-bottom: 1px solid rgba(0,0,0,0.03) !important;
     }
 
     .category-tabs-container::-webkit-scrollbar {
@@ -541,36 +566,83 @@
         height: 22px;
     }
 
-    /* --- 10. REPORT TABLES (SCROLLABLE CARDS) --- */
-    .report-table-container {
-        margin: 10px;
-        border-radius: 12px;
+    /* --- 10. REPORT TABLES (PREMIUM CARD LIST) --- */
+    .report-table-container,
+    .table-responsive {
+        margin: 0 !important;
+        padding: 5px !important;
+        overflow-x: hidden !important;
     }
 
-    table thead {
-        display: none;
+    .mobile-card-table {
+        display: block !important;
+        width: 100% !important;
+        border: none !important;
     }
 
-    table tr {
-        display: block;
-        border-bottom: 1px solid #f1f5f9;
-        padding: 12px 0;
-        margin-bottom: 8px;
+    .mobile-card-table thead {
+        display: none !important;
     }
 
-    table td {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 15px !important;
-        text-align: right;
-        font-size: 14px;
+    .mobile-card-table tbody {
+        display: block !important;
+        width: 100% !important;
     }
 
-    table td::before {
+    .mobile-card-table tr {
+        display: block !important;
+        background: #ffffff !important;
+        border-radius: 20px !important;
+        margin-bottom: 20px !important;
+        padding: 15px !important;
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.1) !important;
+        border: 1.5px solid rgba(0, 0, 0, 0.08) !important;
+        position: relative !important;
+        margin-top: 10px !important;
+    }
+
+    .mobile-card-table td {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 10px 0 !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+        font-size: 13px !important;
+        text-align: right !important;
+        gap: 15px !important;
+    }
+
+    .mobile-card-table td:last-child {
+        border-bottom: none !important;
+    }
+
+    .mobile-card-table td::before {
         content: attr(data-label);
-        font-weight: 700;
-        color: #64748b;
-        text-align: left;
+        font-weight: 700 !important;
+        color: #94a3b8 !important;
+        text-align: left !important;
+        text-transform: uppercase !important;
+        font-size: 10px !important;
+        letter-spacing: 0.5px !important;
+        flex: 1 !important;
+        min-width: 80px !important;
+    }
+
+    /* Fix cutting off of dropdowns/inputs in cards */
+    .mobile-card-table td select,
+    .mobile-card-table td .btn-table-action,
+    .mobile-card-table td .status-select,
+    .mobile-card-table td .rider-select {
+        flex: 2 !important;
+        max-width: 180px !important;
+        min-width: 0 !important;
+        text-overflow: ellipsis !important;
+    }
+
+    /* Specific spacing for status badges in cards */
+    .mobile-card-table td .status,
+    .mobile-card-table td .badge {
+        margin: 0 !important;
     }
 
     /* --- 11. GRID OPTIMIZATIONS --- */
@@ -582,16 +654,24 @@
     .dashboard-grid {
         grid-template-columns: 1fr !important;
         gap: 16px !important;
+        padding: 10px !important;
     }
 
     .kpi-row {
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 10px !important;
+        padding: 10px !important;
+    }
+
+    /* Fix card shadows in dashboard */
+    .kpi-card, .glass-card, .panel {
+        box-shadow: 0 4px 15px rgba(255, 77, 0, 0.08) !important;
+        border: 1px solid rgba(0, 0, 0, 0.12) !important;
     }
 
     /* --- 12. MODAL OPTIMIZATIONS --- */
     .modal {
-        padding: 10px !important;
+        padding: 0 !important;
         align-items: flex-end !important;
     }
 
@@ -601,18 +681,21 @@
         border-radius: 24px 24px 0 0 !important;
         padding: 20px !important;
         margin: 0 !important;
-        max-height: 90vh;
+        max-height: 92vh !important;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.1) !important;
     }
 
     /* --- 13. TOAST NOTIFICATIONS --- */
     #alertContainer {
-        right: 10px !important;
-        left: 10px !important;
+        right: 15px !important;
+        left: 15px !important;
         width: auto !important;
+        bottom: 80px !important; /* Above bottom nav */
     }
 
     .alert-box {
         min-width: auto !important;
         width: 100%;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15) !important;
     }
 }
