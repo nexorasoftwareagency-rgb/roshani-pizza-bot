@@ -5366,3 +5366,86 @@ body {
 .status-indicator.disconnected { background: var(--error); box-shadow: 0 0 8px var(--error); }
 .status-indicator.connecting { background: var(--warning); animation: pulse 1s infinite; }
 @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+/* --- PREMIUM ANALYTICS UI --- */
+#tab-reports .section-title {
+    font-size: 26px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--primary), #ea580c);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+}
+
+#tab-reports .glass-card.flex-row {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    padding: 12px 20px;
+    border-radius: 16px;
+}
+
+#tab-reports .kpi-card {
+    background: linear-gradient(145deg, #ffffff, #f8fafc);
+    border: 1px solid rgba(0,0,0,0.03);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+    border-radius: 20px;
+    padding: 24px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+#tab-reports .kpi-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(249, 115, 22, 0.1);
+    border-color: rgba(249, 115, 22, 0.2);
+}
+
+#tab-reports .kpi-info .val {
+    font-size: 26px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+#tab-reports .kpi-info .lbl {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#tab-reports .panel-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1e293b;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+}
+
+#tab-reports .glass-card {
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+    border: 1px solid rgba(0,0,0,0.04);
+}
+
+#tab-reports .report-table-wrapper th {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 11px;
+    color: #64748b;
+    border-bottom: 2px solid #f1f5f9;
+    padding: 12px 10px;
+}
+
+#tab-reports .report-table-wrapper td {
+    padding: 12px 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #334155;
+    border-bottom: 1px solid #f8fafc;
+}
