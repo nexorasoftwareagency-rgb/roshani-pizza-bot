@@ -370,12 +370,32 @@ export function updateMobileCartSummaryState(count, total) {
 
     if (count > 0) {
         summary.classList.remove('hidden');
+        summary.setAttribute('data-action', 'toggleMobileCart');
+        summary.removeAttribute('data-tab'); // Use action instead of tab switch if items present
+
         const countElem = document.getElementById('mobileCartCount');
         const totalElem = document.getElementById('mobileCartTotal');
         if (countElem) countElem.innerText = `${count} Items`;
         if (totalElem) totalElem.innerText = `₹${total.toLocaleString()}`;
     } else {
         summary.classList.add('hidden');
+        summary.setAttribute('data-tab', 'walkin');
+        summary.removeAttribute('data-action');
+    }
+}
+
+/**
+ * Toggles the full-screen cart sheet on mobile
+ */
+export function toggleMobileCart(forceState) {
+    const cart = document.querySelector('.walkin-cart');
+    if (!cart) return;
+    
+    haptic(10);
+    if (typeof forceState === 'boolean') {
+        cart.classList.toggle('active', forceState);
+    } else {
+        cart.classList.toggle('active');
     }
 }
 
@@ -389,7 +409,7 @@ export async function checkWalkinCustomer() {
     if (phone.length < 10) return;
 
     try {
-        const snap = await db.ref(`customers/${phone}`).once("value");
+        const snap = await Outlet.ref(`customers/${phone}`).once("value");
         const nameInput = document.getElementById("walkinCustName");
         
         if (snap.exists()) {
@@ -518,7 +538,7 @@ export async function submitWalkinSale() {
 
         // 2. Update Customer LTV if phone provided
         if (phone && phone.length >= 10) {
-            const custRef = db.ref(`customers/${phone}`);
+            const custRef = Outlet.ref(`customers/${phone}`);
             await custRef.transaction(c => {
                 if (!c) return { name, phone, orderCount: 1, totalSpent: total, lastSeen: Date.now(), lastAddress: 'Walk-in' };
                 return {

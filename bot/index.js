@@ -314,7 +314,8 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
         }
 
         const currentStatus = (order.status || "").trim();
-        console.log(`[Status Update] 🔍 Processing Order #${id.slice(-5)} | Status: ${currentStatus} | Target: ${jid}`);
+        const orderType = order.type || "Unknown";
+        console.log(`[Status Update] 🔍 Processing Order #${id.slice(-5)} | Type: ${orderType} | Status: ${currentStatus} | Target: ${jid}`);
 
         const statusKey = `${id}_${currentStatus}`;
         if (!processedStatus[id] || processedStatus[id].status !== currentStatus || isNew) {
@@ -335,13 +336,16 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 msg = `👨‍🍳 *NOW PREPARING!* 🔥\n━━━━━━━━━━━━━━━━━━━━\nYour order #${id.slice(-5)} is now in the kitchen! 👨‍🍳\n\nIt won't be long now! 🍕\n${getFoodFunnyProgress("Preparing")}`;
                 img = botSettings.imgPreparing;
             } else if (order.status === "Cooked" || order.status === "Ready") {
-                msg = `🍱 *READY & PACKED!* 🍱\n━━━━━━━━━━━━━━━━━━━━\nYour delicious order #${id.slice(-5)} is ready! 🚀\n\nIt's waiting for the rider to pick it up. 🛵\n${getFoodFunnyProgress("Cooked")}`;
+                const isDineIn = orderType === 'Dine-in';
+                msg = `🍱 *READY & PACKED!* 🍱\n━━━━━━━━━━━━━━━━━━━━\nYour delicious order #${id.slice(-5)} is ready! 🚀\n\n${isDineIn ? "It's ready to be served! 🍽️" : "It's waiting for the rider to pick it up. 🛵"}\n${getFoodFunnyProgress("Cooked")}`;
                 img = botSettings.imgCooked;
                 
-                if (order.assignedRider || order.riderId) {
+                if (!isDineIn && (order.assignedRider || order.riderId)) {
                     await notifyRiderPickup(sock, order, order.assignedRider || order.riderId);
                 }
             } else if (order.status === "Out for Delivery") {
+                if (orderType === 'Dine-in') return; // Skip for Dine-in
+                
                 let riderInfoText = "";
                 const riderId = order.riderId || order.assignedRider;
                 if (riderId) {
@@ -353,7 +357,8 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 msg = `🛵 *OUT FOR DELIVERY!* 🚀\n━━━━━━━━━━━━━━━━━━━━\nOur rider is on the way to your location! 🛵💨\n\n🆔 Order: #${id.slice(-5)}\nPlease keep *₹${order.total}* ready.${riderInfoText}\n${getFoodFunnyProgress("Out for Delivery")}`;
                 img = botSettings.imgOut;
             } else if (order.status === "Delivered") {
-                msg = `✅ *DELIVERED SUCCESSFULLY!* 🍕❤️\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n🤝 *Payment:* ${order.paymentMethod}\n💵 *Total Paid:* ₹${order.total}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*Enjoy your meal!* 😋\n\n${getFunnyFoodJoke()}`;
+                const isDineIn = orderType === 'Dine-in';
+                msg = `✅ *${isDineIn ? 'SERVED' : 'DELIVERED'} SUCCESSFULLY!* 🍕❤️\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n🤝 *Payment:* ${order.paymentMethod}\n💵 *Total Paid:* ₹${order.total}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*Enjoy your meal!* 😋\n\n${getFunnyFoodJoke()}`;
                 img = botSettings.imgDelivered;
             } else if (currentStatus === "Cancelled") {
                 msg = `❌ *ORDER CANCELLED* ❌\n━━━━━━━━━━━━━━━━━━━━\nWe're sorry, your order #${id.slice(-5)} has been cancelled.\n\nReason: ${order.cancelReason || "Store Busy / Technical Issue"}\n\nIf you have any questions, please contact us. 🙏`;
@@ -960,6 +965,7 @@ async function startBot() {
 
                 const finalOrder = {
                     orderId, outlet: user.outlet, 
+                    type: "Online", // Explicitly tag as Online order
                     customerName: escapeHtml(user.name),
                     phone: user.phone, 
                     whatsappNumber: sender, // Save sender JID for status updates

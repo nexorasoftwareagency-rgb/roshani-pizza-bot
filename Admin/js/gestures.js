@@ -49,10 +49,17 @@ function initSwipeToClose(elementId, closeCallback) {
         const diff = currentY - startY;
         
         if (diff > 0) {
-            // Dragging down
+            // Dragging down - move the drawer
             el.style.transform = `translateY(${diff}px)`;
-            // Stop propagation to prevent body scroll
+            
+            // Critical: Only prevent default if we are actually moving the drawer down
+            // to avoid blocking other gestures or system behaviors
             if (e.cancelable) e.preventDefault();
+            e.stopPropagation();
+        } else {
+            // Dragging up - reset transform and let native scroll take over
+            el.style.transform = '';
+            isSwiping = false; 
         }
     }, { passive: false });
 
