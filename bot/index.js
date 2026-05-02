@@ -300,13 +300,22 @@ async function sendCategories(sock, sender, user) {
     if (!categories) return sock.sendMessage(sender, { text: "❌ No categories available right now." });
 
     user.categoryList = Object.entries(categories).map(([id, val]) => ({ id, ...val }));
-    let msg = `🍽️ *SELECT CATEGORY - ${outlet.toUpperCase()}*\n\n`;
+    
+    const botSettings = await getData("settings/Bot", outlet) || {};
+    const storeSettings = await getData("settings/Store", outlet) || {};
+    const storeName = storeSettings.storeName || outlet.toUpperCase();
+    
+    let msg = `✨ ━━━━━━━━━━━━━━━━━━ ✨\n`;
+    msg += `🍕 *${storeName.toUpperCase()}* 🍕\n`;
+    msg += `✨ ━━━━━━━━━━━━━━━━━━ ✨\n\n`;
+    msg += `🍽️ *SELECT A CATEGORY TO ORDER:*\n\n`;
     user.categoryList.forEach((c, i) => { msg += `${i + 1}️⃣  ${c.name}\n`; });
-    msg += `\n🛒 *9* View Cart\n🏠 *0* Main Menu`;
+    msg += `\n━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `🛒 *9* View Cart\n🏠 *0* Main Menu`;
     
     user.step = "CATEGORY";
-    const banner = (await getData("settings/Store", outlet))?.bannerImage;
-    await sendImage(sock, sender, banner, msg);
+    const menuImg = botSettings.menuImage || storeSettings.bannerImage;
+    await sendImage(sock, sender, menuImg, msg);
 }
 
 async function sendCartView(sock, sender, user) {
@@ -767,7 +776,10 @@ async function startBot() {
 
             // STATE MACHINE
             if (user.step === "START") {
-                const settings = await getData("settings/Store", user.outlet || 'pizza');
+                const outlet = user.outlet || 'pizza';
+                const store = await getData("settings/Store", outlet);
+                const bot = await getData("settings/Bot", outlet);
+                
                 let welcome = `Hello *${pushName}*! 👋\n`;
                 welcome += `✨ *WELCOME TO ROSHANI PIZZA & CAKE* 🍕🎂\n`;
                 welcome += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -779,7 +791,8 @@ async function startBot() {
                 welcome += `_Reply with 1, 2 or 3 to start_`;
                 
                 user.step = "OUTLET";
-                return await sendImage(sock, sender, settings?.bannerImage, welcome);
+                const greetingImg = bot?.greetingImage || store?.bannerImage;
+                return await sendImage(sock, sender, greetingImg, welcome);
             }
 
             if (user.step === "OUTLET") {
