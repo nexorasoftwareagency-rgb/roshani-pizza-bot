@@ -440,12 +440,8 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
 
 if (msg) {
                 await sendImage(sock, jid, img, msg);
-                // Also send location to customer if out for delivery
-                if (order.status === "Out for Delivery" && order.lat && order.lng) {
-                    const locMsg = `📍 View delivery location: https://maps.google.com/?q=${order.lat},${order.lng}`;
-                    await sock.sendMessage(jid, { text: locMsg });
-                }
             }
+        }
         }
     } catch (err) { console.error("Status Update Error:", err); }
 }
