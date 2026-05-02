@@ -23,62 +23,67 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, #FF5200 0%, #FF7E00 100%);
+            background: linear-gradient(135deg, #FF5200 0%, #FF2E00 100%);
             padding: 20px;
         }
 
         .login-card {
             background: white;
             padding: 40px 30px;
-            border-radius: 24px;
+            border-radius: 32px;
             width: 100%;
             max-width: 400px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 50px rgba(255, 82, 0, 0.2);
+            border: 2px solid rgba(255, 82, 0, 0.1);
             text-align: center;
         }
 
         .login-logo-box {
-            width: 70px;
-            height: 70px;
+            width: 80px;
+            height: 80px;
             background: #FFF5F1;
             color: #FF5200;
-            border-radius: 20px;
+            border-radius: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 20px;
+            margin: 0 auto 25px;
+            box-shadow: 0 8px 20px rgba(255, 82, 0, 0.1);
         }
 
         .login-logo-box i {
-            width: 35px;
-            height: 35px;
+            width: 40px;
+            height: 40px;
         }
 
         .login-card h2 {
             font-weight: 900;
-            font-size: 1.8rem;
-            margin-bottom: 5px;
+            font-size: 2rem;
+            margin-bottom: 8px;
             color: #1E293B;
+            letter-spacing: -0.5px;
         }
 
         .login-card p {
             color: #64748B;
-            margin-bottom: 30px;
-            font-weight: 500;
+            margin-bottom: 35px;
+            font-weight: 600;
+            font-size: 0.95rem;
         }
 
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             text-align: left;
         }
 
         .input-group label {
             display: block;
-            font-size: 0.85rem;
-            font-weight: 700;
+            font-size: 0.8rem;
+            font-weight: 800;
             color: #1E293B;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .input-wrapper {
@@ -89,31 +94,38 @@
 
         .input-wrapper i {
             position: absolute;
-            left: 15px;
+            left: 18px;
             color: #94A3B8;
             width: 20px;
         }
 
         .input-wrapper input {
             width: 100%;
-            padding: 16px 15px 16px 45px;
-            border: 2px solid #E2E8F0;
-            border-radius: 14px;
+            padding: 18px 15px 18px 50px;
+            border: 2px solid #F1F5F9;
+            background: #F8FAFC;
+            border-radius: 16px;
             font-size: 1rem;
-            font-weight: 600;
+            font-weight: 700;
             outline: none;
-            transition: 0.2s;
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .input-wrapper input:focus {
             border-color: #FF5200;
+            background: white;
+            box-shadow: 0 0 0 5px rgba(255, 82, 0, 0.05);
         }
 
         .error-msg {
+            background: #FEF2F2;
             color: #EF4444;
             font-size: 0.85rem;
-            font-weight: 700;
-            margin-top: 15px;
+            font-weight: 800;
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(239, 68, 68, 0.1);
         }
         .hidden { display: none !important; }
     </style>
