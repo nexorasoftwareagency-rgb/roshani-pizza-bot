@@ -81,10 +81,12 @@
         backdrop-filter: blur(4px);
         z-index: 8999;
         display: none;
+        pointer-events: none;
     }
 
     .sidebar-overlay.active {
         display: block;
+        pointer-events: auto;
     }
 
     /* Mobile Header */
@@ -434,7 +436,7 @@
     /* --- Mobile Category Tabs - Filter Pills (Sticky) --- */
     .category-tabs-container {
         position: sticky !important;
-        top: 112px !important; /* Header (64) + Search Bar (~48) */
+        top: 64px !important; /* Header (64) */
         z-index: 999 !important;
         background: #fff !important;
         display: flex !important;
@@ -634,7 +636,7 @@
     .mobile-card-table td .status-select,
     .mobile-card-table td .rider-select {
         flex: 2 !important;
-        max-width: 180px !important;
+        flex-basis: 60% !important;
         min-width: 0 !important;
         text-overflow: ellipsis !important;
     }
