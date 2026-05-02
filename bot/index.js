@@ -345,15 +345,22 @@ async function sendCategories(sock, sender, user) {
     
     const botSettings = await getData("settings/Bot", outlet) || {};
     const storeSettings = await getData("settings/Store", outlet) || {};
-    const storeName = storeSettings.storeName || outlet.toUpperCase();
+    const storeName = storeSettings.storeName || (outlet === 'pizza' ? "Roshani Pizza" : "Roshani Cake");
+    const emoji = outlet === 'pizza' ? "🍕" : "🎂";
+    const headerEmoji = outlet === 'pizza' ? "🔥" : "✨";
     
-    let msg = `✨ ━━━━━━━━━━━━━━━━━━ ✨\n`;
-    msg += `🍕 *${storeName.toUpperCase()}* 🍕\n`;
-    msg += `✨ ━━━━━━━━━━━━━━━━━━ ✨\n\n`;
-    msg += `🍽️ *SELECT A CATEGORY TO ORDER:*\n\n`;
-    user.categoryList.forEach((c, i) => { msg += `${i + 1}️⃣  ${c.name}\n`; });
-    msg += `\n━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `🛒 *9* View Cart\n🏠 *0* Main Menu`;
+    let msg = `${headerEmoji} ━━━━━━━━━━━━━━━━━━ ${headerEmoji}\n`;
+    msg += `${emoji} *${storeName.toUpperCase()}* ${emoji}\n`;
+    msg += `${headerEmoji} ━━━━━━━━━━━━━━━━━━ ${headerEmoji}\n\n`;
+    msg += `🍽️ *SELECT CATEGORY - ${outlet.toUpperCase()}*\n\n`;
+    
+    user.categoryList.forEach((c, i) => { 
+        msg += `${i + 1}️⃣  ${c.name}\n`; 
+    });
+    
+    msg += `\n🛒 *9* View Cart\n🏠 *0* Main Menu\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `_Reply with a number to browse_`;
     
     user.step = "CATEGORY";
     const menuImg = botSettings.menuImage || storeSettings.bannerImage;
