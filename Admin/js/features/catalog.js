@@ -349,7 +349,7 @@ export async function showDishModal(dishId = null) {
             addonsContainer.innerHTML = '';
             if (d.addons) {
                 Object.entries(d.addons).forEach(([name, price]) => {
-                    addNewAddonField(name, price);
+                    addDishAddonField(name, price);
                 });
             }
         }
@@ -394,7 +394,7 @@ export function addSizeField(name = "", price = "") {
     container.appendChild(div);
 }
 
-export function addNewAddonField(name = "", price = "") {
+export function addDishAddonField(name = "", price = "") {
     const container = document.getElementById('addonsContainer');
     if (!container) return;
     const div = document.createElement('div');
@@ -404,6 +404,19 @@ export function addNewAddonField(name = "", price = "") {
         <input placeholder="Addon (e.g. Extra Cheese)" value="${name}" class="form-input" style="flex:2; margin-bottom:0">
         <input type="number" placeholder="Price" value="${price}" class="form-input" style="flex:1; margin-bottom:0">
         <button data-action="removeParent" style="background:none; border:none; color:red; cursor:pointer;">×</button>
+    `;
+    container.appendChild(div);
+}
+
+export function addCategoryAddonField(name = "", price = "") {
+    const container = document.getElementById('categoryAddonsList');
+    if (!container) return;
+    const div = document.createElement('div');
+    div.className = "addon-row-small flex-row flex-gap-10 mb-8";
+    div.innerHTML = `
+        <input placeholder="Addon Name" value="${name}" class="form-input mb-0" style="flex:2">
+        <input type="number" placeholder="Price" value="${price}" class="form-input mb-0" style="flex:1">
+        <button data-action="removeParent" class="btn-text-danger">&times;</button>
     `;
     container.appendChild(div);
 }
