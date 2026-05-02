@@ -25,7 +25,7 @@ import {
 } from './features/riders.js';
 import { 
     editDish, deleteDish, editCategory, deleteCategory, 
-    showDishModal, saveDish, addCategory, addNewAddonField, 
+    showDishModal, saveDish, addCategory, addDishAddonField, addSizeField, addCategoryAddonField,
     migrateAddonsToCategories, toggleDishAvailable, runImageMigration, filterMenu, filterCategories
 } from './features/catalog.js';
 import { 
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', () => showDishModal());
         });
         document.getElementById('btnMigrateDishAddons')?.addEventListener('click', migrateAddonsToCategories);
-        document.getElementById('btnAddCatAddonField')?.addEventListener('click', addNewAddonField);
+        document.getElementById('btnAddCatAddonField')?.addEventListener('click', addCategoryAddonField);
         document.getElementById('btnAddCategory')?.addEventListener('click', addCategory);
         bindClickTo('btnChangeCatPhoto', 'catFile');
 
@@ -165,6 +165,8 @@ document.addEventListener('DOMContentLoaded', () => {
             previewImage(e.target, 'dishPreview');
         });
         document.getElementById('saveDishBtn')?.addEventListener('click', saveDish);
+        document.getElementById('btnAddSizeField')?.addEventListener('click', () => addSizeField());
+        document.getElementById('btnAddAddonField')?.addEventListener('click', () => addDishAddonField());
 
         // Toggle Password Visibility
         const setupPassToggle = (btnId, inputId) => {
