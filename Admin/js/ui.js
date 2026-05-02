@@ -181,7 +181,8 @@ export const ui = {
     showToast,
     toggleSidebar,
     closeSidebar,
-    switchTab
+    switchTab,
+    toggleMobileCart: (state) => import('./features/pos.js').then(m => m.toggleMobileCart(state))
 };
 
 /**

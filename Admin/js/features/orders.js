@@ -12,6 +12,11 @@ import { showAlert, addNotification, highlightOrder } from './notifications.js';
  * STATUS WORKFLOW CONFIGURATION
  */
 export const STATUS_SEQUENCE = ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Delivered"];
+export const STATUS_SEQUENCES = {
+    'Online': ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Delivered"],
+    'Dine-in': ["Confirmed", "Preparing", "Cooked", "Ready", "Delivered"],
+    'Default': ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Delivered"]
+};
 export const STATUS_MAPPING = {
     "New": 0, "Pending": 0, "Placed": 0,
     "Confirmed": 1,
@@ -148,21 +153,24 @@ export function loadMoreOrders() {
  * GET STATUS OPTIONS
  * Filters available status transitions based on current status
  */
-function getStatusOptions(currentStatus) {
-    const currentLevel = STATUS_MAPPING[currentStatus] ?? 0;
+function getStatusOptions(currentStatus, type = 'Online') {
+    const sequence = STATUS_SEQUENCES[type] || STATUS_SEQUENCES['Default'];
+    const currentLevel = sequence.indexOf(currentStatus);
     const options = [];
     
     // Always show current status as selected
     options.push({ value: currentStatus, label: currentStatus, selected: true });
 
     // Show next step if exists
-    const nextStep = STATUS_SEQUENCE[currentLevel + 1];
-    if (nextStep) {
+    // If current status is not in sequence, offer the first step
+    const nextStep = (currentLevel !== -1) ? sequence[currentLevel + 1] : sequence[0];
+    
+    if (nextStep && nextStep !== currentStatus) {
         options.push({ value: nextStep, label: `Move to ${nextStep}`, selected: false });
     }
 
     // Always allow cancellation (unless already delivered or cancelled)
-    if (currentLevel < 6 && currentStatus !== "Cancelled") {
+    if (currentStatus !== "Delivered" && currentStatus !== "Cancelled") {
         options.push({ value: "Cancelled", label: "Cancel Order X", selected: false });
     }
 
@@ -285,18 +293,39 @@ export function renderOrders(snap) {
         const truncatedAddress = o.address ? (o.address.length > 30 ? o.address.substring(0, 30) + "..." : o.address) : "Counter Sale";
 
         if (activeTab === 'dashboard') {
-            // Dashboard Table: ID, Customer, Total, Payment, Status (5 columns)
+            // Dashboard Table: ID, Customer, Items, Total, Status, Assign Rider, Actions (7 columns)
+            const itemSummary = items.length > 0 ? `${items.length} Items` : "No Items";
+            const onlineRiders = (state.ridersList || []).filter(r => r.status === "Online" || r.status === "On Delivery");
+            const riderOptions = onlineRiders.map(r => `
+                <option value="${r.id}" ${o.riderId === r.id ? 'selected' : ''}>${escapeHtml(r.name)}</option>
+            `).join('');
+
             tr.innerHTML = `
-                <td class="font-mono font-600">#${safeOrderId}</td>
-                <td>
+                <td data-label="Order ID" class="font-mono font-600">#${safeOrderId}</td>
+                <td data-label="Customer">
                     <div class="flex-column">
                         <span>${safeCustomerName}</span>
                         <small class="text-muted">${escapeHtml(o.phone || 'Guest')}</small>
                     </div>
                 </td>
-                <td class="font-bold">₹${escapeHtml(o.total || '0')}</td>
-                <td><span class="badge-payment">${escapeHtml(o.paymentMethod || 'Cash')}</span></td>
-                <td><span class="status ${safeStatusClass}">${safeStatus}</span></td>
+                <td data-label="Items">${itemSummary}</td>
+                <td data-label="Total" class="font-bold">₹${escapeHtml(o.total || '0')}</td>
+                <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
+                <td data-label="Assign Rider">
+                    <select data-action="assignRider" data-id="${id}" class="status-select" ${o.type === 'Dine-in' ? 'disabled' : ''}>
+                        <option value="">Select Rider</option>
+                        ${riderOptions}
+                    </select>
+                </td>
+                <td data-label="Actions">
+                    <div class="flex-row flex-gap-5">
+                        <select data-action="updateStatus" data-id="${id}" class="status-select">
+                            <option value="">Actions</option>
+                            ${getStatusOptions(o.status || "Placed", o.type || 'Online')}
+                        </select>
+                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-table-icon">🖨️</button>
+                    </div>
+                </td>
             `;
         } else if (activeTab === 'live') {
             // Live Ops Table: ID, Customer, Items, Total, Status, Assign Rider, Actions (7 columns)
@@ -318,7 +347,7 @@ export function renderOrders(snap) {
                 <td data-label="Total" class="font-bold">₹${escapeHtml(o.total || '0')}</td>
                 <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
                 <td data-label="Assign Rider">
-                    <select data-action="assignRider" data-id="${id}" class="status-select">
+                    <select data-action="assignRider" data-id="${id}" class="status-select" ${o.type === 'Dine-in' ? 'disabled' : ''}>
                         <option value="">Select Rider</option>
                         ${riderOptions}
                     </select>
@@ -327,7 +356,7 @@ export function renderOrders(snap) {
                     <div class="flex-row flex-gap-5">
                         <select data-action="updateStatus" data-id="${id}" class="status-select">
                             <option value="">Actions</option>
-                            ${getStatusOptions(o.status || "Placed")}
+                            ${getStatusOptions(o.status || "Placed", o.type || 'Online')}
                         </select>
                         <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-table-icon">🖨️</button>
                     </div>
@@ -355,7 +384,7 @@ export function renderOrders(snap) {
                     <div class="flex-row flex-gap-5">
                         <select data-action="updateStatus" data-id="${id}" class="status-select">
                             <option value="">Actions</option>
-                            ${getStatusOptions(o.status || "Placed")}
+                            ${getStatusOptions(o.status || "Placed", o.type || 'Online')}
                         </select>
                         <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-table-icon">🖨️</button>
                     </div>
@@ -552,24 +581,27 @@ export async function updateStatus(id, status) {
     if (!order) return;
 
     const currentStatus = order.status || "Placed";
-    const currentLevel = STATUS_MAPPING[currentStatus] ?? 0;
-    const nextLevel = STATUS_MAPPING[status] ?? 0;
+    const type = order.type || 'Online';
+    const sequence = STATUS_SEQUENCES[type] || STATUS_SEQUENCES['Default'];
+    
+    const currentLevel = sequence.indexOf(currentStatus);
+    const nextLevel = sequence.indexOf(status);
 
     // Rule 1: Allow cancellation from any state EXCEPT "Delivered"
     const isCancelling = status === "Cancelled";
-    const canCancel = isCancelling && currentLevel < 6;
+    const canCancel = isCancelling && currentStatus !== "Delivered";
 
     // Rule 2: Allow ONLY the exact next step in the sequence
     const isNextStep = nextLevel === currentLevel + 1;
 
     if (!isNextStep && !canCancel && status !== currentStatus) {
-        if (nextLevel <= currentLevel && !isCancelling) {
+        if (nextLevel <= currentLevel && nextLevel !== -1 && !isCancelling) {
             showToast(`⚠️ Status Reversal Blocked: Cannot go from ${currentStatus} to ${status}`, "error");
-        } else if (isCancelling && currentLevel >= 6) {
+        } else if (isCancelling && currentStatus === "Delivered") {
             showToast(`⚠️ Cannot cancel an order that is already Delivered`, "error");
         } else {
-            const expectedNext = STATUS_SEQUENCE[currentLevel + 1] || "None";
-            showToast(`⚠️ Sequence Violation: Next step must be "${expectedNext}" (not "${status}")`, "error");
+            const expectedNext = sequence[currentLevel + 1] || "None";
+            showToast(`⚠️ Sequence Violation: Next step for ${type} order must be "${expectedNext}" (not "${status}")`, "error");
         }
         
         // Re-render to reset select dropdowns
@@ -718,7 +750,7 @@ export async function openOrderDrawer(id) {
                             <small class="text-muted d-block m-b-5">Update Status</small>
                             <select data-action="updateStatus" data-id="${id}" class="form-input w-100">
                                 <option value="">Select Next Step</option>
-                                ${getStatusOptions(order.status || "Placed")}
+                                ${getStatusOptions(order.status || "Placed", order.type || 'Online')}
                             </select>
                         </div>
                     </div>
