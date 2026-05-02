@@ -113,7 +113,8 @@ body {
         linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
     color: var(--text-main);
     font-family: 'Inter', 'Outfit', sans-serif;
-    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile */
+    height: 100vh;  /* Fallback */
     overflow: hidden;
     max-width: 100vw;
 }
@@ -258,7 +259,8 @@ html, body {
 .layout {
     display: flex;
     flex-direction: row;
-    height: 100vh; /* Fix: Set fixed height to enable main scroll */
+    height: 100dvh; /* Dynamic height */
+    height: 100vh;
     align-items: stretch;
     justify-content: flex-start;
     overflow: hidden;
@@ -625,11 +627,12 @@ html, body {
     flex: 1;
     min-width: 0;
     padding: 0;
-    height: 100vh; /* Standardize height */
-    max-height: 100vh;
+    height: 100dvh; 
+    height: 100vh;
     background: var(--bg-secondary);
     overflow-y: auto;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch; /* Momentum scroll for iOS */
     transition: margin-left var(--sidebar-transition), padding-left var(--sidebar-transition);
     position: relative;
     scrollbar-gutter: stable;

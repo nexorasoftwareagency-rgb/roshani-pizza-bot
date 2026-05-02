@@ -19,6 +19,8 @@
         position: relative;
         overflow-x: hidden;
         overflow-y: auto;
+        height: 100dvh;
+        height: 100%;
         -webkit-overflow-scrolling: touch;
     }
 
