@@ -294,7 +294,7 @@ async function sendInvalidInputHelp(sock, sender, user) {
     let helpMsg = "⚠️ *Invalid Selection.* ";
     switch (user.step) {
         case "OUTLET":
-            helpMsg += "Please reply with *1* for Pizza Outlet, *2* for Cake Outlet, or *3* to Track Order.";
+            helpMsg += "Please reply with *1* for Pizza Outlet or *2* for Cake Outlet.";
             break;
         case "CATEGORY":
             helpMsg += "Please reply with a *Category Number* from the list above.\n\n🛒 *9* View Cart\n🏠 *0* Main Menu";
@@ -844,9 +844,8 @@ async function startBot() {
                 welcome += `Delicious food, delivered fast to your doorstep! 🚀\n\n`;
                 welcome += `Please select an outlet:\n`;
                 welcome += `1️⃣ *Pizza Outlet* 🍕\n`;
-                welcome += `2️⃣ *Cake Outlet* 🎂\n`;
-                welcome += `3️⃣ *Track Order* 📊\n\n`;
-                welcome += `_Reply with 1, 2 or 3 to start_`;
+                welcome += `2️⃣ *Cake Outlet* 🎂\n\n`;
+                welcome += `_Reply with 1 or 2 to start_`;
                 
                 user.step = "OUTLET";
                 const greetingImg = bot?.greetingImage || store?.bannerImage;
@@ -856,10 +855,6 @@ async function startBot() {
             if (user.step === "OUTLET") {
                 if (text === "1") user.outlet = "pizza";
                 else if (text === "2") user.outlet = "cake";
-                else if (text === "3") {
-                    user.step = "TRACK_ORDER";
-                    return sock.sendMessage(sender, { text: "📊 *TRACK YOUR ORDER*\n\nChecking your latest orders... ⏳" });
-                }
                 else return sendInvalidInputHelp(sock, sender, user);
 
                 const store = await getData("settings/Store", user.outlet) || {};
@@ -869,49 +864,6 @@ async function startBot() {
                 return sendCategories(sock, sender, user);
             }
 
-            if (user.step === "TRACK_ORDER") {
-                const outlets = ['pizza', 'cake'];
-                let latestOrder = null;
-                let latestTime = 0;
-
-                for (const outlet of outlets) {
-                    const orders = await getData(`orders`, outlet);
-                    if (!orders) continue;
-                    Object.entries(orders).forEach(([id, order]) => {
-                        const phone = order.phone || order.whatsappNumber;
-                        if (phone && phone.slice(-10) === sender.split('@')[0].slice(-10)) {
-                            const time = new Date(order.createdAt).getTime();
-                            if (time > latestTime) {
-                                latestTime = time;
-                                latestOrder = { id, ...order };
-                            }
-                        }
-                    });
-                }
-
-                if (!latestOrder) {
-                    user.step = "START";
-                    return sock.sendMessage(sender, { text: "❌ *No active orders found.* Start a new order to get started!" });
-                }
-
-                let trackMsg = `📊 *ORDER STATUS*\n`;
-                trackMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
-                trackMsg += `🆔 *Order ID:* #${latestOrder.id.slice(-5)}\n`;
-                trackMsg += `📅 *Date:* ${new Date(latestOrder.createdAt).toLocaleString()}\n`;
-                trackMsg += `📍 *Status:* *${latestOrder.status}*\n`;
-                trackMsg += `💰 *Total:* ₹${latestOrder.total}\n`;
-                trackMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
-                trackMsg += getFoodFunnyProgress(latestOrder.status);
-                trackMsg += `\n0️⃣ *Back to Main Menu*`;
-
-                user.step = "TRACK_FINISH";
-                return sock.sendMessage(sender, { text: trackMsg });
-            }
-
-            if (user.step === "TRACK_FINISH") {
-                if (text === "0") { user.step = "START"; return sock.sendMessage(sender, { text: "Back to menu..." }); }
-                return sock.sendMessage(sender, { text: "⚠️ Reply *0* to go back." });
-            }
 
             if (user.step === "CATEGORY") {
                 if (text === "0") { user.step = "START"; return sock.sendMessage(sender, { text: "🏠 Returning to Main Menu..." }); }
@@ -1051,16 +1003,11 @@ async function startBot() {
             }
 
             if (user.step === "REUSE_PROFILE") {
-                if (text === "1") {
                     user.name = user.profile.name;
                     user.phone = user.profile.phone;
                     user.address = user.profile.address;
-                    user.location = user.profile.location;
+                    // Note: We intentionally DO NOT reuse user.location here as per request
                     
-                    if (user.location) {
-                        user.step = "PLACE_ORDER_PREP"; // Internal transition
-                        return handleCheckoutFinal(sock, sender, user);
-                    }
                     user.step = "LOCATION";
                     return sock.sendMessage(sender, { text: "📍 *Share your Location* for delivery calculation (Paperclip -> Location)" });
                 }
