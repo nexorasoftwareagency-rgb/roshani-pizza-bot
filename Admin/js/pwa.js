@@ -3,7 +3,7 @@
  * Handles service worker, installation prompt, and refresh circuit breaker.
  */
 
-import { showConfirm } from './ui-utils.js';
+import { showConfirm, showToast } from './ui-utils.js';
 
 // 1. REFRESH CIRCUIT BREAKER & COMPLETE REFRESH
 export const completeSiteRefresh = async () => {
@@ -17,43 +17,42 @@ export const completeSiteRefresh = async () => {
     showToast("Initializing Nuclear Refresh...", "warning");
     
     try {
-        // 1. Unregister all service workers
+        // 1. Unregister all service workers with timeout
         if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (let registration of registrations) {
-                await registration.unregister();
-                console.log("[PWA] Service Worker Unregistered");
-            }
+            const swPromise = navigator.serviceWorker.getRegistrations().then(async registrations => {
+                for (let registration of registrations) {
+                    await registration.unregister();
+                }
+            });
+            await Promise.race([swPromise, new Promise(res => setTimeout(res, 2000))]);
         }
 
-        // 2. Clear all caches
+        // 2. Clear all caches with timeout
         if ('caches' in window) {
-            const cacheNames = await caches.keys();
-            for (let name of cacheNames) {
-                await caches.delete(name);
-                console.log(`[PWA] Cache Cleared: ${name}`);
-            }
+            const cachePromise = caches.keys().then(async keys => {
+                for (let name of keys) {
+                    await caches.delete(name);
+                }
+            });
+            await Promise.race([cachePromise, new Promise(res => setTimeout(res, 2000))]);
         }
 
         // 3. Selective Storage Wipe (Preserve Auth)
         sessionStorage.clear();
-        
-        // Identify and remove all keys EXCEPT Firebase Auth tokens
         Object.keys(localStorage).forEach(key => {
-            // Firebase Auth usually uses keys starting with 'firebase:authUser'
             if (!key.startsWith('firebase:')) {
                 localStorage.removeItem(key);
             }
         });
         
-        console.log("[PWA] Local storage cleared (Preserving Auth).");
-        showToast("Caches Purged. Site Updated. Reloading...", "success");
+        console.log("[PWA] Nuclear Purge Complete.");
+        showToast("System Purged. Reloading...", "success");
 
-        // Delay for visual feedback and ensure storage operations finish
+        // Force a reload with robust cache-busting
         setTimeout(() => {
-            // Force a reload with a unique timestamp to bypass any ISP/Browser proxies
-            window.location.href = window.location.origin + window.location.pathname + '?nuclear=' + Date.now();
-        }, 1200);
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.location.href = `${cleanUrl}?v=${Date.now()}&sync=${Math.random().toString(36).substring(7)}`;
+        }, 1000);
 
     } catch (err) {
         console.error("Refresh failed:", err);
