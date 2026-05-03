@@ -35,6 +35,8 @@ let _ordersRef = null;
 let _ordersValueCb = null;
 let _ordersChildCb = null;
 let _ordersChangedCb = null;
+let _liveOrdersRef = null;
+let _liveOrdersValueCb = null;
 
 /**
  * INITIALIZE REAL-TIME LISTENERS
@@ -52,6 +54,12 @@ export function initRealtimeListeners() {
         _ordersRef.off("value", _ordersValueCb);
         _ordersRef = null;
         _ordersValueCb = null;
+    }
+
+    if (_liveOrdersValueCb && _liveOrdersRef) {
+        _liveOrdersRef.off("value", _liveOrdersValueCb);
+        _liveOrdersRef = null;
+        _liveOrdersValueCb = null;
     }
 
     let firstLoad = true;
@@ -130,7 +138,8 @@ export function initRealtimeListeners() {
     // 4. PERSISTENT LIVE-OPS SYNC (Always active for recent data)
     // We fetch the last 100 orders specifically for the 'Live Ops' tab to ensure it
     // doesn't get empty if the main History tab is filtered to a specific old date.
-    _ordersRef.orderByChild("createdAt").limitToLast(100).on("value", snap => {
+    _liveOrdersRef = _ordersRef.orderByChild("createdAt").limitToLast(100);
+    _liveOrdersValueCb = snap => {
         state.liveOrdersMap.clear();
         snap.forEach(child => {
             state.liveOrdersMap.set(child.key, child.val());
@@ -139,7 +148,8 @@ export function initRealtimeListeners() {
         if (state.currentActiveTab === 'live') {
             renderOrders(state.lastOrdersSnap); 
         }
-    });
+    };
+    _liveOrdersRef.on("value", _liveOrdersValueCb);
 }
 
 /**
@@ -249,6 +259,16 @@ export function renderOrders(snap) {
     sortedOrders.forEach(o => {
         const id = o.id;
         // Normalize items for rendering and calculations
+        if (state._activeListeners) {
+            state._activeListeners.forEach(l => {
+                if (typeof l === 'function') l();
+                else if (l && l.off) l.off();
+            });
+        }
+        state._activeListeners = [];
+
+        if (state._ordersRef) state._ordersRef.off();
+        state._ordersRef = null;
         let items = [];
         if (Array.isArray(o.cart)) {
             items = o.cart;

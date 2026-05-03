@@ -92,40 +92,48 @@ window.addEventListener('appinstalled', () => {
 
 // NUCLEAR REFRESH CIRCUIT BREAKER
 window.completeSiteRefresh = async () => {
-    window.haptic(20);
-    window.showToast("Initializing Deep Refresh...", "info");
+    window.haptic(50);
+    console.log("[Refresh] Initializing Deep Sync & Cache Purge...");
+    window.showToast("Purging Caches & Syncing...", "info");
     
     try {
-        // 1. Unregister all service workers
+        // 1. Unregister all service workers with timeout
         if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (let registration of registrations) {
-                await registration.unregister();
-            }
+            const swPromise = navigator.serviceWorker.getRegistrations().then(async registrations => {
+                for (let registration of registrations) {
+                    await registration.unregister();
+                }
+            });
+            // Don't wait forever for SW
+            await Promise.race([swPromise, new Promise(res => setTimeout(res, 2000))]);
         }
 
-        // 2. Clear all caches
+        // 2. Clear all caches with timeout
         if ('caches' in window) {
-            const cacheNames = await caches.keys();
-            for (let name of cacheNames) {
-                await caches.delete(name);
-            }
+            const cachePromise = caches.keys().then(async keys => {
+                for (let key of keys) {
+                    await caches.delete(key);
+                }
+            });
+            await Promise.race([cachePromise, new Promise(res => setTimeout(res, 2000))]);
         }
 
-        // 3. Clear storage data that might be stuck
-        sessionStorage.clear();
+        // 3. Clear local storage for active state
         localStorage.removeItem('activeOrderId');
         localStorage.removeItem('activeOrderData');
+        sessionStorage.clear();
         
-        window.showToast("Caches Purged. Reloading...", "success");
+        console.log("[Refresh] Purge Complete. Triggering Reload.");
+        window.showToast("System Purged. Reloading...", "success");
 
-        // Force reload from server with cache-busting query
+        // Force reload from server with double-cache-busting
         setTimeout(() => {
-            window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
-        }, 1000);
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.location.href = `${cleanUrl}?v=${Date.now()}&sync=${Math.random().toString(36).substring(7)}`;
+        }, 800);
 
     } catch (err) {
-        console.error("Refresh failed:", err);
+        console.error("Critical Refresh Error:", err);
         window.location.reload();
     }
 };
@@ -137,16 +145,7 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// Bind Refresh Button
-document.addEventListener('DOMContentLoaded', () => {
-    const refreshBtn = document.getElementById('btnRefreshApp');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.completeSiteRefresh();
-        });
-    }
-});
+
 
 const escapeHtml = (text) => {
     if (!text && text !== 0) return "";
@@ -184,6 +183,7 @@ let currentOrderId = null;
 window.activeOrders = {};
 window.riderLocation = null;
 window._activeListeners = [];
+let lastNotifCount = -1;
 window.activeOrderData = null;
 window.activeOrderId = null;
 window.activeOrderOutlet = null;
@@ -364,32 +364,6 @@ window.login = async () => {
             errEl.classList.remove('hidden'); 
         }
         window.showToast(msg, "error");
-    }
-};
-
-window.completeSiteRefresh = async () => {
-    window.showToast("Initializing Deep Refresh...", "info");
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
-    
-    try {
-        if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (let registration of registrations) {
-                await registration.unregister();
-            }
-        }
-        if ('caches' in window) {
-            const cacheNames = await caches.keys();
-            for (let name of cacheNames) {
-                await caches.delete(name);
-            }
-        }
-        window.showToast("Caches Purged. Reloading...", "success");
-        setTimeout(() => {
-            window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
-        }, 800);
-    } catch (e) {
-        window.location.reload();
     }
 };
 
@@ -614,6 +588,7 @@ function initLocationTracking() {
         }, err => { }, { enableHighAccuracy: true }
     );
 
+    if (_locationInterval) clearInterval(_locationInterval);
     _locationInterval = setInterval(() => {
         if (window.riderLocation && currentUser && currentUser.profile.status === "Online") {
             set(ref(db, resolvePath(`riders/${currentUser.profile.id}/location`)), window.riderLocation).catch(() => { });
@@ -921,7 +896,6 @@ function initRealtimeListeners() {
     const notifPath = `riders/${riderId}/notifications`;
     const notifRef = ref(db, notifPath);
     
-    let lastNotifCount = -1;
     const unsubNotif = onValue(notifRef, snap => {
         const data = snap.val() || {};
         const count = Object.keys(data).length;
@@ -1229,37 +1203,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Login (if present)
+    // Login & Sync Actions
     document.getElementById('loginBtn')?.addEventListener('click', window.login);
-    document.getElementById('btnRefreshApp')?.addEventListener('click', window.completeSiteRefresh);
+    document.getElementById('btnRefreshApp')?.addEventListener('click', (e) => {
+        console.log("[UI] Nuclear Refresh Triggered via Button");
+        window.completeSiteRefresh();
+    });
     
     // Auto-refresh listeners every 10 minutes to ensure no stale connections
     setInterval(() => {
         console.log("[Sync] Performing scheduled listener refresh...");
-        window.initRealtimeListeners();
-    }, 600000);
-});
-
-window.completeSiteRefresh = () => {
-    window.haptic(100);
-    window.showToast("Refreshing data...", "info");
-    
-    const icon = document.querySelector('#btnRefreshApp i');
-    const syncStatus = document.getElementById('syncStatus');
-    
-    if (icon) icon.classList.add('animate-spin');
-    if (syncStatus) syncStatus.classList.add('active');
-    
-    setTimeout(() => {
         window.clearAllListeners();
         window.initRealtimeListeners();
-        window.renderAllOrders();
-        
-        if (icon) icon.classList.remove('animate-spin');
-        if (syncStatus) syncStatus.classList.remove('active');
-        window.showToast("Data Synced ✅", "success");
-    }, 1200);
-};
+    }, 600000);
 
     const dateOpts = { month: 'long', day: 'numeric', year: 'numeric' };
     const dateEl = document.getElementById('currentDate');
@@ -1310,6 +1266,7 @@ onAuthStateChanged(auth, async user => {
         if (window.currentUser.profile.profilePhoto) document.getElementById('r-profile-img').src = window.currentUser.profile.profilePhoto;
 
         await loadOutletCoords();
+        window.clearAllListeners();
         initLocationTracking();
         initRealtimeListeners();
         setupPushNotifications(user.uid);
