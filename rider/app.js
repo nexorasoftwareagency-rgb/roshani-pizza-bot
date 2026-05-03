@@ -948,8 +948,9 @@ window.renderAllOrders = () => {
             if (!o) return;
             const status = (o.status || "").toLowerCase();
             // Use riderId (UID) for more robust matching
-            const currentEmail = window.currentUser.email.toLowerCase();
-            const isMine = (window.currentUser && (o.riderId === window.currentUser.profile.id || (o.assignedRider && o.assignedRider.toLowerCase() === currentEmail))) ? true : false;
+            const currentEmail = (window.currentUser?.email || "").toLowerCase();
+            const riderUid = window.currentUser?.uid || window.currentUser?.profile?.id;
+            const isMine = (riderUid && o.riderId === riderUid) || (o.assignedRider && o.assignedRider.toLowerCase() === currentEmail);
 
             // 1. UNASSIGNED / PICKUP SECTION
             if (!o.assignedRider && ["ready", "cooked", "preparing", "confirmed"].includes(status)) {
@@ -1000,9 +1001,9 @@ window.renderAllOrders = () => {
                 let actionButtons = "";
                 const currentStatus = (o.status || "").toLowerCase();
 
-                if (["ready", "cooked", "arriving at restaurant", "confirmed", "preparing"].includes(currentStatus)) {
+                if (["ready", "cooked", "arriving at restaurant", "confirmed", "preparing", "placed"].includes(currentStatus)) {
                     actionButtons = `<button class="btn-primary full-width mt-10" data-action="pickup" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="package-check"></i> CONFIRM PICKUP</button>`;
-                } else if (currentStatus === "picked up" || currentStatus === "out for delivery") {
+                } else if (currentStatus === "picked up" || currentStatus === "out for delivery" || currentStatus === "delivering") {
                     actionButtons = `<button class="btn-primary full-width mt-10" style="background:#10B981;" data-action="navigate" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="navigation"></i> LET'S GO TO DELIVER</button>`;
                 }
 
