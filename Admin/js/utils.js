@@ -141,6 +141,24 @@ export const logAudit = async (action, details = {}) => {
     }
 };
 
+export const addRiderNotification = async (uid, title, sub, type = 'info') => {
+    if (!uid) return;
+    try {
+        const notifRef = db.ref(`riders/${uid}/notifications`).push();
+        await notifRef.set({
+            id: notifRef.key,
+            title,
+            body: sub,
+            type,
+            timestamp: ServerValue.TIMESTAMP,
+            read: false,
+            icon: type === 'new' ? 'package' : 'bell'
+        });
+    } catch (e) {
+        console.warn("[Rider Notif] Failed:", e);
+    }
+};
+
 export const standardizeAuthError = (error) => {
     if (!error || !error.code) return "An unexpected error occurred. Please try again.";
 
