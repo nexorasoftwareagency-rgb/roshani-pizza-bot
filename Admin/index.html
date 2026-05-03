@@ -65,7 +65,7 @@
 
             <button id="loginBtn" type="submit" class="btn-primary w-full flex-center p-12 br-12 font-bold fs-16">
                 <span>Access Dashboard</span>
-                <i data-lucide="arrow-right" class="ml-10" style="width:18px;"></i>
+                <i data-lucide="arrow-right" class="ml-10 icon-18"></i>
             </button>
             <div id="loginError" class="login-error hidden"></div>
         </form>
@@ -363,8 +363,8 @@
                     <div class="panel-header">
                         <h3>Order History</h3>
                         <div class="flex-row flex-center flex-gap-10 flex-wrap-mobile">
-                            <input type="date" id="orderFrom" class="search-input-group" style="width: 130px;" title="Filter orders from date">
-                            <input type="date" id="orderTo" class="search-input-group" style="width: 130px;" title="Filter orders to date">
+                            <input type="date" id="orderFrom" class="search-input-group w-130" title="Filter orders from date">
+                            <input type="date" id="orderTo" class="search-input-group w-130" title="Filter orders to date">
                             <input type="text" id="orderSearch" placeholder="Search ID or Name..."
                                 class="search-input-group flex-1" title="Search orders by ID or customer name">
                         </div>
@@ -733,7 +733,7 @@
                                     <div class="outlet-status-control glass-card p-16 mb-14">
                                         <div class="flex-between flex-center mb-10">
                                             <div class="flex-row flex-center flex-gap-10">
-                                                <label class="form-label-small mb-0" style="font-weight:700;">🔌 Outlet
+                                                <label class="form-label-small mb-0 fw-700">🔌 Outlet
                                                     Status</label>
                                                 <span id="outletStatusPill" class="outlet-status-pill status-auto"
                                                     title="Current outlet status">AUTO</span>
@@ -1075,7 +1075,7 @@
 
                             <div class="migration-card premium-row-v4 p-20 br-16 mb-20">
                                 <div class="flex-row flex-center flex-gap-15 mb-14">
-                                    <div class="kpi-icon-box orange" style="width:40px; height:40px;"><i data-lucide="database" style="width:18px;"></i></div>
+                                    <div class="kpi-icon-box orange box-40"><i data-lucide="database" class="icon-18"></i></div>
                                     <h5 class="migration-title primary m-0">POS Migration Utility</h5>
                                 </div>
                                 <p class="migration-text text-muted-small mb-14">Moves all add-ons from dishes to categories. Use this once to sync existing data.</p>
@@ -1084,7 +1084,7 @@
 
                             <div class="migration-card alt premium-row-v4 p-20 br-16">
                                 <div class="flex-row flex-center flex-gap-15 mb-14">
-                                    <div class="kpi-icon-box green" style="width:40px; height:40px;"><i data-lucide="image" style="width:18px;"></i></div>
+                                    <div class="kpi-icon-box green box-40"><i data-lucide="image" class="icon-18"></i></div>
                                     <h5 class="migration-title green m-0">Image Storage Migration</h5>
                                 </div>
                                 <p class="migration-text text-muted-small mb-14">Converts all Firebase Storage images to Base64 text in the database. Run this to finalize the move to text-only storage.</p>
@@ -1834,8 +1834,8 @@
         <div class="modal-content glass-card max-w-400">
             <div class="modal-header">
                 <div class="flex-row flex-center flex-gap-10">
-                    <div class="status-icon status-busy" style="padding: 8px;"><i data-lucide="lock"
-                            style="width: 18px; height: 18px;"></i></div>
+                    <div class="status-icon status-busy p-8"><i data-lucide="lock"
+                            class="icon-18"></i></div>
                     <h3 class="modal-title">Security Confirmation</h3>
                 </div>
                 <button class="close-btn">&times;</button>

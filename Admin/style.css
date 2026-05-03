@@ -198,10 +198,31 @@ html, body {
     font-family: monospace !important;
 }
 
+.icon-18 {
+    width: 18px !important;
+    height: 18px !important;
+}
+
+.box-40 {
+    width: 40px !important;
+    height: 40px !important;
+}
+
+.w-130 {
+    width: 130px !important;
+}
+
+.fw-700 {
+    font-weight: 700 !important;
+}
+
+.p-8 {
+    padding: 8px !important;
+}
+
 .text-center {
     text-align: center !important;
 }
-
 .text-right {
     text-align: right !important;
 }
@@ -663,7 +684,6 @@ html, body {
     background: var(--bg-secondary);
     overflow-y: auto;
     overflow-x: hidden;
-    -webkit-overflow-scrolling: touch; /* Momentum scroll for iOS */
     transition: margin-left var(--sidebar-transition), padding-left var(--sidebar-transition);
     position: relative;
     scrollbar-gutter: stable;
@@ -2794,6 +2814,7 @@ tbody tr:hover td:first-child {
     margin-bottom: 6px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     height: 28px;
@@ -5436,6 +5457,7 @@ body {
     font-weight: 800;
     background: linear-gradient(135deg, var(--primary), #ea580c);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -0.5px;
 }
