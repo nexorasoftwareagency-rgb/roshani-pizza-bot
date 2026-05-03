@@ -835,14 +835,20 @@ export async function assignRider(id, riderId) {
 
         const updateData = {
             riderId: riderId,
-            assignedRider: rider.email.toLowerCase(), // Essential for Rider Panel filtering
+            assignedRider: rider.email.toLowerCase(),
             riderName: rider.name,
             riderPhone: rider.phone,
             assignedAt: ServerValue.TIMESTAMP
         };
 
+        // Automate status transition on assignment
+        const currentStatus = (order.status || "").toLowerCase();
+        if (currentStatus === "placed") {
+            updateData.status = "Confirmed";
+        }
+
         // Manual assignment only - Rider will handle status advancement via "PICKUP"
-        showToast(`Rider ${rider.name} assigned. Rider will update status upon pickup.`, "success");
+        showToast(`Rider ${rider.name} assigned. Status updated if needed.`, "success");
 
         await Outlet.ref(`orders/${id}`).update(updateData);
         
