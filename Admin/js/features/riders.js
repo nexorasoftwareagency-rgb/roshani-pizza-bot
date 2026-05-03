@@ -209,7 +209,6 @@ export function renderRiders(searchTerm = "") {
             activeDashboard.appendChild(card);
             if (window.lucide) window.lucide.createIcons(card);
         }
-        }
     });
 
     // Update Summary
