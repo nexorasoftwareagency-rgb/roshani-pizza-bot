@@ -19,27 +19,26 @@
 
     * {
         -webkit-tap-highlight-color: rgba(249, 115, 22, 0.15);
-        touch-action: auto !important;
+        touch-action: manipulation !important;
         box-sizing: border-box;
         max-width: 100%;
     }
 
     html {
-        overflow: visible !important;
-        height: auto !important;
+        height: 100% !important;
+        overflow: hidden !important;
     }
 
     body {
+        height: 100% !important;
+        width: 100% !important;
         position: relative !important;
         overflow-x: hidden !important;
         overflow-y: auto !important;
-        height: auto !important;
-        min-height: 100dvh !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-x pan-y !important;
         overscroll-behavior-y: auto !important;
-        overscroll-behavior: auto !important;
-        touch-action: auto !important;
         background: var(--bg-primary) !important;
-        -webkit-overflow-scrolling: touch;
     }
 
     /* Fix for touch events not firing */
