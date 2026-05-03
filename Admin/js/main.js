@@ -99,7 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', () => showDishModal());
         });
         document.getElementById('btnMigrateDishAddons')?.addEventListener('click', migrateAddonsToCategories);
-        document.getElementById('btnAddCatAddonField')?.addEventListener('click', addCategoryAddonField);
         document.getElementById('btnAddCategory')?.addEventListener('click', addCategory);
         bindClickTo('btnChangeCatPhoto', 'catFile');
 
@@ -165,8 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
             previewImage(e.target, 'dishPreview');
         });
         document.getElementById('saveDishBtn')?.addEventListener('click', saveDish);
-        document.getElementById('btnAddSizeField')?.addEventListener('click', () => addSizeField());
-        document.getElementById('btnAddAddonField')?.addEventListener('click', () => addDishAddonField());
 
         // Toggle Password Visibility
         const setupPassToggle = (btnId, inputId) => {
@@ -277,6 +274,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'clearWalkinCart': clearWalkinCart(); break;
                 case 'submitWalkinSale': submitWalkinSale(); break;
                 case 'addCategory': addCategory(); break;
+                case 'addSizeField': addSizeField(); break;
+                case 'addDishAddonField': addDishAddonField(); break;
+                case 'addCategoryAddonField': addCategoryAddonField(); break;
                 case 'saveRiderAccount': saveRiderAccount(); break;
                 case 'applyWalkinDiscount': {
                     const amt = el.getAttribute('data-amount');
