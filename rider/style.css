@@ -23,10 +23,16 @@
     --border-primary: 2px solid rgba(255, 82, 0, 0.15);
     --glass-bg: rgba(255, 255, 255, 0.9);
     --glass-border: 1px solid rgba(255, 255, 255, 0.3);
+    --orange: #FF5200;
+    --orange-dark: #E64A00;
+    --orange-light: #FF9F00;
 
     --header-height: 70px;
     --bottom-nav-height: 75px;
 }
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.animate-spin { animation: spin 1s linear infinite; }
 
 * {
     margin: 0;
@@ -1369,6 +1375,7 @@ body {
     .premium-dashboard-card, .order-card-premium {
         padding: 1.2rem;
     }
+}
 
 .map-status-chip {
     background: rgba(16, 185, 129, 0.1);
@@ -1418,6 +1425,44 @@ body {
 .status-pill.preparing, .status-pill.confirmed { background: #FEF9C3; color: #854d0e; }
 .status-pill.picked-up, .status-pill.out-for-delivery { background: #DBEAFE; color: #1e40af; }
 
+.customer-ava.icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(255, 82, 0, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--orange);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icon-btn:active { transform: scale(0.9); background: rgba(255, 82, 0, 0.15); }
+
+.sync-status {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.sync-status.active { opacity: 1; }
+
 .customer-avatar {
     width: 45px;
     height: 45px;
@@ -1435,4 +1480,3 @@ body {
     height: 350px;
     width: 100%;
 }
-

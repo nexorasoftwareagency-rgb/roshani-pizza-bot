@@ -819,6 +819,14 @@ window.startNavigation = async (id, outletId) => {
     window.haptic(20);
     try {
         const orderPath = `${outletId}/orders/${id}`;
+        
+        // Update status to "Out for Delivery" if it's currently "Picked Up"
+        const currentSnap = await get(ref(db, orderPath));
+        const currentOrder = currentSnap.val();
+        if (currentOrder && (currentOrder.status || "").toLowerCase() === "picked up") {
+            await update(ref(db, orderPath), { status: "Out for Delivery" });
+        }
+
         const snap = await get(ref(db, orderPath));
         const order = snap.val();
         
@@ -847,30 +855,39 @@ window.startNavigation = async (id, outletId) => {
 
 // REALTIME LISTENERS & PREMIUM UI RENDERER
 window.clearAllListeners = () => {
+    console.log("[Sync] Clearing all listeners...");
     if (window._activeListeners) {
-        window._activeListeners.forEach(item => { try { if (item.ref && typeof item.ref.off === 'function') item.ref.off(); else if (item.ref && item.type === 'value') off(item.ref); } catch (e) { } });
+        window._activeListeners.forEach(unsub => { 
+            try { 
+                if (typeof unsub === 'function') unsub(); 
+                else if (unsub && unsub.ref && typeof unsub.ref.off === 'function') unsub.ref.off();
+            } catch (e) { console.warn("[Sync] Error clearing listener:", e); } 
+        });
         window._activeListeners = [];
     }
 };
 
 function initRealtimeListeners() {
-    if (!currentUser || !currentUser.email) return;
+    if (!currentUser || !currentUser.email) {
+        console.warn("[Sync] Cannot init listeners: No user email available.");
+        return;
+    }
     const currentEmail = currentUser.email.toLowerCase();
+    console.log(`[Sync] Initializing listeners for: ${currentEmail}`);
 
     ['pizza', 'cake'].forEach(outletId => {
         const ordersPath = `${outletId}/orders`;
         window.orderCache[outletId] = {};
 
         const updateCache = (data, type) => {
+            console.log(`[Sync] Received ${type} updates for ${outletId} (${Object.keys(data).length} items)`);
             if (type === 'unassigned') {
-                // Clear old unassigned from cache for this outlet
                 Object.keys(window.orderCache[outletId]).forEach(id => {
                     if (!window.orderCache[outletId][id].assignedRider) {
                         delete window.orderCache[outletId][id];
                     }
                 });
             } else if (type === 'mine') {
-                // Clear old mine from cache for this outlet
                 Object.keys(window.orderCache[outletId]).forEach(id => {
                     if (window.orderCache[outletId][id].assignedRider) {
                         delete window.orderCache[outletId][id];
@@ -883,33 +900,48 @@ function initRealtimeListeners() {
 
         // 1. Available for Pickup (Unassigned)
         const q1 = query(ref(db, ordersPath), orderByChild('assignedRider'), equalTo(""));
-        window._activeListeners.push({ ref: q1, type: 'value' });
-        onValue(q1, snap => updateCache(snap.val() || {}, 'unassigned'), error => {
+        const unsub1 = onValue(q1, snap => updateCache(snap.val() || {}, 'unassigned'), error => {
             console.error(`[Firebase] Pickup Sync Error (${outletId}):`, error);
             if (error.code === 'PERMISSION_DENIED') {
                 showToast("Access Denied: Rules are blocking orders sync.", "error");
             }
         });
+        window._activeListeners.push(unsub1);
 
         // 2. My Orders (Assigned to me)
         const q2 = query(ref(db, ordersPath), orderByChild('assignedRider'), equalTo(currentEmail));
-        window._activeListeners.push({ ref: q2, type: 'value' });
-        onValue(q2, snap => updateCache(snap.val() || {}, 'mine'), error => {
+        const unsub2 = onValue(q2, snap => updateCache(snap.val() || {}, 'mine'), error => {
             console.error(`[Firebase] My Orders Sync Error (${outletId}):`, error);
         });
+        window._activeListeners.push(unsub2);
     });
 
     // Listen to Notifications
     const riderId = currentUser.profile.id;
     const notifPath = `riders/${riderId}/notifications`;
     const notifRef = ref(db, notifPath);
-    window._activeListeners.push({ ref: notifRef, type: 'value' });
-    onValue(notifRef, snap => {
-        window.riderNotifications = snap.val() || {};
+    
+    let lastNotifCount = -1;
+    const unsubNotif = onValue(notifRef, snap => {
+        const data = snap.val() || {};
+        const count = Object.keys(data).length;
+        
+        if (lastNotifCount !== -1 && count > lastNotifCount) {
+            window.haptic([200, 100, 200]);
+            window.showToast("New Notification Received! 🔔", "info");
+            try { new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {}); } catch(e){}
+        }
+        
+        lastNotifCount = count;
+        window.riderNotifications = data;
         window.renderNotifications();
     }, error => {
         console.error("[Firebase] Notification Read Error:", error);
+        if (error.code === 'PERMISSION_DENIED') {
+            window.showToast("Notification Access Denied", "error");
+        }
     });
+    window._activeListeners.push(unsubNotif);
 }
 
 window.renderAllOrders = () => {
@@ -941,7 +973,12 @@ window.renderAllOrders = () => {
 
     Object.keys(window.orderCache).forEach(outletId => {
         const orders = window.orderCache[outletId];
-        const sortedIds = Object.keys(orders).sort((a, b) => (orders[b].createdAt || 0) - (orders[a].createdAt || 0));
+        // Correct date sorting for ISO strings
+        const sortedIds = Object.keys(orders).sort((a, b) => {
+            const timeA = orders[a].createdAt ? new Date(orders[a].createdAt).getTime() : 0;
+            const timeB = orders[b].createdAt ? new Date(orders[b].createdAt).getTime() : 0;
+            return timeB - timeA;
+        });
         
         sortedIds.forEach(id => {
             const o = orders[id];
@@ -974,36 +1011,40 @@ window.renderAllOrders = () => {
                 `;
                 unassignedCount++;
             }
-            // 2. ACTIVE ORDER SECTION
-            else if (status !== "delivered" && isMine) {
-                window.activeOrderId = id;
-                window.activeOrderOutlet = outletId;
-                window.activeOrderData = o;
+                // 2. ACTIVE ORDER SECTION
+                else if (status !== "delivered" && isMine) {
+                    // Store ALL active orders, but keep track of the first one for the main view
+                    if (!window.activeOrderId) {
+                        window.activeOrderId = id;
+                        window.activeOrderOutlet = outletId;
+                        window.activeOrderData = o;
+                    }
 
-                const cName = o.customerName || 'Customer';
-                const cAdd = o.address || 'Location Details';
-                const cPhone = (o.customerPhone || o.phone || '').replace(/\D/g, '').slice(-10);
-                const oId = (o.orderId || id.slice(-6)).toUpperCase();
+                    const cName = o.customerName || 'Customer';
+                    const cAdd = o.address || 'Location Details';
+                    const cPhone = (o.customerPhone || o.phone || '').replace(/\D/g, '').slice(-10);
+                    const oId = (o.orderId || id.slice(-6)).toUpperCase();
 
-                const safeName = escapeHtml(cName);
-                const safeAdd = escapeHtml(cAdd);
-                const safeStatus = escapeHtml(o.status.toUpperCase());
-                const safePhone = escapeHtml(cPhone);
-                const safeOrderId = escapeHtml(oId);
-                const initial = escapeHtml(cName.charAt(0).toUpperCase());
-                const safeId = escapeHtml(id);
-                const safeOutlet = escapeHtml(outletId);
+                    const safeName = escapeHtml(cName);
+                    const safeAdd = escapeHtml(cAdd);
+                    const safeStatus = escapeHtml(o.status.toUpperCase());
+                    const safePhone = escapeHtml(cPhone);
+                    const safeOrderId = escapeHtml(oId);
+                    const initial = escapeHtml(cName.charAt(0).toUpperCase());
+                    const safeId = escapeHtml(id);
+                    const safeOutlet = escapeHtml(outletId);
 
-                const itemsList = (o.normalizedItems || o.items || []).map(i => 
-                    `<div class="pickup-item-row">• ${escapeHtml(i.name || i.item)} (${escapeHtml(i.size)}) x${i.qty || i.quantity}</div>`
-                ).join('');
+                    const itemsList = (o.normalizedItems || o.items || []).map(i => 
+                        `<div class="pickup-item-row">• ${escapeHtml(i.name || i.item)} (${escapeHtml(i.size)}) x${i.qty || i.quantity}</div>`
+                    ).join('');
 
-                let actionButtons = "";
-                const currentStatus = (o.status || "").toLowerCase();
+                    let actionButtons = "";
+                    const currentStatus = (o.status || "").toLowerCase();
 
-                if (["ready", "cooked", "arriving at restaurant", "confirmed", "preparing", "placed"].includes(currentStatus)) {
-                    actionButtons = `<button class="btn-primary full-width mt-10" data-action="pickup" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="package-check"></i> CONFIRM PICKUP</button>`;
-                } else if (currentStatus === "picked up" || currentStatus === "out for delivery" || currentStatus === "delivering") {
+                    // Show pickup button for any status that is before delivery
+                    if (["ready", "cooked", "arriving at restaurant", "confirmed", "preparing", "placed", "waiting for pickup"].includes(currentStatus)) {
+                        actionButtons = `<button class="btn-primary full-width mt-10" data-action="pickup" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="package-check"></i> CONFIRM PICKUP</button>`;
+                    } else if (currentStatus === "picked up" || currentStatus === "out for delivery" || currentStatus === "delivering") {
                     actionButtons = `<button class="btn-primary full-width mt-10" style="background:#10B981;" data-action="navigate" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="navigation"></i> LET'S GO TO DELIVER</button>`;
                 }
 
@@ -1191,7 +1232,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // Login (if present)
     document.getElementById('loginBtn')?.addEventListener('click', window.login);
     document.getElementById('btnRefreshApp')?.addEventListener('click', window.completeSiteRefresh);
+    
+    // Auto-refresh listeners every 10 minutes to ensure no stale connections
+    setInterval(() => {
+        console.log("[Sync] Performing scheduled listener refresh...");
+        window.initRealtimeListeners();
+    }, 600000);
+});
 
+window.completeSiteRefresh = () => {
+    window.haptic(100);
+    window.showToast("Refreshing data...", "info");
+    
+    const icon = document.querySelector('#btnRefreshApp i');
+    const syncStatus = document.getElementById('syncStatus');
+    
+    if (icon) icon.classList.add('animate-spin');
+    if (syncStatus) syncStatus.classList.add('active');
+    
+    setTimeout(() => {
+        window.clearAllListeners();
+        window.initRealtimeListeners();
+        window.renderAllOrders();
+        
+        if (icon) icon.classList.remove('animate-spin');
+        if (syncStatus) syncStatus.classList.remove('active');
+        window.showToast("Data Synced ✅", "success");
+    }, 1200);
+};
 
     const dateOpts = { month: 'long', day: 'numeric', year: 'numeric' };
     const dateEl = document.getElementById('currentDate');
@@ -1224,9 +1292,10 @@ onAuthStateChanged(auth, async user => {
         }
 
         const profileData = snap.val();
-        window.currentUser = { ...user, profile: { id: user.uid, ...profileData } };
+        currentUser = { ...user, profile: { id: user.uid, ...profileData } };
+        window.currentUser = currentUser;
 
-        const pName = window.currentUser.profile.name || "Boss";
+        const pName = currentUser.profile.name || "Boss";
         document.getElementById('profileName').innerText = pName;
         document.getElementById('r-name').innerText = pName;
         document.getElementById('sidebar-name').innerText = pName;
@@ -1243,6 +1312,7 @@ onAuthStateChanged(auth, async user => {
         await loadOutletCoords();
         initLocationTracking();
         initRealtimeListeners();
+        setupPushNotifications(user.uid);
 
         document.getElementById('dashboard').classList.remove('hidden');
         window.showSection('home');

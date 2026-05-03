@@ -51,6 +51,13 @@ export const switchTab = (tabId, skipHistory = false) => {
     }
 
     closeSidebar();
+    
+    // Close other mobile drawers
+    const orderDrawer = document.getElementById('orderDrawer');
+    const orderOverlay = document.getElementById('orderDrawerOverlay');
+    if (orderDrawer) orderDrawer.classList.remove('active');
+    if (orderOverlay) orderOverlay.classList.remove('active');
+    
     toggleNotificationSheet(false);
 
     if (tabId === 'notifications') {
