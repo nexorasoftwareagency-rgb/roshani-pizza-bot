@@ -17,15 +17,16 @@
     --warning: #F59E0B;
     --danger: #EF4444;
 
-    --shadow-sm: 0 4px 12px rgba(255, 82, 0, 0.08);
-    --shadow-md: 0 12px 32px rgba(255, 82, 0, 0.12);
-    --shadow-float: 0 -8px 30px rgba(255, 82, 0, 0.1);
-    --border-primary: 2px solid rgba(255, 82, 0, 0.15);
-    --glass-bg: rgba(255, 255, 255, 0.9);
-    --glass-border: 1px solid rgba(255, 255, 255, 0.3);
+    --shadow-sm: 0 8px 24px rgba(255, 82, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 20px 48px rgba(255, 82, 0, 0.18), 0 8px 20px rgba(0, 0, 0, 0.06);
+    --shadow-float: 0 -15px 50px rgba(255, 82, 0, 0.15);
+    --border-premium: 2.5px solid rgba(255, 82, 0, 0.25);
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    --glass-border: 1.5px solid rgba(255, 255, 255, 0.4);
     --orange: #FF5200;
     --orange-dark: #E64A00;
     --orange-light: #FF9F00;
+    --radius-premium: 24px;
 
     --header-height: 70px;
     --bottom-nav-height: 75px;
@@ -42,37 +43,59 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+html {
+    height: 100%;
+    overflow: hidden;
+}
+
 body {
+    height: 100%;
+    width: 100%;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y !important;
     background-color: var(--bg-app);
     color: var(--text-main);
-    overflow-x: hidden;
+    position: relative;
 }
 
 /* -------------------------------------------------------------------------- */
 /* GLOBAL UTILITIES                                                           */
 /* -------------------------------------------------------------------------- */
-.hidden {
-    display: none !important;
-}
+.hidden { display: none !important; }
+.mb-8 { margin-bottom: 8px; }
+.mb-10 { margin-bottom: 10px; }
+.mb-15 { margin-bottom: 15px; }
+.mb-20 { margin-bottom: 20px; }
+.mt-10 { margin-top: 10px; }/* -------------------------------------------------------------------------- */
+/* ROSHANI RIDER - PREMIUM DESIGN SYSTEM (ORANGE THEME)                       */
+/* -------------------------------------------------------------------------- */
+:root {
+    --primary: #FF5200;
+    --primary-dark: #E64A19;
+    --primary-light: #FFF5F1;
+    --bg-app: #F4F6F8;
+    --bg-surface: #FFFFFF;
 
-.mb-8 {
-    margin-bottom: 8px;
-}
+    --text-main: #1E293B;
+    --text-muted: #64748B;
+    --text-danger: #EF4444;
 
-.mb-10 {
-    margin-bottom: 10px;
-}
+    --success: #10B981;
+    --info: #3B82F6;
+    --warning: #F59E0B;
+    --danger: #EF4444;
 
-.mb-15 {
-    margin-bottom: 15px;
-}
-
-.mb-20 {
-    margin-bottom: 20px;
-}
-
-.mt-10 {
-    margin-top: 10px;
+    --shadow-sm: 0 8px 24px rgba(255, 82, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 20px 48px rgba(255, 82, 0, 0.18), 0 8px 20px rgba(0, 0, 0, 0.06);
+    --shadow-float: 0 -15px 50px rgba(255, 82, 0, 0.15);
+    --border-premium: 2.5px solid rgba(255, 82, 0, 0.25);
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    --glass-border: 1.5px solid rgba(255, 255, 255, 0.4);
+    --orange: #FF5200;
+    --orange-dark: #E64A00;
+    --orange-light: #FF9F00;
 }
 
 .mt-15 {
@@ -246,7 +269,7 @@ body {
     gap: 6px;
     background: #DCFCE7;
     padding: 6px 12px;
-    border-radius: 20px;
+    border-radius: var(--radius-premium);
     cursor: pointer;
     border: 1px solid rgba(0, 0, 0, 0.03);
 }
@@ -443,10 +466,10 @@ body {
 .premium-dashboard-card,
 .order-card-premium {
     background: var(--bg-surface);
-    border-radius: 20px;
+    border-radius: var(--radius-premium);
     padding: 1.5rem;
     box-shadow: var(--shadow-sm);
-    border: var(--border-primary);
+    border: var(--border-premium);
     margin-bottom: 1.5rem;
     transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -491,7 +514,7 @@ body {
 }
 
 .solid-stat-card {
-    border-radius: 16px;
+    border-radius: var(--radius-premium);
     padding: 12px;
     color: white;
     display: flex;
@@ -553,7 +576,7 @@ body {
 /* -------------------------------------------------------------------------- */
 .active-delivery-mock-card {
     background: var(--bg-surface);
-    border-radius: 20px;
+    border-radius: var(--radius-premium);
     padding: 1.5rem;
     box-shadow: var(--shadow-sm);
     border: 1.5px solid rgba(0, 0, 0, 0.08);
@@ -634,7 +657,7 @@ body {
     background: var(--primary);
     color: white;
     border: none;
-    border-radius: 20px;
+    border-radius: var(--radius-premium);
     padding: 10px 5px;
     font-size: 0.65rem;
     font-weight: 800;
@@ -791,7 +814,7 @@ body {
     text-align: center;
     letter-spacing: 15px;
     border: 2px solid #E2E8F0;
-    border-radius: 16px;
+    border-radius: var(--radius-premium);
     margin-bottom: 20px;
     outline: none;
     color: var(--primary);
@@ -1094,7 +1117,7 @@ body {
     width: 100%;
     overflow-x: auto;
     background: var(--bg-surface);
-    border-radius: 16px;
+    border-radius: var(--radius-premium);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
     border: 1px solid rgba(0, 0, 0, 0.05);
     margin-bottom: 20px;
@@ -1243,7 +1266,7 @@ body {
     display: flex;
     gap: 15px;
     padding: 15px;
-    border-radius: 16px;
+    border-radius: var(--radius-premium);
     margin-bottom: 10px;
     cursor: pointer;
     transition: 0.2s;
@@ -1381,7 +1404,7 @@ body {
     background: rgba(16, 185, 129, 0.1);
     color: #10B981;
     padding: 6px 12px;
-    border-radius: 20px;
+    border-radius: var(--radius-premium);
     font-size: 0.75rem;
     font-weight: 700;
     display: flex;
@@ -1415,7 +1438,7 @@ body {
 
 .status-pill {
     padding: 4px 10px;
-    border-radius: 20px;
+    border-radius: var(--radius-premium);
     font-size: 0.7rem;
     font-weight: 800;
     text-transform: uppercase;
@@ -1448,7 +1471,7 @@ body {
     background: #333;
     color: white;
     padding: 8px 16px;
-    border-radius: 20px;
+    border-radius: var(--radius-premium);
     font-size: 12px;
     font-weight: 600;
     display: flex;
@@ -1480,3 +1503,4 @@ body {
     height: 350px;
     width: 100%;
 }
+

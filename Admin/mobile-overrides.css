@@ -19,20 +19,27 @@
 
     * {
         -webkit-tap-highlight-color: rgba(249, 115, 22, 0.15);
-        touch-action: manipulation;
+        touch-action: auto !important;
         box-sizing: border-box;
         max-width: 100%;
     }
 
-    html, body {
+    html {
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    body {
         position: relative !important;
         overflow-x: hidden !important;
         overflow-y: auto !important;
         height: auto !important;
         min-height: 100dvh !important;
-        
+        overscroll-behavior-y: auto !important;
+        overscroll-behavior: auto !important;
         touch-action: auto !important;
         background: var(--bg-primary) !important;
+        -webkit-overflow-scrolling: touch;
     }
 
     /* Fix for touch events not firing */
@@ -61,7 +68,7 @@
     }
 
     /* Fix for mobile unresponsiveness: Do NOT disable pointer events on main when sidebar is active */
-    .sidebar-active main {
+    .sidebar-active .main {
         pointer-events: auto !important;
     }
 
@@ -82,7 +89,7 @@
         pointer-events: auto !important;
         position: relative !important;
         z-index: 10 !important;
-        overflow-x: hidden !important;
+        overflow: visible !important;
         height: auto !important;
         min-height: 100vh !important;
         width: 100% !important;
@@ -117,7 +124,7 @@
     .tab-content,
     .tab-pane {
         pointer-events: auto !important;
-        touch-action: manipulation;
+        touch-action: auto !important;
     }
 
     /* Force overlays to not block when inactive */
@@ -407,8 +414,7 @@
         flex-direction: column !important;
         gap: 0 !important;
         flex: 1 !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
+        overflow: visible !important;
         width: 100% !important;
         max-width: 100vw !important;
         
