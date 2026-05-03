@@ -512,11 +512,17 @@ html, body {
 }
 
 .sidebar-header {
-    color: var(--primary-contrast);
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: -1px;
-    padding: 30px 25px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    color: var(--text-main);
+}
+
+[data-theme="dark"] .sidebar-header {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+    color: #fff;
 }
 
 .sidebar ul {
@@ -6563,13 +6569,7 @@ body {
     margin-top: 2px;
 }
 
-.sidebar-header {
-    padding: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
+
 
 .logo-text {
     font-size: 18px;
