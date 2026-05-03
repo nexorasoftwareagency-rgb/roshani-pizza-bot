@@ -545,14 +545,14 @@ window.renderNotifications = () => {
 };
 
 window.markNotifRead = async (id) => {
-    const safeEmail = window.currentUser.email.replace(/\./g, '_');
-    await update(ref(db, `riders/${safeEmail}/notifications/${id}`), { read: true });
+    const riderId = window.currentUser.profile.id;
+    await update(ref(db, `riders/${riderId}/notifications/${id}`), { read: true });
 };
 
 window.clearAllNotifications = async () => {
     if (!confirm("Clear all notifications?")) return;
-    const safeEmail = window.currentUser.email.replace(/\./g, '_');
-    await remove(ref(db, `riders/${safeEmail}/notifications`));
+    const riderId = window.currentUser.profile.id;
+    await remove(ref(db, `riders/${riderId}/notifications`));
     window.showToast("Notifications cleared", "success");
 };
 
@@ -867,8 +867,8 @@ function initRealtimeListeners() {
     });
 
     // Listen to Notifications
-    const safeEmail = currentEmail.replace(/\./g, '_');
-    const notifPath = `riders/${safeEmail}/notifications`;
+    const riderId = currentUser.profile.id;
+    const notifPath = `riders/${riderId}/notifications`;
     const notifRef = ref(db, notifPath);
     window._activeListeners.push({ ref: notifRef, type: 'value' });
     onValue(notifRef, snap => {

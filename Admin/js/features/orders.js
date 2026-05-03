@@ -5,7 +5,7 @@
 
 import { db, Outlet, ServerValue } from '../firebase.js';
 import { state } from '../state.js';
-import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit, calculateDistance, getFeeFromSlabs } from '../utils.js';
+import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit, calculateDistance, getFeeFromSlabs, addRiderNotification } from '../utils.js';
 import { showAlert, addNotification, highlightOrder } from './notifications.js';
 import { showPaymentPicker } from '../ui-utils.js';
 
@@ -742,6 +742,10 @@ export async function assignRider(id, riderId) {
         showToast(`Rider ${rider.name} assigned. Rider will update status upon pickup.`, "success");
 
         await Outlet.ref(`orders/${id}`).update(updateData);
+        
+        // Notify Rider
+        await addRiderNotification(riderId, "New Order Assigned!", `Order #${id.slice(-5)} for ₹${order.total} assigned to you.`, 'new');
+
         logAudit("Orders", `Assigned Rider: ${rider.name} to #${id.slice(-5)}`, id);
     } catch (e) {
         showToast("Assignment failed: " + e.message, "error");
