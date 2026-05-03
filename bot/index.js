@@ -51,6 +51,29 @@ function formatJid(phone) {
     return (clean.length >= 10) ? (clean + "@s.whatsapp.net") : null;
 }
 
+function getISTDateInfo(customDate = null) {
+    // Current UTC time
+    const now = customDate ? new Date(customDate) : new Date();
+    // IST is UTC + 5:30
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(now.getTime() + IST_OFFSET);
+    
+    return {
+        dateStr: istTime.toISOString().split('T')[0], // YYYY-MM-DD in IST
+        hour: istTime.getUTCHours(),
+        minute: istTime.getUTCMinutes(),
+        istObject: istTime
+    };
+}
+
+function getISTDateString(isoString) {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(date.getTime() + IST_OFFSET);
+    return istTime.toISOString().split('T')[0];
+}
+
 async function getReportRecipients() {
     const recipients = new Set();
     const fallback = "919876543210";
@@ -530,13 +553,10 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
 async function sendDailyReport(sock, targetDate = null) {
     try {
         const outlets = ['pizza', 'cake'];
+        const ist = getISTDateInfo();
+        const dateStr = targetDate || ist.dateStr;
         
-        // Use India Time for date calculations
-        const indiaTime = new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"});
-        const now = new Date(indiaTime);
-        
-        // If targetDate is null, we assume we want reports for "today" (India time)
-        const dateStr = targetDate || now.toLocaleDateString('sv-SE'); // YYYY-MM-DD
+        console.log(`[Report] Generating Daily Report for: ${dateStr}`);
         
         let totalOrders = 0;
         let totalRevenue = 0;
@@ -548,18 +568,20 @@ async function sendDailyReport(sock, targetDate = null) {
             
             let outletOrders = 0;
             let outletRevenue = 0;
+            let statusBreakdown = {};
             
             Object.values(orders).forEach(order => {
                 if (!order.createdAt) return;
                 
-                // Convert order time to India YYYY-MM-DD
-                const oDate = new Date(order.createdAt).toLocaleString("en-US", {timeZone: "Asia/Kolkata"});
-                const oDateStr = new Date(oDate).toLocaleDateString('sv-SE');
+                const oDateStr = getISTDateString(order.createdAt);
                 
                 if (oDateStr === dateStr) {
                     outletOrders++;
-                    // Only count delivered orders as "Sales" revenue, matching Admin
-                    if (order.status === "Delivered") {
+                    const s = order.status || "Unknown";
+                    statusBreakdown[s] = (statusBreakdown[s] || 0) + 1;
+
+                    // Count 'Delivered' or 'Paid' orders as revenue
+                    if (order.status === "Delivered" || order.paymentStatus === "Paid") {
                         outletRevenue += parseFloat(order.total || 0);
                     }
                 }
@@ -569,6 +591,12 @@ async function sendDailyReport(sock, targetDate = null) {
                 reportDetails += `\n${outlet === 'pizza' ? '🍕' : '🎂'} *${outlet.toUpperCase()} OUTLET:*\n`;
                 reportDetails += `   📦 Total Orders: ${outletOrders}\n`;
                 reportDetails += `   💰 Real Sales: ₹${outletRevenue.toLocaleString()}\n`;
+                
+                // Add Breakdown
+                const breakdownStr = Object.entries(statusBreakdown)
+                    .map(([s, count]) => `      ▫️ ${s}: ${count}`)
+                    .join('\n');
+                reportDetails += `   📊 Breakdown:\n${breakdownStr}\n`;
             }
             
             totalOrders += outletOrders;
@@ -577,10 +605,11 @@ async function sendDailyReport(sock, targetDate = null) {
         
         const jids = await getReportRecipients();
         const displayDate = new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+        const nowIST = getISTDateInfo().istObject;
         
         const msg = `📊 *DAILY SALES REPORT* 📊\n\n` +
             `📅 Sales Date: *${displayDate}*\n` +
-            `⏰ Generated: ${now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}\n\n` +
+            `⏰ Generated: ${nowIST.getUTCHours().toString().padStart(2, '0')}:${nowIST.getUTCMinutes().toString().padStart(2, '0')} IST\n\n` +
             (reportDetails || "_No sales recorded for this date._\n") + 
             `\n💵 *TOTAL REVENUE:* ₹${totalRevenue.toLocaleString()}\n` +
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
@@ -795,19 +824,26 @@ async function startBot() {
         cleanupSessions();
         updateData('bot/status', { lastSeen: Date.now(), status: 'Online' }).catch(() => {});
         
-        // Get Time in Asia/Kolkata
-        const indiaTime = new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"});
-        const now = new Date(indiaTime);
-        const hour = now.getHours();
-        const minute = now.getMinutes();
+        // Get Time in Asia/Kolkata accurately
+        const ist = getISTDateInfo();
+        const hour = ist.hour;
+        const minute = ist.minute;
         
-        // Daily Report at 9:30 PM (21:30) - Capture full day sales
+        // 1. Daily Report at 9:30 PM (21:30)
         if (hour === 21 && minute === 30 && !dailyReportSent) {
             await sendDailyReport(sock);
             dailyReportSent = true;
         }
         
-        // Reset flags at 4 AM (low traffic time)
+        // 2. Late Night Catch-up (If bot was off at 21:30, send it at 1:30 AM for YESTERDAY)
+        if (hour === 1 && minute === 30 && !dailyReportSent) {
+            const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const yDateStr = getISTDateString(yesterday.toISOString());
+            await sendDailyReport(sock, yDateStr);
+            dailyReportSent = true; 
+        }
+
+        // Reset flags at 4 AM IST
         if (hour === 4 && minute === 0) {
             dailyReportSent = false;
             weeklyReportSent = false;
@@ -993,11 +1029,14 @@ async function startBot() {
 
             if (user.step === "SIZE") {
                 if (text === "0") {
-                    // Go back to DISH step for the current category
-                    user.step = "CATEGORY";
-                    // We need to re-trigger the category selection logic but we don't have the cat object easily.
-                    // Actually, the easiest is to just re-send categories.
-                    return sendCategories(sock, sender, user);
+                    const dishList = user.dishList || [];
+                    if (dishList.length === 0) return sendCategories(sock, sender, user);
+                    
+                    let dMsg = `🍽️ *ITEM SELECTION*\n\n`;
+                    dishList.forEach((d, i) => { dMsg += `${i + 1}️⃣  *${d.name}*\n💰 From ₹${d.price}\n\n`; });
+                    dMsg += `🛒 *9* View Cart\n0️⃣ *Take one step Back* 🔙`;
+                    user.step = "DISH";
+                    return sock.sendMessage(sender, { text: dMsg });
                 }
                 const [size, price] = user.sizeList[parseInt(text) - 1] || [];
                 if (!size) return sendInvalidInputHelp(sock, sender, user);
@@ -1016,9 +1055,14 @@ async function startBot() {
 
             if (user.step === "QUANTITY") {
                 const qty = parseInt(text);
-                if (qty === 0) {
-                    user.step = "CATEGORY";
-                    return sendCategories(sock, sender, user);
+                if (text === "0") {
+                    const dish = user.current.dish;
+                    user.sizeList = Object.entries(dish.sizes || { "Regular": dish.price });
+                    let sMsg = `📏 *SELECT SIZE*\n\n`;
+                    user.sizeList.forEach(([s, p], i) => { sMsg += `${i + 1}️⃣  ${s} — ₹${p}\n`; });
+                    sMsg += `\n0️⃣ *Take one step Back* 🔙`;
+                    user.step = "SIZE";
+                    return sock.sendMessage(sender, { text: sMsg });
                 }
                 if (isNaN(qty) || qty < 1 || qty > 50) return sendInvalidInputHelp(sock, sender, user);
 
@@ -1241,6 +1285,7 @@ async function startBot() {
                     subtotal, deliveryFee: user.deliveryFee, total: subtotal + user.deliveryFee,
                     status: "Placed", paymentMethod: method, paymentStatus: "Pending",
                     createdAt: new Date().toISOString(),
+                    assignedRider: "",
                     items: user.cart
                 };
 

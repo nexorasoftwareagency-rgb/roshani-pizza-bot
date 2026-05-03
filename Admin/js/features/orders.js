@@ -282,6 +282,7 @@ export function renderOrders(snap) {
 
         const tr = document.createElement('tr');
         tr.id = `row-${id}`;
+        tr.className = "premium-row-v4";
         tr.onclick = (e) => {
             if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'A') {
                 openOrderDrawer(id);
@@ -295,7 +296,6 @@ export function renderOrders(snap) {
         const truncatedAddress = o.address ? (o.address.length > 30 ? o.address.substring(0, 30) + "..." : o.address) : "Counter Sale";
 
         if (activeTab === 'dashboard') {
-            // Dashboard Table: ID, Customer, Items, Total, Status, Assign Rider, Actions (7 columns)
             const itemSummary = items.length > 0 ? `${items.length} Items` : "No Items";
             const onlineRiders = (state.ridersList || []).filter(r => r.status === "Online" || r.status === "On Delivery");
             const riderOptions = onlineRiders.map(r => `
@@ -303,92 +303,187 @@ export function renderOrders(snap) {
             `).join('');
 
             tr.innerHTML = `
-                <td data-label="Order ID" class="font-mono font-600">#${safeOrderId}</td>
-                <td data-label="Customer">
-                    <div class="flex-column">
-                        <span>${safeCustomerName}</span>
-                        <small class="text-muted">${escapeHtml(o.phone || 'Guest')}</small>
+                <td data-label="Order">
+                    <div class="identity-chip-v4">
+                        <div class="kpi-icon-box ${o.type === 'Online' ? 'blue' : 'orange'}" style="width:32px; height:32px; font-size:14px;">
+                            <i data-lucide="${o.type === 'Online' ? 'globe' : 'store'}"></i>
+                        </div>
+                        <div class="identity-info-v4">
+                            <span class="name">#${safeOrderId}</span>
+                            <span class="sub">${o.type || 'Online'}</span>
+                        </div>
                     </div>
                 </td>
-                <td data-label="Items">${itemSummary}</td>
-                <td data-label="Total" class="font-bold">₹${escapeHtml(o.total || '0')}</td>
-                <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
-                <td data-label="Assign Rider">
-                    <select data-action="assignRider" data-id="${id}" class="status-select" ${o.type === 'Dine-in' ? 'disabled' : ''}>
-                        <option value="">Select Rider</option>
-                        ${riderOptions}
-                    </select>
+                <td data-label="Customer">
+                    <div class="identity-info-v4">
+                        <span class="name">${safeCustomerName}</span>
+                        <span class="sub">${escapeHtml(o.phone || 'Guest')}</span>
+                    </div>
+                </td>
+                <td data-label="Details">
+                    <div class="flex-col">
+                        <span class="font-600 fs-13">${itemSummary}</span>
+                        <span class="text-muted-small">${truncatedAddress}</span>
+                    </div>
+                </td>
+                <td data-label="Total">
+                    <span class="font-bold color-primary fs-15">₹${escapeHtml(o.total || '0')}</span>
+                </td>
+                <td data-label="Status">
+                    <span class="status ${safeStatusClass}">${safeStatus}</span>
+                </td>
+                <td data-label="Rider">
+                    <div class="flex-row flex-center flex-gap-8">
+                        <i data-lucide="bike" style="width:14px;" class="text-muted"></i>
+                        <select data-action="assignRider" data-id="${id}" class="status-select-mini" ${o.type === 'Dine-in' ? 'disabled' : ''}>
+                            <option value="">Assign</option>
+                            ${riderOptions}
+                        </select>
+                    </div>
                 </td>
                 <td data-label="Actions">
-                    <div class="flex-row flex-gap-5">
-                        <select data-action="updateStatus" data-id="${id}" class="status-select">
-                            <option value="">Actions</option>
+                    <div class="action-group-v4">
+                        <select data-action="updateStatus" data-id="${id}" class="status-select-mini" style="width: 100px;">
+                            <option value="">Status</option>
                             ${getStatusOptions(o.status || "Placed", o.type || 'Online')}
                         </select>
-                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-table-icon">🖨️</button>
+                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4" title="Print Receipt">
+                            <i data-lucide="printer"></i>
+                        </button>
                     </div>
                 </td>
             `;
         } else if (activeTab === 'live') {
-            // Live Ops Table: ID, Customer, Items, Total, Status, Assign Rider, Actions (7 columns)
             const itemSummary = items.length > 0 ? `${items.length} Items` : "No Items";
-            
-            // Rider options
             const onlineRiders = (state.ridersList || []).filter(r => r.status === "Online" || r.status === "On Delivery");
             const riderOptions = onlineRiders.map(r => `
                 <option value="${r.id}" ${o.riderId === r.id ? 'selected' : ''}>${escapeHtml(r.name)}</option>
             `).join('');
 
             tr.innerHTML = `
-                <td data-label="Order ID" class="font-mono font-600">#${safeOrderId}</td>
-                <td data-label="Customer">
-                    ${safeCustomerName}<br>
-                    <small class="text-muted">${escapeHtml(o.phone || 'Guest')}</small>
+                <td data-label="Order">
+                    <div class="identity-chip-v4">
+                        <div class="kpi-icon-box ${o.outlet === 'pizza' ? 'orange' : 'pink'}" style="width:32px; height:32px; font-size:14px;">
+                            <i data-lucide="zap"></i>
+                        </div>
+                        <div class="identity-info-v4">
+                            <span class="name">#${safeOrderId}</span>
+                            <span class="sub">${o.outlet.toUpperCase()}</span>
+                        </div>
+                    </div>
                 </td>
-                <td data-label="Items">${itemSummary}</td>
-                <td data-label="Total" class="font-bold">₹${escapeHtml(o.total || '0')}</td>
-                <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
-                <td data-label="Assign Rider">
-                    <select data-action="assignRider" data-id="${id}" class="status-select" ${o.type === 'Dine-in' ? 'disabled' : ''}>
-                        <option value="">Select Rider</option>
+                <td data-label="Customer">
+                    <div class="identity-info-v4">
+                        <span class="name">${safeCustomerName}</span>
+                        <span class="sub">${escapeHtml(o.phone || 'Guest')}</span>
+                    </div>
+                </td>
+                <td data-label="Kitchen">
+                    <div class="flex-col">
+                        <span class="font-600 fs-13">${itemSummary}</span>
+                        <span class="text-muted-small">${o.type}</span>
+                    </div>
+                </td>
+                <td data-label="Total">
+                    <span class="font-bold color-primary">₹${escapeHtml(o.total || '0')}</span>
+                </td>
+                <td data-label="Status">
+                    <span class="status ${safeStatusClass}">${safeStatus}</span>
+                </td>
+                <td data-label="Rider">
+                    <select data-action="assignRider" data-id="${id}" class="status-select-mini" ${o.type === 'Dine-in' ? 'disabled' : ''}>
+                        <option value="">Assign</option>
                         ${riderOptions}
                     </select>
                 </td>
                 <td data-label="Actions">
-                    <div class="flex-row flex-gap-5">
-                        <select data-action="updateStatus" data-id="${id}" class="status-select">
-                            <option value="">Actions</option>
+                    <div class="action-group-v4">
+                        <select data-action="updateStatus" data-id="${id}" class="status-select-mini">
                             ${getStatusOptions(o.status || "Placed", o.type || 'Online')}
                         </select>
-                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-table-icon">🖨️</button>
+                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4">
+                            <i data-lucide="printer"></i>
+                        </button>
                     </div>
                 </td>
             `;
-        } else {
-            // Full Tables (Orders/Payments): ID, Customer, Address, Total, Status, Actions (6 columns)
+        } else if (activeTab === 'payments') {
+            const method = o.paymentMethod || "Cash";
             tr.innerHTML = `
-                <td data-label="Order ID" class="font-mono font-600">#${safeOrderId}</td>
+                <td data-label="Date">
+                    <div class="identity-chip-v4 ml-15">
+                        <div class="kpi-icon-box glass" style="width:32px; height:32px; font-size:14px;">
+                            <i data-lucide="calendar"></i>
+                        </div>
+                        <div class="identity-info-v4">
+                            <span class="name">#${safeOrderId}</span>
+                            <span class="sub">${new Date(o.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                        </div>
+                    </div>
+                </td>
                 <td data-label="Customer">
-                    ${safeCustomerName}<br>
-                    <small class="text-muted">${escapeHtml(o.phone || 'Guest')}</small>
-                    ${o.phone ? `<button data-action="chatOnWhatsapp" data-phone="${o.phone}" class="btn-chat">💬</button>` : ''}
+                    <div class="identity-info-v4">
+                        <span class="name">${safeCustomerName}</span>
+                        <span class="sub">${escapeHtml(o.phone || 'Guest')}</span>
+                    </div>
+                </td>
+                <td data-label="Method">
+                    <div class="flex-row flex-center flex-gap-8">
+                        <span class="badge-payment-v4">${method}</span>
+                    </div>
+                </td>
+                <td data-label="Status">
+                    <span class="status ${safeStatusClass}">${safeStatus}</span>
+                </td>
+                <td data-label="Amount" class="text-right pr-25">
+                    <span class="font-bold color-primary fs-16">₹${escapeHtml(o.total || '0')}</span>
+                </td>
+            `;
+        } else {
+            tr.innerHTML = `
+                <td data-label="Order">
+                    <div class="identity-chip-v4">
+                        <div class="kpi-icon-box ${o.outlet === 'pizza' ? 'blue' : 'pink'}" style="width:32px; height:32px; font-size:14px;">
+                            <i data-lucide="package"></i>
+                        </div>
+                        <div class="identity-info-v4">
+                            <span class="name">#${safeOrderId}</span>
+                            <span class="sub">${new Date(o.createdAt).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                </td>
+                <td data-label="Customer">
+                    <div class="identity-info-v4">
+                        <span class="name">${safeCustomerName}</span>
+                        <div class="action-group-v4 mt-5">
+                            <span class="sub">${escapeHtml(o.phone || 'Guest')}</span>
+                            ${o.phone ? `<button data-action="chatOnWhatsapp" data-phone="${o.phone}" class="btn-action-v4 success" style="width:20px;height:20px;font-size:10px;"><i data-lucide="message-square" style="width:10px;"></i></button>` : ''}
+                        </div>
+                    </div>
                 </td>
                 <td data-label="Address">
-                    <span title="${escapeHtml(o.address || '')}">${escapeHtml(truncatedAddress)}</span>
-                    ${(o.locationLink || (o.lat && o.lng)) ? 
-                        `<br><a href="${escapeHtml(o.locationLink || `https://www.google.com/maps?q=${o.lat},${o.lng}`)}" target="_blank" rel="noopener noreferrer" class="color-primary fs-11">📍 View Location</a>` 
-                        : ""
-                    }
+                    <div class="identity-info-v4">
+                        <span class="sub" title="${escapeHtml(o.address || '')}">${escapeHtml(truncatedAddress)}</span>
+                        ${(o.locationLink || (o.lat && o.lng)) ? 
+                            `<a href="${escapeHtml(o.locationLink || `https://www.google.com/maps?q=${o.lat},${o.lng}`)}" target="_blank" rel="noopener noreferrer" class="link-premium fs-10 font-bold">📍 VIEW MAP</a>` 
+                            : ""
+                        }
+                    </div>
                 </td>
-                <td data-label="Total" class="font-bold">₹${escapeHtml(o.total || '0')}</td>
-                <td data-label="Status"><span class="status ${safeStatusClass}">${safeStatus}</span></td>
+                <td data-label="Total">
+                    <span class="font-bold color-primary">₹${escapeHtml(o.total || '0')}</span>
+                </td>
+                <td data-label="Status">
+                    <span class="status ${safeStatusClass}">${safeStatus}</span>
+                </td>
                 <td data-label="Actions">
-                    <div class="flex-row flex-gap-5">
-                        <select data-action="updateStatus" data-id="${id}" class="status-select">
-                            <option value="">Actions</option>
+                    <div class="action-group-v4">
+                        <select data-action="updateStatus" data-id="${id}" class="status-select-mini">
                             ${getStatusOptions(o.status || "Placed", o.type || 'Online')}
                         </select>
-                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-table-icon">🖨️</button>
+                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4">
+                            <i data-lucide="printer"></i>
+                        </button>
                     </div>
                 </td>
             `;
@@ -431,11 +526,11 @@ export function renderOrders(snap) {
  */
 
 function updateDashboardStats(orders) {
-    const today = new Date().toLocaleDateString('sv-SE'); // Local YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
     
     const todayOrders = orders.filter(o => {
         if (!o.createdAt) return false;
-        const date = new Date(o.createdAt).toLocaleDateString('sv-SE');
+        const date = new Date(o.createdAt).toISOString().split('T')[0];
         return date === today;
     });
 
@@ -466,7 +561,7 @@ function renderPriorityOrders(orders) {
     // Remove old listener if any and add delegation
     if (!container.dataset.hasListener) {
         container.addEventListener('click', (e) => {
-            const card = e.target.closest('.priority-card');
+            const card = e.target.closest('.priority-card-v4');
             if (card && card.dataset.orderId) {
                 window.openOrderDrawer(card.dataset.orderId);
             }
@@ -494,39 +589,35 @@ function renderPriorityOrders(orders) {
         const id = o.id;
         const status = o.status || "Placed";
         const type = o.type || 'Online';
-        const safeStatusClass = status.replace(/ /g, '');
+        const safeStatusClass = status.toLowerCase().replace(/ /g, '');
+        const timeStr = o.createdAt ? new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently';
         
-        // Rider options for this card
-        const onlineRiders = (state.ridersList || []).filter(r => r.status === "Online" || r.status === "On Delivery");
-        const riderOptions = onlineRiders.map(r => `
-            <option value="${r.id}" ${o.riderId === r.id ? 'selected' : ''}>${escapeHtml(r.name)}</option>
-        `).join('');
+        // Extract items summary
+        const items = o.cart || o.items || (o.normalizedItems ? o.normalizedItems : []);
+        const itemsSummary = Array.isArray(items) ? items.map(i => `${i.qty}x ${i.name || i.item}`).join(', ') : "Items hidden";
 
         return `
-            <div class="priority-card ${safeStatusClass.toLowerCase()}" data-order-id="${id}">
-                <div class="flex-row flex-between">
-                    <div>
-                        <span class="p-id">#${escapeHtml(o.orderId || id.slice(-5))}</span>
-                        <h4 class="p-name">${escapeHtml(o.customerName || 'Walk-in')}</h4>
+            <div class="priority-card-v4 status-${safeStatusClass}" data-order-id="${id}">
+                <div class="header">
+                    <span class="order-id">#${id.slice(-5).toUpperCase()}</span>
+                    <span class="time">${timeStr}</span>
+                </div>
+                <div class="cust-info">
+                    <div class="identity-info-v4">
+                        <span class="name">${escapeHtml(o.customerName || 'Walk-in')}</span>
+                        <span class="sub">${escapeHtml(o.phone || 'No Phone')}</span>
                     </div>
-                    <div class="p-status-pill ${safeStatusClass}">${escapeHtml(status)}</div>
                 </div>
-                <div class="p-meta">
-                    <span>₹${o.total}</span> • <span>${o.normalizedItems ? o.normalizedItems.length : 0} items</span>
-                </div>
-                
-                <div class="priority-actions flex-row flex-gap-5 mt-10" onclick="event.stopPropagation()">
-                    <select data-action="assignRider" data-id="${id}" class="status-select-mini" ${type === 'Dine-in' ? 'disabled' : ''}>
-                        <option value="">Rider</option>
-                        ${riderOptions}
-                    </select>
-                    <select data-action="updateStatus" data-id="${id}" class="status-select-mini">
-                        ${getStatusOptions(status, type)}
-                    </select>
+                <div class="items-summary">${escapeHtml(itemsSummary)}</div>
+                <div class="footer">
+                    <span class="status-badge-v4 status-${safeStatusClass}">${status}</span>
+                    <span class="font-bold color-primary">₹${o.total}</span>
                 </div>
             </div>
         `;
     }).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function renderTopItems(orders) {
@@ -554,12 +645,19 @@ function renderTopItems(orders) {
     }
 
     container.innerHTML = topItems.map(([name, qty], i) => `
-        <div class="top-item-row">
-            <span class="rank">#${i+1}</span>
-            <span class="name">${escapeHtml(name)}</span>
-            <span class="qty">${qty} sold</span>
+        <div class="premium-stat-row">
+            <div class="flex-row flex-center">
+                <div class="rank-box">#${i+1}</div>
+                <div class="info-main">
+                    <span class="title">${escapeHtml(name)}</span>
+                    <span class="sub">Popular Choice</span>
+                </div>
+            </div>
+            <div class="value-chip">${qty} SOLD</div>
         </div>
     `).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function renderTopCustomers(orders) {
@@ -583,15 +681,20 @@ function renderTopCustomers(orders) {
         return;
     }
 
-    container.innerHTML = topCusts.map(c => `
-        <div class="top-cust-row">
-            <div class="cust-info">
-                <span class="name">${escapeHtml(c.name)}</span>
-                <small>${c.count} orders</small>
+    container.innerHTML = topCusts.map((c, i) => `
+        <div class="premium-stat-row">
+            <div class="flex-row flex-center">
+                <div class="rank-box" style="background: var(--info)">#${i+1}</div>
+                <div class="identity-info-v4">
+                    <span class="name">${escapeHtml(c.name)}</span>
+                    <span class="sub">${c.count} Orders Placed</span>
+                </div>
             </div>
-            <span class="total">₹${c.total.toLocaleString()}</span>
+            <div class="value-chip success">₹${c.total.toLocaleString()}</div>
         </div>
     `).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 
@@ -786,68 +889,99 @@ export async function openOrderDrawer(id) {
     const drawer = document.getElementById('orderDrawer');
     if (!drawer) return;
 
-    const content = document.getElementById('orderDrawerContent');
+    const content = document.getElementById('orderDrawerBody');
     if (!content) return;
 
     // Render items using normalized array
     const items = order.normalizedItems || [];
     const itemsHtml = items.map(item => `
-        <div class="drawer-item">
-            <div class="flex-between">
-                <div>
-                    <span class="font-600">${escapeHtml(item.name || "Item")}</span>
-                    <span class="text-muted fs-11">(${escapeHtml(item.size || 'N/A')})</span>
+        <div class="premium-row-v4 p-12 mb-8 br-12" style="background: rgba(0,0,0,0.02);">
+            <div class="flex-between flex-center">
+                <div class="identity-info-v4">
+                    <span class="name font-600 color-primary" style="font-size:14px;">${escapeHtml(item.name || "Item")}</span>
+                    <span class="sub" style="font-size:11px;">${escapeHtml(item.size || 'N/A')}</span>
                 </div>
-                <div class="font-600">₹${item.price || item.total || 0} x ${item.qty || 1}</div>
+                <div class="identity-info-v4 text-right">
+                    <span class="name font-700" style="font-size:14px;">₹${item.price || item.total || 0}</span>
+                    <span class="sub" style="font-size:10px;">Qty: ${item.qty || 1}</span>
+                </div>
             </div>
-            ${item.addon && item.addon !== 'None' ? `<div class="text-muted-small">+ ${escapeHtml(item.addon)}</div>` : ''}
-            ${item.addons && Array.isArray(item.addons) ? `<div class="text-muted-small">+ ${item.addons.map(a => escapeHtml(a.name || '')).filter(n => n).join(', ')}</div>` : ''}
+            ${(item.addon && item.addon !== 'None') || (item.addons && item.addons.length > 0) ? `
+                <div class="mt-8 pt-8 border-t-ghost">
+                    <div class="text-muted-small ls-sm text-upper" style="font-size:8px; margin-bottom:4px;">Extras</div>
+                    <div class="flex-row flex-wrap flex-gap-4">
+                        ${item.addon && item.addon !== 'None' ? `<span class="status-badge-v4 info" style="font-size:9px; padding:2px 6px;">${escapeHtml(item.addon)}</span>` : ''}
+                        ${item.addons && Array.isArray(item.addons) ? item.addons.map(a => `<span class="status-badge-v4 success" style="font-size:9px; padding:2px 6px;">${escapeHtml(a.name || '')}</span>`).join('') : ''}
+                    </div>
+                </div>
+            ` : ''}
         </div>
     `).join('');
 
     content.innerHTML = `
-        <div class="drawer-header p-20">
-            <h3 class="m-0">Order #${escapeHtml(order.orderId || id.slice(-5))}</h3>
-            <span class="status ${order.status.replace(/ /g, '')}">${order.status}</span>
-        </div>
-        <div class="drawer-body p-20">
-            <div class="drawer-section">
-                <label>Customer Details</label>
-                <p><strong>${escapeHtml(order.customerName || 'Guest')}</strong></p>
-                <p>${escapeHtml(order.phone || 'No Phone')}</p>
-                <p class="fs-12 text-muted">${escapeHtml(order.address || 'Walk-in')}</p>
-                ${(order.locationLink || (order.lat && order.lng)) ? 
-                    `<a href="${escapeHtml(order.locationLink || `https://www.google.com/maps?q=${order.lat},${order.lng}`)}" target="_blank" rel="noopener noreferrer" class="btn-map-drawer">📍 View on Google Maps</a>` 
-                    : ""
-                }
+        <div class="drawer-header-v4 p-20 border-b-ghost">
+            <div class="flex-between flex-center mb-10">
+                <div class="identity-info-v4">
+                    <span class="name fs-20 font-800 color-primary">Order #${escapeHtml(order.orderId || id.slice(-5))}</span>
+                    <span class="sub">${new Date(order.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                </div>
+                <span class="status-badge-v4 ${order.status.toLowerCase().replace(/\s+/g, '')}" style="font-size:11px; padding:6px 12px;">${order.status}</span>
             </div>
-            <div class="drawer-section">
-                <label>Items</label>
+        </div>
+        
+        <div class="drawer-scroll-body p-20" style="max-height: calc(85vh - 180px); overflow-y: auto;">
+            <div class="drawer-section mb-24">
+                <div class="section-label-v4 mb-12">Customer Details</div>
+                <div class="identity-chip-v4 p-15 br-16 bg-ghost" style="background: rgba(249, 115, 22, 0.04);">
+                    <div class="kpi-icon-box glass" style="width:40px; height:40px;">
+                        <i data-lucide="user"></i>
+                    </div>
+                    <div class="identity-info-v4">
+                        <span class="name font-700 fs-16">${escapeHtml(order.customerName || 'Guest')}</span>
+                        <span class="sub fs-13">${escapeHtml(order.phone || 'No Phone')}</span>
+                    </div>
+                </div>
+                <div class="mt-12 p-12 br-12 border-ghost flex-row flex-gap-10">
+                    <i data-lucide="map-pin" class="text-muted" style="width:16px;"></i>
+                    <div class="flex-1">
+                        <p class="fs-13 m-0 line-height-14">${escapeHtml(order.address || 'Counter Sale / Walk-in')}</p>
+                        ${(order.locationLink || (order.lat && order.lng)) ? 
+                            `<a href="${escapeHtml(order.locationLink || `https://www.google.com/maps?q=${order.lat},${order.lng}`)}" target="_blank" rel="noopener noreferrer" class="link-premium fs-11 font-700 mt-8 d-inline-block">📍 TRACK ON LIVE MAP</a>` 
+                            : ""
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="drawer-section mb-24">
+                <div class="section-label-v4 mb-12">Order Items (${items.length})</div>
                 <div class="drawer-items-list">${itemsHtml}</div>
             </div>
-            <div class="drawer-section">
-                <div class="flex-between m-b-5"><span class="text-muted">Subtotal</span><span>₹${order.subtotal || 0}</span></div>
-                <div class="flex-between m-b-5"><span class="text-muted">Discount Allotted</span><span>-₹${order.discount || 0}</span></div>
-                <div class="flex-between m-b-5"><span class="text-muted">Delivery</span><span>₹${order.deliveryFee || 0}</span></div>
-                <div class="flex-between font-bold fs-16"><span class="color-primary">Total</span><span>₹${order.total || 0}</span></div>
+
+            <div class="drawer-section mb-24 p-20 br-16" style="background: var(--dark); color: white;">
+                <div class="flex-between mb-8"><span class="text-white-50 fs-13">Subtotal</span><span class="fs-13">₹${order.subtotal || 0}</span></div>
+                <div class="flex-between mb-8"><span class="text-white-50 fs-13">Discount</span><span class="text-success fs-13">-₹${order.discount || 0}</span></div>
+                <div class="flex-between mb-12"><span class="text-white-50 fs-13">Delivery Fee</span><span class="fs-13">₹${order.deliveryFee || 0}</span></div>
+                <div class="border-t-white-10 pt-12 flex-between flex-center">
+                    <span class="font-600 fs-14">Grand Total</span>
+                    <span class="fs-22 font-800 color-primary">₹${order.total || 0}</span>
+                </div>
             </div>
-            <div class="drawer-section">
-                <label>Rider Assignment</label>
-                <div class="flex-column flex-gap-10">
-                    ${order.riderName ? `<p class="m-0">Assigned to: <strong>${escapeHtml(order.riderName)}</strong></p>` : `<p class="m-0 text-muted">No rider assigned</p>`}
-                    
-                    <div class="flex-row flex-gap-10 m-t-10">
-                        <div class="flex-1">
-                            <small class="text-muted d-block m-b-5">Update Status</small>
-                            <select data-action="updateStatus" data-id="${id}" class="form-input w-100">
-                                <option value="">Select Next Step</option>
-                                ${getStatusOptions(order.status || "Placed", order.type || 'Online')}
-                            </select>
-                        </div>
+
+            <div class="drawer-section mb-20">
+                <div class="section-label-v4 mb-12">Operational Controls</div>
+                <div class="panel-v4 p-15 br-16">
+                    <div class="form-group mb-15">
+                        <label class="form-label-small mb-8 d-block">ORDER STATUS</label>
+                        <select data-action="updateStatus" data-id="${id}" class="form-input-v4 w-100">
+                            <option value="">Select Next Step</option>
+                            ${getStatusOptions(order.status || "Placed", order.type || 'Online')}
+                        </select>
                     </div>
                     
-                    <div class="flex-row flex-gap-8 flex-center">
-                        <select data-action="assignRider" data-id="${id}" class="form-input flex-1">
+                    <div class="form-group">
+                        <label class="form-label-small mb-8 d-block">DELIVERY RIDER</label>
+                        <select data-action="assignRider" data-id="${id}" class="form-input-v4 w-100" ${order.type === 'Dine-in' ? 'disabled' : ''}>
                             <option value="">${order.riderId ? 'Change Rider' : 'Select Rider'}</option>
                             ${(state.ridersList || [])
                                 .filter(r => r.status === "Online" || r.status === "On Delivery")
@@ -860,6 +994,7 @@ export async function openOrderDrawer(id) {
         </div>
     `;
 
+    if (window.lucide) window.lucide.createIcons(content);
     drawer.classList.add('active');
     
     // Push state so back button closes the drawer

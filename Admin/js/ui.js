@@ -39,6 +39,8 @@ export const closeSidebar = () => {
     if (overlay) overlay.classList.remove('active');
 };
 
+import { loadInventory, cleanupInventory } from './features/inventory.js';
+
 export const switchTab = (tabId, skipHistory = false) => {
     state.currentActiveTab = tabId;
     console.log(`[Navigation] Switching to: ${tabId}`);
@@ -121,6 +123,7 @@ export const switchTab = (tabId, skipHistory = false) => {
         if (tabId !== 'riders' && tabId !== 'dashboard' && tabId !== 'live') cleanupRiders();
         if (tabId !== 'feedback') cleanupFeedbacks();
         if (tabId !== 'liveTracker') cleanupLiveRiderTracker();
+        if (tabId !== 'inventory') cleanupInventory();
 
         // --- PHASE 3.25: DATA REFRESH ---
         // Refresh appropriate data based on the tab
@@ -161,10 +164,14 @@ export const switchTab = (tabId, skipHistory = false) => {
             case 'lostSales':
                 loadLostSales();
                 break;
+            case 'inventory':
+                loadInventory();
+                break;
             case 'live':
                 loadRiders(); // For rider assignment dropdowns
                 break;
         }
+
 
         // Global Order Refresh for core tabs
         if (['dashboard', 'orders', 'live'].includes(tabId)) {

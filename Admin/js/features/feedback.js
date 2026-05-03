@@ -38,25 +38,47 @@ export function loadFeedbacks() {
 
         const feedbackHTML = feedbacks.map(f => {
             const stars = "⭐".repeat(f.rating || 0);
-            const dateStr = f.timestamp ? new Date(f.timestamp).toLocaleString() : "N/A";
+            const dateStr = f.timestamp ? new Date(f.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : "N/A";
 
             return `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.03)">
-                    <td data-label="Date" style="padding:15px; font-size:12px;">${escapeHtml(dateStr)}</td>
-                    <td data-label="Order ID" style="padding:15px; font-family:monospace; font-weight:700;">#${escapeHtml(f.orderId || 'N/A')}</td>
-                    <td data-label="Customer" style="padding:15px">
-                        <div style="font-weight:700;">${escapeHtml(f.customerName || 'Guest')}</div>
-                        <small style="color:var(--text-muted);">${escapeHtml(f.phone || '')}</small>
+                <tr class="premium-row-v4">
+                    <td data-label="Date">
+                        <div class="identity-info-v4">
+                            <span class="name">${escapeHtml(dateStr)}</span>
+                            <span class="sub">Log Time</span>
+                        </div>
                     </td>
-                    <td data-label="Rating" style="padding:15px; font-size:14px;">${stars}</td>
-                    <td data-label="Feedback" style="padding:15px">
-                        <div style="font-weight:600; color:var(--text-main);">${escapeHtml(f.reason || f.feedback || '')}</div>
-                        ${f.comment ? `<div style="font-size:12px; color:var(--text-muted); margin-top:4px; font-style:italic;">"${escapeHtml(f.comment)}"</div>` : ''}
+                    <td data-label="Order ID">
+                        <div class="identity-chip-v4">
+                            <div class="kpi-icon-box glass" style="width:32px; height:32px; font-size:14px;">
+                                <i data-lucide="hash"></i>
+                            </div>
+                            <span class="name">#${escapeHtml(f.orderId || 'N/A')}</span>
+                        </div>
+                    </td>
+                    <td data-label="Customer">
+                        <div class="identity-info-v4">
+                            <span class="name">${escapeHtml(f.customerName || 'Guest')}</span>
+                            <span class="sub">${escapeHtml(f.phone || 'Anonymous')}</span>
+                        </div>
+                    </td>
+                    <td data-label="Rating">
+                        <div class="flex-col">
+                            <span class="fs-14">${stars}</span>
+                            <span class="text-muted-small">${f.rating}/5 Score</span>
+                        </div>
+                    </td>
+                    <td data-label="Feedback">
+                        <div class="flex-col">
+                            <span class="font-600 color-primary fs-13">${escapeHtml(f.reason || f.feedback || 'General Rating')}</span>
+                            ${f.comment ? `<span class="text-muted-small italic">"${escapeHtml(f.comment)}"</span>` : ''}
+                        </div>
                     </td>
                 </tr>
             `;
         }).join('');
         tableBody.innerHTML = feedbackHTML;
+        if (window.lucide) window.lucide.createIcons(tableBody);
     });
 }
 

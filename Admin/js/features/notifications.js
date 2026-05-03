@@ -175,14 +175,23 @@ export function toggleNotificationSheet(show) {
 }
 
 function renderNotifItem(n, isFull = false) {
-    const safeOutlet = n.outlet ? (n.outlet === 'pizza' ? '🍕' : '🎂') : '';
+    const outletIcon = n.outlet === 'cake' ? '🎂' : '🍕';
+    const typeClass = n.type || 'info';
+    
     return `
-        <div class="notification-item ${escapeHtml(n.type)} ${isFull ? 'notif-item-full' : ''}">
-            <div class="flex-grow-1">
-                <div class="notif-title">${safeOutlet} ${escapeHtml(n.title)}</div>
-                <div class="notif-sub">${escapeHtml(n.sub)}</div>
+        <div class="notification-item-v4 ${typeClass} ${isFull ? 'notif-item-full' : ''} p-15 mb-10 br-16">
+            <div class="identity-chip-v4 mb-8">
+                <div class="kpi-icon-box glass sm" style="width:28px; height:28px; font-size:12px;">
+                    <span>${outletIcon}</span>
+                </div>
+                <div class="identity-info-v4">
+                    <span class="name font-700 fs-14">${escapeHtml(n.title)}</span>
+                    <span class="sub fs-11">${escapeHtml(n.time)}</span>
+                </div>
             </div>
-            <div class="notif-time-badge">${escapeHtml(n.time)}</div>
+            <div class="notif-sub-v4 fs-13 color-text-muted pl-35">
+                ${escapeHtml(n.sub)}
+            </div>
         </div>
     `;
 }

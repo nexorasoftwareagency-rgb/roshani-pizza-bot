@@ -112,12 +112,17 @@ export function renderWalkinDishGrid(dishes) {
     grid.innerHTML = dishes.map(d => {
         const price = d.price || (d.sizes ? Object.values(d.sizes)[0] : 0);
         return `
-            <div class="pos-dish-btn" data-action="openPOSSelectionModal" data-id="${d.id}">
-                <div class="pos-dish-icon">
-                    <img src="${d.image || 'assets/img/placeholder-dish.png'}" alt="${escapeHtml(d.name)}">
+            <div class="pos-dish-btn-v4" data-action="openPOSSelectionModal" data-id="${d.id}">
+                <div class="dish-visual">
+                    <img src="${d.image || 'assets/img/placeholder-dish.png'}" alt="${escapeHtml(d.name)}" loading="lazy">
+                    <div class="dish-overlay">
+                        <span class="price-chip">₹${price}</span>
+                    </div>
                 </div>
-                <div class="pos-dish-name">${escapeHtml(d.name)}</div>
-                <div class="pos-dish-price">₹${price}</div>
+                <div class="dish-content">
+                    <div class="dish-name">${escapeHtml(d.name)}</div>
+                    <div class="dish-category">${escapeHtml(d.category || '')}</div>
+                </div>
             </div>
         `;
     }).join('');
@@ -326,28 +331,39 @@ export function renderWalkinCart() {
     list.innerHTML = items.map(([key, item]) => {
         const itemTotal = item.price * item.qty;
         subtotal += itemTotal;
-        const addonText = item.addons && item.addons.length > 0 ? `<div class="cart-item-addons">+ ${item.addons.map(a => a.name).join(', ')}</div>` : '';
+        const addonText = item.addons && item.addons.length > 0 ? `<div class="cart-item-addons-v4 mt-4">${item.addons.map(a => `<span class="addon-tag">+ ${a.name}</span>`).join('')}</div>` : '';
         
         return `
-            <div class="cart-item">
-                <div class="cart-item-main">
-                    <div class="cart-item-details">
-                        <div class="cart-item-name">${escapeHtml(item.name)} <span class="cart-item-size">(${escapeHtml(item.size)})</span></div>
+            <div class="premium-row-v4 p-12 mb-8 br-16 bg-white shadow-sm border-ghost">
+                <div class="flex-between flex-center">
+                    <div class="identity-info-v4 flex-1">
+                        <span class="name font-700 fs-14">${escapeHtml(item.name)} <span class="text-muted font-normal fs-11">(${escapeHtml(item.size)})</span></span>
                         ${addonText}
-                        <div class="cart-item-price">\u20B9${item.price} x ${item.qty} = \u20B9${itemTotal}</div>
+                        <div class="fs-12 color-primary font-700 mt-4">₹${item.price.toLocaleString()} <span class="text-muted font-normal">per item</span></div>
                     </div>
-                    <div class="cart-item-actions">
-                        <div class="qty-control">
-                            <button data-action="walkinQtyChange" data-id="${key}" data-val="-1">-</button>
-                            <span>${item.qty}</span>
-                            <button data-action="walkinQtyChange" data-id="${key}" data-val="1">+</button>
+                    <div class="identity-info-v4 text-right ml-10">
+                        <div class="qty-control-v4 mb-4">
+                            <button class="qty-btn" data-action="walkinQtyChange" data-id="${key}" data-val="-1">
+                                <i data-lucide="minus"></i>
+                            </button>
+                            <span class="qty-val">${item.qty}</span>
+                            <button class="qty-btn" data-action="walkinQtyChange" data-id="${key}" data-val="1">
+                                <i data-lucide="plus"></i>
+                            </button>
                         </div>
-                        <button class="btn-remove" data-action="walkinRemoveItem" data-id="${key}">\uD83D\uDDD1\uFE0F</button>
+                        <div class="font-800 fs-15 color-dark">₹${itemTotal.toLocaleString()}</div>
                     </div>
+                </div>
+                <div class="flex-row mt-8 border-t-ghost pt-8">
+                   <button class="btn-remove-v4 flex-center flex-gap-6 fs-11" data-action="walkinRemoveItem" data-id="${key}">
+                       <i data-lucide="trash-2" style="width:12px;"></i> Remove
+                   </button>
                 </div>
             </div>
         `;
     }).join('');
+
+    if (window.lucide) window.lucide.createIcons(list);
 
     let discountValue = state.walkinDiscount;
     if (state.walkinDiscountPct > 0) {
@@ -539,6 +555,7 @@ export async function submitWalkinSale() {
             timestamp: ServerValue.TIMESTAMP,
             createdAt: new Date().toISOString(),
             outlet: Outlet.current,
+            assignedRider: "", 
             createdBy: auth.currentUser ? auth.currentUser.email : 'admin'
         };
 

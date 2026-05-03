@@ -84,17 +84,13 @@ function startRiderLocationListener() {
                 const pos = [r.location.lat, r.location.lng];
                 bounds.push(pos);
 
+                const popupContent = generateRiderPopup(r);
+
                 if (riderMarkersMap.has(id)) {
                     // Update existing marker
                     const marker = riderMarkersMap.get(id);
                     marker.setLatLng(pos);
-                    marker.getPopup().setContent(`
-                        <div style="font-family: 'Outfit', sans-serif;">
-                            <strong style="color:var(--primary)">${escapeHtml(r.name)}</strong><br>
-                            <small>${escapeHtml(r.phone)}</small><br>
-                            <div style="margin-top:5px; font-size:10px; font-weight:800; color:var(--success)">MOVED: ${new Date(r.location.ts).toLocaleTimeString()}</div>
-                        </div>
-                    `);
+                    marker.getPopup().setContent(popupContent);
                 } else {
                     // Create new marker
                     const marker = L.marker(pos, {
@@ -106,12 +102,7 @@ function startRiderLocationListener() {
                             popupAnchor: [1, -34],
                             shadowSize: [41, 41]
                         })
-                    }).addTo(adminTrackerMap).bindPopup(`
-                        <div style="font-family: 'Outfit', sans-serif;">
-                            <strong style="color:var(--primary)">${escapeHtml(r.name)}</strong><br>
-                            <small>${escapeHtml(r.phone)}</small>
-                        </div>
-                    `);
+                    }).addTo(adminTrackerMap).bindPopup(popupContent);
                     riderMarkersMap.set(id, marker);
                 }
             } else {
@@ -135,4 +126,43 @@ function startRiderLocationListener() {
     };
 
     Outlet.ref('riders').on('value', riderLocationCb);
+}
+
+/**
+ * GENERATE PREMIUM POPUP CONTENT
+ */
+function generateRiderPopup(r) {
+    const lastSeen = r.location && r.location.ts ? 
+        new Date(r.location.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 
+        'Recently';
+    
+    const profileImg = r.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(r.name || 'R') + "&background=random";
+    const displayStatus = (r.status === "Online" && r.currentOrder) ? "On Delivery" : "Online";
+    const statusClass = displayStatus.toLowerCase().replace(/\s+/g, '-');
+
+    return `
+        <div class="identity-info-v4 p-10" style="min-width: 180px;">
+            <div class="identity-chip-v4 mb-10">
+                <img src="${profileImg}" class="identity-avatar-v4" style="width:32px; height:32px;">
+                <div class="identity-info-v4">
+                    <span class="name color-primary" style="font-size:14px;">${escapeHtml(r.name || 'Rider')}</span>
+                    <span class="sub" style="font-size:11px;"><i data-lucide="phone" style="width:10px;"></i> ${escapeHtml(r.phone || '')}</span>
+                </div>
+            </div>
+            
+            <div class="mt-8 pt-8 border-t-ghost">
+                <div class="flex-between flex-center mb-8">
+                    <span class="text-muted-small ls-sm text-upper" style="font-size:9px;">Activity</span>
+                    <div class="rider-status-pill-v4 ${statusClass}" style="padding: 2px 8px; font-size: 9px;">
+                        <span class="rider-dot-v4"></span>
+                        <span>${displayStatus}</span>
+                    </div>
+                </div>
+                <div class="flex-between flex-center">
+                    <span class="text-muted-small ls-sm text-upper" style="font-size:9px;">Last Seen</span>
+                    <span class="text-dark font-bold" style="font-size:10px;">${lastSeen}</span>
+                </div>
+            </div>
+        </div>
+    `;
 }

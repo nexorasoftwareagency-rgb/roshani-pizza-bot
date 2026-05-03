@@ -274,15 +274,22 @@ onMessage(messaging, (payload) => {
 
 // NAVIGATION
 window.toggleRiderSidebar = () => {
+    console.log("[Navigation] Toggling Sidebar. Width:", window.innerWidth);
     window.haptic(10);
     const nav = document.getElementById('sidebarNav');
     const overlay = document.getElementById('sidebarOverlay');
-    if (!nav) return;
+    if (!nav) {
+        console.error("[Navigation] sidebarNav element not found!");
+        return;
+    }
 
-    if (window.innerWidth > 1024) document.body.classList.toggle('sidebar-collapsed');
-    else {
+    if (window.innerWidth > 1024) {
+        document.body.classList.toggle('sidebar-collapsed');
+        console.log("[Navigation] Laptop mode: toggled .sidebar-collapsed on body");
+    } else {
         const isActive = nav.classList.toggle('active');
         if (overlay) overlay.classList.toggle('active', isActive);
+        console.log("[Navigation] Mobile mode: sidebar active =", isActive);
     }
 };
 
@@ -312,6 +319,8 @@ window.showSection = (sectionId) => {
     // Re-init map if switching to active section
     if (sectionId === 'active' && window.activeOrderData) {
         setTimeout(() => window.initActiveMap(window.activeOrderData), 200);
+    } else if (sectionId === 'active') {
+        setTimeout(() => window.initDefaultMap(), 200);
     }
 };
 
@@ -499,6 +508,28 @@ window.initActiveMap = (order) => {
 
     activeMap.fitBounds(bounds, { padding: [50, 50] });
     activeMap.invalidateSize();
+};
+
+window.initDefaultMap = () => {
+    const mapContainer = document.getElementById('activeTripMap');
+    if (!mapContainer || activeMap) return;
+
+    // Default center (can be overridden by user location)
+    const center = window.riderLocation ? [window.riderLocation.lat, window.riderLocation.lng] : [25.887944, 85.026194];
+    
+    activeMap = L.map('activeTripMap', { zoomControl: false }).setView(center, 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(activeMap);
+
+    if (window.riderLocation) {
+        riderMarker = L.circleMarker([window.riderLocation.lat, window.riderLocation.lng], {
+            color: '#FF5200',
+            fillColor: '#FF5200',
+            fillOpacity: 0.8,
+            radius: 8
+        }).addTo(activeMap).bindPopup("You are here");
+    }
 };
 
 window.renderNotifications = () => {
@@ -830,33 +861,41 @@ function initRealtimeListeners() {
         const ordersPath = `${outletId}/orders`;
         window.orderCache[outletId] = {};
 
-        const updateCache = (data, filterType) => {
-            Object.keys(window.orderCache[outletId]).forEach(id => {
-                const order = window.orderCache[outletId][id];
-                const isMine = (order.assignedRider || "").toLowerCase() === currentEmail;
-                if (filterType === 'unassigned' && (!order.assignedRider)) delete window.orderCache[outletId][id];
-                else if (filterType === 'mine' && isMine) delete window.orderCache[outletId][id];
-            });
+        const updateCache = (data, type) => {
+            if (type === 'unassigned') {
+                // Clear old unassigned from cache for this outlet
+                Object.keys(window.orderCache[outletId]).forEach(id => {
+                    if (!window.orderCache[outletId][id].assignedRider) {
+                        delete window.orderCache[outletId][id];
+                    }
+                });
+            } else if (type === 'mine') {
+                // Clear old mine from cache for this outlet
+                Object.keys(window.orderCache[outletId]).forEach(id => {
+                    if (window.orderCache[outletId][id].assignedRider) {
+                        delete window.orderCache[outletId][id];
+                    }
+                });
+            }
             Object.assign(window.orderCache[outletId], data);
             window.renderAllOrders();
         };
 
-        const q1 = query(ref(db, ordersPath), orderByChild('assignedRider'), equalTo(null));
+        // 1. Available for Pickup (Unassigned)
+        const q1 = query(ref(db, ordersPath), orderByChild('assignedRider'), equalTo(""));
         window._activeListeners.push({ ref: q1, type: 'value' });
         onValue(q1, snap => updateCache(snap.val() || {}, 'unassigned'), error => {
-            console.error(`[Firebase] Unassigned Read Error (${outletId}):`, error);
+            console.error(`[Firebase] Pickup Sync Error (${outletId}):`, error);
             if (error.code === 'PERMISSION_DENIED') {
-                console.warn("Security Rules are blocking this rider from reading orders.");
+                showToast("Access Denied: Rules are blocking orders sync.", "error");
             }
         });
 
+        // 2. My Orders (Assigned to me)
         const q2 = query(ref(db, ordersPath), orderByChild('assignedRider'), equalTo(currentEmail));
         window._activeListeners.push({ ref: q2, type: 'value' });
-        onValue(q2, snap => { 
-            window._lastOrderCache = window.orderCache; 
-            updateCache(snap.val() || {}, 'mine'); 
-        }, error => {
-            console.error(`[Firebase] Assigned Read Error (${outletId}):`, error);
+        onValue(q2, snap => updateCache(snap.val() || {}, 'mine'), error => {
+            console.error(`[Firebase] My Orders Sync Error (${outletId}):`, error);
         });
     });
 
@@ -877,12 +916,15 @@ window.renderAllOrders = () => {
     const unassignedList = document.getElementById('unassignedOrdersList');
     const dashboardActiveView = document.getElementById('dashboardActiveDeliveryView');
     const activeOrderView = document.getElementById('activeOrderView');
+    const historyList = document.getElementById('completedOrdersList');
     const pickupBadge = document.getElementById('navPickupBadge');
 
     if (!unassignedList || !dashboardActiveView || !window.currentUser) return;
 
+    // Reset views
     unassignedList.innerHTML = '';
     dashboardActiveView.innerHTML = '';
+    if (historyList) historyList.innerHTML = '';
     if (activeOrderView) {
         activeOrderView.innerHTML = `
             <div class="glass-panel empty-state-glass">
@@ -891,63 +933,47 @@ window.renderAllOrders = () => {
         `;
     }
 
+    let unassignedRows = "";
+    let historyRows = "";
     let unassignedCount = 0;
     let todayOrders = 0; let todayPay = 0; let totalCash = 0;
     const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
 
     Object.keys(window.orderCache).forEach(outletId => {
         const orders = window.orderCache[outletId];
-        Object.keys(orders).forEach(id => {
+        const sortedIds = Object.keys(orders).sort((a, b) => (orders[b].createdAt || 0) - (orders[a].createdAt || 0));
+        
+        sortedIds.forEach(id => {
             const o = orders[id];
             if (!o) return;
             const status = (o.status || "").toLowerCase();
-            const isMine = (window.currentUser && o.assignedRider) ? (o.assignedRider.toLowerCase() === window.currentUser.email.toLowerCase()) : false;
+            // Use riderId (UID) for more robust matching
+            const currentEmail = window.currentUser.email.toLowerCase();
+            const isMine = (window.currentUser && (o.riderId === window.currentUser.profile.id || (o.assignedRider && o.assignedRider.toLowerCase() === currentEmail))) ? true : false;
 
-            if ((status === "ready" || status === "cooked") && !o.assignedRider) {
+            // 1. UNASSIGNED / PICKUP SECTION
+            if (!o.assignedRider && ["ready", "cooked", "preparing", "confirmed"].includes(status)) {
                 const safeOrderId = escapeHtml((o.orderId || id.slice(-6)).toUpperCase());
                 const safeAddress = escapeHtml(o.address || 'Unknown');
-                const safeName = escapeHtml(o.customerName || 'Guest');
-                const safePhone = escapeHtml(o.phone || o.customerPhone || 'N/A');
                 const safeFee = escapeHtml(String(o.deliveryFee || 0));
                 const safeTotal = escapeHtml(String(o.total || 0));
                 const safeId = escapeHtml(id);
                 const safeOutlet = escapeHtml(outletId);
+                const statusLabel = (status === "ready" || status === "cooked") ? "READY" : "PREPARING";
                 
-                const itemsList = (o.normalizedItems || o.items || []).map(i => 
-                    `<div class="pickup-item-row">• ${escapeHtml(i.name || i.item)} (${escapeHtml(i.size)}) x${i.qty || i.quantity}</div>`
-                ).join('');
-
-                unassignedList.innerHTML += `
-                    <div class="order-card-premium">
-                        <div class="incoming-request-header">
-                            <div class="new-order-badge">AVAILABLE</div>
-                            <div class="order-id-chip">#${safeOrderId}</div>
-                        </div>
-                        <div class="incoming-request-body">
-                            <h3 class="rest-name">Drop-off: ${safeAddress}</h3>
-                            <div class="customer-info-mini mt-10">
-                                <p><strong>Customer:</strong> ${safeName}</p>
-                                <p><strong>Phone:</strong> ${safePhone}</p>
-                            </div>
-                            <div class="pickup-items-list mt-10">
-                                <p class="text-small font-bold mb-5 uppercase text-muted">Invoice Details:</p>
-                                ${itemsList}
-                            </div>
-                            <div class="trip-summary-stats mt-15" style="background:#f8fafc; padding:10px; border-radius:10px;">
-                                <div class="trip-stat">
-                                    <span class="text-muted text-small font-bold uppercase">Earning</span><br>
-                                    <span class="text-orange font-bold" style="font-size:1.2rem;">₹${safeFee}</span>
-                                </div>
-                                <div class="trip-stat">
-                                    <span class="text-muted text-small font-bold uppercase">Collect</span><br>
-                                    <span class="text-pink font-bold" style="font-size:1.2rem;">₹${safeTotal}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <button class="btn-primary full-width mt-15" data-action="accept" data-id="${safeId}" data-outlet="${safeOutlet}">PICK UP ORDER</button>
-                    </div>`;
+                unassignedRows += `
+                    <tr>
+                        <td><span class="order-id">#${safeOrderId}</span></td>
+                        <td><span class="badge-${statusLabel.toLowerCase()}">${statusLabel}</span></td>
+                        <td class="address-cell">${safeAddress}</td>
+                        <td class="text-success font-bold">₹${safeFee}</td>
+                        <td class="font-bold">₹${safeTotal}</td>
+                        <td><button class="btn-primary" data-action="accept" data-id="${safeId}" data-outlet="${safeOutlet}">ACCEPT</button></td>
+                    </tr>
+                `;
                 unassignedCount++;
             }
+            // 2. ACTIVE ORDER SECTION
             else if (status !== "delivered" && isMine) {
                 window.activeOrderId = id;
                 window.activeOrderOutlet = outletId;
@@ -974,31 +1000,29 @@ window.renderAllOrders = () => {
                 let actionButtons = "";
                 const currentStatus = (o.status || "").toLowerCase();
 
-                if (currentStatus === "ready" || currentStatus === "cooked" || currentStatus === "arriving at restaurant" || currentStatus === "confirmed") {
+                if (["ready", "cooked", "arriving at restaurant", "confirmed", "preparing"].includes(currentStatus)) {
                     actionButtons = `<button class="btn-primary full-width mt-10" data-action="pickup" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="package-check"></i> CONFIRM PICKUP</button>`;
                 } else if (currentStatus === "picked up" || currentStatus === "out for delivery") {
                     actionButtons = `<button class="btn-primary full-width mt-10" style="background:#10B981;" data-action="navigate" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="navigation"></i> LET'S GO TO DELIVER</button>`;
                 }
 
                 const activeContent = `
-                    <div class="active-delivery-mock-card">
-                        <div class="active-del-header">
-                            <div class="active-del-title">Active Delivery <span class="text-muted text-small">#${safeOrderId}</span></div>
-                            <div class="active-badge">1 ACTIVE TRIP</div>
+                    <div class="active-delivery-card-premium">
+                        <div class="card-header-premium">
+                            <span class="order-id-badge">#${safeOrderId}</span>
+                            <span class="status-pill ${currentStatus}">${safeStatus}</span>
                         </div>
                         <div class="customer-info-row">
-                            <div class="cust-avatar">${initial}</div>
-                            <div class="cust-details">
-                                <h3>${safeName}</h3>
-                                <p><i data-lucide="map-pin"></i> ${safeAdd}</p>
-                                <p class="text-orange text-small mt-10 font-bold">${safeStatus}</p>
+                            <div class="customer-avatar">${initial}</div>
+                            <div class="customer-details">
+                                <div class="customer-name">${safeName}</div>
+                                <div class="customer-address">${safeAdd}</div>
                             </div>
                         </div>
-                        <div class="pickup-items-list mt-10" style="background:#f1f5f9; border-radius:10px; padding:10px;">
-                            <p class="text-small font-bold mb-5 uppercase text-muted">Invoice Details:</p>
+                        <div class="order-items-minimal">
                             ${itemsList}
                         </div>
-                        <div class="action-pill-row mt-15">
+                        <div class="action-grid">
                             <button class="action-pill" data-action="call" data-phone="${safePhone}"><i data-lucide="phone"></i>CALL</button>
                             <button class="action-pill" data-action="msg" data-phone="${safePhone}" data-orderid="${safeOrderId}"><i data-lucide="message-circle"></i>MSG</button>
                             <button class="action-pill" data-action="otp"><i data-lucide="key-round"></i>OTP</button>
@@ -1008,20 +1032,90 @@ window.renderAllOrders = () => {
                 `;
 
                 dashboardActiveView.innerHTML = activeContent;
-                if (activeOrderView) activeOrderView.innerHTML = activeContent;
+                if (activeOrderView) {
+                    activeOrderView.innerHTML = `
+                        <div class="view-header mb-15">
+                            <h2 class="section-heading">Live Trip Navigation</h2>
+                            <p class="text-muted text-small">Tracking delivery for #${safeOrderId}</p>
+                        </div>
+                        <div id="activeTripMap" class="trip-map-container glass-panel mb-20" style="height:350px;"></div>
+                        <div class="order-details-panel">
+                            ${activeContent}
+                        </div>
+                    `;
+                }
                 
-                // Initialize/Update Map if in LIVE section
                 if (document.getElementById('sec-active').classList.contains('active')) {
-                    setTimeout(() => window.initActiveMap(o), 100);
+                    setTimeout(() => window.initActiveMap(o), 200);
                 }
             }
+            // 3. HISTORY SECTION
             else if (status === "delivered" && isMine) {
                 const fee = Number(o.deliveryFee || 0);
                 if ((o.deliveredAt || 0) >= startOfToday) { todayOrders++; todayPay += fee; }
                 totalCash += fee;
+
+                const oId = (o.orderId || id.slice(-6)).toUpperCase();
+                const dTime = o.deliveredAt ? new Date(o.deliveredAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                const safeAddress = escapeHtml(o.address || '---');
+                
+                historyRows += `
+                    <tr>
+                        <td><span class="order-id">#${oId}</span></td>
+                        <td><span class="text-muted-small">${dTime}</span></td>
+                        <td class="address-cell">${safeAddress}</td>
+                        <td class="text-success font-bold">₹${fee}</td>
+                        <td><span class="badge-delivered">DONE</span></td>
+                    </tr>
+                `;
             }
         });
     });
+
+    // Final Render for Pickup Table
+    if (unassignedCount > 0) {
+        unassignedList.innerHTML = `
+            <div class="pickup-table-wrapper">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>ORDER</th>
+                            <th>STATUS</th>
+                            <th>DESTINATION</th>
+                            <th>EARN</th>
+                            <th>TOTAL</th>
+                            <th>ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>${unassignedRows}</tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        unassignedList.innerHTML = `<div class="glass-panel text-center p-20"><p class="text-muted">No orders available for pickup right now.</p></div>`;
+    }
+
+    // Final Render for History Table
+    if (historyRows) {
+        historyList.innerHTML = `
+            <div class="premium-table-wrapper animate-fade-in">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>ORDER</th>
+                            <th>TIME</th>
+                            <th>DESTINATION</th>
+                            <th>EARN</th>
+                            <th>STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody>${historyRows}</tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        historyList.innerHTML = `<div class="glass-panel text-center p-40"><i data-lucide="history" style="width:48px;height:48px;color:#ccc;margin-bottom:15px;"></i><p class="text-muted">No completed trips found for today.</p></div>`;
+    }
 
     if (pickupBadge) { 
         pickupBadge.innerText = unassignedCount; 
@@ -1034,6 +1128,7 @@ window.renderAllOrders = () => {
     document.getElementById('stats-earnings').innerText = `₹${todayPay.toLocaleString()}`;
     document.getElementById('e-total').innerText = `₹${totalCash.toLocaleString()}`;
 
+    console.log(`[UI] Render Complete. Pickups: ${unassignedCount}, History: ${todayOrders}`);
     if (window.lucide) lucide.createIcons();
 };
 
@@ -1044,7 +1139,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
 
     // Header & Sidebar
-    document.getElementById('mobileMenuBtn')?.addEventListener('click', window.toggleRiderSidebar);
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.toggleRiderSidebar();
+    });
     document.getElementById('sidebarOverlay')?.addEventListener('click', window.toggleRiderSidebar);
     document.getElementById('statusToggleBtn')?.addEventListener('click', window.toggleRiderStatus);
     document.getElementById('logoutBtn')?.addEventListener('click', window.logout);
@@ -1098,6 +1197,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dateEl) dateEl.innerText = new Date().toLocaleDateString('en-US', dateOpts);
     
     if (window.lucide) lucide.createIcons();
+
+    // History Search
+    document.getElementById('historySearch')?.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        document.querySelectorAll('#completedOrdersList .order-card-premium').forEach(card => {
+            const id = card.querySelector('.order-id-chip').innerText.toLowerCase();
+            card.style.display = id.includes(term) ? 'block' : 'none';
+        });
+    });
 });
 
 onAuthStateChanged(auth, async user => {
@@ -1106,17 +1214,22 @@ onAuthStateChanged(auth, async user => {
     if (isLoginPage) { window.location.href = 'index.html'; return; }
 
     try {
-        const snap = await get(query(ref(db, "riders"), orderByChild("email"), equalTo(user.email.toLowerCase())));
-        if (!snap.exists()) return auth.signOut();
+        const profileRef = ref(db, `riders/${user.uid}`);
+        const snap = await get(profileRef);
+        
+        if (!snap.exists()) {
+            console.warn("[Auth] No rider profile found for UID:", user.uid);
+            return signOut(auth);
+        }
 
-        const profile = Object.entries(snap.val())[0];
-        window.currentUser = { ...user, profile: { id: profile[0], ...profile[1] } };
+        const profileData = snap.val();
+        window.currentUser = { ...user, profile: { id: user.uid, ...profileData } };
 
         const pName = window.currentUser.profile.name || "Boss";
         document.getElementById('profileName').innerText = pName;
         document.getElementById('r-name').innerText = pName;
         document.getElementById('sidebar-name').innerText = pName;
-        document.getElementById('sidebar-id').innerText = `RID-${profile[0].slice(0, 6).toUpperCase()}`;
+        document.getElementById('sidebar-id').innerText = `RID-${user.uid.slice(0, 6).toUpperCase()}`;
 
         document.getElementById('r-father-name').innerText = window.currentUser.profile.fatherName || '---';
         document.getElementById('r-age').innerText = window.currentUser.profile.age || '---';
