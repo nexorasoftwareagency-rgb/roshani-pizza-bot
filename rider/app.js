@@ -451,12 +451,11 @@ window.confirmPickup = async () => {
     const orderPath = `${window.activeOrderOutlet || 'pizza'}/orders/${window.activeOrderId}`;
     try {
         await update(ref(db, orderPath), { status: "Picked Up", pickedUpAt: serverTimestamp() });
-        const modal = document.getElementById('verificationModal');
-        if (modal) modal.classList.add('hidden');
         window.showToast("Order Picked Up! Drive safe. 🛵", "success");
         
-        // Auto-switch to LIVE section
+        // Auto-switch to LIVE section & start navigation
         window.showSection('active');
+        window.startNavigation(window.activeOrderId, window.activeOrderOutlet);
     } catch (e) {
         logError("confirmPickup", e);
         window.showToast("Failed to update status.", "error");
@@ -728,11 +727,6 @@ window.finalizeDeliverySequence = async (orderPath, matchesFallback, order, paym
     };
 
     await update(ref(db, orderPath), updates);
-    
-    // Auto-open navigation if this was a "Picked Up" transition
-    if (updates.status === "Picked Up") {
-        window.startNavigation(orderPath.split('/').pop(), orderPath.split('/')[0]);
-    }
     
     const riderId = window.currentUser.profile.id;
     const commission = Number(order.deliveryFee || 0);
