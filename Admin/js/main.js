@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         // Modal Controls
-        document.querySelectorAll('.close-btn, .cancel-dish-btn, .cancel-cat-btn, .btn-secondary').forEach(btn => {
+        document.querySelectorAll('.close-btn, .cancel-dish-btn, .cancel-cat-btn, .btn-hide-modal').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const modal = e.target.closest('.modal');
                 if (modal) {
@@ -179,15 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        document.querySelectorAll('.btn-hide-inventory-modal').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const modal = document.getElementById('inventoryModal');
-                if (modal) {
-                    modal.classList.remove('active', 'flex');
-                    modal.classList.add('hidden');
-                }
-            });
-        });
 
         document.getElementById('saveInventoryBtn')?.addEventListener('click', async () => {
             const id = document.getElementById('inventoryId').value;
