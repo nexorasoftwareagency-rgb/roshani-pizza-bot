@@ -527,11 +527,16 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
 // 4A. DAILY & MONTHLY REPORT FUNCTIONS
 // =============================
 
-async function sendDailyReport(sock) {
+async function sendDailyReport(sock, targetDate = null) {
     try {
         const outlets = ['pizza', 'cake'];
-        const now = new Date();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        
+        // Use India Time for date calculations
+        const indiaTime = new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"});
+        const now = new Date(indiaTime);
+        
+        // If targetDate is null, we assume we want reports for "today" (India time)
+        const dateStr = targetDate || now.toLocaleDateString('sv-SE'); // YYYY-MM-DD
         
         let totalOrders = 0;
         let totalRevenue = 0;
@@ -545,17 +550,25 @@ async function sendDailyReport(sock) {
             let outletRevenue = 0;
             
             Object.values(orders).forEach(order => {
-                const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
-                if (orderTime >= startOfDay) {
+                if (!order.createdAt) return;
+                
+                // Convert order time to India YYYY-MM-DD
+                const oDate = new Date(order.createdAt).toLocaleString("en-US", {timeZone: "Asia/Kolkata"});
+                const oDateStr = new Date(oDate).toLocaleDateString('sv-SE');
+                
+                if (oDateStr === dateStr) {
                     outletOrders++;
-                    outletRevenue += parseFloat(order.total || 0);
+                    // Only count delivered orders as "Sales" revenue, matching Admin
+                    if (order.status === "Delivered") {
+                        outletRevenue += parseFloat(order.total || 0);
+                    }
                 }
             });
             
             if (outletOrders > 0) {
-                reportDetails += `\n🍕 *${outlet.toUpperCase()} OUTLET:*\n`;
-                reportDetails += `   📦 Orders: ${outletOrders}\n`;
-                reportDetails += `   💰 Revenue: ₹${outletRevenue.toLocaleString()}\n`;
+                reportDetails += `\n${outlet === 'pizza' ? '🍕' : '🎂'} *${outlet.toUpperCase()} OUTLET:*\n`;
+                reportDetails += `   📦 Total Orders: ${outletOrders}\n`;
+                reportDetails += `   💰 Real Sales: ₹${outletRevenue.toLocaleString()}\n`;
             }
             
             totalOrders += outletOrders;
@@ -563,18 +576,20 @@ async function sendDailyReport(sock) {
         }
         
         const jids = await getReportRecipients();
+        const displayDate = new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
         
         const msg = `📊 *DAILY SALES REPORT* 📊\n\n` +
-            `📅 Date: ${now.toLocaleDateString('en-IN')}\n\n` +
-            reportDetails + 
-            `\n\n💵 *TOTAL:* ₹${totalRevenue.toLocaleString()}\n` +
+            `📅 Sales Date: *${displayDate}*\n` +
+            `⏰ Generated: ${now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}\n\n` +
+            (reportDetails || "_No sales recorded for this date._\n") + 
+            `\n💵 *TOTAL REVENUE:* ₹${totalRevenue.toLocaleString()}\n` +
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
             `_Sent automatically by Roshani Bot_`;
         
         for (const jid of jids) {
             await sock.sendMessage(jid, { text: msg });
         }
-        console.log(`📊 Daily report broadcast to ${jids.length} numbers`);
+        console.log(`📊 Daily report for ${dateStr} broadcast to ${jids.length} numbers`);
     } catch (err) { console.error("Daily Report Error:", err); }
 }
 
@@ -780,30 +795,20 @@ async function startBot() {
         cleanupSessions();
         updateData('bot/status', { lastSeen: Date.now(), status: 'Online' }).catch(() => {});
         
-        const now = new Date();
+        // Get Time in Asia/Kolkata
+        const indiaTime = new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"});
+        const now = new Date(indiaTime);
         const hour = now.getHours();
         const minute = now.getMinutes();
         
-        // Daily Report at 8:00 PM (20:00) - Skip Sundays
-        if (hour === 20 && minute === 0 && !dailyReportSent && now.getDay() !== 0) {
+        // Daily Report at 9:30 PM (21:30) - Capture full day sales
+        if (hour === 21 && minute === 30 && !dailyReportSent) {
             await sendDailyReport(sock);
             dailyReportSent = true;
         }
         
-        // Weekly Report every Sunday at 8:00 PM
-        if (now.getDay() === 0 && hour === 20 && minute === 0 && !weeklyReportSent) {
-            await sendWeeklyReport(sock);
-            weeklyReportSent = true;
-        }
-        
-        // Monthly Report on 1st of month at 8:00 AM
-        if (now.getDate() === 1 && hour === 8 && minute === 0 && !monthlyReportSent) {
-            await sendMonthlyReport(sock);
-            monthlyReportSent = true;
-        }
-        
-        // Reset flags at midnight
-        if (hour === 0 && minute === 0) {
+        // Reset flags at 4 AM (low traffic time)
+        if (hour === 4 && minute === 0) {
             dailyReportSent = false;
             weeklyReportSent = false;
             monthlyReportSent = false;
