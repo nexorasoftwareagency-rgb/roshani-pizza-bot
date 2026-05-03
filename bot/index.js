@@ -473,11 +473,21 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
         if (!processedStatus[id] || processedStatus[id].status !== currentStatus || isNew || isOtpChanged) {
             console.log(`[Status Update] 📤 SENDING MESSAGE: #${id.slice(-5)} -> ${currentStatus}${isOtpChanged ? ' (New OTP)' : ''} to ${jid}`);
             
+            const currentRider = order.riderId || order.assignedRider || "";
+            const lastRider = processedStatus[id]?.riderId || "";
+            const isRiderChanged = currentRider && currentRider !== lastRider;
+
             processedStatus[id] = { 
                 status: currentStatus, 
                 timestamp: Date.now(),
-                lastOtp: storedOTP 
+                lastOtp: storedOTP,
+                riderId: currentRider
             };
+
+            // NEW: Notify Rider on Assignment
+            if (isRiderChanged) {
+                await notifyRiderAssignment(sock, id, order);
+            }
 
             const botSettings = await getData("settings/Bot", order.outlet) || {};
             let msg = "";
@@ -729,24 +739,67 @@ async function sendWeeklyReport(sock) {
 async function notifyRiderPickup(sock, order) {
     try {
         if (!order.riderPhone) return;
-        
         const riderJid = formatJid(order.riderPhone);
         
-        let itemsText = (order.normalizedItems || order.items || []).map(i => `• ${i.name || i.item} (${i.size}) x${i.qty || i.quantity}`).join('\n');
+        let itemsText = "";
+        (order.items || []).forEach(i => {
+            const qty = i.quantity || i.qty || 1;
+            itemsText += `• ${i.name} (${i.size || 'Reg'}) x${qty}\n`;
+        });
+
+        const mapsLink = (order.lat && order.lng) ? `https://www.google.com/maps?q=${order.lat},${order.lng}` : (order.locationLink || "");
         
-        const msg = `🛵 *NEW PICKUP ASSIGNED* 🛵\n━━━━━━━━━━━━━━━━━━━━\n` +
-            `🆔 *Order:* #${order.orderId?.slice(-5) || 'N/A'}\n` +
+        const msg = `🛵 *ORDER PICKED UP* 🛵\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `🆔 *Order ID:* #${order.orderId || 'N/A'}\n` +
             `👤 *Customer:* ${order.customerName}\n` +
             `📞 *Phone:* ${order.phone}\n` +
-            `📍 *Address:* ${order.address}\n\n` +
-            `📝 *Note:* ${order.customerNote || 'None'}\n\n` +
-            `📦 *INVOICE DETAILS:*\n${itemsText}\n\n` +
-            `💰 *Total:* ₹${order.total} (${order.paymentMethod})\n` +
-            `🔑 *OTP:* ${order.otp || 'N/A'} (Ask customer at delivery)\n` +
-            `━━━━━━━━━━━━━━━━━━━━\n_Please confirm pickup on your portal!_`;
+            `📍 *Address:* ${order.address}\n` +
+            (mapsLink ? `🗺️ *Live Location:* ${mapsLink}\n` : "") +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `📦 *INVOICE DETAILS:*\n${itemsText}\n` +
+            `💰 *Subtotal:* ₹${order.subtotal || order.itemTotal || 0}\n` +
+            (order.deliveryFee ? `🚚 *Delivery:* ₹${order.deliveryFee}\n` : "") +
+            (order.discount ? `🎁 *Discount:* -₹${order.discount}\n` : "") +
+            `💵 *TO COLLECT: ₹${order.total}* (${order.paymentMethod})\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `🔑 *DELIVERY OTP:* ${order.otp || 'N/A'}\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `_Please ensure safe & timely delivery!_`;
         
         await sock.sendMessage(riderJid, { text: msg });
     } catch (err) { console.error("Rider Pickup Notify Error:", err); }
+}
+
+async function notifyRiderAssignment(sock, orderId, order) {
+    try {
+        const riderPhone = order.riderPhone;
+        if (!riderPhone) return;
+        const riderJid = formatJid(riderPhone);
+
+        let itemsText = "";
+        (order.items || []).forEach(i => {
+            const qty = i.quantity || i.qty || 1;
+            itemsText += `• ${i.name} (${i.size || 'Reg'}) x${qty}\n`;
+        });
+
+        const mapsLink = (order.lat && order.lng) ? `https://www.google.com/maps?q=${order.lat},${order.lng}` : (order.locationLink || "");
+
+        const msg = `🔔 *NEW ORDER ASSIGNED* 🔔\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `🆔 *Order ID:* #${order.orderId || orderId.slice(-5)}\n` +
+            `👤 *Customer:* ${order.customerName}\n` +
+            `📞 *Phone:* ${order.phone}\n` +
+            `📍 *Address:* ${order.address}\n` +
+            (mapsLink ? `🗺️ *Live Location:* ${mapsLink}\n` : "") +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `📦 *ORDER DETAILS:*\n${itemsText}\n` +
+            `💰 *Amount:* ₹${order.total} (${order.paymentMethod})\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `_Please reach the outlet for pickup!_`;
+
+        await sock.sendMessage(riderJid, { text: msg });
+    } catch (err) { console.error("Rider Assignment Notify Error:", err); }
 }
 
 async function addInAppNotification(riderUid, title, body, type = 'info', icon = 'bell', outlet = 'pizza') {

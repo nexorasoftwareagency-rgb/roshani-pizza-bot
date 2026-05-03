@@ -539,7 +539,14 @@ export async function submitWalkinSale() {
         }
         const total = Math.max(0, subtotal - discountValue);
 
-        const orderId = "W" + Date.now().toString().slice(-6);
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
+        
+        // Get sequence from database
+        const seqSnap = await db.ref(`pizza/metadata/orderSequence/${dateStr}`).transaction((current) => (current || 0) + 1);
+        const seqNum = seqSnap.snapshot.val() || 1;
+        const orderId = `${dateStr}-${seqNum.toString().padStart(4, '0')}`;
+
         const orderData = {
             orderId,
             items,
