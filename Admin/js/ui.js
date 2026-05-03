@@ -24,6 +24,7 @@ export const toggleSidebar = () => {
         document.body.classList.toggle('sidebar-collapsed');
     } else {
         const isActive = sidebar.classList.toggle('active');
+        document.body.classList.toggle('sidebar-active', isActive);
         if (overlay) overlay.classList.toggle('active', isActive);
         
         if (isActive) {
@@ -37,6 +38,7 @@ export const closeSidebar = () => {
     const overlay = document.getElementById('sidebarOverlay');
     if (sidebar) sidebar.classList.remove('active');
     if (overlay) overlay.classList.remove('active');
+    document.body.classList.remove('sidebar-active');
 };
 
 import { loadInventory, cleanupInventory } from './features/inventory.js';
@@ -100,11 +102,16 @@ export const switchTab = (tabId, skipHistory = false) => {
     const mainItem = document.getElementById(`menu-${tabId}`);
     if (mainItem) mainItem.classList.add('active');
 
-    // Update Mobile Bottom Nav
+    // Update Mobile Bottom Nav & Header Title
+    const mobileTitle = document.querySelector('.mobile-app-title');
     document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
         item.classList.remove('active');
         if (item.getAttribute('data-tab') === tabId) {
             item.classList.add('active');
+            if (mobileTitle) {
+                const label = item.querySelector('span');
+                if (label) mobileTitle.textContent = label.textContent;
+            }
         }
     });
 

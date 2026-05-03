@@ -55,33 +55,45 @@
         flex-direction: column !important;
     }
 
+    .topbar, 
+    .topbar-admin {
+        display: none !important;
+    }
+
     .main {
         touch-action: auto !important;
         pointer-events: auto !important;
         position: relative !important;
         z-index: 10 !important;
-        overflow: visible !important;
+        overflow-x: hidden !important;
         height: auto !important;
-        min-height: 100% !important;
+        min-height: 100vh !important;
         width: 100% !important;
+        padding-top: 56px !important; /* Mobile Header height */
         padding-bottom: 100px !important; /* Space for bottom nav */
     }
 
-    .tab-content, 
-    .section,
-    .panel,
-    .mobile-header,
-    .bottom-nav {
-        pointer-events: auto !important;
-        z-index: 20 !important;
-    }
-
-    .bottom-nav {
-        z-index: 3000 !important;
-    }
-
     .mobile-header {
-        z-index: 2000 !important;
+        z-index: 4000 !important;
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 56px;
+    }
+
+    .bottom-nav {
+        z-index: 5000 !important;
+        position: fixed !important;
+        bottom: 0;
+        left: 0;
+        right: 0;
+    }
+
+    .tab-content {
+        z-index: 20 !important;
+        position: relative !important;
+        pointer-events: auto !important;
     }
 
     /* Ensure tab contents are clickable */
@@ -106,6 +118,15 @@
         visibility: hidden !important;
         opacity: 0 !important;
         z-index: -1 !important;
+    }
+
+    body.sidebar-active .bottom-nav {
+        display: none !important;
+    }
+
+    body.sidebar-active .main {
+        filter: blur(4px) brightness(0.8);
+        pointer-events: none !important;
     }
 
     .desktop-only {
@@ -215,19 +236,35 @@
         top: 0 !important;
         bottom: 0 !important;
         width: 280px !important;
+        max-width: 85vw !important;
         z-index: 10000 !important;
         transform: translateX(-100%) !important;
         transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.1) !important;
+        box-shadow: 20px 0 50px rgba(0, 0, 0, 0.2) !important;
         background: white !important;
         display: flex !important;
         flex-direction: column !important;
         margin: 0 !important;
         padding: 0 !important;
+        overflow-y: auto;
     }
 
     .sidebar.active {
         transform: translateX(0) !important;
+    }
+
+    .sidebar .sidebar-header {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 10;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .sidebar .nav-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px 0;
     }
 
     .sidebar-overlay {
