@@ -1430,3 +1430,9 @@ body {
     font-weight: 900;
     font-size: 1.2rem;
 }
+
+.trip-map-container {
+    height: 350px;
+    width: 100%;
+}
+
