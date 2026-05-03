@@ -384,12 +384,11 @@ export function addSizeField(name = "", price = "") {
     const container = document.getElementById('sizesContainer');
     if (!container) return;
     const div = document.createElement('div');
-    div.style = "display:flex; gap:5px; margin-bottom:5px;";
-    div.className = "size-row";
+    div.className = "size-row flex-row flex-gap-10 mb-8";
     div.innerHTML = `
-        <input placeholder="Size (e.g. Small)" value="${name}" class="form-input" style="flex:2; margin-bottom:0">
-        <input type="number" placeholder="Price" value="${price}" class="form-input" style="flex:1; margin-bottom:0">
-        <button data-action="removeParent" style="background:none; border:none; color:red; cursor:pointer;">×</button>
+        <input placeholder="Size (e.g. Small)" value="${name}" class="form-input mb-0" style="flex:2">
+        <input type="number" placeholder="Price" value="${price}" class="form-input mb-0" style="flex:1">
+        <button data-action="removeParent" class="btn-text-danger" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:18px;">&times;</button>
     `;
     container.appendChild(div);
 }
@@ -398,12 +397,11 @@ export function addDishAddonField(name = "", price = "") {
     const container = document.getElementById('addonsContainer');
     if (!container) return;
     const div = document.createElement('div');
-    div.style = "display:flex; gap:5px; margin-bottom:5px;";
-    div.className = "addon-row";
+    div.className = "addon-row flex-row flex-gap-10 mb-8";
     div.innerHTML = `
-        <input placeholder="Addon (e.g. Extra Cheese)" value="${name}" class="form-input" style="flex:2; margin-bottom:0">
-        <input type="number" placeholder="Price" value="${price}" class="form-input" style="flex:1; margin-bottom:0">
-        <button data-action="removeParent" style="background:none; border:none; color:red; cursor:pointer;">×</button>
+        <input placeholder="Addon (e.g. Extra Cheese)" value="${name}" class="form-input mb-0" style="flex:2">
+        <input type="number" placeholder="Price" value="${price}" class="form-input mb-0" style="flex:1">
+        <button data-action="removeParent" class="btn-text-danger" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:18px;">&times;</button>
     `;
     container.appendChild(div);
 }

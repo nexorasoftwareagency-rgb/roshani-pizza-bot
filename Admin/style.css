@@ -2287,7 +2287,8 @@ tbody tr:hover td:first-child {
 }
 
 .modal-details-scroll {
-    overflow-y: visible;
+    overflow-y: auto;
+    max-height: 500px;
     padding-right: 15px;
 }
 
