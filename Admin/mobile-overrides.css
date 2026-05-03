@@ -60,6 +60,23 @@
         display: none !important;
     }
 
+    /* Fix for mobile unresponsiveness: Do NOT disable pointer events on main when sidebar is active */
+    .sidebar-active main {
+        pointer-events: auto !important;
+    }
+
+    /* Ensure header is always clickable to allow toggling sidebar back */
+    .sidebar-active header {
+        pointer-events: auto !important;
+        z-index: 1001;
+    }
+
+    /* Sidebar overlay should handle the blocking if needed, but not the main container */
+    .sidebar-overlay.active {
+        display: block;
+        pointer-events: auto;
+    }
+
     .main {
         touch-action: auto !important;
         pointer-events: auto !important;
@@ -125,8 +142,15 @@
     }
 
     body.sidebar-active .main {
-        filter: blur(4px) brightness(0.8);
-        pointer-events: none !important;
+        filter: none;
+        pointer-events: auto !important;
+    }
+
+    /* Ensure hamburger/header remains clickable even when sidebar is active */
+    body.sidebar-active .mobile-header,
+    body.sidebar-active .mobile-header-left,
+    body.sidebar-active .mobile-header-left * {
+        pointer-events: auto !important;
     }
 
     .desktop-only {
@@ -949,11 +973,15 @@
         left: 15px !important;
         width: auto !important;
         bottom: 80px !important; /* Above bottom nav */
+        top: auto !important; /* Prevent stretching from style.css top: 25px */
+        pointer-events: none !important; /* Let clicks pass through to content below */
+        height: auto !important;
     }
 
     .alert-box {
         min-width: auto !important;
         width: 100%;
         box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15) !important;
+        pointer-events: auto !important; /* Re-enable for the actual toast */
     }
 }
