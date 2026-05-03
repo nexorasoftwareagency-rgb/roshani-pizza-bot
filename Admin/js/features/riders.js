@@ -11,8 +11,8 @@ export function loadRiders() {
     // Detach previous listeners
     cleanupRiders();
 
-    const ridersRef = Outlet.ref("riders");
-    const statsRef = Outlet.ref("riderStats");
+    const ridersRef = db.ref("riders");
+    const statsRef = db.ref("riderStats");
     
     console.log(`[Riders] Initializing listeners at: ${ridersRef.toString()}`);
     
@@ -51,8 +51,8 @@ export function loadRiders() {
  */
 export function cleanupRiders() {
     console.log("[Riders] Detaching listeners...");
-    Outlet.ref("riders").off();
-    Outlet.ref("riderStats").off();
+    db.ref("riders").off();
+    db.ref("riderStats").off();
 }
 
 /**
@@ -104,7 +104,7 @@ export function renderRiders(searchTerm = "") {
         // 1. Populate Management Table
         if (table) {
             const tr = document.createElement('tr');
-            tr.className = "rider-row";
+            tr.className = "premium-row-v4";
             
             // Mask phone for privacy in general list
             const maskedPhone = r.phone ? '******' + escapeHtml(r.phone.slice(-4)) : 'N/A';
@@ -114,43 +114,43 @@ export function renderRiders(searchTerm = "") {
             const safeId = escapeHtml(r.id);
 
             tr.innerHTML = `
-                <td>
-                    <div class="rider-identity-cell">
-                        <img src="${safePhoto}" class="rider-avatar-large" alt="${safeName}">
-                        <div class="rider-identity-text">
-                            <span class="rider-name-bold">${safeName}</span>
-                            <span class="rider-subtext"><i data-lucide="phone" style="width:10px;"></i> ${maskedPhone}</span>
+                <td data-label="Rider">
+                    <div class="identity-chip-v4">
+                        <img src="${safePhoto}" class="identity-avatar-v4" alt="${safeName}">
+                        <div class="identity-info-v4">
+                            <span class="name">${safeName}</span>
+                            <span class="sub"><i data-lucide="phone" style="width:10px;"></i> ${maskedPhone}</span>
                         </div>
                     </div>
                 </td>
-                <td>
-                    <div class="credential-tag">
-                        <span class="tag-label">ID:</span>
-                        <span class="tag-value">${safeEmail}</span>
+                <td data-label="ID">
+                    <div class="identity-info-v4">
+                        <span class="name">${safeEmail}</span>
+                        <span class="sub">Credential Email</span>
                     </div>
                 </td>
-                <td>
-                    <div class="status-indicator-wrapper">
-                        <span class="status-dot dot-${statusClass}"></span>
-                        <span class="status-text text-${statusClass}">${escapeHtml(displayStatus)}</span>
+                <td data-label="Status">
+                    <div class="rider-status-pill-v4 ${statusClass}">
+                        <span class="rider-dot-v4"></span>
+                        <span>${escapeHtml(displayStatus)}</span>
                     </div>
                 </td>
-                <td>
+                <td data-label="Performance">
                     <div class="quick-stats-grid">
-                        <div class="stat-mini">
-                            <span class="mini-label">Orders</span>
-                            <span class="mini-value">${parseInt(stats.totalOrders || 0, 10)}</span>
+                        <div class="identity-info-v4">
+                            <span class="name">${parseInt(stats.totalOrders || 0, 10)}</span>
+                            <span class="sub">Orders</span>
                         </div>
-                        <div class="stat-mini">
-                            <span class="mini-label">Wallet</span>
-                            <span class="mini-value text-success">₹${(stats.totalEarnings || 0).toLocaleString()}</span>
+                        <div class="identity-info-v4">
+                            <span class="name text-success">₹${(stats.totalEarnings || 0).toLocaleString()}</span>
+                            <span class="sub">Wallet</span>
                         </div>
                     </div>
                 </td>
-                <td>
-                    <div class="performance-bar-wrapper">
+                <td data-label="Metrics">
+                    <div class="performance-bar-wrapper" style="min-width: 100px;">
                         <div class="flex-between mb-4">
-                            <span class="text-xs">Success Rate</span>
+                            <span class="text-xs">Success</span>
                             <span class="text-xs font-bold">98%</span>
                         </div>
                         <div class="performance-track">
@@ -158,16 +158,16 @@ export function renderRiders(searchTerm = "") {
                         </div>
                     </div>
                 </td>
-                <td>
-                    <div class="action-buttons-flex">
-                        <button data-action="editRider" data-id="${safeId}" class="btn-icon-premium" title="Edit Rider">
-                            <i data-lucide="edit-2"></i>
+                <td data-label="Actions">
+                    <div class="action-group-v4">
+                        <button data-action="editRider" data-id="${safeId}" class="btn-action-v4" title="Edit Rider">
+                            <i data-lucide="edit-2" style="width:14px;"></i>
                         </button>
-                        <button data-action="resetRiderPassword" data-email="${safeEmail}" class="btn-icon-premium text-warning" title="Reset Password">
-                            <i data-lucide="key"></i>
+                        <button data-action="resetRiderPassword" data-email="${safeEmail}" class="btn-action-v4" title="Reset Password">
+                            <i data-lucide="key" style="width:14px;"></i>
                         </button>
-                        <button data-action="deleteRider" data-id="${safeId}" class="btn-icon-premium text-danger" title="Delete Rider">
-                            <i data-lucide="trash-2"></i>
+                        <button data-action="deleteRider" data-id="${safeId}" class="btn-action-v4 danger" title="Delete Rider">
+                            <i data-lucide="trash-2" style="width:14px;"></i>
                         </button>
                     </div>
                 </td>
@@ -178,26 +178,37 @@ export function renderRiders(searchTerm = "") {
         // 2. Populate Active Dashboard (If exists)
         if (activeDashboard) {
             const card = document.createElement('div');
-            card.className = `rider-status-card ${statusClass}`;
+            card.className = `rider-status-card-v4 ${statusClass} premium-shadow-v4`;
             const safeName = escapeHtml(r.name || "Rider");
             const safePhoto = (r.profilePhoto || profileImg).replace(/"/g, '&quot;');
             const safeStatus = escapeHtml(displayStatus);
 
             card.innerHTML = `
-                <div class="rider-card-header">
-                    <img src="${safePhoto}" alt="${safeName}">
-                    <div class="rider-info">
-                        <h4>${safeName}</h4>
-                        <p>${safeStatus}</p>
+                <div class="identity-chip-v4 mb-15">
+                    <img src="${safePhoto}" class="identity-avatar-v4" alt="${safeName}">
+                    <div class="identity-info-v4">
+                        <span class="name">${safeName}</span>
+                        <div class="rider-status-pill-v4 ${statusClass}">
+                            <span class="rider-dot-v4"></span>
+                            <span>${safeStatus}</span>
+                        </div>
                     </div>
                 </div>
                 ${displayStatus === 'On Delivery' && r.currentOrder ? `
-                    <div class="active-task-pulse">
-                        <span>Current: Order #${escapeHtml(String(r.currentOrder).slice(-5))}</span>
+                    <div class="active-task-v4">
+                        <i data-lucide="package" style="width:12px;"></i>
+                        <span>Order #${escapeHtml(String(r.currentOrder).slice(-5))}</span>
                     </div>
-                ` : ''}
+                ` : `
+                    <div class="idle-state-v4 text-muted-small">
+                        <i data-lucide="clock" style="width:12px;"></i>
+                        <span>Waiting for orders...</span>
+                    </div>
+                `}
             `;
             activeDashboard.appendChild(card);
+            if (window.lucide) window.lucide.createIcons(card);
+        }
         }
     });
 
@@ -365,7 +376,7 @@ export async function saveRiderAccount() {
                 updatedAt: Date.now()
             };
 
-            await Outlet.ref(`riders/${riderId}`).update(updateData);
+            await db.ref(`riders/${riderId}`).update(updateData);
             logAudit("Riders", `Updated Rider: ${name}`, riderId);
             showToast("Rider updated successfully!", "success");
             hideRiderModal();
@@ -386,7 +397,7 @@ export async function saveRiderAccount() {
                 createdAt: Date.now()
             };
 
-            await Outlet.ref(`riders/${uid}`).set(riderData);
+            await db.ref(`riders/${uid}`).set(riderData);
             await secondaryAuth.signOut(); // Security: Sign out secondary user immediately
 
             logAudit("Riders", `Created New Rider: ${name}`, uid);
@@ -409,7 +420,7 @@ export function deleteRider(id) {
         haptic();
 
         try {
-            const riderRef = Outlet.ref(`riders/${id}`);
+            const riderRef = db.ref(`riders/${id}`);
             const snap = await riderRef.once('value');
             const riderName = snap.val()?.name || "Unknown";
             

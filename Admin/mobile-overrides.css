@@ -9,6 +9,14 @@
         --safe-bottom: env(safe-area-inset-bottom);
     }
 
+    .flex-wrap-mobile {
+        flex-wrap: wrap !important;
+    }
+
+    .flex-1 {
+        flex: 1 !important;
+    }
+
     * {
         -webkit-tap-highlight-color: rgba(249, 115, 22, 0.15);
         touch-action: manipulation;
@@ -45,7 +53,6 @@
         overflow: visible !important;
         display: flex !important;
         flex-direction: column !important;
-        pointer-events: none !important; /* Let children handle it */
     }
 
     .main {
@@ -114,17 +121,91 @@
     .notification-sheet.mobile-only,
     .drawer-content.mobile-only {
         display: none !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        z-index: 5000 !important; /* Above bottom nav (3000) */
+        flex-direction: column;
+        border-top-left-radius: 28px !important;
+        border-top-right-radius: 28px !important;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.12) !important;
+        max-height: 85vh !important;
+        padding-bottom: calc(85px + var(--safe-bottom)) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        border-bottom: none !important;
     }
 
     .bottom-sheet.mobile-only.active,
     .notification-sheet.mobile-only.active,
     .drawer-content.mobile-only.active {
         display: flex !important;
+        animation: slideSheetUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .sheet-handle {
+        width: 40px !important;
+        height: 5px !important;
+        background: rgba(0, 0, 0, 0.1) !important;
+        border-radius: 10px !important;
+        margin: 12px auto 4px auto !important;
+        flex-shrink: 0;
+    }
+
+    .sheet-header {
+        padding: 12px 20px 20px 20px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        border-bottom: 1px solid rgba(0,0,0,0.03) !important;
+        gap: 12px !important;
+    }
+
+    .sheet-header h3 {
+        font-size: 18px !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.5px !important;
+        margin: 0 !important;
+        color: var(--dark) !important;
+        background: linear-gradient(135deg, var(--dark) 0%, #475569 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .sheet-clear-btn {
+        padding: 8px 16px !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        border-radius: 100px !important;
+        background: var(--ghost-white) !important;
+        border: 1px solid rgba(0,0,0,0.04) !important;
+        color: var(--primary) !important;
+        transition: all 0.2s ease;
+    }
+
+    .sheet-clear-btn:active {
+        transform: scale(0.95);
+        background: var(--primary-lighter) !important;
+    }
+
+    .sheet-body {
+        padding: 15px !important;
+        overflow-y: auto !important;
+    }
+
+    @keyframes slideSheetUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
     }
 
     body {
-        padding-bottom: calc(70px + var(--safe-bottom));
-        font-size: 14px;
+        padding-bottom: calc(64px + var(--safe-bottom));
+        font-size: 13px;
     }
 
     /* --- 2. SIDEBAR NAVIGATION (DRAWER MODE) --- */
@@ -165,20 +246,20 @@
         pointer-events: auto;
     }
 
-    /* Mobile Header */
+    /* Mobile Header - Compact */
     .mobile-header {
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
         right: 0 !important;
-        height: 64px !important;
+        height: 56px !important;
         background: #fff !important;
         border-bottom: 1px solid #eee !important;
         z-index: 4000 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: space-between !important;
-        padding: 0 16px !important;
+        padding: 0 12px !important;
     }
 
     .mobile-header-left {
@@ -186,16 +267,16 @@
         cursor: pointer !important;
     }
 
-    /* --- 3. TOUCH-FRIENDLY BUTTONS --- */
+    /* --- 3. COMPACT BUTTONS --- */
     button, 
     .btn-primary, 
     .btn-secondary,
     .nav-btn {
-        min-height: 44px;
-        min-width: 44px;
-        padding: 12px 20px;
-        font-size: 15px;
-        border-radius: 12px;
+        min-height: 40px;
+        min-width: 40px;
+        padding: 10px 16px;
+        font-size: 14px;
+        border-radius: 10px;
     }
 
     .btn-table-action,
@@ -205,14 +286,14 @@
         padding: 8px 12px;
     }
 
-    /* --- 4. IMPROVED INPUTS FOR MOBILE --- */
+    /* --- 4. COMPACT INPUTS --- */
     input, 
     select, 
     textarea {
-        font-size: 16px !important;
-        padding: 14px 16px !important;
-        border-radius: 12px !important;
-        min-height: 48px;
+        font-size: 14px !important;
+        padding: 10px 12px !important;
+        border-radius: 10px !important;
+        min-height: 42px;
     }
 
     input:focus, 
@@ -255,8 +336,8 @@
 
     .orders-column {
         background: white;
-        border-radius: 16px;
-        padding: 15px;
+        border-radius: 14px;
+        padding: 12px;
     }
 
     /* --- 6. POS / WALK-IN MOBILE OPTIMIZATION --- */
@@ -266,6 +347,9 @@
         gap: 0 !important;
         flex: 1 !important;
         overflow-y: auto !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100vw !important;
         -webkit-overflow-scrolling: touch !important;
         padding: 5px !important;
     }
@@ -291,9 +375,9 @@
     /* Search - Sticky style */
     .walkin-picker .panel-header {
         position: sticky !important;
-        top: 64px !important; /* Matches Mobile Header height */
+        top: 56px !important; /* Matches Compact Mobile Header height */
         background: #fff !important;
-        padding: 10px 15px !important;
+        padding: 8px 12px !important;
         margin-bottom: 0 !important;
         border-radius: 0 !important;
         z-index: 1000 !important;
@@ -317,12 +401,12 @@
         padding: 8px 12px !important;
     }
 
-    /* Dish Grid - 4 columns for mobile */
+    /* Dish Grid - Optimized for Mobile */
     #tab-walkin .walkin-dish-grid {
         display: grid !important;
-        grid-template-columns: repeat(4, 1fr) !important;
-        gap: 6px !important;
-        padding: 2px !important;
+        grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)) !important;
+        gap: 10px !important;
+        padding: 5px !important;
         max-height: none !important;
         overflow: visible !important;
     }
@@ -474,8 +558,8 @@
 
     .walkin-pay-btn {
         flex: none !important;
-        padding: 12px 8px !important;
-        font-size: 12px !important;
+        padding: 14px 10px !important;
+        font-size: 13px !important;
     }
 
     /* Discount presets */
@@ -512,7 +596,7 @@
     /* --- Mobile Category Tabs - Filter Pills (Sticky) --- */
     .category-tabs-container {
         position: sticky !important;
-        top: 64px !important; /* Header (64) */
+        top: 56px !important; /* Header (56) */
         z-index: 999 !important;
         background: #fff !important;
         display: flex !important;
@@ -670,24 +754,24 @@
     .mobile-card-table tr {
         display: block !important;
         background: #ffffff !important;
-        border-radius: 20px !important;
-        margin-bottom: 20px !important;
-        padding: 15px !important;
-        box-shadow: var(--shadow-medium) !important;
-        border: 1.5px solid var(--primary-lighter) !important;
+        border-radius: 14px !important;
+        margin-bottom: 12px !important;
+        padding: 12px !important;
+        box-shadow: var(--shadow-soft) !important;
+        border: 1px solid var(--primary-lighter) !important;
         position: relative !important;
-        margin-top: 10px !important;
+        margin-top: 8px !important;
     }
 
     .mobile-card-table td {
         display: flex !important;
         justify-content: space-between !important;
         align-items: center !important;
-        padding: 10px 0 !important;
+        padding: 8px 0 !important;
         border-bottom: 1px solid var(--primary-lighter) !important;
-        font-size: 13px !important;
+        font-size: 12px !important;
         text-align: right !important;
-        gap: 15px !important;
+        gap: 10px !important;
     }
 
     .mobile-card-table td:last-child {
@@ -731,20 +815,79 @@
 
     .dashboard-grid {
         grid-template-columns: 1fr !important;
-        gap: 16px !important;
-        padding: 10px !important;
+        gap: 12px !important;
+        padding: 8px !important;
     }
 
     .kpi-row {
         grid-template-columns: repeat(2, 1fr) !important;
-        gap: 10px !important;
+        gap: 8px !important;
+        padding: 8px !important;
+    }
+
+    .kpi-card, .glass-card, .panel {
+        box-shadow: 0 2px 8px rgba(255, 77, 0, 0.05) !important;
+        border: 1px solid rgba(0, 0, 0, 0.08) !important;
         padding: 10px !important;
     }
 
-    /* Fix card shadows in dashboard */
-    .kpi-card, .glass-card, .panel {
-        box-shadow: 0 4px 15px rgba(255, 77, 0, 0.08) !important;
-        border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    .kpi-card .kpi-value {
+        font-size: 18px !important;
+    }
+
+    /* Premium Component Mobile Shinkage */
+    .dish-card {
+        padding: 8px !important;
+        border-radius: 14px !important;
+    }
+    
+    .dish-info h4 {
+        font-size: 13px !important;
+    }
+    
+    .dish-pricing-box {
+        padding: 6px !important;
+        margin: 4px 0 !important;
+    }
+    
+    .dish-price-row {
+        font-size: 10px !important;
+        margin-bottom: 2px !important;
+    }
+
+    .priority-card {
+        padding: 10px !important;
+        border-radius: 14px !important;
+    }
+
+    .p-name {
+        font-size: 15px !important;
+    }
+
+    .p-meta {
+        margin-top: 8px !important;
+        font-size: 11px !important;
+    }
+
+    .p-meta .p-total {
+        font-size: 13px !important;
+    }
+
+    .priority-actions {
+        margin-top: 10px !important;
+        padding-top: 8px !important;
+        gap: 5px !important;
+    }
+
+    .status-select-mini {
+        font-size: 10px !important;
+        padding: 5px !important;
+        border-radius: 6px !important;
+    }
+
+
+    .kpi-card .kpi-label {
+        font-size: 11px !important;
     }
 
     /* --- 12. MODAL OPTIMIZATIONS --- */

@@ -51,7 +51,7 @@
     },
     "pizza": {
       "orders": {
-        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && query.orderByChild == 'assignedRider' && (query.equalTo == null || query.equalTo == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
+        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && query.orderByChild == 'assignedRider' && (query.equalTo == null || query.equalTo == '' || query.equalTo == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
         ".indexOn": ["createdAt", "status", "riderId", "assignedRider"],
         "$orderId": {
           ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || !data.child('assignedRider').exists() || data.child('assignedRider').val().toLowerCase() == root.child('riders').child(auth.uid).child('email').val().toLowerCase())",
@@ -90,7 +90,7 @@
     },
     "cake": {
       "orders": {
-        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && query.orderByChild == 'assignedRider' && (query.equalTo == null || query.equalTo == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
+        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && query.orderByChild == 'assignedRider' && (query.equalTo == null || query.equalTo == '' || query.equalTo == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
         ".indexOn": ["createdAt", "status", "riderId", "assignedRider"],
         "$orderId": {
           ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || !data.child('assignedRider').exists() || data.child('assignedRider').val().toLowerCase() == root.child('riders').child(auth.uid).child('email').val().toLowerCase())",

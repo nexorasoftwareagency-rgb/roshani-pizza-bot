@@ -9,10 +9,9 @@ import { logAudit, escapeHtml, formatDate, haptic } from '../utils.js';
  * Loads and renders the customer table with LTV and order count.
  */
 export function loadCustomers() {
-    const table = document.getElementById("customersTable");
+    const table = document.getElementById("customersTableBody") || document.getElementById("customersTable");
     if (!table) return;
 
-    // Fetch both to correlate
     Promise.all([
         Outlet.ref("customers").once("value"),
         Outlet.ref("orders").once("value")
@@ -25,39 +24,55 @@ export function loadCustomers() {
             const c = child.val();
             const phone = child.key;
 
-            // Calculate stats
             const myOrders = orders.filter(o => o.phone === phone);
             const orderCount = myOrders.length;
             const ltv = myOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
 
-            // PII Policy: Do not mask phone numbers (requested by user)
-            // But we keep the displayPhone variable for consistent UI if needed.
-            // USER explicitly said "do not mask phone numbers" in phase 2.
             const displayPhone = phone; 
-            const truncatedAddress = c.address ? (c.address.length > 30 ? c.address.substring(0, 30) + "..." : c.address) : "No address saved";
+            const truncatedAddress = c.address ? (c.address.length > 30 ? c.address.substring(0, 30) + "..." : c.address) : "Counter Sale / Guest";
 
             table.innerHTML += `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05)">
-                    <td data-label="Name">
-                        <div style="font-weight:600; color:var(--text-main)">${escapeHtml(c.name)}</div>
-                        <small style="color:var(--text-muted); font-size:10px;">Joined: ${c.registeredAt ? new Date(c.registeredAt).toLocaleDateString() : 'N/A'}</small>
+                <tr class="premium-row-v4">
+                    <td data-label="Customer">
+                        <div class="identity-chip-v4">
+                            <div class="kpi-icon-box glass" style="width:32px; height:32px; font-size:14px;">
+                                <i data-lucide="user"></i>
+                            </div>
+                            <div class="identity-info-v4">
+                                <span class="name">${escapeHtml(c.name || 'Anonymous')}</span>
+                                <span class="sub">Joined: ${c.registeredAt ? new Date(c.registeredAt).toLocaleDateString() : 'N/A'}</span>
+                            </div>
+                        </div>
                     </td>
                     <td data-label="WhatsApp">
-                        <a href="https://wa.me/91${phone.replace(/\D/g, "").slice(-10)}" target="_blank" rel="noopener noreferrer" style="color:var(--primary); text-decoration:none; display:flex; align-items:center; gap:5px;">
-                             <i class="fab fa-whatsapp"></i> ${escapeHtml(displayPhone)}
-                        </a>
-                    </td>
-                    <td data-label="Last Address">
-                        <div style="font-size:12px; color:var(--text-main); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(c.address || '')}">
-                            ${escapeHtml(truncatedAddress)}
+                        <div class="identity-info-v4">
+                            <a href="https://wa.me/91${phone.replace(/\D/g, "").slice(-10)}" target="_blank" rel="noopener noreferrer" class="link-premium font-bold" style="display:flex; align-items:center; gap:5px;">
+                                 <i data-lucide="message-square" style="width:12px;"></i> ${escapeHtml(displayPhone)}
+                            </a>
                         </div>
-                        ${c.locationLink ? `<a href="${escapeHtml(c.locationLink)}" target="_blank" rel="noopener noreferrer" style="color:var(--primary); font-size:10px; text-decoration:none;">📍 Map Link</a>` : ""}
                     </td>
-                    <td data-label="Orders" style="font-weight:600; color:var(--vibrant-orange)">${orderCount}</td>
-                    <td data-label="LTV" style="font-weight:700; color:var(--warm-yellow)">₹${ltv.toLocaleString()}</td>
+                    <td data-label="Address">
+                        <div class="identity-info-v4">
+                            <span class="sub" title="${escapeHtml(c.address || '')}">${escapeHtml(truncatedAddress)}</span>
+                            ${c.locationLink ? `<a href="${escapeHtml(c.locationLink)}" target="_blank" rel="noopener noreferrer" class="link-premium fs-10 font-bold">📍 VIEW MAP</a>` : ""}
+                        </div>
+                    </td>
+                    <td data-label="Orders">
+                        <div class="flex-col">
+                            <span class="font-bold color-primary">${orderCount}</span>
+                            <span class="text-muted-small">Purchases</span>
+                        </div>
+                    </td>
+                    <td data-label="Value" class="text-right">
+                        <div class="flex-col pr-15">
+                            <span class="font-bold fs-15">₹${ltv.toLocaleString()}</span>
+                            <span class="text-muted-small">LTV</span>
+                        </div>
+                    </td>
                 </tr>
             `;
         });
+        if (window.lucide) window.lucide.createIcons(table);
     });
 }
 
@@ -148,15 +163,26 @@ export function generateCustomReport() {
 
         // Render Table
         tableBody.innerHTML = salesData.map(o => `
-            <tr class="report-row-bordered">
-                <td data-label="Date" class="report-cell report-date-cell">${formatDate(o.createdAt)}</td>
-                <td data-label="Customer" class="report-cell">
-                     <div class="report-cust-name">${escapeHtml(o.customerName || 'Guest')}</div>
-                    <div class="report-cust-phone">${escapeHtml(o.phone || '')}</div>
+            <tr class="premium-row-v4">
+                <td data-label="Date">
+                    <div class="identity-info-v4">
+                        <span class="name">${formatDate(o.createdAt)}</span>
+                        <span class="sub">#${escapeHtml(o.orderId || o.id.slice(-5))}</span>
+                    </div>
                 </td>
-                <td data-label="Total" class="report-cell report-total-cell">₹${o.total || 0}</td>
-                <td data-label="Method" class="report-cell"><span class="badge badge-secondary">${escapeHtml(o.paymentMethod || 'COD')}</span></td>
-                <td data-label="Items" class="report-cell">
+                <td data-label="Customer">
+                    <div class="identity-info-v4">
+                        <span class="name">${escapeHtml(o.customerName || 'Guest')}</span>
+                        <span class="sub">${escapeHtml(o.phone || '')}</span>
+                    </div>
+                </td>
+                <td data-label="Total">
+                    <span class="font-bold text-orange">₹${o.total || 0}</span>
+                </td>
+                <td data-label="Method">
+                    <span class="badge-payment">${escapeHtml(o.paymentMethod || 'COD')}</span>
+                </td>
+                <td data-label="Items">
                      ${(() => {
                          const rawList = o.cart || (Array.isArray(o.items) ? o.items : Object.values(o.items || {}));
                          const itemsList = rawList.length ? rawList : (o.item ? [{name: o.item, qty: 1}] : []);
@@ -368,27 +394,32 @@ export async function loadLostSales() {
             const whatsappLink = `https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}`;
 
             const tr = document.createElement('tr');
+            tr.className = "premium-row-v4";
             tr.innerHTML = `
-            <td style="padding-left:25px;">
-                <div class="font-bold text-main">${ts}</div>
-                <div class="text-muted-small" style="font-size:10px;">ID: ...${id.slice(-6)}</div>
-            </td>
-            <td>
-                <div class="flex-column">
-                    <span class="font-bold">${escapeHtml(record.customerName || 'Guest')}</span>
-                    <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" class="text-primary font-bold" style="font-size:12px;">📱 ${escapeHtml(phone)}</a>
+            <td data-label="Date" class="p-l-25">
+                <div class="identity-info-v4">
+                    <span class="name">${ts}</span>
+                    <span class="sub">ID: ...${id.slice(-6)}</span>
                 </div>
             </td>
-            <td>
+            <td data-label="Customer">
+                <div class="identity-info-v4">
+                    <span class="name">${escapeHtml(record.customerName || 'Guest')}</span>
+                    <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" class="text-primary font-bold" style="font-size:12px; text-decoration:none;">📱 ${escapeHtml(phone)}</a>
+                </div>
+            </td>
+            <td data-label="Step">
                 <span class="status-pill" style="background:rgba(0,0,0,0.05); color:var(--text-dark); border:1px solid rgba(0,0,0,0.1); font-size:10px;">
                     ${escapeHtml(source)}
                 </span>
             </td>
-            <td style="max-width:250px;">
-                <div class="text-truncate-2" title="${escapeHtml(itemsStr)}">${escapeHtml(itemsStr)}</div>
+            <td data-label="Items" style="max-width:250px;">
+                <div class="identity-info-v4">
+                    <span class="sub text-truncate-2" title="${escapeHtml(itemsStr)}">${escapeHtml(itemsStr)}</span>
+                </div>
             </td>
-            <td style="padding-right:25px; text-align:right;">
-                <span class="font-black" style="font-size:16px; color:var(--text-dark);">₹${val}</span>
+            <td data-label="Value" class="p-r-25 text-right">
+                <span class="font-bold text-orange" style="font-size:16px;">₹${val}</span>
             </td>
         `;
             tbody.appendChild(tr);

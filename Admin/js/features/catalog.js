@@ -23,21 +23,22 @@ export function loadCategories() {
             state.categories.push(cat);
 
             const div = document.createElement('div');
-            div.className = "glass-card";
-            div.style.padding = "15px";
-            div.classList.add('flex-row', 'flex-center');
-            div.style.alignItems = "center";
-            div.style.gap = "15px";
-            div.style.borderRadius = "12px";
-            div.style.border = "1px solid rgba(0,0,0,0.05)";
+            div.className = "premium-row-v4 p-15 flex-row flex-center flex-gap-15 br-12";
+            div.style.border = "1px solid rgba(0,0,0,0.02)";
 
             div.innerHTML = `
-                <img src="${cat.image || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\' viewBox=\'0 0 60 60\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23eee\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'8\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" style="width:60px; height:60px; border-radius:10px; object-fit:cover; border:1px solid rgba(0,0,0,0.05)">
-                <div style="flex:1">
-                    <h4 style="margin:0; color:var(--text-main); font-weight:700;">${escapeHtml(cat.name)}</h4>
-                    <small style="color:var(--text-muted)">ID: ${child.key.slice(-4)}</small>
+                <div class="identity-chip-v4" style="flex: 1;">
+                    <img src="${cat.image || 'https://placehold.co/100/orange/white?text=Category'}" class="identity-avatar-v4" style="width:50px; height:50px;">
+                    <div class="identity-info-v4">
+                        <span class="name">${escapeHtml(cat.name)}</span>
+                        <span class="sub">ID: ${child.key.slice(-4).toUpperCase()}</span>
+                    </div>
                 </div>
-                <button data-action="deleteCategory" data-id="${cat.id}" style="background:none; border:none; color:#ef4444; font-size:20px; cursor:pointer; opacity:0.6;">&times;</button>
+                <div class="action-group-v4">
+                    <button data-action="deleteCategory" data-id="${cat.id}" class="btn-action-v4 danger" title="Delete Category">
+                         <i data-lucide="trash-2" style="width:14px;"></i>
+                    </button>
+                </div>
             `;
             container.appendChild(div);
         });
@@ -137,21 +138,44 @@ export function loadMenu() {
             }
 
             const card = document.createElement('div');
-            card.className = 'dish-card';
+            card.className = 'dish-card premium-shadow-v4';
             card.innerHTML = `
                 <div class="dish-img-container">
-                    <img src="${d.image || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\' viewBox=\'0 0 150 150\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23eee\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'12\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="${escapeHtml(d.name)}">
+                    <img src="${d.image || 'https://placehold.co/150/orange/white?text=Dish'}" alt="${escapeHtml(d.name)}">
                     <div class="stock-badge ${d.stock ? 'available' : 'out'}">
-                        ${d.stock ? 'AVAILABLE' : 'OUT OF STOCK'}
+                        ${d.stock ? '✅ Available' : '❌ Out of Stock'}
                     </div>
+                    <div class="dish-category-badge">${escapeHtml(d.category || 'General')}</div>
                 </div>
                 <div class="dish-info">
-                     <h4>${escapeHtml(d.name)}</h4>
-                    <div class="dish-category">${escapeHtml(d.category || '')}</div>
-                    ${sizesHtml}
-                    <div class="dish-actions">
-                        <button class="edit-btn btn-secondary flex-center gap-5" data-action="editDish" data-id="${dishId}"><i data-lucide="edit-3" style="width:12px;"></i> Edit</button>
-                        <button class="delete-btn btn-secondary flex-center" data-action="deleteDish" data-id="${dishId}"><i data-lucide="trash-2" style="width:12px;"></i></button>
+                    <h4 class="mb-8">${escapeHtml(d.name)}</h4>
+                    
+                    <div class="dish-pricing-v4 mb-15">
+                        ${d.sizes ? Object.entries(d.sizes).map(([size, price]) => `
+                            <div class="price-chip-v4">
+                                <span class="size">${escapeHtml(size)}</span>
+                                <span class="price">₹${escapeHtml(String(price))}</span>
+                            </div>
+                        `).join("") : `
+                            <div class="price-chip-v4 main">
+                                <span class="size">Price</span>
+                                <span class="price">₹${escapeHtml(String(d.price || 0))}</span>
+                            </div>
+                        `}
+                    </div>
+
+                    <div class="flex-row justify-between flex-center pt-12 border-t-ghost">
+                        <div class="action-group-v4">
+                            <button class="btn-action-v4" data-action="editDish" data-id="${dishId}" title="Edit Dish">
+                                <i data-lucide="edit-3" style="width:14px;"></i>
+                            </button>
+                            <button class="btn-action-v4 danger" data-action="deleteDish" data-id="${dishId}" title="Delete Dish">
+                                <i data-lucide="trash-2" style="width:14px;"></i>
+                            </button>
+                        </div>
+                        <div class="notif-time-badge-premium fs-10" style="padding:4px 8px;">
+                            ID: ${dishId.slice(-4).toUpperCase()}
+                        </div>
                     </div>
                 </div>`;
 

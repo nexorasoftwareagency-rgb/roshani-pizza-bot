@@ -36,8 +36,8 @@ export function initAuth() {
     if (loginForm) {
         loginForm.onsubmit = async (e) => {
             e.preventDefault();
-            const emailEl = document.getElementById("adminEmail");
-            const passEl = document.getElementById("adminPassword");
+            const emailEl = document.getElementById("loginEmail");
+            const passEl = document.getElementById("loginPassword");
             if (emailEl && passEl) {
                 doLogin(emailEl.value.trim(), passEl.value);
             } else {
@@ -92,9 +92,9 @@ export function initAuth() {
             console.log(`[Auth] Fetching profile from: admins/${user.uid}`);
             console.log("[Auth] Current outlet:", window.currentOutlet);
 
-            // Use a promise with timeout to prevent hang
+            // Ensure global paths are used for system-wide nodes
             const adminSnap = await Promise.race([
-                Outlet.ref(`admins/${user.uid}`).once("value"),
+                db.ref(`admins/${user.uid}`).once("value"),
                 new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000))
             ]);
             console.log("[Auth] Admin snapshot exists:", adminSnap.exists());
@@ -268,20 +268,30 @@ export function userLogout() {
  * LOGIN (Manual trigger)
  */
 export async function doLogin(email, pass) {
-    const btn = document.querySelector("#loginForm button");
+    const btn = document.getElementById("loginBtn");
+    const errEl = document.getElementById("loginError");
     try {
         if (btn) {
             btn.disabled = true;
-            btn.innerText = "Authenticating...";
+            btn.innerHTML = '<span>Accessing Dashboard...</span> <div class="loading-spinner-small ml-10"></div>';
         }
+        if (errEl) errEl.classList.add('hidden');
+        
         logAudit('LOGIN_ATTEMPT', { email });
         await auth.signInWithEmailAndPassword(email, pass);
     } catch (error) {
         console.error("Login Error:", error);
-        showToast(error.message, "error");
+        if (errEl) {
+            errEl.innerText = error.message;
+            errEl.classList.remove('hidden');
+        } else {
+            showToast(error.message, "error");
+        }
+        
         if (btn) {
             btn.disabled = false;
-            btn.innerText = "Sign In";
+            btn.innerHTML = '<span>Access Dashboard</span> <i data-lucide="arrow-right" class="ml-10" style="width:18px;"></i>';
+            if (window.lucide) window.lucide.createIcons();
         }
     }
 }

@@ -295,13 +295,30 @@ function renderFeeSlabs(slabs) {
     
     slabs.forEach((slab, index) => {
         const tr = document.createElement('tr');
+        tr.className = 'premium-row-v4';
         tr.innerHTML = `
-            <td><input type="number" class="slab-km form-input-small" value="${slab.km}" placeholder="KM"></td>
-            <td><input type="number" class="slab-fee form-input-small" value="${slab.fee}" placeholder="₹"></td>
-            <td><button class="btn-icon text-danger" data-action="removeFeeSlab">🗑️</button></td>
+            <td>
+                <div class="flex-row flex-center flex-gap-8">
+                    <i data-lucide="map-pin" class="text-muted" style="width:14px;"></i>
+                    <input type="number" class="slab-km form-input-small w-80" value="${slab.km}" placeholder="KM">
+                    <span class="text-muted-small">km</span>
+                </div>
+            </td>
+            <td>
+                <div class="flex-row flex-center flex-gap-8">
+                    <span class="text-muted-small">₹</span>
+                    <input type="number" class="slab-fee form-input-small w-80" value="${slab.fee}" placeholder="Fee">
+                </div>
+            </td>
+            <td class="text-right">
+                <button class="btn-icon-danger" data-action="removeFeeSlab" title="Remove Slab">
+                    <i data-lucide="trash-2" style="width:16px;"></i>
+                </button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
+    if (window.lucide) window.lucide.createIcons();
 }
 
 export function addFeeSlab() {
@@ -374,9 +391,7 @@ function showStatusAlert(newStatus) {
     if (!alertContainer) return;
 
     const div = document.createElement('div');
-    div.className = 'alert-box';
-    const colorMap = { 'FORCE_OPEN': '#22c55e', 'FORCE_CLOSED': '#ef4444', 'AUTO': '#3b82f6' };
-    div.style.borderLeftColor = colorMap[newStatus] || '#3b82f6';
+    div.className = 'alert-box info';
     
     const labelMap = { 
         'FORCE_OPEN': '✅ Outlet is now FORCE OPEN', 
@@ -385,11 +400,19 @@ function showStatusAlert(newStatus) {
     };
     
     div.innerHTML = `
-        <div class="alert-title">${labelMap[newStatus] || 'Status Updated'}</div>
-        <div class="alert-sub">WhatsApp bot will respect this status immediately.</div>
+        <div class="alert-title">
+            <i data-lucide="zap" style="width:18px;"></i>
+            <span>${labelMap[newStatus] || 'Status Updated'}</span>
+        </div>
+        <div class="alert-sub">The WhatsApp bot and ordering system will respect this status immediately.</div>
     `;
     alertContainer.appendChild(div);
-    setTimeout(() => div.remove(), 4000);
+    if (window.lucide) window.lucide.createIcons();
+    
+    setTimeout(() => {
+        div.style.animation = 'slideOutPremium 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards';
+        setTimeout(() => div.remove(), 500);
+    }, 4000);
 }
 
 // --- INITIALIZATION ---

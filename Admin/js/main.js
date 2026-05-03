@@ -165,6 +165,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         document.getElementById('saveDishBtn')?.addEventListener('click', saveDish);
 
+        // Inventory Modal
+        document.getElementById('btnAddInventoryItem')?.addEventListener('click', () => {
+            const modal = document.getElementById('inventoryModal');
+            if (modal) {
+                document.getElementById('inventoryModalTitle').innerText = "Add New Item";
+                document.getElementById('inventoryId').value = "";
+                ['invItemName', 'invItemStock', 'invItemMinStock'].forEach(id => {
+                    document.getElementById(id).value = "";
+                });
+                modal.classList.add('active', 'flex');
+                modal.classList.remove('hidden');
+            }
+        });
+
+        document.querySelectorAll('.btn-hide-inventory-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modal = document.getElementById('inventoryModal');
+                if (modal) {
+                    modal.classList.remove('active', 'flex');
+                    modal.classList.add('hidden');
+                }
+            });
+        });
+
+        document.getElementById('saveInventoryBtn')?.addEventListener('click', async () => {
+            const id = document.getElementById('inventoryId').value;
+            const data = {
+                name: document.getElementById('invItemName').value.trim(),
+                category: document.getElementById('invItemCategory').value,
+                stock: parseFloat(document.getElementById('invItemStock').value) || 0,
+                minStock: parseFloat(document.getElementById('invItemMinStock').value) || 0,
+                unit: document.getElementById('invItemUnit').value,
+                lastUpdated: Date.now()
+            };
+
+            if (!data.name) return showToast("Item name is required", "warning");
+
+            try {
+                if (id) await Outlet.ref(`inventory/${id}`).update(data);
+                else await Outlet.ref('inventory').push(data);
+                
+                showToast("Inventory item saved!", "success");
+                document.querySelector('.btn-hide-inventory-modal').click();
+            } catch (err) {
+                showToast("Failed to save: " + err.message, "error");
+            }
+        });
+
+
         // Toggle Password Visibility
         const setupPassToggle = (btnId, inputId) => {
             const btn = document.getElementById(btnId);
@@ -205,6 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const action = el.getAttribute('data-action');
             const tab = el.getAttribute('data-tab');
+            
+            console.log(`[Interaction] Click detected: Action=${action}, Tab=${tab}`, el);
 
             if (tab) {
                 switchTab(tab);
