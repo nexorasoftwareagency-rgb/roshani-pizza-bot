@@ -1239,70 +1239,33 @@
                 <div id="reportsContainer" class="hidden"></div>
             </div>
 
-            <!-- INVENTORY TAB -->
-            <div id="tab-inventory" class="tab-content hidden">
-                <div class="panel">
-                    <div class="panel-header">
-                        <div>
-                            <h2 class="panel-title">INVENTORY & STOCK</h2>
-                            <p class="panel-subtitle">Track raw materials and kitchen supplies in real-time</p>
+                <div id="tab-inventory" class="tab-content hidden">
+                <div class="panel flex-center p-60">
+                    <div class="coming-soon-v4 center-text">
+                        <div class="cs-icon-glow mb-24">
+                            <i data-lucide="sparkles" style="width: 48px; height: 48px; color: var(--primary);"></i>
                         </div>
-                        <div class="flex-row flex-gap-10">
-                            <button id="btnLowStockOnly" class="btn-secondary btn-small">
-                                <i data-lucide="alert-triangle"></i> Low Stock
-                            </button>
-                            <button id="btnAddInventoryItem" class="btn-primary btn-small">
-                                <i data-lucide="plus"></i> Add Item
-                            </button>
+                        <h2 class="panel-title fs-32 mb-12">Inventory Management</h2>
+                        <p class="panel-subtitle fs-18 mb-32">Advanced Raw Material & Stock Tracking is currently under development.</p>
+                        
+                        <div class="cs-features-grid">
+                            <div class="cs-feature-card">
+                                <i data-lucide="activity"></i>
+                                <span>Real-time Stock Alerts</span>
+                            </div>
+                            <div class="cs-feature-card">
+                                <i data-lucide="bar-chart-3"></i>
+                                <span>Waste Analytics</span>
+                            </div>
+                            <div class="cs-feature-card">
+                                <i data-lucide="shopping-bag"></i>
+                                <span>Auto-Purchase Orders</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="stats-row-v4 mb-20">
-                        <div class="kpi-card-v4">
-                            <div class="kpi-icon-box glass">
-                                <i data-lucide="package"></i>
-                            </div>
-                            <div class="kpi-data">
-                                <span class="label">Total Items</span>
-                                <span class="value" id="inv-total-items">0</span>
-                            </div>
+                        <div class="mt-40">
+                            <span class="badge-premium">UPCOMING FEATURE</span>
                         </div>
-                        <div class="kpi-card-v4 danger">
-                            <div class="kpi-icon-box glass">
-                                <i data-lucide="alert-circle"></i>
-                            </div>
-                            <div class="kpi-data">
-                                <span class="label">Low Stock Alerts</span>
-                                <span class="value" id="inv-low-stock">0</span>
-                            </div>
-                        </div>
-                        <div class="kpi-card-v4 success">
-                            <div class="kpi-icon-box glass">
-                                <i data-lucide="truck"></i>
-                            </div>
-                            <div class="kpi-data">
-                                <span class="label">Restocked (30d)</span>
-                                <span class="value" id="inv-restock-count">0</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="scroll-x">
-                        <table class="premium-table-v4">
-                            <thead>
-                                <tr>
-                                    <th>Item Identity</th>
-                                    <th>Stock Level</th>
-                                    <th>Min. Required</th>
-                                    <th>Unit</th>
-                                    <th>Last Updated</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="inventoryTableBody">
-                                <!-- Populated via JS -->
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>
@@ -1647,63 +1610,6 @@
                     class="btn-primary flex-center flex-gap-8 w-150">
                     <i data-lucide="check-circle"></i> Save Rider
                 </button>
-                <button class="btn-secondary w-100 btn-hide-modal">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- INVENTORY MODAL -->
-    <div id="inventoryModal" class="modal">
-        <div class="modal-content glass-card">
-            <div class="modal-header">
-                <h2 id="inventoryModalTitle" class="modal-title">Inventory Item</h2>
-                <button class="close-btn btn-hide-inventory-modal">&times;</button>
-            </div>
-
-            <div class="modal-body">
-                <input type="hidden" id="inventoryId">
-                <div class="form-row">
-                    <div class="flex-1">
-                        <label class="form-label" for="invItemName">Item Name</label>
-                        <input id="invItemName" placeholder="e.g. Mozzarella Cheese" class="form-input w-full" title="Enter inventory item name">
-                    </div>
-                    <div class="flex-1">
-                        <label class="form-label" for="invItemCategory">Category</label>
-                        <select id="invItemCategory" class="form-input w-full" title="Select item category">
-                            <option value="Dairy">Dairy</option>
-                            <option value="Vegetables">Vegetables</option>
-                            <option value="Packaging">Packaging</option>
-                            <option value="Flour/Dough">Flour/Dough</option>
-                            <option value="Sauces">Sauces</option>
-                            <option value="Others">Others</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row mt-10">
-                    <div class="flex-1">
-                        <label class="form-label" for="invItemStock">Current Stock</label>
-                        <input id="invItemStock" type="number" placeholder="50" class="form-input w-full" title="Enter current stock level">
-                    </div>
-                    <div class="flex-1">
-                        <label class="form-label" for="invItemMinStock">Min Stock (Alert)</label>
-                        <input id="invItemMinStock" type="number" placeholder="10" class="form-input w-full" title="Enter minimum stock threshold for alerts">
-                    </div>
-                    <div class="flex-1">
-                        <label class="form-label" for="invItemUnit">Unit</label>
-                        <select id="invItemUnit" class="form-input w-full" title="Select stock unit">
-                            <option value="kg">kg (Kilograms)</option>
-                            <option value="ltr">ltr (Liters)</option>
-                            <option value="pcs">pcs (Pieces)</option>
-                            <option value="box">box (Boxes)</option>
-                            <option value="pkt">pkt (Packets)</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button id="saveInventoryBtn" class="btn-primary w-150">Save Item</button>
                 <button class="btn-secondary w-100 btn-hide-modal">Cancel</button>
             </div>
         </div>
