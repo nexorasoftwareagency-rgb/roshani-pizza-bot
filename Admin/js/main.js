@@ -68,6 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initAuth();
     initRiderAnalytics();
 
+    // Final check for icons on static content
+    if (window.lucide) window.lucide.createIcons();
+
     // 1. Static Event Binding
     const setupStaticListeners = () => {
         // Global Image Error Handler (CSP Compliant)
