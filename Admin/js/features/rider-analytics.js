@@ -73,8 +73,8 @@ export async function generateRiderPerformanceReport() {
         return;
     }
 
-    const fromTime = new Date(fromDateStr + "T00:00:00").getTime();
-    const toTime = new Date(toDateStr + "T23:59:59").getTime();
+    const fromStr = `${fromDateStr}T00:00:00.000Z`;
+    const toStr = `${toDateStr}T23:59:59.999Z`;
 
     const btn = document.getElementById('btnGenerateRiderReport');
     btn.disabled = true;
@@ -85,8 +85,8 @@ export async function generateRiderPerformanceReport() {
         // Note: In a large system, we'd use Firebase queries, 
         // but here we already have some data in state or can fetch the range.
         
-        const pizzaOrdersSnap = await db.ref("pizza/orders").orderByChild("createdAt").startAt(fromTime).endAt(toTime).once('value');
-        const cakeOrdersSnap = await db.ref("cake/orders").orderByChild("createdAt").startAt(fromTime).endAt(toTime).once('value');
+        const pizzaOrdersSnap = await db.ref("pizza/orders").orderByChild("createdAt").startAt(fromStr).endAt(toStr).once('value');
+        const cakeOrdersSnap = await db.ref("cake/orders").orderByChild("createdAt").startAt(fromStr).endAt(toStr).once('value');
         
         const allOrders = [];
         const processSnap = (snap, outlet) => {

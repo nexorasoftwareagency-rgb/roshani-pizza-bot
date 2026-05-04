@@ -151,47 +151,52 @@ export async function openPOSSelectionModal(dishId) {
     document.getElementById('posModalQty').innerText = "1";
     document.getElementById('posSizeSection').classList.remove('hidden');
 
-    // Render Sizes
+    // 2. Populate Sizes
     const sizeGrid = document.getElementById('posSizeGrid');
-    sizeGrid.innerHTML = "";
-
+    sizeGrid.innerHTML = '';
+    
     let sizes = dish.sizes || {};
     if (Object.keys(sizes).length === 0) {
         sizes = { "- Default -": dish.price || 0 };
     }
 
     Object.entries(sizes).forEach(([name, price], idx) => {
+        const isDefault = idx === 0;
+        if (isDefault) {
+            state.currentPOSModalSize = { name, price: Number(price) };
+        }
+
         const card = document.createElement('div');
-        card.className = `size-card ${idx === 0 ? 'active' : ''}`;
-        card.innerHTML = `
-            <div class="size-chip-box">
-                <span class="size-name">${escapeHtml(name)}</span>
-                <span class="size-price">\u20B9${escapeHtml(price)}</span>
-            </div>
-        `;
+        card.className = `size-card ${isDefault ? 'active' : ''}`;
         card.setAttribute('data-action', 'selectPOSSize');
         card.setAttribute('data-name', name);
         card.setAttribute('data-price', price);
+        card.innerHTML = `
+            <span class="size-name">${name}</span>
+            <span class="size-price">₹${Number(price).toLocaleString()}</span>
+        `;
         sizeGrid.appendChild(card);
-        if (idx === 0) state.currentPOSModalSize = { name, price };
     });
 
-    // Render Addons
+    // 3. Populate Addons
     const addonsList = document.getElementById('posAddonsList');
-    addonsList.innerHTML = "";
-
+    addonsList.innerHTML = '';
+    
     const cat = state.categories.find(c => c.name === dish.category);
     if (cat && cat.addons) {
         document.getElementById('posAddonsSection').classList.remove('hidden');
         Object.entries(cat.addons).forEach(([name, price]) => {
             const item = document.createElement('div');
-            item.className = "addon-check-item";
+            item.className = 'addon-check-item';
+            item.setAttribute('data-action', 'togglePOSAddon');
+            item.setAttribute('data-name', name);
+            item.setAttribute('data-price', price);
             item.innerHTML = `
-                <div class="flex-row flex-center">
-                    <input type="checkbox" data-action="togglePOSAddon" data-name="${escapeHtml(name)}" data-price="${escapeHtml(price)}">
-                    <span class="fs-13 font-weight-600">${escapeHtml(name)}</span>
+                <div class="flex-row flex-center flex-gap-10">
+                    <div class="custom-checkbox"></div>
+                    <span class="addon-name">${name}</span>
                 </div>
-                <span class="text-muted-small font-weight-700">+\u20B9${escapeHtml(price)}</span>
+                <span class="addon-price">+₹${Number(price).toLocaleString()}</span>
             `;
             addonsList.appendChild(item);
         });
@@ -199,17 +204,24 @@ export async function openPOSSelectionModal(dishId) {
         document.getElementById('posAddonsSection').classList.add('hidden');
     }
 
+    console.log(`[POS] Opening selection modal for: ${dish.name}`);
     updatePOSModalTotal();
     const modal = document.getElementById('posSelectionModal');
-    modal.classList.remove('hidden');
-    modal.classList.add('active', 'flex');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('active', 'side-panel-active');
+        document.body.classList.add('pos-selection-mode');
+    } else {
+        console.error("[POS] Modal element #posSelectionModal not found!");
+    }
 }
 
 export function hidePOSSelectionModal() {
     const modal = document.getElementById('posSelectionModal');
     if (modal) {
         modal.classList.add('hidden');
-        modal.classList.remove('active', 'flex');
+        modal.classList.remove('active', 'side-panel-active');
+        document.body.classList.remove('pos-selection-mode');
     }
 }
 
@@ -220,11 +232,16 @@ export function selectPOSSize(name, price, el) {
     updatePOSModalTotal();
 }
 
-export function togglePOSAddon(name, price, checkbox) {
-    if (checkbox.checked) {
-        state.currentPOSModalAddons[name] = price;
+export function togglePOSAddon(name, price, el) {
+    const isSelected = el.classList.contains('active');
+    if (!isSelected) {
+        state.currentPOSModalAddons[name] = Number(price);
+        el.classList.add('active');
+        el.querySelector('.custom-checkbox').classList.add('checked');
     } else {
         delete state.currentPOSModalAddons[name];
+        el.classList.remove('active');
+        el.querySelector('.custom-checkbox').classList.remove('checked');
     }
     updatePOSModalTotal();
 }
@@ -305,6 +322,7 @@ export function clearWalkinCart() {
     state.walkinDiscountPct = 0;
     if (document.getElementById('walkinCustPhone')) document.getElementById('walkinCustPhone').value = "";
     if (document.getElementById('walkinCustName')) document.getElementById('walkinCustName').value = "";
+    if (document.getElementById('walkinTableNo')) document.getElementById('walkinTableNo').value = "";
     if (document.getElementById('walkinCustNote')) document.getElementById('walkinCustNote').value = "";
     if (document.getElementById('walkinDiscountRow')) document.getElementById('walkinDiscountRow').classList.add('hidden');
     if (document.getElementById('walkinDiscountVal')) document.getElementById('walkinDiscountVal').innerText = "-₹0";
@@ -384,6 +402,27 @@ export function renderWalkinCart() {
     }
 
     document.getElementById("walkinTotal").innerText = `₹${finalTotal.toLocaleString()}`;
+
+    // Ensure manual discount input updates correctly
+    const discountInput = document.getElementById('walkinDiscount');
+    if (discountInput) {
+        if (!discountInput.dataset.listener) {
+            discountInput.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value) || 0;
+                state.walkinDiscount = val;
+                state.walkinDiscountPct = 0;
+                // Re-calculate totals
+                renderWalkinCart();
+            });
+            discountInput.dataset.listener = "true";
+        }
+        // Update input value to reflect state (e.g. if preset was used)
+        if (state.walkinDiscountPct === 0) {
+            discountInput.value = state.walkinDiscount;
+        } else {
+            discountInput.value = 0; // Clear manual if percentage is active
+        }
+    }
 
     // Calculate total qty for mobile summary
     const totalQty = Object.values(state.walkinCart).reduce((sum, item) => sum + item.qty, 0);
@@ -476,7 +515,9 @@ export async function submitWalkinSale() {
 
     const phone = document.getElementById("walkinCustPhone").value.trim();
     const name = document.getElementById("walkinCustName").value.trim() || "Guest";
+    const tableNo = document.getElementById("walkinTableNo")?.value.trim() || "";
     const note = document.getElementById("walkinCustNote").value.trim() || "";
+    const combinedNote = tableNo ? `[Table: ${tableNo}] ${note}` : note;
     const btn = document.getElementById('walkinSubmitBtn');
     
     if (btn) {
@@ -556,7 +597,8 @@ export async function submitWalkinSale() {
             paymentMethod: state.walkinPayMethod || "Cash",
             customerName: name,
             phone: phone || "Walk-in",
-            customerNote: note,
+            customerNote: combinedNote,
+            tableNo: tableNo,
             status: "Confirmed",
             type: "Dine-in",
             timestamp: ServerValue.TIMESTAMP,
@@ -645,17 +687,22 @@ export async function openCartAddonPicker(cartKey) {
         document.getElementById('posAddonsSection').classList.remove('hidden');
         Object.entries(cat.addons).forEach(([name, price]) => {
             const isChecked = state.currentPOSModalAddons[name] !== undefined;
-            const itemDiv = document.createElement('div');
-            itemDiv.className = "addon-check-item";
-            itemDiv.innerHTML = `
-                <div class="flex-row flex-center">
-                    <input type="checkbox" ${isChecked ? 'checked' : ''} data-action="togglePOSAddon" data-name="${escapeHtml(name)}" data-price="${escapeHtml(price)}">
-                    <span class="fs-13 font-weight-600">${escapeHtml(name)}</span>
+            const item = document.createElement('div');
+            item.className = `addon-check-item ${isChecked ? 'active' : ''}`;
+            item.setAttribute('data-action', 'togglePOSAddon');
+            item.setAttribute('data-name', name);
+            item.setAttribute('data-price', price);
+            item.innerHTML = `
+                <div class="flex-row flex-center flex-gap-10">
+                    <div class="custom-checkbox ${isChecked ? 'checked' : ''}"></div>
+                    <span class="addon-name">${name}</span>
                 </div>
-                <span class="text-muted-small font-weight-700">+\u20B9${escapeHtml(price)}</span>
+                <span class="addon-price">+₹${Number(price).toLocaleString()}</span>
             `;
-            addonsList.appendChild(itemDiv);
+            addonsList.appendChild(item);
         });
+    } else {
+        document.getElementById('posAddonsSection').classList.add('hidden');
     }
 
     state.editingCartKey = cartKey;
@@ -666,7 +713,7 @@ export async function openCartAddonPicker(cartKey) {
     updatePOSModalTotal();
     const modal = document.getElementById('posSelectionModal');
     modal.classList.remove('hidden');
-    modal.classList.add('active', 'flex');
+    modal.classList.add('active', 'side-panel-active');
 }
 
 // No window re-exposures here. All functions are exported or available via standard module imports.

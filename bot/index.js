@@ -459,23 +459,40 @@ async function notifyAdmin(sock, orderId, order, type = 'NEW') {
 
 async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
     try {
-        // FIX: Prefer the original sender JID (whatsappNumber) directly without formatting if it exists.
-        // This avoids issues with prefixes like +91 or non-standard number lengths.
-        let jid = order.whatsappNumber != null ? String(order.whatsappNumber) : undefined;
-        if (!jid || typeof jid !== 'string' || !jid.includes('@')) {
-            jid = formatJid(order.whatsappNumber || order.phone);
+        // FIX: Robust JID resolution for both Online and POS orders.
+        // POS orders usually store the phone in 'order.phone'. 
+        // Online orders store the JID in 'order.whatsappNumber'.
+        let jid = null;
+        
+        if (order.whatsappNumber && String(order.whatsappNumber).includes('@')) {
+            jid = String(order.whatsappNumber);
+        } else {
+            // Fallback to phone field (POS orders or incomplete online profiles)
+            const rawPhone = order.phone || order.whatsappNumber;
+            if (rawPhone && rawPhone !== "Walk-in") {
+                jid = formatJid(rawPhone);
+            }
         }
-
+        
         if (!jid) {
-            console.error(`[Status Update] ❌ FAILED: No valid JID for order ${id}. Phone: ${maskPhone(order.phone)}, whatsappNumber: ${maskPhone(order.whatsappNumber)}`);
+            const status = (order.status || "Unknown").toUpperCase();
+            const type = (order.type || order.orderType || "Walk-in");
+            if (order.phone !== "Walk-in") {
+                console.warn(`[BOT] ⚠️ Skipping Notification for #${id.slice(-5)} (${type}): No valid phone. Value: "${order.phone}"`);
+                updateData(`bot/logs/${id}`, { error: "No valid JID", phone: order.phone, type, timestamp: Date.now() }).catch(()=>{});
+            }
             return;
         }
 
         const currentStatus = (order.status || "").trim();
         const statusLower = currentStatus.toLowerCase();
-        const orderType = (order.type || "Online").trim();
+        const orderType = (order.type || order.orderType || "Online").trim();
         const typeLower = orderType.toLowerCase();
-        const isDineIn = typeLower.includes("dine");
+        const isDineIn = typeLower.includes("dine") || typeLower.includes("walk") || orderType === "Dine-in";
+
+        if (isDineIn) {
+            console.log(`[BOT] 🍽️ Dine-in Order Detected: #${id.slice(-5)} | Status: ${currentStatus} | Target: ${maskJid(jid)}`);
+        }
 
         const phoneDisplay = order.phone || order.whatsappNumber || "N/A";
         
@@ -517,7 +534,11 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 msg = `🎉 *ORDER PLACED!* 🍕\n━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n\nThank you for your order! 🙏\nWe have received it and our team is reviewing it now. ⏳\n\nYou will receive an update as soon as it's confirmed! ❤️\n${getFoodFunnyProgress("Placed")}`;
                 img = botSettings.imgPlaced || botSettings.imgConfirmed;
             } else if (statusLower === "confirmed") {
-                msg = `✅ *ORDER CONFIRMED!* 🎊\n━━━━━━━━━━━━━━━━━━━━\n${formatOrderInvoice(id, order)}\nYour order is being prepared with love! ❤️\n${getFoodFunnyProgress("Confirmed")}`;
+                if (isDineIn && isNew) {
+                    msg = `🍕 *WELCOME TO ROSHANI ${order.outlet?.toUpperCase() || 'PIZZA'}!* ✨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nYour counter order has been *CONFIRMED*! 🎊\n\n🆔 *Order ID:* #${id.slice(-5)}\n👤 *Customer:* ${order.customerName || 'Guest'}\n${order.tableNo ? `🪑 *Table No:* ${order.tableNo}\n` : ''}━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nYour delicious meal is being prepared right now! 👨‍🍳🔥\n\n_Thank you for dining with us!_ 🙏`;
+                } else {
+                    msg = `✅ *ORDER CONFIRMED!* 🎊\n━━━━━━━━━━━━━━━━━━━━\n${formatOrderInvoice(id, order)}\nYour order is being prepared with love! ❤️\n${getFoodFunnyProgress("Confirmed")}`;
+                }
                 img = botSettings.imgConfirmed;
             } else if (statusLower === "preparing") {
                 msg = `👨‍🍳 *NOW PREPARING!* 🔥\n━━━━━━━━━━━━━━━━━━━━\nYour order #${id.slice(-5)} is now in the kitchen! 👨‍🍳\n\nIt won't be long now! 🍕\n${getFoodFunnyProgress("Preparing")}`;
@@ -537,7 +558,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                     }
                 }
             } else if (statusLower === "picked up" || statusLower === "out for delivery") {
-                if (isDineIn) return;
+                if (isDineIn) return; // Skip delivery messages for dine-in
                 
                 let otp = storedOTP;
                 if (!otp) {
@@ -560,7 +581,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                     msg = `🛵 *OUT FOR DELIVERY!* 🚀\n━━━━━━━━━━━━━━━━━━━━\nOur rider is on the way to your location! 🛵💨\n\n🆔 Order: #${id.slice(-5)}\n🔑 *OTP:* ${otp} (Share with rider only)${riderInfoText}\n💰 *Total:* ₹${order.total || 0}\n${getFoodFunnyProgress("Out for Delivery")}`;
                 }
                 img = botSettings.imgOut;
-            } else if (statusLower === "delivered") {
+            } else if (statusLower === "delivered" || statusLower === "served") {
                 msg = `✅ *${isDineIn ? 'SERVED' : 'DELIVERED'} SUCCESSFULLY!* 🍕❤️\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n🤝 *Payment:* ${order.paymentMethod}\n💵 *Total Paid:* ₹${order.total || 0}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*Enjoy your meal!* 😋\n\n${getFunnyFoodJoke()}`;
                 img = botSettings.imgDelivered;
             } else if (statusLower === "cancelled") {
@@ -918,11 +939,19 @@ async function startBot() {
         });
         orderRef.on("child_added", (snap) => {
             const order = snap.val();
+            if (!order) return;
+            
             // Only handle "new" orders if they were created after the bot started
             const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
-            if (order && !processedStatus[snap.key] && orderTime > startupTime - 10000) {
+            const type = (order.type || order.orderType || "").toLowerCase();
+            const isDineIn = type.includes("dine") || type.includes("walk");
+            
+            // Be more lenient for Dine-in (30 mins) to ensure counter bookings are not missed
+            const timeBuffer = isDineIn ? 1800000 : 10000; 
+
+            if (!processedStatus[snap.key] && orderTime > startupTime - timeBuffer) {
                 handleOrderStatusUpdate(sock, snap.key, order, true);
-            } else if (order) {
+            } else {
                 // Just mark as processed without sending message
                 processedStatus[snap.key] = { status: order.status, timestamp: Date.now() };
             }

@@ -37,6 +37,7 @@ export async function printOrderReceipt(rawOrder, isReprint = false) {
         tagline: "THANK YOU",
         poweredBy: "Powered by Roshani ERP",
         config: {
+            showStoreName: true,
             showAddress: true,
             showGSTIN: false,
             showFSSAI: false,
@@ -48,12 +49,40 @@ export async function printOrderReceipt(rawOrder, isReprint = false) {
     };
 
     try {
-        const storeSnap = await Outlet.ref("settings/Store").once("value");
+        const [storeSnap, dispSnap] = await Promise.all([
+            Outlet.ref("settings/Store").once("value"),
+            Outlet.ref("settings/Display").once("value")
+        ]);
+
         if (storeSnap.exists()) {
             store = { ...store, ...storeSnap.val() };
         }
+
+        if (dispSnap.exists()) {
+            const disp = dispSnap.val();
+            // Map 'checkShowStoreName' -> 'showStoreName' etc. explicitly for critical flags
+            const mapping = {
+                'checkShowStoreName': 'showStoreName',
+                'checkShowAddress': 'showAddress',
+                'checkShowGSTIN': 'showGSTIN',
+                'checkShowFSSAI': 'showFSSAI',
+                'checkShowTagline': 'showTagline',
+                'checkShowPoweredBy': 'showPoweredBy',
+                'checkShowQR': 'showQR',
+                'checkShowFeedbackQR': 'showFeedbackQR'
+            };
+
+            Object.entries(mapping).forEach(([checkKey, targetKey]) => {
+                if (disp[checkKey] !== undefined) {
+                    store.config[targetKey] = disp[checkKey];
+                }
+            });
+
+            // Log for debugging visibility issues if needed
+            console.log("[Printing] Normalized Config:", store.config);
+        }
     } catch (e) {
-        console.warn("Could not load store settings for print:", e);
+        console.warn("Could not load settings for print:", e);
     }
 
     const printWindow = window.open('', '_blank', 'width=450,height=800');
