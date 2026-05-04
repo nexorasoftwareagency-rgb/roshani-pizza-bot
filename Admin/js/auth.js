@@ -1,4 +1,4 @@
-import { auth, Outlet, ServerValue, EmailAuthProvider } from './firebase.js';
+import { auth, db, Outlet, ServerValue, EmailAuthProvider } from './firebase.js';
 import { state } from './state.js';
 import { showToast, logAudit } from './utils.js';
 import * as ui from './ui.js';

@@ -143,9 +143,8 @@ export function initRealtimeListeners() {
     });
 
     // 4. PERSISTENT LIVE-OPS SYNC (Always active for recent data)
-    // We fetch the last 100 orders specifically for the 'Live Ops' tab to ensure it
-    // doesn't get empty if the main History tab is filtered to a specific old date.
-    _liveOrdersRef = _ordersRef.orderByChild("createdAt").limitToLast(100);
+    // Use a fresh reference to avoid combining multiple orderBy calls from _ordersRef
+    _liveOrdersRef = Outlet.ref("orders").orderByChild("createdAt").limitToLast(100);
     _liveOrdersValueCb = snap => {
         state.liveOrdersMap.clear();
         snap.forEach(child => {
@@ -546,6 +545,9 @@ export function renderOrders(snap) {
             liveBadge.classList.add('hidden');
         }
     }
+
+    // Refresh icons for all newly rendered orders
+    if (window.lucide) window.lucide.createIcons();
 }
 
 /**

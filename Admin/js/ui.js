@@ -178,6 +178,10 @@ export const switchTab = (tabId, skipHistory = false) => {
                 loadLostSales();
                 break;
         }
+
+        // --- PHASE 3.5: ICON SYNCHRONIZATION ---
+        // Ensure all dynamic icons in the target tab are properly rendered
+        if (window.lucide) window.lucide.createIcons(target);
     }
 };
 
