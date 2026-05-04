@@ -19,7 +19,7 @@
     }
 
     * {
-        -webkit-tap-highlight-color: rgba(249, 115, 22, 0.15);
+        -webkit-tap-highlight-color: var(--primary-glow);
         touch-action: manipulation !important;
         box-sizing: border-box;
         max-width: 100%;
@@ -50,7 +50,7 @@
     [data-action],
     [data-tab] {
         touch-action: manipulation;
-        -webkit-tap-highlight-color: rgba(249, 115, 22, 0.3);
+        -webkit-tap-highlight-color: rgba(var(--primary-rgb), 0.3);
         cursor: pointer;
     }
 
@@ -95,7 +95,7 @@
         min-height: 100vh !important; /* Fallback */
         min-height: 100dvh !important;
         width: 100% !important;
-        padding-top: 56px !important; /* Mobile Header height */
+        padding-top: var(--mobile-header-height) !important; /* Mobile Header height */
         padding-bottom: 100px !important; /* Space for bottom nav */
     }
 
@@ -106,12 +106,14 @@
         left: 0;
         right: 0;
         height: var(--mobile-header-height) !important;
-        background: #fff !important;
-        border-bottom: 1px solid #eee !important;
+        background: rgba(255, 255, 255, 0.85) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
         display: flex !important;
         align-items: center !important;
         justify-content: space-between !important;
-        padding: 0 12px !important;
+        padding: 0 16px !important;
     }
 
     .bottom-nav {
@@ -662,7 +664,7 @@
     /* --- Mobile Category Tabs - Filter Pills (Sticky) --- */
     .category-tabs-container {
         position: sticky !important;
-        top: 56px !important; /* Header (56) */
+        top: var(--mobile-header-height) !important; /* Header height variable */
         z-index: 999 !important;
         background: #fff !important;
         display: flex !important;
@@ -699,11 +701,11 @@
         transform: none !important;
     }
 
-.category-tab.active {
-        background: linear-gradient(135deg, var(--primary), #ea580c) !important;
+    .category-tab.active {
+        background: var(--primary) !important;
         border-color: var(--primary) !important;
         color: #fff !important;
-        box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4) !important;
+        box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.3) !important;
     }
 
     /* Search input */
@@ -719,7 +721,7 @@
 
     .search-input-group:focus {
         border-color: var(--primary) !important;
-        box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1) !important;
+        box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.1) !important;
     }
 
     /* --- 8. PREMIUM BOTTOM SHEET (ORDER DRAWER) --- */
@@ -760,14 +762,16 @@
         left: 0;
         right: 0;
         height: calc(65px + var(--safe-bottom));
-        background: linear-gradient(135deg, #fff, #f8fafc);
+        background: rgba(255, 255, 255, 0.85);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        backdrop-filter: blur(20px) saturate(180%);
         display: flex;
         justify-content: space-around;
         align-items: center;
-        border-top: 1px solid #e2e8f0;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
         z-index: 3000;
         padding-bottom: var(--safe-bottom);
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
     }
 
     .nav-item {
@@ -892,7 +896,7 @@
     }
 
     .kpi-card, .glass-card, .panel {
-        box-shadow: 0 2px 8px rgba(255, 77, 0, 0.05) !important;
+        box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.05) !important;
         border: 1px solid rgba(0, 0, 0, 0.08) !important;
         padding: 10px !important;
     }

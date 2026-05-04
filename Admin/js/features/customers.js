@@ -107,7 +107,7 @@ export function generateCustomReport() {
 
     // Validate date inputs
     if (!from || !to) {
-        showToast("Please select both start and end dates for filtering", "warning");
+        ui.showToast("Please select both start and end dates for filtering", "warning");
         tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px; color:var(--text-muted);'>Please select a date range to view reports.</td></tr>";
         return;
     }
@@ -115,7 +115,7 @@ export function generateCustomReport() {
     const fromDateObj = new Date(from);
     const toDateObj = new Date(to);
     if (isNaN(fromDateObj.getTime()) || isNaN(toDateObj.getTime())) {
-        showToast("Invalid date format selected", "error");
+        ui.showToast("Invalid date format selected", "error");
         return;
     }
 

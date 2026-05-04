@@ -1,6 +1,6 @@
 import { previewImage, showToast, logAudit } from './utils.js';
 import { switchOutlet, openOutletInNewTab } from './branding.js';
-import { switchTab, toggleSidebar, themeManager } from './ui.js';
+import { switchTab, toggleSidebar, themeManager, toggleMobileCart } from './ui.js';
 import { initGestures } from './gestures.js';
 import { initAuth, doLogin as adminLogin, userLogout } from './auth.js';
 import { installPWA, completeSiteRefresh } from './pwa.js';
@@ -268,8 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'toggleNotificationSheet': toggleNotificationSheet(); break;
                 case 'toggleSidebar': toggleSidebar(); break;
                 case 'toggleMobileCart': {
-                    const { ui } = await import('./ui.js');
-                    ui.toggleMobileCart(true);
+                    toggleMobileCart(true);
                     break;
                 }
                 case 'openOutletInNewTab': openOutletInNewTab(); break;
