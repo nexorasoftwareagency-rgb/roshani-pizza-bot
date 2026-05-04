@@ -519,7 +519,7 @@ export function renderOrders(snap) {
     });
 
     // Add Load More Button if on 'orders' tab
-    if (activeTab === 'orders' && snap.numChildren() >= (state.orderLimit || 50)) {
+    if (activeTab === 'orders' && snap && snap.numChildren() >= (state.orderLimit || 50)) {
         const fullTable = containers['orders'];
         if (fullTable) {
             const existingBtn = document.getElementById('loadMoreOrdersBtn');
@@ -531,7 +531,7 @@ export function renderOrders(snap) {
                 fullTable.parentNode.appendChild(footer);
             }
         }
-    } else {
+    } else if (activeTab === 'orders' || !snap) {
         const existingContainer = document.getElementById('loadMoreContainer');
         if (existingContainer) existingContainer.remove();
     }
