@@ -633,6 +633,7 @@ window.acceptOrder = async (id, outletId) => {
                 deliveryOTP: initialOTP, 
                 otp: initialOTP, 
                 assignedRider: window.currentUser.email.toLowerCase(), 
+                riderId: window.currentUser.uid,
                 riderPhone: window.currentUser.profile.phone || "",
                 acceptedAt: Date.now() 
             };
@@ -952,7 +953,22 @@ window.renderAllOrders = () => {
     let unassignedRows = "";
     let historyRows = "";
     let unassignedCount = 0;
-    let todayOrders = 0; let todayPay = 0; let totalCash = 0;
+    
+    // Stats for Today
+    let todayOrders = 0; 
+    let todayPay = 0; 
+    
+    // Outlet Specific Stats (Lifetime)
+    let pizzaEarnings = 0;
+    let cakeEarnings = 0;
+    
+    // Outlet Specific Stats (Today)
+    let pizzaToday = 0;
+    let cakeToday = 0;
+    
+    // Cash to Settle (Orders with paymentMethod === 'CASH')
+    let totalCashToSettle = 0;
+    
     const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
 
     Object.keys(window.orderCache).forEach(outletId => {
@@ -1078,8 +1094,24 @@ window.renderAllOrders = () => {
             // 3. HISTORY SECTION
             else if (status === "delivered" && isMine) {
                 const fee = Number(o.deliveryFee || 0);
-                if ((o.deliveredAt || 0) >= startOfToday) { todayOrders++; todayPay += fee; }
-                totalCash += fee;
+                const orderTotal = Number(o.total || 0);
+                const isToday = (o.deliveredAt || 0) >= startOfToday;
+                const isCash = (o.paymentMethod || "").toUpperCase() === "CASH";
+
+                if (isToday) {
+                    todayOrders++;
+                    todayPay += fee;
+                    if (outletId === 'pizza') pizzaToday += fee;
+                    else if (outletId === 'cake') cakeToday += fee;
+                }
+
+                if (outletId === 'pizza') pizzaEarnings += fee;
+                else if (outletId === 'cake') cakeEarnings += fee;
+
+                // Cash to Settle: If rider collected cash, they need to return the order total to shop
+                if (isCash) {
+                    totalCashToSettle += orderTotal;
+                }
 
                 const oId = (o.orderId || id.slice(-6)).toUpperCase();
                 const dTime = o.deliveredAt ? new Date(o.deliveredAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
@@ -1154,7 +1186,13 @@ window.renderAllOrders = () => {
 
     document.getElementById('stats-delivered').innerText = todayOrders;
     document.getElementById('stats-earnings').innerText = `₹${todayPay.toLocaleString()}`;
-    document.getElementById('e-total').innerText = `₹${totalCash.toLocaleString()}`;
+    
+    // Detailed Stats
+    if (document.getElementById('e-total')) document.getElementById('e-total').innerText = `₹${totalCashToSettle.toLocaleString()}`;
+    if (document.getElementById('e-pizza')) document.getElementById('e-pizza').innerText = `₹${pizzaEarnings.toLocaleString()}`;
+    if (document.getElementById('e-cake')) document.getElementById('e-cake').innerText = `₹${cakeEarnings.toLocaleString()}`;
+    if (document.getElementById('e-pizza-today')) document.getElementById('e-pizza-today').innerText = `₹${pizzaToday.toLocaleString()}`;
+    if (document.getElementById('e-cake-today')) document.getElementById('e-cake-today').innerText = `₹${cakeToday.toLocaleString()}`;
 
     console.log(`[UI] Render Complete. Pickups: ${unassignedCount}, History: ${todayOrders}`);
     if (window.lucide) lucide.createIcons();

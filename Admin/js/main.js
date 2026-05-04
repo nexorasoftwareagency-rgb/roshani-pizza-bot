@@ -223,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!action) return;
             const id = el.getAttribute('data-id');
             const val = el.getAttribute('data-val');
+            const tag = el.getAttribute('data-tag');
             const name = el.getAttribute('data-name');
             const price = el.getAttribute('data-price');
 
@@ -250,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'walkinRemoveItem': removeFromWalkinCart(id); break;
                 case 'filterWalkinByCategory': filterWalkinByCategory(val, el); break;
                 case 'selectPOSSize': selectPOSSize(name, parseFloat(price), el); break;
+                case 'togglePOSAddon': togglePOSAddon(name, parseFloat(price), el); break;
                 case 'triggerClick': {
                     const target = document.getElementById(val);
                     if (target) target.click();

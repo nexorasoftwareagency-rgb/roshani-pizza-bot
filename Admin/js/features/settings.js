@@ -147,7 +147,7 @@ export async function loadStoreSettings() {
         // 5. Visibility Controls
         const vi = disp || {};
         const checks = [
-            'checkShowAddress', 'checkShowGSTIN', 'checkShowFSSAI', 'checkShowTagline',
+            'checkShowStoreName', 'checkShowAddress', 'checkShowGSTIN', 'checkShowFSSAI', 'checkShowTagline',
             'checkShowPoweredBy', 'checkShowQR', 'checkShowWifiInfo', 'checkShowSocial', 'checkShowFeedbackQR'
         ];
         checks.forEach(id => {
@@ -257,7 +257,7 @@ export async function saveStoreSettings() {
 
         const displayData = {};
         const checks = [
-            'checkShowAddress', 'checkShowGSTIN', 'checkShowFSSAI', 'checkShowTagline',
+            'checkShowStoreName', 'checkShowAddress', 'checkShowGSTIN', 'checkShowFSSAI', 'checkShowTagline',
             'checkShowPoweredBy', 'checkShowQR', 'checkShowWifiInfo', 'checkShowSocial', 'checkShowFeedbackQR'
         ];
         checks.forEach(id => {

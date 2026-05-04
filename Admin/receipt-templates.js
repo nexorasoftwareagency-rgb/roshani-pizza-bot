@@ -82,21 +82,27 @@ window.ReceiptTemplates = {
             <body>
                 <div class="center">
                     ${isReprint ? `<div class="reprint-tag bold">REPRINTED BILL</div>` : ''}
-                    ${store.entityName ? `<div class="store-entity bold">${store.entityName}</div>` : ''}
-                    <h1 class="store-name">${store.storeName}</h1>
-                    <div class="address-text">${store.address || ''}</div>
                     
-                    ${store.gstin ? `<div class="bold" style="font-size:0.75rem;">GSTIN: ${store.gstin}</div>` : ''}
-                    ${store.fssai ? `<div style="font-size:0.7rem;">FSSAI: ${store.fssai}</div>` : ''}
+                    <!-- Store Branding -->
+                    ${(!store.config || store.config.showStoreName !== false) ? `
+                        ${store.entityName ? `<div class="store-entity bold">${this.escapeHtml(store.entityName)}</div>` : ''}
+                        <h1 class="store-name">${this.escapeHtml(store.storeName || (window.currentOutlet === 'pizza' ? 'ROSHANI PIZZA' : 'ROSHANI CAKES'))}</h1>
+                    ` : ''}
+                    
+                    ${(!store.config || store.config.showAddress !== false) ? `<div class="address-text">${this.escapeHtml(store.address || '')}</div>` : ''}
+                    
+                    ${(!store.config || (store.config.showGSTIN !== false && store.gstin)) ? `<div class="bold" style="font-size:0.75rem;">GSTIN: ${this.escapeHtml(store.gstin || '')}</div>` : ''}
+                    ${(!store.config || (store.config.showFSSAI !== false && store.fssai)) ? `<div style="font-size:0.7rem;">FSSAI: ${this.escapeHtml(store.fssai || '')}</div>` : ''}
                     
                     <div class="hr"></div>
-                    <div class="bold" style="font-size:1.1rem; letter-spacing: 2px;">${order.type === 'walkin' ? 'CASH MEMO' : 'ORDER INVOICE'}</div>
+                    <div class="bold" style="font-size:1.1rem; letter-spacing: 2px;">${(order.type === 'walkin' || order.type === 'Dine-in') ? 'CASH MEMO' : 'ORDER INVOICE'}</div>
                     <div class="hr"></div>
                 </div>
 
                 <div style="font-size: 0.8rem;">
-                    <div class="summary-row"><span>ORDER: #${order.orderId.slice(-6).toUpperCase()}</span> <span>${order.time}</span></div>
-                    <div class="summary-row"><span>DATE: ${order.date}</span> <span>${order.paymentMethod}</span></div>
+                    <div class="summary-row"><span>ORDER: #${order.orderId.slice(-6).toUpperCase()}</span> <span>${order.time || ''}</span></div>
+                    <div class="summary-row"><span>DATE: ${order.date || ''}</span> <span>${order.paymentMethod || 'Cash'}</span></div>
+                    ${order.tableNo ? `<div class="summary-row"><span class="bold">TABLE NO: ${order.tableNo}</span></div>` : ''}
                 </div>
                 
                 <div class="hr"></div>
@@ -123,21 +129,21 @@ window.ReceiptTemplates = {
                     </div>
                     <div class="summary-row">
                         <span>Subtotal:</span>
-                        <span>₹${order.subtotal.toFixed(2)}</span>
+                        <span>₹${Number(order.subtotal || 0).toFixed(2)}</span>
                     </div>
-                    ${order.deliveryFee > 0 ? `<div class="summary-row"><span>Delivery:</span> <span>₹${order.deliveryFee.toFixed(2)}</span></div>` : ''}
-                    ${order.discount > 0 ? `<div class="summary-row"><span class="bold">Discount Allotted:</span> <span class="bold">-₹${order.discount.toFixed(2)}</span></div>` : ''}
+                    ${order.deliveryFee > 0 ? `<div class="summary-row"><span>Delivery:</span> <span>₹${Number(order.deliveryFee).toFixed(2)}</span></div>` : ''}
+                    ${order.discount > 0 ? `<div class="summary-row"><span class="bold">Discount Allotted:</span> <span class="bold">-₹${Number(order.discount).toFixed(2)}</span></div>` : ''}
                     
                     <div class="summary-row grand-total">
-                        <span>NET PAYABLE</span>
-                        <span>₹${order.total.toFixed(2)}</span>
+                        <span style="font-size: 1rem;">NET PAYABLE</span>
+                        <span style="font-size: 1.4rem;">₹${Number(order.total || 0).toFixed(2)}</span>
                     </div>
                 </div>
 
                 <div class="mt-10" style="font-size: 0.85rem;">
-                    <div class="bold">Customer: ${this.escapeHtml(order.customerName)}</div>
-                    ${order.phone ? `<div>Contact: ${this.escapeHtml(order.phone)}</div>` : ''}
-                    ${order.customerNote ? `<div style="margin-top:8px; padding: 8px; border: 1px solid #000; font-size: 0.7rem; line-height:1.4;"><strong>NOTE:</strong> ${this.escapeHtml(order.customerNote)}</div>` : ''}
+                    <div class="bold">Customer: ${this.escapeHtml(order.customerName || 'Guest')}</div>
+                    ${order.phone && order.phone !== "Walk-in" ? `<div>Contact: ${this.escapeHtml(order.phone)}</div>` : ''}
+                    ${order.customerNote ? `<div style="margin-top:8px; padding: 8px; border: 1px dashed #000; font-size: 0.7rem; line-height:1.4;"><strong>NOTE:</strong> ${this.escapeHtml(order.customerNote)}</div>` : ''}
                 </div>
 
                 ${isReprint ? `
@@ -145,6 +151,15 @@ window.ReceiptTemplates = {
                     DUPLICATE / REPRINT
                 </div>` : ''}
 
+                <!-- PAYMENT QR SECTION -->
+                ${(store.config && store.config.showQR !== false && store.paymentQR) ? `
+                <div class="qr-section center" style="border-style: dashed; margin-top: 15px;">
+                    <img class="qr-code" src="${store.paymentQR}" alt="Payment QR">
+                    <div class="qr-text">SCAN TO PAY ONLINE</div>
+                    <div style="font-size:0.6rem; margin-top:2px;">Fast & Secure Digital Payment</div>
+                </div>` : ''}
+
+                <!-- FEEDBACK QR SECTION -->
                 ${(store.config && store.config.showFeedbackQR !== false) ? `
                 <div class="qr-section center">
                     <img class="qr-code" src="${qrUrl}" alt="Feedback QR">
@@ -153,10 +168,11 @@ window.ReceiptTemplates = {
                 </div>` : ''}
 
                 <div class="footer center">
-                    <div class="bold">${store.tagline || 'Thank You! Visit Again'}</div>
+                    ${(!store.config || store.config.showTagline !== false) ? `<div class="bold">${this.escapeHtml(store.tagline || 'Thank You! Visit Again')}</div>` : ''}
+                    ${(!store.config || store.config.showPoweredBy !== false) ? `
                     <div style="margin-top:5px; font-size: 0.65rem; opacity:0.7;">
-                        ${store.poweredBy || 'Powered by Prasant ERP'}
-                    </div>
+                        ${this.escapeHtml(store.poweredBy || 'Powered by Roshani ERP')}
+                    </div>` : ''}
                     <div style="font-size: 0.6rem; margin-top:5px;">*** This is a computer generated bill ***</div>
                 </div>
             </body>
