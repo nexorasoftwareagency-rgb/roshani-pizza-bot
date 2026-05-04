@@ -143,16 +143,12 @@ export function initAuth() {
                 const msg = document.createElement('p');
                 msg.textContent = 'No administrative profile found for this account.';
                 
-                const uidInfo = document.createElement('p');
-                uidInfo.className = 'fs-12 text-muted';
-                uidInfo.textContent = `UID: ${user.uid}`;
-                
                 const retryBtn = document.createElement('button');
                 retryBtn.className = 'btn-primary mt-20';
                 retryBtn.textContent = 'Try Another Account';
                 retryBtn.addEventListener('click', () => location.reload());
                 
-                modal.append(title, msg, uidInfo, retryBtn);
+                modal.append(title, msg, retryBtn);
                 overlay.appendChild(modal);
             }
             
@@ -227,8 +223,8 @@ export function requireAdminReauth(onSuccess) {
     const confirmBtn = document.getElementById('btnConfirmReauth');
 
     if (!modal || !passInput || !confirmBtn) {
-        console.warn("[Auth] Reauth modal elements missing, bypassing...");
-        if (typeof onSuccess === 'function') onSuccess();
+        console.error("[Auth] Critical: Reauth components missing. Aborting operation for security.");
+        showToast("Security Error: Reauthentication system unavailable", "error");
         return;
     }
 

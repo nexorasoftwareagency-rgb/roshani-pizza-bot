@@ -32,7 +32,7 @@ auth.onAuthStateChanged(async (user) => {
     const admin = child.val();
 
     if (admin.email === user.email) {
-      window.currentOutlet = admin.outlet;
+      currentOutlet = window.currentOutlet = admin.outlet;
       found = true;
     }
   });
@@ -53,14 +53,23 @@ auth.onAuthStateChanged(async (user) => {
 // =============================
 // LOGIN / LOGOUT
 // =============================
-$('loginBtn').onclick = () => {
-  auth.signInWithEmailAndPassword(
-    $('adminEmail').value,
-    $('adminPassword').value
-  ).catch(e => $('authError').textContent = e.message);
-};
+const loginBtn = $('loginBtn');
+if (loginBtn) {
+  loginBtn.onclick = () => {
+    auth.signInWithEmailAndPassword(
+      $('adminEmail').value,
+      $('adminPassword').value
+    ).catch(e => {
+      const errEl = $('authError');
+      if (errEl) errEl.textContent = e.message;
+    });
+  };
+}
 
-$('logoutBtn').onclick = () => auth.signOut();
+const logoutBtn = $('logoutBtn');
+if (logoutBtn) {
+  logoutBtn.onclick = () => auth.signOut();
+}
 
 // =============================
 // INIT
@@ -103,18 +112,33 @@ function loadOrders() {
           : '';
 
         const tr = document.createElement('tr');
+        
+        const tdId = document.createElement('td');
+        tdId.textContent = `#${order.orderId || 'N/A'}`;
+        tr.appendChild(tdId);
 
-        tr.innerHTML = `
-                    <td>#${order.orderId}</td>
-                    <td>${order.customerName}<br>${order.phone}</td>
-                    <td>${items}</td>
-                    <td>₹${order.total}</td>
-                    <td>
-                        <select onchange="updateOrderStatus('${order.id}', this.value)">
-                            ${statusOptions(order.status)}
-                        </select>
-                    </td>
-                `;
+        const tdCust = document.createElement('td');
+        tdCust.textContent = `${order.customerName || 'Guest'}`;
+        tdCust.appendChild(document.createElement('br'));
+        const spanPhone = document.createElement('span');
+        spanPhone.textContent = order.phone || '';
+        tdCust.appendChild(spanPhone);
+        tr.appendChild(tdCust);
+
+        const tdItems = document.createElement('td');
+        tdItems.textContent = items;
+        tr.appendChild(tdItems);
+
+        const tdTotal = document.createElement('td');
+        tdTotal.textContent = `₹${order.total || 0}`;
+        tr.appendChild(tdTotal);
+
+        const tdStatus = document.createElement('td');
+        const select = document.createElement('select');
+        select.onchange = (e) => updateOrderStatus(order.id, e.target.value);
+        select.innerHTML = statusOptions(order.status);
+        tdStatus.appendChild(select);
+        tr.appendChild(tdStatus);
 
         container.appendChild(tr);
       });
@@ -155,13 +179,23 @@ function loadCategories() {
     snap.forEach(child => {
       const c = child.val();
 
-      container.innerHTML += `
-                <div class="admin-card">
-                    <button onclick="deleteItem('categories','${child.key}')">X</button>
-                    <img src="${c.image}">
-                    <h4>${c.name}</h4>
-                </div>
-            `;
+      const card = document.createElement('div');
+      card.className = 'admin-card';
+
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'X';
+      delBtn.onclick = () => deleteItem('categories', child.key);
+      card.appendChild(delBtn);
+
+      const img = document.createElement('img');
+      img.src = c.image || '';
+      card.appendChild(img);
+
+      const h4 = document.createElement('h4');
+      h4.textContent = c.name || '';
+      card.appendChild(h4);
+
+      container.appendChild(card);
     });
   });
 }
@@ -190,17 +224,37 @@ function loadDishes() {
     snap.forEach(child => {
       const d = child.val();
 
-      grid.innerHTML += `
-                <div class="admin-card">
-                    <button onclick="deleteItem('dishes','${child.key}')">X</button>
-                    <img src="${d.imageUrl}">
-                    <h4>${d.name}</h4>
-                    <p>₹${d.price || '-'}</p>
+      const card = document.createElement('div');
+      card.className = 'admin-card';
 
-                    <button onclick="openSize('${child.key}')">Sizes</button>
-                    <button onclick="openAddon('${child.key}')">Addons</button>
-                </div>
-            `;
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'X';
+      delBtn.onclick = () => deleteItem('dishes', child.key);
+      card.appendChild(delBtn);
+
+      const img = document.createElement('img');
+      img.src = d.imageUrl || '';
+      card.appendChild(img);
+
+      const h4 = document.createElement('h4');
+      h4.textContent = d.name || '';
+      card.appendChild(h4);
+
+      const p = document.createElement('p');
+      p.textContent = `₹${d.price || '-'}`;
+      card.appendChild(p);
+
+      const sizeBtn = document.createElement('button');
+      sizeBtn.textContent = 'Sizes';
+      sizeBtn.onclick = () => openSize(child.key);
+      card.appendChild(sizeBtn);
+
+      const addonBtn = document.createElement('button');
+      addonBtn.textContent = 'Addons';
+      addonBtn.onclick = () => openAddon(child.key);
+      card.appendChild(addonBtn);
+
+      grid.appendChild(card);
     });
   });
 }
@@ -258,9 +312,11 @@ window.openAddon = (dishId) => {
   try {
     const parsed = JSON.parse(price);
 
+    const { name: _ignored, ...sanitizedParsed } = parsed;
+
     db.ref(`addons/${currentOutlet}/${dishId}`).push({
       name,
-      ...parsed
+      ...sanitizedParsed
     });
 
     alert("Addon Added");

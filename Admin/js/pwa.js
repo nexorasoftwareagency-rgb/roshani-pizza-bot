@@ -27,14 +27,11 @@ export const completeSiteRefresh = async () => {
             await Promise.race([swPromise, new Promise(res => setTimeout(res, 2000))]);
         }
 
-        // 2. Clear all caches with timeout
+        // 2. Clear App-Specific Caches (Optimized)
         if ('caches' in window) {
-            const cachePromise = caches.keys().then(async keys => {
-                for (let name of keys) {
-                    await caches.delete(name);
-                }
-            });
-            await Promise.race([cachePromise, new Promise(res => setTimeout(res, 2000))]);
+            const keys = await caches.keys();
+            const appKeys = keys.filter(key => key.includes('roshani-erp') || key.includes('pizza-erp'));
+            await Promise.all(appKeys.map(key => caches.delete(key)));
         }
 
         // 3. Selective Storage Wipe (Preserve Auth)
@@ -60,25 +57,40 @@ export const completeSiteRefresh = async () => {
     }
 };
 
-(function () {
-    const REFRESH_LIMIT = 5;
-    const TIME_WINDOW = 10000;
+/**
+ * DOUBLE-REFRESH DETECTION & AUTO-PURGE
+ * Triggers a nuclear purge if the user refreshes twice within 5 seconds.
+ */
+(async function () {
     const now = Date.now();
-    let refreshData = JSON.parse(sessionStorage.getItem('erp_refresh_log') || '{"count": 0, "first": 0}');
+    const lastRefresh = parseInt(sessionStorage.getItem('last_refresh_ts') || '0');
+    const refreshCount = parseInt(sessionStorage.getItem('refresh_count') || '0');
+    const TIME_WINDOW = 5000;
 
-    if (now - refreshData.first > TIME_WINDOW) {
-        refreshData = { count: 1, first: now };
+    if (now - lastRefresh < TIME_WINDOW) {
+        const newCount = refreshCount + 1;
+        sessionStorage.setItem('refresh_count', newCount.toString());
+
+        if (newCount >= 2) {
+            console.log("[PWA] Double-refresh detected. Auto-purging caches...");
+            if ('caches' in window) {
+                try {
+                    const keys = await caches.keys();
+                    const appKeys = keys.filter(key => key.includes('roshani-erp') || key.includes('pizza-erp'));
+                    await Promise.all(appKeys.map(key => caches.delete(key)));
+                } catch (e) {
+                    console.warn("[PWA] Auto-purge failed:", e);
+                }
+            }
+            sessionStorage.setItem('refresh_count', '0');
+            sessionStorage.setItem('last_refresh_ts', '0');
+            window.location.reload();
+            return;
+        }
     } else {
-        refreshData.count++;
+        sessionStorage.setItem('refresh_count', '1');
     }
-
-    sessionStorage.setItem('erp_refresh_log', JSON.stringify(refreshData));
-
-    if (refreshData.count > REFRESH_LIMIT) {
-        console.error("CRITICAL: Infinite redirect loop detected. Stopping.");
-        sessionStorage.setItem('erp_refresh_log', '{"count": 0, "first": 0}');
-        return;
-    }
+    sessionStorage.setItem('last_refresh_ts', now.toString());
 })();
 
 // Note: Manual pull-to-refresh for Nuclear Refresh has been REMOVED to prevent accidental triggers.

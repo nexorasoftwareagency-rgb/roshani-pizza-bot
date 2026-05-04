@@ -1080,7 +1080,7 @@
                                     <h5 class="migration-title primary m-0">POS Migration Utility</h5>
                                 </div>
                                 <p class="migration-text text-muted-small mb-14">Moves all add-ons from dishes to categories. Use this once to sync existing data.</p>
-                                <button id="btnMigrateAddons" data-action="migrateAddons" class="btn-primary btn-small w-full">🚀 Run Migration</button>
+                                <button id="btnMigrateAddons" data-action="migrateAddons" class="btn-primary btn-small w-full flex-center flex-gap-8"><i data-lucide="refresh-cw"></i> Run Migration</button>
                             </div>
 
                             <div class="migration-card alt premium-row-v4 p-20 br-16">
@@ -1657,7 +1657,7 @@
     </div>
 
     <!-- MOBILE POS FLOATING SUMMARY -->
-    <div id="mobileCartSummary" class="mobile-cart-summary hidden mobile-only" data-tab="walkin">
+    <div id="mobileCartSummary" class="mobile-cart-summary hidden mobile-only cursor-pointer" data-action="toggleMobileCart">
         <div class="flex-between flex-center h-full">
             <div class="flex-row flex-center flex-gap-10">
                 <div class="summary-icon"><i data-lucide="shopping-bag"></i></div>

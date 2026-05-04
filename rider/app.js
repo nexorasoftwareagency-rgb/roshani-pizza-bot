@@ -370,7 +370,7 @@ window.login = async () => {
 // PULL TO REFRESH (MOBILE)
 let touchStart = -1;
 window.addEventListener('touchstart', (e) => {
-    if (window.scrollY === 0) touchStart = e.touches[0].pageY;
+    if ((window.scrollY || document.documentElement.scrollTop || 0) === 0) touchStart = e.touches[0].pageY;
     else touchStart = -1;
 }, { passive: true });
 
@@ -532,13 +532,13 @@ window.renderNotifications = () => {
     }
 
     list.innerHTML = notifs.map(([id, n]) => `
-        <div class="notif-item ${n.read ? '' : 'unread'}" onclick="window.markNotifRead('${id}')">
-            <div class="notif-icon ${n.type || 'info'}">
-                <i data-lucide="${n.icon || 'bell'}"></i>
+        <div class="notif-item ${n.read ? '' : 'unread'}" data-action="markNotifRead" data-id="${escapeHtml(id)}">
+            <div class="notif-icon ${escapeHtml(n.type || 'info')}">
+                <i data-lucide="${escapeHtml(n.icon || 'bell')}"></i>
             </div>
             <div class="notif-body">
-                <h4>${n.title}</h4>
-                <p>${n.body}</p>
+                <h4>${escapeHtml(n.title)}</h4>
+                <p>${escapeHtml(n.body)}</p>
                 <span class="notif-time">${new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
             ${!n.read ? '<div class="unread-dot"></div>' : ''}
@@ -549,15 +549,25 @@ window.renderNotifications = () => {
 };
 
 window.markNotifRead = async (id) => {
-    const riderId = window.currentUser.profile.id;
-    await update(ref(db, `riders/${riderId}/notifications/${id}`), { read: true });
+    if (!id || !window.currentUser?.profile?.id) return;
+    try {
+        const riderId = window.currentUser.profile.id;
+        await update(ref(db, `riders/${riderId}/notifications/${id}`), { read: true });
+    } catch (e) {
+        console.warn("[Rider Notif] Mark Read Failed:", e);
+    }
 };
 
 window.clearAllNotifications = async () => {
+    if (!window.currentUser?.profile?.id) return;
     if (!confirm("Clear all notifications?")) return;
-    const riderId = window.currentUser.profile.id;
-    await remove(ref(db, `riders/${riderId}/notifications`));
-    window.showToast("Notifications cleared", "success");
+    try {
+        const riderId = window.currentUser.profile.id;
+        await remove(ref(db, `riders/${riderId}/notifications`));
+        window.showToast("Notifications cleared", "success");
+    } catch (e) {
+        window.showToast("Failed to clear notifications", "error");
+    }
 };
 
 window.toggleNotifSheet = () => {
@@ -1081,7 +1091,7 @@ window.renderAllOrders = () => {
                         <td><span class="text-muted-small">${dTime}</span></td>
                         <td class="address-cell">${safeAddress}</td>
                         <td class="text-success font-bold">₹${fee}</td>
-                        <td><span class="badge-delivered">DONE</span></td>
+                        <td><span class="rider-status-pill">DONE</span></td>
                     </tr>
                 `;
             }
@@ -1112,25 +1122,27 @@ window.renderAllOrders = () => {
     }
 
     // Final Render for History Table
-    if (historyRows) {
-        historyList.innerHTML = `
-            <div class="premium-table-wrapper animate-fade-in">
-                <table class="premium-table">
-                    <thead>
-                        <tr>
-                            <th>ORDER</th>
-                            <th>TIME</th>
-                            <th>DESTINATION</th>
-                            <th>EARN</th>
-                            <th>STATUS</th>
-                        </tr>
-                    </thead>
-                    <tbody>${historyRows}</tbody>
-                </table>
-            </div>
-        `;
-    } else {
-        historyList.innerHTML = `<div class="glass-panel text-center p-40"><i data-lucide="history" style="width:48px;height:48px;color:#ccc;margin-bottom:15px;"></i><p class="text-muted">No completed trips found for today.</p></div>`;
+    if (historyList) {
+        if (historyRows) {
+            historyList.innerHTML = `
+                <div class="premium-table-wrapper animate-fade-in">
+                    <table class="premium-table">
+                        <thead>
+                            <tr>
+                                <th>ORDER</th>
+                                <th>TIME</th>
+                                <th>DESTINATION</th>
+                                <th>EARN</th>
+                                <th>STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody>${historyRows}</tbody>
+                    </table>
+                </div>
+            `;
+        } else {
+            historyList.innerHTML = `<div class="glass-panel text-center p-40"><i data-lucide="history" style="width:48px;height:48px;color:#ccc;margin-bottom:15px;"></i><p class="text-muted">No completed trips found for today.</p></div>`;
+        }
     }
 
     if (pickupBadge) { 
@@ -1171,6 +1183,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('unassignedOrdersList')?.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-action="accept"]');
         if (btn) window.acceptOrder(btn.dataset.id, btn.dataset.outlet);
+    });
+
+    document.getElementById('notifList')?.addEventListener('click', (e) => {
+        const item = e.target.closest('[data-action="markNotifRead"]');
+        if (item) window.markNotifRead(item.dataset.id);
     });
 
     document.getElementById('dashboardActiveDeliveryView')?.addEventListener('click', (e) => {
@@ -1225,10 +1242,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // History Search
     document.getElementById('historySearch')?.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        document.querySelectorAll('#completedOrdersList .order-card-premium').forEach(card => {
-            const id = card.querySelector('.order-id-chip').innerText.toLowerCase();
-            card.style.display = id.includes(term) ? 'block' : 'none';
+        const term = (e.target.value || '').toLowerCase().trim();
+        document.querySelectorAll('#completedOrdersList tbody tr').forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(term) ? '' : 'none';
         });
     });
 });

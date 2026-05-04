@@ -110,11 +110,11 @@ export function renderWalkinDishGrid(dishes) {
     }
 
     grid.innerHTML = dishes.map(d => {
-        const price = d.price || (d.sizes ? Object.values(d.sizes)[0] : 0);
+        const price = d.price ?? (d.sizes ? Object.values(d.sizes)[0] : 0);
         return `
             <div class="pos-dish-btn-v4" data-action="openPOSSelectionModal" data-id="${d.id}">
                 <div class="dish-visual">
-                    <img src="${d.image || 'assets/img/placeholder-dish.png'}" alt="${escapeHtml(d.name)}" loading="lazy">
+                    <img src="${escapeHtml(d.image || 'assets/img/placeholder-dish.png')}" alt="${escapeHtml(d.name)}" loading="lazy">
                     <div class="dish-overlay">
                         <span class="price-chip">₹${price}</span>
                     </div>
