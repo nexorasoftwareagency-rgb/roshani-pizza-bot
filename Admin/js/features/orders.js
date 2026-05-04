@@ -258,24 +258,29 @@ export function renderOrders(snap) {
     renderPriorityOrders(allOrders);
     renderTopItems(allOrders);
     renderTopCustomers(allOrders);
-
     // Clear active containers
     Object.values(containers).forEach(c => { if (c) c.innerHTML = ""; });
+
+    // Performance Optimization: Cleanup listeners once, not per item
+    if (state._activeListeners) {
+        state._activeListeners.forEach(l => {
+            if (typeof l === 'function') l();
+            else if (l && l.off) l.off();
+        });
+        state._activeListeners = [];
+    }
+
+    // Create fragments for each container to avoid reflows
+    const fragments = {
+        'dashboard': document.createDocumentFragment(),
+        'orders': document.createDocumentFragment(),
+        'live': document.createDocumentFragment(),
+        'payments': document.createDocumentFragment()
+    };
 
     let liveCount = 0;
     sortedOrders.forEach(o => {
         const id = o.id;
-        // Normalize items for rendering and calculations
-        if (state._activeListeners) {
-            state._activeListeners.forEach(l => {
-                if (typeof l === 'function') l();
-                else if (l && l.off) l.off();
-            });
-        }
-        state._activeListeners = [];
-
-        if (state._ordersRef) state._ordersRef.off();
-        state._ordersRef = null;
         let items = [];
         if (Array.isArray(o.cart)) {
             items = o.cart;
@@ -515,7 +520,14 @@ export function renderOrders(snap) {
             `;
         }
 
-        if (containers[activeTab]) containers[activeTab].appendChild(tr);
+        if (fragments[activeTab]) fragments[activeTab].appendChild(tr);
+    });
+
+    // Bulk append fragments to containers
+    Object.keys(containers).forEach(key => {
+        if (containers[key] && fragments[key]) {
+            containers[key].appendChild(fragments[key]);
+        }
     });
 
     // Add Load More Button if on 'orders' tab
@@ -546,8 +558,13 @@ export function renderOrders(snap) {
         }
     }
 
-    // Refresh icons for all newly rendered orders
-    if (window.lucide) window.lucide.createIcons();
+    // Refresh icons only for the active container to reduce lag
+    if (window.lucide && containers[activeTab]) {
+        window.lucide.createIcons({
+            nameAttr: 'data-lucide',
+            root: containers[activeTab]
+        });
+    }
 }
 
 /**

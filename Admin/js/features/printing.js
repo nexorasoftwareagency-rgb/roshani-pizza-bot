@@ -2,6 +2,14 @@ import { Outlet } from '../firebase.js';
 import { updateStatus } from './orders.js';
 import { standardizeOrderData, showToast } from '../utils.js';
 
+// Settings Cache to reduce lag on subsequent prints
+let settingsCache = {
+    store: null,
+    display: null,
+    lastFetched: 0
+};
+const CACHE_DURATION = 300000; // 5 minutes
+
 /**
  * Main function to print an order receipt
  * @param {Object} rawOrder - The raw order data from Firebase
@@ -49,18 +57,24 @@ export async function printOrderReceipt(rawOrder, isReprint = false) {
     };
 
     try {
-        const [storeSnap, dispSnap] = await Promise.all([
-            Outlet.ref("settings/Store").once("value"),
-            Outlet.ref("settings/Display").once("value")
-        ]);
-
-        if (storeSnap.exists()) {
-            store = { ...store, ...storeSnap.val() };
+        const now = Date.now();
+        if (!settingsCache.store || (now - settingsCache.lastFetched > CACHE_DURATION)) {
+            const [storeSnap, dispSnap] = await Promise.all([
+                Outlet.ref("settings/Store").once("value"),
+                Outlet.ref("settings/Display").once("value")
+            ]);
+            
+            settingsCache.store = storeSnap.exists() ? storeSnap.val() : {};
+            settingsCache.display = dispSnap.exists() ? dispSnap.val() : {};
+            settingsCache.lastFetched = now;
         }
 
-        if (dispSnap.exists()) {
-            const disp = dispSnap.val();
-            // Map 'checkShowStoreName' -> 'showStoreName' etc. explicitly for critical flags
+        if (settingsCache.store) {
+            store = { ...store, ...settingsCache.store };
+        }
+
+        if (settingsCache.display) {
+            const disp = settingsCache.display;
             const mapping = {
                 'checkShowStoreName': 'showStoreName',
                 'checkShowAddress': 'showAddress',
@@ -77,9 +91,6 @@ export async function printOrderReceipt(rawOrder, isReprint = false) {
                     store.config[targetKey] = disp[checkKey];
                 }
             });
-
-            // Log for debugging visibility issues if needed
-            console.log("[Printing] Normalized Config:", store.config);
         }
     } catch (e) {
         console.warn("Could not load settings for print:", e);
@@ -109,7 +120,7 @@ export async function printOrderReceipt(rawOrder, isReprint = false) {
             printWindow.print();
             printWindow.close();
         } catch (e) { console.error("Print error:", e); }
-    }, 800);
+    }, 300); // Reduced delay for faster processing
 }
 
 /**
