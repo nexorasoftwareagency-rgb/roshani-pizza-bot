@@ -482,7 +482,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
         // Track OTP changes to trigger resend notifications even if status is same
         const storedOTP = order.deliveryOTP || order.otp || order.otpCode;
         const isOtpChanged = processedStatus[id] && 
-                            processedStatus[id].status.toLowerCase() === "out for delivery" && 
+                            processedStatus[id].status?.toLowerCase() === "out for delivery" && 
                             statusLower === "out for delivery" && 
                             processedStatus[id].lastOtp && 
                             processedStatus[id].lastOtp !== storedOTP;
@@ -1331,6 +1331,7 @@ async function startBot() {
                 const orderId = await generateOrderId(user.outlet);
                 const { subtotal } = formatCartSummary(user.cart);
 
+                const deliveryFee = user.deliveryFee || 0;
                 const finalOrder = {
                     orderId, outlet: user.outlet, 
                     type: "Online", // Explicitly tag as Online order
@@ -1339,7 +1340,7 @@ async function startBot() {
                     whatsappNumber: sender, // Save sender JID for status updates
                     address: escapeHtml(user.address),
                     lat: user.location.lat, lng: user.location.lng,
-                    subtotal, deliveryFee: user.deliveryFee, total: subtotal + user.deliveryFee - (user.discount || 0),
+                    subtotal, deliveryFee, total: subtotal + deliveryFee - (user.discount || 0),
                     status: "Placed", paymentMethod: method, paymentStatus: "Pending",
                     createdAt: new Date().toISOString(),
                     assignedRider: "",

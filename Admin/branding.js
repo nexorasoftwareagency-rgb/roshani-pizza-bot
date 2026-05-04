@@ -9,13 +9,13 @@
     const brand = savedOutlet.toLowerCase().includes('cake') ? 'cake' : 'pizza';
 
     const isPizza = brand === 'pizza';
-    const primaryColor = isPizza ? '#FF5200' : '#E91E63'; // Pizza Orange vs Cake Pink
-    const secondaryColor = isPizza ? '#FFF5F0' : '#FFF0F5';
+    const primaryColor = isPizza ? '#f36b21' : '#ec4899'; // Premium Roshani Orange vs Modern Pink
+    const secondaryColor = isPizza ? '#fff5ed' : '#fff0f5';
 
     // 2. Apply Dynamic CSS Variables to Root
     const root = document.documentElement;
     root.style.setProperty('--primary', primaryColor);
-    root.style.setProperty('--primary-rgb', isPizza ? '255, 82, 0' : '233, 30, 99');
+    root.style.setProperty('--primary-rgb', isPizza ? '243, 107, 33' : '236, 72, 153');
     root.style.setProperty('--bg-secondary', secondaryColor);
 
     // 3. Update Browser UI Elements (Mobile Friendly)

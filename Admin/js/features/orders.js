@@ -771,7 +771,7 @@ export async function updateStatus(id, status) {
 
     // Enforce Rider Assignment for Out for Delivery
     if (status === "Out for Delivery") {
-        const orderCheck = state.ordersMap.get(id); // Defensive lookup
+        const orderCheck = state.ordersMap.get(id) || state.liveOrdersMap.get(id); // Defensive lookup (both maps)
         if (!orderCheck) {
             showToast("⚠️ Order data not found. Refreshing...", "error");
             renderOrders(state.lastOrdersSnap);

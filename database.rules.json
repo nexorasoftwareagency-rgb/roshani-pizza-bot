@@ -56,7 +56,7 @@
         "$orderId": {
           ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && (!data.child('assignedRider').exists() || data.child('assignedRider').val().toLowerCase() == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
           ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && (!data.child('riderId').exists() || data.child('riderId').val() == auth.uid)))",
-          ".validate": "newData.hasChildren(['items', 'total', 'status', 'createdAt']) && (root.child('admins').child(auth.uid).exists() || (newData.child('items').val() == data.child('items').val() && newData.child('total').val() == data.child('total').val() && (newData.child('riderId').val() == data.child('riderId').val() || !data.child('riderId').exists())))"
+          ".validate": "newData.hasChildren(['items', 'total', 'status', 'createdAt']) && (root.child('admins').child(auth.uid).exists() || (newData.child('items').val() == data.child('items').val() && newData.child('total').val() == data.child('total').val() && (data.child('riderId').exists() ? newData.child('riderId').val() == data.child('riderId').val() : newData.child('riderId').val() == auth.uid)))"
         }
       },
       "dishes": {
@@ -93,9 +93,9 @@
         ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && query.orderByChild == 'assignedRider' && (query.equalTo == null || query.equalTo == '' || query.equalTo == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
         ".indexOn": ["createdAt", "status", "riderId", "assignedRider"],
         "$orderId": {
-          ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || !data.child('assignedRider').exists() || data.child('assignedRider').val().toLowerCase() == root.child('riders').child(auth.uid).child('email').val().toLowerCase())",
+          ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && (!data.child('assignedRider').exists() || data.child('assignedRider').val().toLowerCase() == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
           ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && (!data.child('riderId').exists() || data.child('riderId').val() == auth.uid)))",
-          ".validate": "newData.hasChildren(['items', 'total', 'status', 'createdAt']) && (root.child('admins').child(auth.uid).exists() || (newData.child('items').val() == data.child('items').val() && newData.child('total').val() == data.child('total').val()))"
+          ".validate": "newData.hasChildren(['items', 'total', 'status', 'createdAt']) && (root.child('admins').child(auth.uid).exists() || (newData.child('items').val() == data.child('items').val() && newData.child('total').val() == data.child('total').val() && (data.child('riderId').exists() ? newData.child('riderId').val() == data.child('riderId').val() : newData.child('riderId').val() == auth.uid)))"
         }
       },
       "dishes": {

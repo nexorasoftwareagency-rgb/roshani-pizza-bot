@@ -56,9 +56,17 @@ auth.onAuthStateChanged(async (user) => {
 const loginBtn = $('loginBtn');
 if (loginBtn) {
   loginBtn.onclick = () => {
+    const emailEl = $('adminEmail');
+    const passEl = $('adminPassword');
+    
+    if (!emailEl || !passEl) {
+      console.error("Login inputs not found");
+      return;
+    }
+
     auth.signInWithEmailAndPassword(
-      $('adminEmail').value,
-      $('adminPassword').value
+      emailEl.value,
+      passEl.value
     ).catch(e => {
       const errEl = $('authError');
       if (errEl) errEl.textContent = e.message;

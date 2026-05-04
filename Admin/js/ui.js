@@ -181,13 +181,15 @@ export const switchTab = (tabId, skipHistory = false) => {
     }
 };
 
+export const toggleMobileCart = (state) => import('./features/pos.js').then(m => m.toggleMobileCart(state));
+
 export const ui = {
     showConfirm,
     showToast,
     toggleSidebar,
     closeSidebar,
     switchTab,
-    toggleMobileCart: (state) => import('./features/pos.js').then(m => m.toggleMobileCart(state))
+    toggleMobileCart
 };
 
 /**
