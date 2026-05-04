@@ -141,6 +141,11 @@
                         <i data-lucide="bar-chart-3"></i> <span>Analytics</span>
                     </button>
                 </li>
+                <li id="menu-riderAnalytics" title="Monitor Rider Performance & Earnings">
+                    <button data-action="switchTab" data-tab="riderAnalytics" class="nav-btn">
+                        <i data-lucide="trending-up"></i> <span>Rider Insights</span>
+                    </button>
+                </li>
                 <li id="menu-feedback" title="View and Manage Customer Reviews">
                     <button data-action="switchTab" data-tab="feedback" class="nav-btn">
                         <i data-lucide="star"></i> <span>Feedback</span>
@@ -1247,6 +1252,97 @@
                 </div>
 
                 <div id="reportsContainer" class="hidden"></div>
+            </div>
+
+            <!-- SECTION: RIDER ANALYTICS -->
+            <div id="tab-riderAnalytics" class="tab-content hidden">
+                <div class="flex-row justify-between flex-center mb-20 p-0-10">
+                    <h2 class="section-title fs-24 m-0">🚴 Rider Intelligence</h2>
+                    <div class="flex-row flex-gap-10 flex-center glass-card p-10-20 rounded-12 flex-wrap-mobile">
+                        <select id="riderSelectAnalytics" class="form-input report-date-input" title="Select Rider">
+                            <option value="">Select a Rider...</option>
+                        </select>
+                        <input type="date" id="riderReportFrom" class="form-input report-date-input" title="From Date">
+                        <input type="date" id="riderReportTo" class="form-input report-date-input" title="To Date">
+                        <button id="btnGenerateRiderReport" class="btn-primary report-gen-btn"
+                            title="Generate Performance Data">Analyze</button>
+                    </div>
+                </div>
+
+                <div class="kpi-row mb-24">
+                    <div class="kpi-card-v4 info">
+                        <div class="icon-wrap info"><i data-lucide="wallet"></i></div>
+                        <div class="info-wrap">
+                            <span class="val" id="riderStatEarnings">₹0</span>
+                            <span class="lbl">Total Earnings</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card-v4 success">
+                        <div class="icon-wrap success"><i data-lucide="package-check"></i></div>
+                        <div class="info-wrap">
+                            <span class="val" id="riderStatDeliveries">0</span>
+                            <span class="lbl">Delivered Orders</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card-v4 warning">
+                        <div class="icon-wrap warning"><i data-lucide="timer"></i></div>
+                        <div class="info-wrap">
+                            <span class="val" id="riderStatAvgTime">0m</span>
+                            <span class="lbl">Avg. Delivery Time</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card-v4 orange">
+                        <div class="icon-wrap orange"><i data-lucide="star"></i></div>
+                        <div class="info-wrap">
+                            <span class="val" id="riderStatRating">5.0</span>
+                            <span class="lbl">Rider Rating</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="dashboard-main">
+                        <div class="glass-card p-24">
+                            <div class="flex-row justify-between flex-center mb-20">
+                                <h4 class="panel-title m-0">Delivery Performance History</h4>
+                                <div class="flex-row flex-gap-10">
+                                    <button id="btnRiderExportExcel" class="btn-secondary btn-small">📥 Excel</button>
+                                    <button id="btnRiderExportPDF" class="btn-secondary btn-small">📥 PDF</button>
+                                </div>
+                            </div>
+                            <div class="scroll-x">
+                                <table class="premium-table-v4">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Order ID</th>
+                                            <th>Customer</th>
+                                            <th>Delivery Time</th>
+                                            <th class="text-right">Earnings (₹)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="riderAnalyticsTableBody">
+                                        <!-- Data injected via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dashboard-sidebar">
+                        <div class="glass-card p-24">
+                            <h4 class="panel-title mb-15">Earnings Trend</h4>
+                            <div class="w-full h-250">
+                                <canvas id="riderEarningsChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="glass-card p-24 mt-20">
+                            <h4 class="panel-title mb-15">Rider Status Summary</h4>
+                            <div id="riderStatusSummary">
+                                <p class="text-muted-small">No rider selected for analysis.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
                 <div id="tab-inventory" class="tab-content hidden">
