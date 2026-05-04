@@ -14,8 +14,9 @@ export const formatDate = (ts) => {
 };
 
 export const escapeHtml = (str) => {
-    if (!str) return '';
-    return String(str)
+    if (str === null || str === undefined) return '';
+    if (typeof str !== 'string') str = String(str);
+    return str
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -148,7 +149,7 @@ export const addRiderNotification = async (uid, title, sub, type = 'info') => {
         await notifRef.set({
             id: notifRef.key,
             title,
-            body: sub,
+            body: sub || 'New update available',
             type,
             timestamp: ServerValue.TIMESTAMP,
             read: false,

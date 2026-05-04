@@ -105,10 +105,18 @@ export function generateCustomReport() {
     const tableBody = document.getElementById("reportTableBody");
     if (!tableBody) return;
 
-    // Validate date inputs - if missing/empty, show feedback and skip filtering
-    if ((fromInput && !from) || (toInput && !to)) {
+    // Validate date inputs
+    if (!from || !to) {
         showToast("Please select both start and end dates for filtering", "warning");
-        // Proceed with no filtering (show all data) rather than showing nothing
+        tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px; color:var(--text-muted);'>Please select a date range to view reports.</td></tr>";
+        return;
+    }
+
+    const fromDateObj = new Date(from);
+    const toDateObj = new Date(to);
+    if (isNaN(fromDateObj.getTime()) || isNaN(toDateObj.getTime())) {
+        showToast("Invalid date format selected", "error");
+        return;
     }
 
     tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px;'>🔔 Collecting sales data...</td></tr>";
@@ -182,14 +190,15 @@ export function generateCustomReport() {
                 <td data-label="Method">
                     <span class="badge-payment">${escapeHtml(o.paymentMethod || 'COD')}</span>
                 </td>
-                <td data-label="Items">
-                     ${(() => {
-                         const rawList = o.cart || (Array.isArray(o.items) ? o.items : Object.values(o.items || {}));
-                         const itemsList = rawList.length ? rawList : (o.item ? [{name: o.item, qty: 1}] : []);
-                         const displayStr = itemsList.length ? itemsList.map(i => `${escapeHtml(i.name || i.item)} x${i.qty || i.quantity || 1}`).join(', ') : 'Empty';
-                         return `<div class="text-muted-small text-truncate" style="max-width:250px;" title="${displayStr}">${displayStr}</div>`;
-                     })()}
-                </td>
+                 <td data-label="Items">
+                      ${(() => {
+                          const rawItems = o.cart || o.items || [];
+                          const itemsList = Array.isArray(rawItems) ? rawItems : Object.values(rawItems);
+                          const finalItems = itemsList.length ? itemsList : (o.item ? [{name: o.item, qty: 1}] : []);
+                          const displayStr = finalItems.length ? finalItems.map(i => `${escapeHtml(i.name || i.item || 'Item')} x${i.qty || i.quantity || 1}`).join(', ') : 'No items';
+                          return `<div class="text-muted-small text-truncate" style="max-width:250px;" title="${displayStr}">${displayStr}</div>`;
+                      })()}
+                 </td>
             </tr>
         `).join('') || "<tr><td colspan='5' class='report-cell text-center py-30 text-muted'>No orders found for this range</td></tr>";
 
@@ -453,7 +462,7 @@ export async function clearLostSales() {
 
 export function filterCustomers(searchTerm) {
     const term = (searchTerm || '').toLowerCase().trim();
-    const rows = document.querySelectorAll('#customersTable tr');
+    const rows = document.querySelectorAll('#customersTableBody tr');
     
     rows.forEach(row => {
         if (!term) {

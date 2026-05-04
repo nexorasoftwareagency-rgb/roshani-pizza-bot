@@ -121,16 +121,23 @@ export function initRealtimeListeners() {
 
     let query = _ordersRef.orderByChild("createdAt");
     
-    // For Live Ops stability, we fetch at least the last 2 days even if date filter is narrow
-    // but we honor the manual date filter for the "Orders" tab history
+    // Validate date inputs if provided
     if (fromDate && toDate) {
-        query = query.startAt(`${fromDate}T00:00:00.000Z`).endAt(`${toDate}T23:59:59.999Z`);
+        const d1 = new Date(fromDate);
+        const d2 = new Date(toDate);
+        if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
+            console.error("[Orders] Invalid date range provided, falling back to recent orders.");
+            query = query.limitToLast(limit);
+        } else {
+            query = query.startAt(`${fromDate}T00:00:00.000Z`).endAt(`${toDate}T23:59:59.999Z`);
+        }
     } else {
         // Fallback to recent 100 orders
         query = query.limitToLast(limit);
     }
 
-    query.on("value", _ordersValueCb, err => {
+    _ordersRef = query;
+    _ordersRef.on("value", _ordersValueCb, err => {
         console.error("[Orders] Firebase Read Error:", err);
         showToast("Error loading orders: " + err.message, "error");
     });
@@ -235,7 +242,8 @@ export function renderOrders(snap) {
         if (activeTab === 'live') return true;
         
         if (!fromDate || !toDate) return true;
-        const oDate = o.createdAt ? new Date(o.createdAt).toISOString().split('T')[0] : null;
+        const d = o.createdAt ? new Date(o.createdAt) : null;
+        const oDate = (d && !isNaN(d.getTime())) ? d.toISOString().split('T')[0] : null;
         return oDate && oDate >= fromDate && oDate <= toDate;
     }).sort((a, b) => {
         const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -364,7 +372,6 @@ export function renderOrders(snap) {
                 <td data-label="Actions">
                     <div class="action-group-v4">
                         <select data-action="updateStatus" data-id="${id}" class="status-select-mini" style="width: 100px;">
-                            <option value="">Status</option>
                             ${getStatusOptions(o.status || "Placed", o.type || 'Online')}
                         </select>
                         <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4" title="Print Receipt">
@@ -521,7 +528,7 @@ export function renderOrders(snap) {
                 const footer = document.createElement('div');
                 footer.id = 'loadMoreContainer';
                 footer.className = 'flex-center p-20';
-                footer.innerHTML = `<button id="loadMoreOrdersBtn" class="btn-secondary" onclick="window.loadMoreOrders()">Load More Orders</button>`;
+                footer.innerHTML = `<button id="loadMoreOrdersBtn" class="btn-secondary" data-action="loadMoreOrders">Load More Orders</button>`;
                 fullTable.parentNode.appendChild(footer);
             }
         }
@@ -550,7 +557,9 @@ function updateDashboardStats(orders) {
     
     const todayOrders = orders.filter(o => {
         if (!o.createdAt) return false;
-        const date = new Date(o.createdAt).toISOString().split('T')[0];
+        const d = new Date(o.createdAt);
+        if (isNaN(d.getTime())) return false;
+        const date = d.toISOString().split('T')[0];
         return date === today;
     });
 
@@ -761,10 +770,18 @@ export async function updateStatus(id, status) {
     }
 
     // Enforce Rider Assignment for Out for Delivery
-    if (status === "Out for Delivery" && !order.riderId) {
-        showToast("⚠️ Please assign a Rider before marking as Out for Delivery", "error");
-        renderOrders(state.lastOrdersSnap);
-        return;
+    if (status === "Out for Delivery") {
+        const orderCheck = state.ordersMap.get(id); // Defensive lookup
+        if (!orderCheck) {
+            showToast("⚠️ Order data not found. Refreshing...", "error");
+            renderOrders(state.lastOrdersSnap);
+            return;
+        }
+        if (!orderCheck.riderId) {
+            showToast("⚠️ Please assign a Rider before marking as Out for Delivery", "error");
+            renderOrders(state.lastOrdersSnap);
+            return;
+        }
     }
 
     // Payment Confirmation for Delivered
@@ -852,6 +869,10 @@ export async function assignRider(id, riderId) {
         if (!rider) throw new Error("Rider not found");
 
         const order = state.ordersMap.get(id) || state.liveOrdersMap.get(id);
+        if (!order) {
+            showToast("⚠️ Order data not found. Please refresh.", "error");
+            return;
+        }
 
         const updateData = {
             riderId: riderId,
@@ -1000,7 +1021,6 @@ export async function openOrderDrawer(id) {
                     <div class="form-group mb-15">
                         <label class="form-label-small mb-8 d-block">ORDER STATUS</label>
                         <select data-action="updateStatus" data-id="${id}" class="form-input-v4 w-100">
-                            <option value="">Select Next Step</option>
                             ${getStatusOptions(order.status || "Placed", order.type || 'Online')}
                         </select>
                     </div>

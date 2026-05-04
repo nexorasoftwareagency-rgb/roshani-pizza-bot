@@ -6,7 +6,7 @@ import { initAuth, doLogin as adminLogin, userLogout } from './auth.js';
 import { installPWA, completeSiteRefresh } from './pwa.js';
 import { 
     updateStatus, assignRider, openOrderDrawer, markAsPaid, 
-    saveDeliveredOrder, closeOrderDrawer, filterOrders 
+    saveDeliveredOrder, closeOrderDrawer, filterOrders, loadMoreOrders 
 } from './features/orders.js';
 import { 
     toggleNotificationSheet, clearAllNotifications, 
@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- 2. Dynamic Event Delegation ---
-    document.addEventListener('click', (e) => {
+    document.addEventListener('click', async (e) => {
         try {
             const el = e.target.closest('[data-action], [data-tab]');
             if (!el) return;
@@ -267,6 +267,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'completeSiteRefresh': completeSiteRefresh(); break;
                 case 'toggleNotificationSheet': toggleNotificationSheet(); break;
                 case 'toggleSidebar': toggleSidebar(); break;
+                case 'toggleMobileCart': {
+                    const { ui } = await import('./ui.js');
+                    ui.toggleMobileCart(true);
+                    break;
+                }
                 case 'openOutletInNewTab': openOutletInNewTab(); break;
                 case 'toggleTheme': themeManager.toggleTheme(); break;
                 case 'userLogout': userLogout(); break;
@@ -289,6 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     else if (pct) setDiscountPct(parseFloat(pct));
                     break;
                 }
+                case 'loadMoreOrders': loadMoreOrders(); break;
                 case 'selectWalkinPayment': {
                     const method = el.getAttribute('data-method');
                     selectWalkinPayment(method, el);

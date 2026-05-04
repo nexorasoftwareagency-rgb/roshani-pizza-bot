@@ -1178,7 +1178,7 @@ body {
     color: var(--text-muted);
 }
 
-.badge-delivered {
+.rider-status-pill {
     background: #DCFCE7;
     color: #166534;
     padding: 4px 10px;

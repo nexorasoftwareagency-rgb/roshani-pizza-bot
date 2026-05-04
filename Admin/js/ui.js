@@ -43,6 +43,7 @@ export const closeSidebar = () => {
 
 
 export const switchTab = (tabId, skipHistory = false) => {
+    if (state.currentActiveTab === tabId) return;
     state.currentActiveTab = tabId;
     console.log(`[Navigation] Switching to: ${tabId}`);
 
@@ -176,18 +177,6 @@ export const switchTab = (tabId, skipHistory = false) => {
             case 'lostSales':
                 loadLostSales();
                 break;
-            case 'live':
-                loadRiders(); // For rider assignment dropdowns
-                break;
-        }
-
-
-        // Global Order Refresh for core tabs
-        if (['dashboard', 'orders', 'live'].includes(tabId)) {
-            console.log(`[Navigation] Refreshing orders for ${tabId}`);
-            if (state.lastOrdersSnap) {
-                renderOrders(state.lastOrdersSnap);
-            }
         }
     }
 };
