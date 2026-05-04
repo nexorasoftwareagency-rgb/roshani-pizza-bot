@@ -33,6 +33,7 @@ import {
     downloadExcel, downloadPDF, filterCustomers 
 } from './features/customers.js';
 import { saveStoreSettings, quickUpdateOutletStatus, addFeeSlab } from './features/settings.js';
+import { initRiderAnalytics } from './features/rider-analytics.js';
 
 // Side-effect imports
 import './firebase.js';
@@ -65,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initAuth();
+    initRiderAnalytics();
 
     // 1. Static Event Binding
     const setupStaticListeners = () => {

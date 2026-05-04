@@ -3,6 +3,7 @@ import { state } from '../state.js';
 import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm } from '../utils.js';
 import { uploadImage } from '../firebase.js';
 import { requireAdminReauth } from '../auth.js';
+import { populateRiderSelect } from './rider-analytics.js';
 
 /**
  * INITIALIZE RIDER DATA
@@ -36,6 +37,7 @@ export function loadRiders() {
             });
         }
         renderRiders();
+        populateRiderSelect();
         
         // --- PHASE 3.5: UPDATE LIVE OPS DROPDOWNS ---
         // If we are on the live or orders tab, we need to refresh the "Assign Rider" selects
