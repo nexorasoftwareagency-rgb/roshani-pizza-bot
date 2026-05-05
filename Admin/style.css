@@ -6522,16 +6522,14 @@ body {
     top: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    left: auto !important;
-    width: 400px !important;
-    justify-content: flex-end !important;
-    padding: 0 !important;
-    background: transparent !important;
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-    pointer-events: none;
-    z-index: 5000 !important;
+    left: 0 !important;
     display: none;
+    align-items: center;
+    justify-content: flex-end !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+    backdrop-filter: blur(4px) !important;
+    z-index: 5000 !important;
 }
 
 /* Hide cart when selection is open to prevent overlap */
@@ -6548,6 +6546,7 @@ body.pos-selection-mode .walkin-picker {
 
 .pos-side-panel.active {
     display: flex !important;
+    pointer-events: auto !important;
 }
 /* MODAL UTILITIES */
 .modal-body {
@@ -7198,24 +7197,7 @@ body.pos-selection-mode .walkin-picker {
 }
 
 /* Condensed POS Side Panel Styles */
-.pos-side-panel {
-    display: none;
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 1000;
-    background: rgba(0, 0, 0, 0.4);
-    -webkit-backdrop-filter: blur(4px);
-    backdrop-filter: blur(4px);
-    align-items: center;
-    justify-content: flex-end; /* Align to right for side-panel feel */
-}
-
-.pos-side-panel.active {
-    display: flex;
-}
+/* Duplicate .pos-side-panel removed for consolidation */
 
 .selection-panel-v4 {
     width: 100%;

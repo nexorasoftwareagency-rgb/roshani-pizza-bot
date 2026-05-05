@@ -558,8 +558,6 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                     }
                 }
             } else if (statusLower === "picked up" || statusLower === "out for delivery") {
-                if (isDineIn) return; // Skip delivery messages for dine-in
-                
                 let otp = storedOTP;
                 if (!otp) {
                     otp = Math.floor(1000 + Math.random() * 9000).toString();

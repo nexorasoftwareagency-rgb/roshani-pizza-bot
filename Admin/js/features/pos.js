@@ -226,6 +226,7 @@ export function hidePOSSelectionModal() {
 }
 
 export function selectPOSSize(name, price, el) {
+    console.log(`[POS] Selecting Size: ${name} (Price: ${price})`);
     document.querySelectorAll('.size-card').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     state.currentPOSModalSize = { name, price };
@@ -264,44 +265,62 @@ function updatePOSModalTotal() {
  */
 
 export function addToWalkinCartFromModal() {
-    if (!state.currentPOSModalDish || !state.currentPOSModalSize) return;
-
-    const dish = state.currentPOSModalDish;
-    const sizeName = state.currentPOSModalSize.name;
-    const addonNames = Object.keys(state.currentPOSModalAddons);
-
-    // Create unique key for cart item
-    const cartKey = `${dish.id}::${sizeName}::${addonNames.sort().join('|')}`;
-    const pricePerItem = Number(state.currentPOSModalSize.price) + Object.values(state.currentPOSModalAddons).reduce((a, b) => a + b, 0);
-
-    // If editing and key changed, remove old one
-    if (state.editingCartKey && state.editingCartKey !== cartKey) {
-        delete state.walkinCart[state.editingCartKey];
-    }
-
-    if (state.walkinCart[cartKey]) {
-        // If editing the SAME key, replace qty. If adding new, increment.
-        if (state.editingCartKey === cartKey) {
-            state.walkinCart[cartKey].qty = state.currentPOSModalQty;
-        } else {
-            state.walkinCart[cartKey].qty += state.currentPOSModalQty;
+    try {
+        haptic(5);
+        const dish = state.currentPOSModalDish;
+        console.log("[POS] addToWalkinCartFromModal triggered for:", dish ? dish.name : "NULL");
+        if (!dish) {
+            console.error("[POS] No dish selected in modal context.");
+            showToast("No item selected", "error");
+            return;
         }
-    } else {
-        state.walkinCart[cartKey] = {
-            id: dish.id,
-            name: dish.name,
-            category: dish.category,
-            size: sizeName,
-            price: pricePerItem,
-            qty: state.currentPOSModalQty,
-            addons: addonNames.map(name => ({ name, price: state.currentPOSModalAddons[name] }))
-        };
-    }
+        if (!state.currentPOSModalSize) {
+            showToast("Please select a size", "warning");
+            return;
+        }
 
-    state.editingCartKey = null;
-    hidePOSSelectionModal();
-    renderWalkinCart();
-    haptic(20);
+        const size = state.currentPOSModalSize;
+        const qty = state.currentPOSModalQty;
+        const addonNames = Object.keys(state.currentPOSModalAddons);
+
+        // Create unique key for cart item
+        const cartKey = `${dish.id}::${size.name}::${addonNames.sort().join('|')}`;
+        const pricePerItem = Number(size.price) + Object.values(state.currentPOSModalAddons).reduce((a, b) => a + b, 0);
+
+        // If editing and key changed, remove old one
+        if (state.editingCartKey && state.editingCartKey !== cartKey) {
+            delete state.walkinCart[state.editingCartKey];
+        }
+
+        if (state.walkinCart[cartKey]) {
+            if (state.editingCartKey === cartKey) {
+                state.walkinCart[cartKey].qty = qty;
+            } else {
+                state.walkinCart[cartKey].qty += qty;
+            }
+        } else {
+            state.walkinCart[cartKey] = {
+                id: dish.id,
+                name: dish.name,
+                category: dish.category,
+                size: size.name,
+                price: pricePerItem,
+                qty: qty,
+                addons: addonNames.map(name => ({ name, price: state.currentPOSModalAddons[name] }))
+            };
+        }
+
+        state.editingCartKey = null;
+        hidePOSSelectionModal();
+        renderWalkinCart();
+        haptic(20);
+        playSuccessSound();
+        showToast(`Added ${qty}x ${dish.name} (${size.name})`, "success");
+        console.log("[POS] Cart updated successfully.");
+    } catch (error) {
+        console.error("[POS] Add to Cart Error:", error);
+        showToast("Failed to add to cart", "error");
+    }
 }
 
 export function removeFromWalkinCart(cartKey) {
