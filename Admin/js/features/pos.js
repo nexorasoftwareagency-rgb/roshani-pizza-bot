@@ -144,7 +144,9 @@ export async function openPOSSelectionModal(dishId) {
     state.editingCartKey = null;
 
     const submitBtn = document.getElementById('posAddBtn');
-    if (submitBtn) submitBtn.innerHTML = '&#128722; Add to Cart';
+    if (submitBtn) {
+        submitBtn.innerHTML = '<i data-lucide="shopping-cart" class="icon-18"></i> <span>Add to Cart</span>';
+    }
 
     document.getElementById('posModalDishName').innerText = dish.name;
     document.getElementById('posModalDishCategory').innerText = dish.category;
@@ -211,6 +213,9 @@ export async function openPOSSelectionModal(dishId) {
         modal.classList.remove('hidden');
         modal.classList.add('active', 'side-panel-active');
         document.body.classList.add('pos-selection-mode');
+        
+        // Ensure all icons (including ones in headers and the button) are rendered
+        if (window.lucide) window.lucide.createIcons({ root: modal });
     } else {
         console.error("[POS] Modal element #posSelectionModal not found!");
     }
@@ -271,11 +276,11 @@ export function addToWalkinCartFromModal() {
         console.log("[POS] addToWalkinCartFromModal triggered for:", dish ? dish.name : "NULL");
         if (!dish) {
             console.error("[POS] No dish selected in modal context.");
-            showToast("No item selected", "error");
+            ui.showToast("No item selected", "error");
             return;
         }
         if (!state.currentPOSModalSize) {
-            showToast("Please select a size", "warning");
+            ui.showToast("Please select a size", "warning");
             return;
         }
 
@@ -315,11 +320,12 @@ export function addToWalkinCartFromModal() {
         renderWalkinCart();
         haptic(20);
         playSuccessSound();
-        showToast(`Added ${qty}x ${dish.name} (${size.name})`, "success");
+        console.log(`[POS] Cart updated. ${qty}x ${dish.name} added/updated.`);
+        ui.showToast(`Added ${qty}x ${dish.name} (${size.name})`, "success");
         console.log("[POS] Cart updated successfully.");
     } catch (error) {
         console.error("[POS] Add to Cart Error:", error);
-        showToast("Failed to add to cart", "error");
+        ui.showToast("Failed to add to cart", "error");
     }
 }
 
@@ -400,7 +406,7 @@ export function renderWalkinCart() {
         `;
     }).join('');
 
-    if (window.lucide) window.lucide.createIcons(list);
+    if (window.lucide) window.lucide.createIcons({ root: list });
 
     let discountValue = state.walkinDiscount;
     if (state.walkinDiscountPct > 0) {
@@ -498,7 +504,7 @@ export async function checkWalkinCustomer() {
         if (snap.exists()) {
             const c = snap.val();
             nameInput.value = c.name || "";
-            showToast(`Welcome back, ${c.name || 'Customer'}!`, "success");
+            ui.showToast(`Welcome back, ${c.name || 'Customer'}!`, "success");
         }
     } catch (e) { console.error(e); }
 }
@@ -727,7 +733,9 @@ export async function openCartAddonPicker(cartKey) {
     state.editingCartKey = cartKey;
 
     const submitBtn = document.getElementById('posAddBtn');
-    if (submitBtn) submitBtn.innerText = "\uD83D\uDCBE Update Item";
+    if (submitBtn) {
+        submitBtn.innerHTML = '<i data-lucide="save" class="icon-18"></i> <span>Update Item</span>';
+    }
 
     updatePOSModalTotal();
     const modal = document.getElementById('posSelectionModal');

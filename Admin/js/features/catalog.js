@@ -179,7 +179,7 @@ export function loadMenu() {
                     </div>
                 </div>`;
 
-            if (window.lucide) window.lucide.createIcons(card);
+            if (window.lucide) window.lucide.createIcons({ root: card });
             grid.appendChild(card);
         });
 

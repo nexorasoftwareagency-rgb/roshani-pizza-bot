@@ -30,17 +30,29 @@ if (!fb.apps.length) {
             try {
                 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                 if (isLocal) {
-                    console.log("[App Check] 🛠️ Localhost detected, enabling Debug Token...");
-                    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+                    const debugToken = window.firebaseConfig.appCheckDebugToken || true;
+                    console.log(`[App Check] 🛠️ Localhost detected, enabling Debug Token: ${debugToken}`);
+                    self.FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
                 }
                 const appCheck = fb.appCheck();
                 appCheck.activate(
                     new fb.appCheck.ReCaptchaV3Provider(window.reCaptchaSiteKey),
                     true
                 );
-                console.log("[App Check] ✅ Activated Successfully (Consolidated)");
+                console.log("[App Check] ✅ Activated Successfully");
+
+                // Catch late activation errors (like 403 Forbidden)
+                appCheck.getToken().catch(err => {
+                    if (err.message.includes('403') || err.code?.includes('permission-denied')) {
+                        console.error("[App Check] ⛔ ACCESS DENIED: Localhost is not authorized.");
+                        showToast("App Check Blocked: Add debug token to Firebase Console", "error");
+                        const token = self.FIREBASE_APPCHECK_DEBUG_TOKEN === true ? "Check Browser Console" : self.FIREBASE_APPCHECK_DEBUG_TOKEN;
+                        console.info(`%c[ACTION REQUIRED] Add this token to Firebase Console -> App Check -> Manage Debug Tokens:\n${token}`, "background: #f00; color: #fff; font-size: 14px; padding: 10px;");
+                    }
+                });
             } catch (e) {
-                console.warn("[App Check] ⚠️ Activation failed:", e);
+                console.warn("[App Check] ⚠️ Activation failed (Expected on localhost if token not registered):", e.message);
+                console.info("[App Check Hint] If you see 403 errors, copy the debug token from the console and add it to App Check -> Manage Debug Tokens in Firebase Console.");
             }
         }
     } else {
@@ -78,7 +90,12 @@ connectedRef.on('value', (snap) => {
     }
 
     if (!connected) {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         console.warn('[Firebase] Lost connection - data may not sync. Retrying...');
+        if (isLocal) {
+            console.info("[Firebase Hint] On localhost, ensure your App Check Debug Token is registered in the Firebase Console if App Check is enforced.");
+            console.info("[Firebase Hint] Check if your Firewall or Adblocker is blocking WebSockets (wss://).");
+        }
         // Proactively try to reconnect
         setTimeout(() => {
             if (db) db.goOnline();
@@ -102,11 +119,42 @@ setInterval(() => {
 
 // Test database connectivity
 setTimeout(() => {
+    if (!fb.apps.length) return;
     console.log("[Firebase] Testing database connectivity...");
-    db.ref('test').once('value')
-        .then(snap => console.log("[Firebase] Database test successful:", snap.val() || "null"))
-        .catch(err => console.error("[Firebase] Database test failed:", err));
-}, 2000);
+    db.ref('.info/connected').once('value', snap => {
+        if (snap.val() === true) {
+            console.log("[Firebase] ✅ Connection established successfully.");
+        } else {
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            if (isLocal) {
+                const token = self.FIREBASE_APPCHECK_DEBUG_TOKEN || 'None';
+                const msg = `[ACTION REQUIRED] App Check is blocking localhost. \n\nAdd this token to Firebase Console -> App Check -> Manage Debug Tokens:\n\n${token}`;
+                console.error(msg);
+                
+                // Add a visible warning to the UI if possible
+                const warningDiv = document.createElement('div');
+                warningDiv.id = "appcheck-warning-overlay";
+                warningDiv.style = "position:fixed; bottom:20px; right:20px; background:#ff4b2b; color:white; padding:20px; border-radius:12px; z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,0.3); max-width:350px; font-family:sans-serif; border:2px solid rgba(255,255,255,0.2);";
+                warningDiv.innerHTML = `
+                    <div style="font-weight:bold; font-size:16px; margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:20px;">⚠️</span> App Check Blocked
+                    </div>
+                    <div style="font-size:13px; line-height:1.5; margin-bottom:15px; opacity:0.9;">
+                        Localhost sync is disabled. You must add the debug token to your Firebase Console to enable data fetching.
+                    </div>
+                    <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; font-family:monospace; font-size:12px; word-break:break-all; margin-bottom:15px; border:1px solid rgba(255,255,255,0.1);">
+                        ${token}
+                    </div>
+                    <button onclick="navigator.clipboard.writeText('${token}'); this.innerText='Copied!';" style="background:white; color:#ff4b2b; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer; width:100%;">
+                        Copy Debug Token
+                    </button>
+                    <div style="text-align:center; margin-top:10px; font-size:10px; opacity:0.7; cursor:pointer;" onclick="this.parentElement.remove()">Dismiss</div>
+                `;
+                document.body.appendChild(warningDiv);
+            }
+        }
+    });
+}, 8000);
 
 // Diagnostic function for debugging data loading issues
 window.diagnoseDatabase = async () => {

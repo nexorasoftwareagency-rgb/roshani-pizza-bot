@@ -78,7 +78,7 @@ export function loadFeedbacks() {
             `;
         }).join('');
         tableBody.innerHTML = feedbackHTML;
-        if (window.lucide) window.lucide.createIcons(tableBody);
+        if (window.lucide) window.lucide.createIcons({ root: tableBody });
     });
 }
 

@@ -4,7 +4,8 @@ window.firebaseConfig = {
   databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
   projectId: "prashant-pizza-e86e4",
   messagingSenderId: "857471482885",
-  appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c"
+  appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c",
+  appCheckDebugToken: "42630bec-e9f0-486a-8d25-fa198bd527dc"
 };
 
 window.reCaptchaSiteKey = "6LeAlcwsAAAAAH4F3p5aCNvyPlhC3BRHOXTdDEGK";

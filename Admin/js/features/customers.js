@@ -72,7 +72,7 @@ export function loadCustomers() {
                 </tr>
             `;
         });
-        if (window.lucide) window.lucide.createIcons(table);
+        if (window.lucide) window.lucide.createIcons({ root: table });
     });
 }
 

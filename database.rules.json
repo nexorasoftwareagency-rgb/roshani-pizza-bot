@@ -79,6 +79,10 @@
         ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
         ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || root.child('riders').child(auth.uid).exists())"
       },
+      "feedbacks": {
+        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".write": "true"
+      },
       "settings": {
         ".read": "auth != null",
         ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
@@ -119,6 +123,10 @@
       "customers": {
         ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
         ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || root.child('riders').child(auth.uid).exists())"
+      },
+      "feedbacks": {
+        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".write": "true"
       },
       "settings": {
         ".read": "auth != null",

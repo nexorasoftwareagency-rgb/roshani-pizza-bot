@@ -209,7 +209,7 @@ export function renderRiders(searchTerm = "") {
                 `}
             `;
             activeDashboard.appendChild(card);
-            if (window.lucide) window.lucide.createIcons(card);
+            if (window.lucide) window.lucide.createIcons({ root: card });
         }
     });
 
@@ -223,8 +223,8 @@ export function renderRiders(searchTerm = "") {
     // Re-init icons only in management container
     const manageTab = document.getElementById('management-tab-container');
     if (window.lucide) {
-        if (manageTab) lucide.createIcons(manageTab);
-        else lucide.createIcons();
+        if (manageTab) window.lucide.createIcons({ root: manageTab });
+        else window.lucide.createIcons({ root: document.getElementById('tab-riders') || document.body });
     }
 }
 

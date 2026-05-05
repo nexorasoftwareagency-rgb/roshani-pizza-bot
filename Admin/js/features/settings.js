@@ -318,7 +318,7 @@ function renderFeeSlabs(slabs) {
         `;
         tbody.appendChild(tr);
     });
-    if (window.lucide) window.lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons({ root: tbody });
 }
 
 export function addFeeSlab() {
@@ -407,7 +407,7 @@ function showStatusAlert(newStatus) {
         <div class="alert-sub">The WhatsApp bot and ordering system will respect this status immediately.</div>
     `;
     alertContainer.appendChild(div);
-    if (window.lucide) window.lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons({ root: div });
     
     setTimeout(() => {
         div.style.animation = 'slideOutPremium 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards';

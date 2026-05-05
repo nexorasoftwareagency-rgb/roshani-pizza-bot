@@ -119,6 +119,31 @@ async function getReportRecipients() {
     return Array.from(recipients);
 }
 
+/**
+ * COMMAND LISTENER
+ * Monitors the 'bot/commands' node for real-time triggers from the Admin Dashboard.
+ */
+function initCommandListener(sock) {
+    console.log("[Bot] Command Listener Started: Listening on 'bot/commands'...");
+    db.ref("bot/commands").on("child_added", async (snap) => {
+        const cmd = snap.val();
+        if (!cmd) return;
+
+        console.log(`[Bot] Command Received: ${cmd.action} (Target: ${cmd.targetDate || 'N/A'})`);
+        
+        try {
+            if (cmd.action === "SEND_DAILY_REPORT") {
+                await sendDailyReport(sock, cmd.targetDate);
+                console.log(`[Bot] Daily Report sent successfully for ${cmd.targetDate}`);
+            }
+            // Remove the command after processing
+            await snap.ref.remove();
+        } catch (err) {
+            console.error("[Bot] Command Execution Error:", err);
+        }
+    });
+}
+
 function cleanupSessions() {
     const now = Date.now();
     for (const sender in sessions) {
@@ -627,8 +652,8 @@ async function sendDailyReport(sock, targetDate = null) {
                     const s = order.status || "Unknown";
                     statusBreakdown[s] = (statusBreakdown[s] || 0) + 1;
 
-                    // Count 'Delivered' or 'Paid' orders as revenue
-                    if (order.status === "Delivered" || order.paymentStatus === "Paid") {
+                    // Count 'Delivered', 'Confirmed' (POS), or 'Paid' orders as revenue
+                    if (order.status === "Delivered" || order.status === "Confirmed" || order.paymentStatus === "Paid") {
                         outletRevenue += parseFloat(order.total || 0);
                     }
                 }
@@ -690,7 +715,10 @@ async function sendMonthlyReport(sock) {
                 const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
                 if (orderTime >= startOfMonth) {
                     outletOrders++;
-                    outletRevenue += parseFloat(order.total || 0);
+                    // Count 'Delivered', 'Confirmed' (POS), or 'Paid' orders as revenue
+                    if (order.status === "Delivered" || order.status === "Confirmed" || order.paymentStatus === "Paid") {
+                        outletRevenue += parseFloat(order.total || 0);
+                    }
                 }
             });
             
@@ -743,7 +771,10 @@ async function sendWeeklyReport(sock) {
                 const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
                 if (orderTime >= weekStartTime) {
                     outletOrders++;
-                    outletRevenue += parseFloat(order.total || 0);
+                    // Count 'Delivered', 'Confirmed' (POS), or 'Paid' orders as revenue
+                    if (order.status === "Delivered" || order.status === "Confirmed" || order.paymentStatus === "Paid") {
+                        outletRevenue += parseFloat(order.total || 0);
+                    }
                 }
             });
             
@@ -893,6 +924,7 @@ async function startBot() {
     });
 
     sock.ev.on('creds.update', saveCreds);
+    initCommandListener(sock);
 
     // Heartbeat & Cleanup & Report Scheduling
     if (reportInterval) clearInterval(reportInterval);
