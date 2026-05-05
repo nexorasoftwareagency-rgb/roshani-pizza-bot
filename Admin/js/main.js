@@ -1,4 +1,6 @@
 import { previewImage, showToast, logAudit } from './utils.js';
+import { state } from './state.js';
+import { auth, db, ServerValue } from './firebase.js';
 import { switchOutlet, openOutletInNewTab } from './branding.js';
 import { switchTab, toggleSidebar, themeManager, toggleMobileCart } from './ui.js';
 import { initGestures } from './gestures.js';
@@ -37,10 +39,7 @@ import { initRiderAnalytics } from './features/rider-analytics.js';
 
 // Side-effect imports
 import './firebase.js';
-import './state.js';
 import './branding.js';
-import './features/feedback.js';
-import './features/tracker.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("[Main] DOM Content Loaded. Initializing...");
@@ -69,11 +68,13 @@ document.addEventListener('DOMContentLoaded', () => {
     initRiderAnalytics();
 
     // Final check for icons on static content
-    // Global icons initialization limited to main layout
+    // Scoped initialization for performance across both states
     if (window.lucide) {
+        const overlay = document.getElementById('authOverlay');
         const layout = document.querySelector('.layout');
-        if (layout) lucide.createIcons(layout);
-        else lucide.createIcons();
+        
+        if (overlay) window.lucide.createIcons({ root: overlay });
+        if (layout) window.lucide.createIcons({ root: layout });
     }
 
     // 1. Static Event Binding
@@ -103,6 +104,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
+
+        // Drawer Overlays
+        const orderOverlay = document.getElementById('orderDrawerOverlay');
+        if (orderOverlay) {
+            orderOverlay.addEventListener('click', () => {
+                import('./features/orders.js').then(o => o.closeOrderDrawer());
+            });
+        }
 
         // Menu & Categories
         document.querySelectorAll('.btn-show-dish-modal').forEach(btn => {
@@ -204,6 +213,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.generateReport) window.generateReport();
         });
 
+        const btnWhatsappReport = document.getElementById('btnWhatsappReport');
+        if (btnWhatsappReport) btnWhatsappReport.addEventListener('click', async () => {
+            const confirmed = confirm("Send Daily Sales Report to WhatsApp now?");
+            if (!confirmed) return;
+            
+            try {
+                btnWhatsappReport.disabled = true;
+                btnWhatsappReport.style.opacity = '0.7';
+                
+                showToast("Requesting WhatsApp Report...", "info");
+                const cmdRef = db.ref("bot/commands").push();
+                await cmdRef.set({
+                    action: "SEND_DAILY_REPORT",
+                    targetDate: new Date().toISOString().split('T')[0],
+                    requestedBy: auth.currentUser?.email || 'admin',
+                    timestamp: ServerValue.TIMESTAMP
+                });
+                showToast("Report request sent to Bot!", "success");
+            } catch (err) {
+                console.error("Bot trigger error:", err);
+                showToast("Failed to trigger Bot: " + err.message, "error");
+            } finally {
+                btnWhatsappReport.disabled = false;
+                btnWhatsappReport.style.opacity = '1';
+            }
+        });
+
         bindFn('btnDownloadExcel', 'downloadExcel');
         bindFn('btnDownloadPDF', 'downloadPDF');
     };
@@ -251,6 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'openPOSSelectionModal': openPOSSelectionModal(id); break;
                 case 'hidePOSSelectionModal': hidePOSSelectionModal(); break;
                 case 'addToWalkinCartFromModal': addToWalkinCartFromModal(); break;
+                case 'adjustPOSModalQty': adjustPOSModalQty(parseInt(val, 10)); break;
                 case 'openCartAddonPicker': openCartAddonPicker(id); break;
                 case 'walkinQtyChange': walkinQtyChange(id, parseInt(val, 10)); break;
                 case 'walkinRemoveItem': removeFromWalkinCart(id); break;
@@ -360,16 +397,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupStaticListeners();
 
-    if (typeof lucide !== 'undefined') {
+    if (window.lucide) {
         const layout = document.querySelector('.layout');
-        if (layout) lucide.createIcons(layout);
-        else lucide.createIcons();
+        window.lucide.createIcons({ root: layout || document.body });
     }
 
     // --- 3. REFRESH & SESSION SAFETY ---
     window.addEventListener('beforeunload', (e) => {
         // Only trigger if we are logged in and not in the middle of a nuclear refresh
-        if (state.currentUser && !window.location.search.includes('nuclear')) {
+        if (state.adminData && !window.location.search.includes('nuclear')) {
             e.preventDefault();
             e.returnValue = ''; // Standard way to show confirmation
         }

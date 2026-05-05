@@ -46,7 +46,7 @@ function resolvePath(path, outlet = 'pizza') {
     if (!path) return '';
 
     // Shared nodes that remain at root level
-    const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'bot', 'logs', 'botUsers'];
+    const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'bot', 'logs', 'botUsers', 'pizza', 'cake'];
     const rootNode = path.split('/')[0];
 
     // If already absolute or shared, return as is

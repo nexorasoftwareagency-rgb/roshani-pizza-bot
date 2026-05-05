@@ -314,7 +314,7 @@ window.showSection = (sectionId) => {
 
     const nav = document.getElementById('sidebarNav');
     if (nav && nav.classList.contains('active')) window.toggleRiderSidebar();
-    if (window.lucide) lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons({ root: target || document.body });
 
     // Re-init map if switching to active section
     if (sectionId === 'active' && window.activeOrderData) {
@@ -527,7 +527,7 @@ window.renderNotifications = () => {
                 <p>No new notifications</p>
             </div>
         `;
-        if (window.lucide) lucide.createIcons();
+        if (window.lucide) window.lucide.createIcons({ root: list });
         return;
     }
 
@@ -545,7 +545,7 @@ window.renderNotifications = () => {
         </div>
     `).join('');
 
-    if (window.lucide) lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons({ root: list });
 };
 
 window.markNotifRead = async (id) => {
@@ -704,7 +704,7 @@ window.verifyOTP = async () => {
             window.activeOrderForPayment = { path: orderPath, data: order, matchesFallback };
             document.getElementById('paymentTotalTxt').innerText = `Total to collect: ₹${order.total || 0}`;
             document.getElementById('paymentPanel').classList.remove('hidden');
-            if (window.lucide) lucide.createIcons();
+            if (window.lucide) window.lucide.createIcons({ root: document.getElementById('paymentPanel') });
         } else {
             const result = await runTransaction(ref(db, otpAttemptsPath), (current) => {
                 const data = current || { count: 0, lastTry: 0, blockedUntil: 0 };
@@ -1195,7 +1195,7 @@ window.renderAllOrders = () => {
     if (document.getElementById('e-cake-today')) document.getElementById('e-cake-today').innerText = `₹${cakeToday.toLocaleString()}`;
 
     console.log(`[UI] Render Complete. Pickups: ${unassignedCount}, History: ${todayOrders}`);
-    if (window.lucide) lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons({ root: document.querySelector('.main-content-v4') || document.body });
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1276,7 +1276,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dateEl = document.getElementById('currentDate');
     if (dateEl) dateEl.innerText = new Date().toLocaleDateString('en-US', dateOpts);
     
-    if (window.lucide) lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons();
 
     // History Search
     document.getElementById('historySearch')?.addEventListener('input', (e) => {
@@ -1328,7 +1328,7 @@ onAuthStateChanged(auth, async user => {
 
         document.getElementById('dashboard').classList.remove('hidden');
         window.showSection('home');
-        if (window.lucide) lucide.createIcons();
+        if (window.lucide) window.lucide.createIcons({ root: document.getElementById('dashboard') || document.body });
     } catch (e) { console.error(e); }
 });
 

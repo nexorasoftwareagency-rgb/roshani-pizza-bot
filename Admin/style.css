@@ -1680,6 +1680,49 @@ tbody tr:hover td:first-child {
     outline-offset: 2px;
 }
 
+.btn-whatsapp {
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-whatsapp::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-whatsapp:hover::before {
+    left: 100%;
+}
+
+.btn-whatsapp:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 211, 102, 0.35);
+    filter: brightness(1.1);
+}
+
+.btn-whatsapp:active {
+    transform: translateY(0);
+}
+
 .btn-primary:hover {
     transform: translateY(-4px) scale(1.02);
     box-shadow: 0 8px 25px rgba(243, 107, 33, 0.4);
@@ -2760,13 +2803,26 @@ tbody tr:hover td:first-child {
     font-size: 14px;
 }
 
-/* AUTH OVERLAY (Ultra Premium v4.2) */
-.login-container-v4 {
-    min-height: 100vh;
+/* --- AUTH OVERLAY: ULTRA PREMIUM STITCH v4 --- */
+#authOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: url('modern_restaurant_bg_1777868493926.png') center/cover no-repeat;
+    background: #0f172a; /* Fallback */
+    overflow: hidden;
+}
+
+#authOverlay.hidden {
+    display: none;
+}
+
+.login-container-v4 {
+    width: 100%;
+    height: 100%;
+    background: url('login-bg.png') center/cover no-repeat;
     position: relative;
     padding: 20px;
 }
@@ -2775,101 +2831,242 @@ tbody tr:hover td:first-child {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%);
+    background: radial-gradient(circle at center, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.85) 100%);
+    backdrop-filter: saturate(120%);
 }
 
 .login-card-v4 {
     width: 100%;
-    max-width: 440px;
-    background: rgba(255, 255, 255, 0.1);
-    -webkit-backdrop-filter: blur(30px) saturate(150%);
-    backdrop-filter: blur(30px) saturate(150%);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 32px;
-    padding: 48px;
+    max-width: 480px;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 40px;
+    padding: 60px 48px;
     position: relative;
     z-index: 1;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.6),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.05);
     color: white;
+    text-align: center;
+}
+
+/* THE STITCH EFFECT */
+.login-card-v4::after {
+    content: '';
+    position: absolute;
+    inset: 12px;
+    border: 1.5px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 32px;
+    pointer-events: none;
+    mask-image: linear-gradient(to bottom, black 80%, transparent);
 }
 
 .login-logo-container {
-    margin-bottom: 20px;
+    margin-bottom: 32px;
     display: flex;
     justify-content: center;
+    position: relative;
 }
 
 .login-logo-v4 {
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(135deg, var(--primary), #ea580c);
-    border-radius: var(--radius-premium);
+    width: 90px;
+    height: 90px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-radius: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
     color: white;
-    box-shadow: 0 10px 20px rgba(234, 88, 12, 0.3);
+    box-shadow: 
+        0 20px 40px rgba(var(--primary-rgb), 0.3),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    position: relative;
+    z-index: 2;
 }
 
-.login-box h2 {
-    font-size: 24px;
+.login-header-v4 h2 {
+    font-size: 32px;
     font-weight: 800;
-    color: #1e293b;
+    letter-spacing: -0.03em;
     margin-bottom: 8px;
+    background: linear-gradient(to bottom, #FFFFFF 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .login-subtitle {
-    color: #64748b;
-    font-size: 14px;
-    margin-bottom: 30px;
+    color: #94a3b8;
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 40px;
 }
 
-.login-input-group {
+.login-input-group-v4 {
+    margin-bottom: 24px;
     text-align: left;
-    margin-bottom: 20px;
 }
 
-.login-input-group label {
-    display: block;
-    font-size: 12px;
+.login-input-group-v4 label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
     font-weight: 700;
-    color: #475569;
+    color: #94a3b8;
     text-transform: uppercase;
-    margin-bottom: 6px;
-    margin-left: 4px;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+    padding-left: 4px;
+}
+
+.input-wrapper-v4 {
+    position: relative;
 }
 
 .login-input-v4 {
     width: 100%;
-    padding: 16px 20px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 16px;
+    padding: 18px 24px;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
     font-size: 16px;
     color: white;
-    transition: all 0.3s;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .login-input-v4::placeholder {
-    color: rgba(255, 255, 255, 0.4);
+    color: #475569;
 }
 
 .login-input-v4:focus {
-    border-color: var(--primary);
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.2);
     outline: none;
+    border-color: var(--primary);
+    background: rgba(15, 23, 42, 0.6);
+    box-shadow: 
+        0 0 0 4px rgba(var(--primary-rgb), 0.15),
+        inset 0 2px 4px rgba(0,0,0,0.2);
+    transform: translateY(-2px);
 }
 
-.login-error {
-    color: var(--danger);
-    font-size: 13px;
-    margin-top: 15px;
-    font-weight: 600;
+.input-stitch-v4 {
+    position: absolute;
+    inset: -2px;
+    border: 2px dashed var(--primary);
+    border-radius: 22px;
+    opacity: 0;
+    transition: all 0.4s;
+    pointer-events: none;
+}
+
+.login-input-v4:focus + .input-stitch-v4 {
+    opacity: 0.4;
+    transform: scale(1.02);
+}
+
+.login-actions-v4 {
+    margin-top: 40px;
+}
+
+.btn-login-v4 {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border: none;
+    border-radius: 20px;
+    color: white;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 25px rgba(var(--primary-rgb), 0.3);
+}
+
+.btn-login-v4:hover {
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 15px 35px rgba(var(--primary-rgb), 0.4);
+}
+
+.btn-login-v4:active {
+    transform: translateY(0);
+}
+
+.btn-stitch-v4 {
+    position: absolute;
+    inset: 4px;
+    border: 1.5px dashed rgba(255, 255, 255, 0.4);
+    border-radius: 16px;
+    pointer-events: none;
+}
+
+.login-error-v4 {
+    margin-top: 24px;
     background: rgba(239, 68, 68, 0.1);
-    padding: 10px;
-    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    padding: 14px 20px;
+    border-radius: 16px;
+    color: #fca5a5;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.login-footer-v4 {
+    margin-top: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.security-dot {
+    width: 6px;
+    height: 6px;
+    background: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #10b981;
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Corner Stitches */
+.corner-stitch {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border: 2px dashed rgba(255, 255, 255, 0.15);
+    pointer-events: none;
+}
+.corner-stitch.tl { top: 20px; left: 20px; border-right: none; border-bottom: none; border-top-left-radius: 15px; }
+.corner-stitch.tr { top: 20px; right: 20px; border-left: none; border-bottom: none; border-top-right-radius: 15px; }
+.corner-stitch.bl { bottom: 20px; left: 20px; border-right: none; border-top: none; border-bottom-left-radius: 15px; }
+.corner-stitch.br { bottom: 20px; right: 20px; border-left: none; border-top: none; border-bottom-right-radius: 15px; }
+
+@keyframes slideInPremium {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-fade-in-up {
+    animation: slideInPremium 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ALERTS (Premium v4.2) */

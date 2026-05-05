@@ -46,30 +46,65 @@
 <body>
     <div id="alertContainer"></div>
 
-    <!-- LOGIN -->
-    <div id="authOverlay" title="Admin Login Screen">
-        <form id="loginForm" class="login-box" title="Sign into the Admin Dashboard">
-            <div class="login-logo-container">
-                <div class="login-logo-v4">🍕</div>
-            </div>
-            <h2 id="loginTitle">Roshani Admin</h2>
-            <p class="login-subtitle">Secure ERP Management Portal</p>
-            
-            <div class="login-input-group">
-                <label>Admin Email</label>
-                <input type="email" id="loginEmail" class="login-input-v4" required placeholder="admin@roshani.com">
-            </div>
-            <div class="login-input-group">
-                <label>Secret Key</label>
-                <input type="password" id="loginPassword" class="login-input-v4" required placeholder="••••••••">
-            </div>
+    <!-- LOGIN (Ultra Premium v4) -->
+    <div id="authOverlay" class="login-container-v4" title="Admin Login Screen">
+        <div class="login-card-v4 animate-fade-in-up">
+            <form id="loginForm" class="login-form-v4" title="Sign into the Admin Dashboard">
+                <div class="login-logo-container">
+                    <div class="login-logo-v4">
+                        <i data-lucide="shield-check" class="icon-32"></i>
+                    </div>
+                </div>
+                
+                <div class="login-header-v4">
+                    <h2 id="loginTitle">Roshani ERP</h2>
+                    <p class="login-subtitle">Secure Admin Management Portal</p>
+                </div>
+                
+                <div class="login-input-group-v4">
+                    <label for="loginEmail">
+                        <i data-lucide="mail" class="icon-14"></i> Admin Email
+                    </label>
+                    <div class="input-wrapper-v4">
+                        <input type="email" id="loginEmail" class="login-input-v4" required placeholder="admin@roshani.com" autocomplete="username">
+                        <div class="input-stitch-v4"></div>
+                    </div>
+                </div>
 
-            <button id="loginBtn" type="submit" class="btn-primary w-full flex-center p-12 br-12 font-bold fs-16">
-                <span>Access Dashboard</span>
-                <i data-lucide="arrow-right" class="ml-10 icon-18"></i>
-            </button>
-            <div id="loginError" class="login-error hidden"></div>
-        </form>
+                <div class="login-input-group-v4">
+                    <label for="loginPassword">
+                        <i data-lucide="lock" class="icon-14"></i> Secret Key
+                    </label>
+                    <div class="input-wrapper-v4">
+                        <input type="password" id="loginPassword" class="login-input-v4" required placeholder="••••••••" autocomplete="current-password">
+                        <div class="input-stitch-v4"></div>
+                    </div>
+                </div>
+
+                <div class="login-actions-v4">
+                    <button id="loginBtn" type="submit" class="btn-login-v4">
+                        <span>Access Dashboard</span>
+                        <div class="btn-stitch-v4"></div>
+                    </button>
+                </div>
+
+                <div id="loginError" class="login-error-v4 hidden">
+                    <i data-lucide="alert-circle" class="icon-16"></i>
+                    <span class="error-msg"></span>
+                </div>
+
+                <div class="login-footer-v4">
+                    <span>Enterprise Security Level 4</span>
+                    <div class="security-dot"></div>
+                </div>
+            </form>
+            
+            <!-- Stitched Corner Accents -->
+            <div class="corner-stitch tl"></div>
+            <div class="corner-stitch tr"></div>
+            <div class="corner-stitch bl"></div>
+            <div class="corner-stitch br"></div>
+        </div>
     </div>
 
     <div class="layout hidden">
@@ -772,28 +807,30 @@
 
                                     <h5 class="mb-12 text-muted-small text-upper ls-sm">Marketing & Connectivity</h5>
 
-                                    <div class="flex-row flex-gap-12 mb-14">
-                                        <div class="flex-1">
-                                            <label class="form-label-small">WiFi Name (SSID)</label>
-                                            <input type="text" id="settingWifiName" class="form-input"
-                                                placeholder="e.g. ROSHANI_GUEST_WIFI" title="WiFi SSID">
-                                        </div>
-                                        <div class="flex-1">
-                                            <label class="form-label-small">WiFi Password</label>
-                                            <div class="flex-row flex-gap-10">
-                                                <input type="password" id="settingWifiPass" class="form-input flex-1"
-                                                    autocomplete="new-password" placeholder="WiFi Password"
-                                                    title="WiFi Password">
-                                                <button type="button" id="btnToggleWifiPass"
-                                                    class="btn-secondary flex-center p-0-10"
-                                                    title="Toggle Visibility">👁️</button>
+                                    <form onsubmit="return false;">
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">WiFi Name (SSID)</label>
+                                                <input type="text" id="settingWifiName" class="form-input"
+                                                    placeholder="e.g. ROSHANI_GUEST_WIFI" title="WiFi SSID" autocomplete="off">
                                             </div>
-                                            <div class="notif-sub-premium mt-6 font-weight-500 color-primary">
-                                                ⚠️ Note: This password will be printed on customer receipts for their
-                                                convenience.
+                                            <div class="flex-1">
+                                                <label class="form-label-small">WiFi Password</label>
+                                                <div class="flex-row flex-gap-10">
+                                                    <input type="password" id="settingWifiPass" class="form-input flex-1"
+                                                        autocomplete="new-password" placeholder="WiFi Password"
+                                                        title="WiFi Password">
+                                                    <button type="button" id="btnToggleWifiPass"
+                                                        class="btn-secondary flex-center p-0-10"
+                                                        title="Toggle Visibility">👁️</button>
+                                                </div>
+                                                <div class="notif-sub-premium mt-6 font-weight-500 color-primary">
+                                                    ⚠️ Note: This password will be printed on customer receipts for their
+                                                    convenience.
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    </form>
 
                                     <div class="flex-row flex-gap-12 mb-14">
                                         <div class="flex-1">
@@ -1177,6 +1214,10 @@
                         <input type="date" id="reportTo" class="form-input report-date-input" title="To Date">
                         <button id="btnGenerateReport" class="btn-primary report-gen-btn"
                             title="Generate Sales Statistics for the selected dates">Generate</button>
+                        <button id="btnWhatsappReport" class="btn-whatsapp flex-center flex-gap-8"
+                            title="Send Daily Sales Report via WhatsApp Bot">
+                            <i data-lucide="message-circle" class="icon-16"></i> <span>Bot Report</span>
+                        </button>
                     </div>
                 </div>
 
@@ -1654,69 +1695,71 @@
                     </div>
 
                     <!-- Right: Form Fields -->
-                    <div class="modal-form-section p-r-10">
-                        <input type="hidden" id="modalRiderId">
+                    <form id="riderAccountForm" onsubmit="return false;">
+                        <div class="modal-form-section p-r-10">
+                            <input type="hidden" id="modalRiderId">
 
-                        <div class="form-row">
-                            <div class="flex-1">
-                                <label class="form-label">Full Name</label>
-                                <input id="riderName" placeholder="John Doe" class="form-input w-full"
-                                    title="Rider's full name">
-                            </div>
-                            <div class="flex-1">
-                                <label class="form-label">Email (Login)</label>
-                                <input id="riderEmail" type="email" placeholder="john@example.com"
-                                    class="form-input w-full" title="Rider's login email address">
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="flex-1">
-                                <label class="form-label" id="riderPassLabel">Portal Password</label>
-                                <div class="password-input-group flex-row flex-gap-8">
-                                    <input id="riderPass" type="password" autocomplete="new-password"
-                                        placeholder="••••••••" class="form-input flex-1"
-                                        title="New password for rider portal">
-                                    <button type="button" id="btnToggleRiderPass"
-                                        class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
+                            <div class="form-row">
+                                <div class="flex-1">
+                                    <label class="form-label">Full Name</label>
+                                    <input id="riderName" placeholder="John Doe" class="form-input w-full"
+                                        title="Rider's full name">
                                 </div>
-                                <small id="riderPassHint" class="hidden text-muted-small">Leave blank to keep current
-                                    password</small>
+                                <div class="flex-1">
+                                    <label class="form-label">Email (Login)</label>
+                                    <input id="riderEmail" type="email" placeholder="john@example.com"
+                                        class="form-input w-full" title="Rider's login email address" autocomplete="username">
+                                </div>
                             </div>
-                            <div class="flex-1">
-                                <label class="form-label">Primary Phone</label>
-                                <input id="riderPhone" type="tel" placeholder="+91 99999 00000"
-                                    class="form-input w-full" title="Rider's primary contact number">
+
+                            <div class="form-row">
+                                <div class="flex-1">
+                                    <label class="form-label" id="riderPassLabel">Portal Password</label>
+                                    <div class="password-input-group flex-row flex-gap-8">
+                                        <input id="riderPass" type="password" autocomplete="new-password"
+                                            placeholder="••••••••" class="form-input flex-1"
+                                            title="New password for rider portal">
+                                        <button type="button" id="btnToggleRiderPass"
+                                            class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
+                                    </div>
+                                    <small id="riderPassHint" class="hidden text-muted-small">Leave blank to keep current
+                                        password</small>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="form-label">Primary Phone</label>
+                                    <input id="riderPhone" type="tel" placeholder="+91 99999 00000"
+                                        class="form-input w-full" title="Rider's primary contact number">
+                                </div>
                             </div>
+
+                            <div class="divider-dashed"></div>
+
+                            <div class="form-row">
+                                <div class="flex-1">
+                                    <label class="form-label">Father's Name</label>
+                                    <input id="riderFatherName" placeholder="Father's Name" class="form-input w-full"
+                                        title="Rider's father name">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="form-label">Age</label>
+                                    <input id="riderAge" type="number" placeholder="25" class="form-input w-full"
+                                        title="Rider's age">
+                                </div>
+                            </div>
+
+                            <label class="form-label">Aadhar Number</label>
+                            <input id="riderAadharNo" placeholder="0000 0000 0000" class="form-input w-full"
+                                title="Rider's 12-digit Aadhar number">
+
+                            <label class="form-label">Educational Qualification</label>
+                            <input id="riderQual" placeholder="e.g. Graduate" class="form-input w-full"
+                                title="Highest educational degree">
+
+                            <label class="form-label">Current Address</label>
+                            <textarea id="riderAddress" placeholder="Full residential address..."
+                                class="form-input w-full h-80" title="Full permanent/current address"></textarea>
                         </div>
-
-                        <div class="divider-dashed"></div>
-
-                        <div class="form-row">
-                            <div class="flex-1">
-                                <label class="form-label">Father's Name</label>
-                                <input id="riderFatherName" placeholder="Father's Name" class="form-input w-full"
-                                    title="Rider's father name">
-                            </div>
-                            <div class="flex-1">
-                                <label class="form-label">Age</label>
-                                <input id="riderAge" type="number" placeholder="25" class="form-input w-full"
-                                    title="Rider's age">
-                            </div>
-                        </div>
-
-                        <label class="form-label">Aadhar Number</label>
-                        <input id="riderAadharNo" placeholder="0000 0000 0000" class="form-input w-full"
-                            title="Rider's 12-digit Aadhar number">
-
-                        <label class="form-label">Educational Qualification</label>
-                        <input id="riderQual" placeholder="e.g. Graduate" class="form-input w-full"
-                            title="Highest educational degree">
-
-                        <label class="form-label">Current Address</label>
-                        <textarea id="riderAddress" placeholder="Full residential address..."
-                            class="form-input w-full h-80" title="Full permanent/current address"></textarea>
-                    </div>
+                    </form>
                 </div>
             </div>
 
@@ -1790,6 +1833,7 @@
     <div id="orderDrawerOverlay" class="drawer-overlay"></div>
     <div id="orderDrawer" class="drawer-content">
         <div class="drawer-handle"></div>
+        <button class="drawer-close-btn" data-action="closeOrderDrawer" title="Close Drawer">&times;</button>
         <div id="orderDrawerBody">
             <!-- Populated via JS -->
             <div class="shimmer skeleton-title"></div>
@@ -1814,7 +1858,9 @@
             <div class="modal-body p-20">
                 <!-- Size Selection -->
                 <div id="posSizeSection" class="selection-section">
-                    <label class="pos-section-label">CHOOSE SIZE</label>
+                    <label class="pos-section-label flex-row flex-center flex-gap-6">
+                        <i data-lucide="layers" class="icon-14"></i> CHOOSE SIZE
+                    </label>
                     <div id="posSizeGrid" class="size-selection-grid mt-10">
                         <!-- Dynamic Size Cards -->
                     </div>
@@ -1822,7 +1868,9 @@
 
                 <!-- Add-ons Selection -->
                 <div id="posAddonsSection" class="selection-section mt-24">
-                    <label class="pos-section-label">EXTRA ADD-ONS</label>
+                    <label class="pos-section-label flex-row flex-center flex-gap-6">
+                        <i data-lucide="plus-circle" class="icon-14"></i> EXTRA ADD-ONS
+                    </label>
                     <div id="posAddonsList" class="addons-checklist-grid mt-10">
                         <!-- Dynamic Addons -->
                     </div>
@@ -1830,23 +1878,28 @@
 
                 <!-- Quantity Selection -->
                 <div class="selection-section mt-24">
-                    <label class="pos-section-label">QUANTITY</label>
+                    <label class="pos-section-label flex-row flex-center flex-gap-6">
+                        <i data-lucide="hash" class="icon-14"></i> QUANTITY
+                    </label>
                     <div class="flex-row flex-center flex-gap-20 mt-10">
-                        <button id="btnPosQtyDec" class="qty-btn-large" title="Decrease quantity">−</button>
+                        <button id="btnPosQtyDec" data-action="adjustPOSModalQty" data-val="-1" class="qty-btn-large" title="Decrease quantity">−</button>
                         <span id="posModalQty" class="qty-val-large">1</span>
-                        <button id="btnPosQtyInc" class="qty-btn-large" title="Increase quantity">+</button>
+                        <button id="btnPosQtyInc" data-action="adjustPOSModalQty" data-val="1" class="qty-btn-large" title="Increase quantity">+</button>
                     </div>
                 </div>
             </div>
 
             <div class="modal-footer selection-footer">
                 <div class="selection-total-info">
-                    <div class="text-muted-small">Total Price</div>
+                    <div class="text-muted-small flex-row flex-center flex-gap-6">
+                        <i data-lucide="calculator" class="icon-12"></i> Total Price
+                    </div>
                     <div id="posModalTotal" class="total-price-large">₹0</div>
                 </div>
-                <button id="posAddBtn" data-action="addToWalkinCartFromModal" class="btn-primary btn-add-large"
+                <button id="posAddBtn" data-action="addToWalkinCartFromModal" class="btn-primary btn-add-large flex-center flex-gap-10"
                     title="Add this item with selected options to your cart">
-                    &#128722; Add to Cart
+                    <i data-lucide="shopping-cart" class="icon-18"></i>
+                    <span>Add to Cart</span>
                 </button>
             </div>
         </div>
@@ -1863,19 +1916,23 @@
                 </div>
                 <button class="close-btn">&times;</button>
             </div>
-            <div class="modal-body p-20">
-                <p class="text-muted-small mb-16">For security, please enter your password to proceed with this sensitive action (e.g. deleting riders or catalog items).</p>
-                <div class="form-group">
-                    <label class="form-label-small">Confirm Admin Password</label>
-                    <input type="password" id="reauthPassword" class="form-input" placeholder="Enter password" autocomplete="current-password">
+            <form id="reauthForm">
+                <div class="modal-body p-20">
+                    <!-- Hidden username for accessibility/password managers -->
+                    <input type="text" name="username" style="display:none;" autocomplete="username">
+                    <p class="text-muted-small mb-16">For security, please enter your password to proceed with this sensitive action (e.g. deleting riders or catalog items).</p>
+                    <div class="form-group">
+                        <label class="form-label-small">Confirm Admin Password</label>
+                        <input type="password" id="reauthPassword" class="form-input" placeholder="Enter password" autocomplete="current-password">
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary btn-hide-modal">Cancel</button>
-                <button id="btnConfirmReauth" class="btn-primary">
-                    Verify & Proceed
-                </button>
-            </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary btn-hide-modal">Cancel</button>
+                    <button id="btnConfirmReauth" type="submit" class="btn-primary">
+                        Verify & Proceed
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

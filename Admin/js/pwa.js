@@ -4,6 +4,7 @@
  */
 
 import { showConfirm, showToast } from './ui-utils.js';
+import { state } from './state.js';
 
 // 1. REFRESH CIRCUIT BREAKER & COMPLETE REFRESH
 export const completeSiteRefresh = async () => {

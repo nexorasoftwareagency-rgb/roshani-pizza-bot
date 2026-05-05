@@ -665,7 +665,7 @@ function renderPriorityOrders(orders) {
         `;
     }).join('');
 
-    if (typeof lucide !== 'undefined') lucide.createIcons(container);
+    if (window.lucide) window.lucide.createIcons({ root: container });
 }
 
 function renderTopItems(orders) {
@@ -705,7 +705,7 @@ function renderTopItems(orders) {
         </div>
     `).join('');
 
-    if (typeof lucide !== 'undefined') lucide.createIcons(container);
+    if (typeof lucide !== 'undefined') lucide.createIcons({ root: container });
 }
 
 function renderTopCustomers(orders) {
@@ -742,7 +742,7 @@ function renderTopCustomers(orders) {
         </div>
     `).join('');
 
-    if (typeof lucide !== 'undefined') lucide.createIcons(container);
+    if (typeof lucide !== 'undefined') lucide.createIcons({ root: container });
 }
 
 
@@ -1059,8 +1059,11 @@ export async function openOrderDrawer(id) {
         </div>
     `;
 
-    if (window.lucide) window.lucide.createIcons(content);
-    drawer.classList.add('active');
+    if (window.lucide) window.lucide.createIcons({ root: content });
+    
+    const overlay = document.getElementById('orderDrawerOverlay');
+    if (drawer) drawer.classList.add('active');
+    if (overlay) overlay.classList.add('active');
     
     // Push state so back button closes the drawer
     history.pushState({ action: 'closeDrawer', targetId: 'orderDrawer' }, "", window.location.hash);
@@ -1068,7 +1071,9 @@ export async function openOrderDrawer(id) {
 
 export function closeOrderDrawer() {
     const drawer = document.getElementById('orderDrawer');
+    const overlay = document.getElementById('orderDrawerOverlay');
     if (drawer) drawer.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
 }
 
 export function filterOrders(searchTerm) {

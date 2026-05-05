@@ -62,8 +62,8 @@ self.addEventListener('activate', (event) => {
 
 // 3. Fetch Event: Network-First Strategy with Cache Fallback
 self.addEventListener('fetch', (event) => {
-  // Only cache GET requests
-  if (event.request.method !== 'GET') return;
+  // Only cache GET requests with HTTP/HTTPS schemes
+  if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
 
   // Skip Firebase Realtime Database calls (must be live)
   if (event.request.url.includes('firebaseio.com')) return;

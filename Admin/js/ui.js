@@ -89,8 +89,7 @@ export const switchTab = (tabId, skipHistory = false) => {
                 e.stopPropagation();
                 switchTab('dashboard');
             };
-            posTab.prepend(backBtn);
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            if (window.lucide) window.lucide.createIcons({ root: posTab });
         }
     } else {
         body.classList.remove('pos-immersion-active');
@@ -181,7 +180,7 @@ export const switchTab = (tabId, skipHistory = false) => {
 
         // --- PHASE 3.5: ICON SYNCHRONIZATION ---
         // Ensure all dynamic icons in the target tab are properly rendered
-        if (window.lucide) window.lucide.createIcons(target);
+        if (window.lucide) window.lucide.createIcons({ root: target });
     }
 };
 
@@ -224,8 +223,7 @@ export class ThemeManager {
         // Update Icons
         const themeBtn = document.querySelector('[data-action="toggleTheme"] i');
         if (themeBtn) {
-            themeBtn.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            if (window.lucide) window.lucide.createIcons({ root: themeBtn.parentElement });
         }
     }
 

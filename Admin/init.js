@@ -18,6 +18,6 @@ window.haptic = (pattern = 10) => {
 // Lucide Icons
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
+        window.lucide.createIcons();
     }
 });

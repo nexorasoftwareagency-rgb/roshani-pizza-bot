@@ -48,13 +48,15 @@ export function initAuth() {
 
     // Add diagnostic button to login form (Gated for non-production/debug only)
     const isDebuggable = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || localStorage.getItem('DEBUG_MODE') === 'true';
-    const loginCard = document.querySelector('.login-card');
+    const loginCard = document.querySelector('.login-card-v4');
     if (loginCard && isDebuggable && !document.getElementById('diagnosticBtn')) {
         const diagBtn = document.createElement('button');
         diagBtn.id = 'diagnosticBtn';
         diagBtn.type = 'button';
         diagBtn.innerText = '🔍 Run Diagnostics';
-        diagBtn.style.cssText = 'margin-top: 15px; background: #666; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 12px;';
+        diagBtn.style.cssText = 'margin-top: 20px; background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 12px; cursor: pointer; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.3s;';
+        diagBtn.onmouseover = () => diagBtn.style.background = 'rgba(255,255,255,0.1)';
+        diagBtn.onmouseout = () => diagBtn.style.background = 'rgba(255,255,255,0.05)';
         diagBtn.onclick = () => {
             if (window.diagnoseDatabase) {
                 window.diagnoseDatabase();
@@ -78,7 +80,7 @@ export function initAuth() {
             if (layout) layout.classList.add('hidden');
             if (loginBtn) {
                 loginBtn.disabled = false;
-                loginBtn.innerText = "Sign In";
+                loginBtn.innerHTML = '<span>Access Dashboard</span> <div class="btn-stitch-v4"></div>';
             }
             return;
         }
@@ -232,7 +234,9 @@ export function requireAdminReauth(onSuccess) {
     passInput.value = "";
     passInput.focus();
 
-    confirmBtn.onclick = async () => {
+    const form = document.getElementById('reauthForm');
+    form.onsubmit = async (e) => {
+        e.preventDefault();
         const pass = passInput.value;
         if (!pass) return showToast("Enter password", "warning");
         try {
@@ -245,7 +249,7 @@ export function requireAdminReauth(onSuccess) {
             showToast("Invalid password", "error");
         } finally {
             confirmBtn.disabled = false;
-            confirmBtn.innerText = "Confirm Access";
+            confirmBtn.innerText = "Verify & Proceed";
         }
     };
 }
@@ -266,10 +270,12 @@ export function userLogout() {
 export async function doLogin(email, pass) {
     const btn = document.getElementById("loginBtn");
     const errEl = document.getElementById("loginError");
+    const errMsg = errEl?.querySelector('.error-msg');
+    
     try {
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<span>Accessing Dashboard...</span> <div class="loading-spinner-small ml-10"></div>';
+            btn.innerHTML = '<span>Verifying Credentials...</span> <div class="btn-stitch-v4"></div>';
         }
         if (errEl) errEl.classList.add('hidden');
         
@@ -277,7 +283,10 @@ export async function doLogin(email, pass) {
         await auth.signInWithEmailAndPassword(email, pass);
     } catch (error) {
         console.error("Login Error:", error);
-        if (errEl) {
+        if (errEl && errMsg) {
+            errMsg.innerText = error.message;
+            errEl.classList.remove('hidden');
+        } else if (errEl) {
             errEl.innerText = error.message;
             errEl.classList.remove('hidden');
         } else {
@@ -286,8 +295,8 @@ export async function doLogin(email, pass) {
         
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '<span>Access Dashboard</span> <i data-lucide="arrow-right" class="ml-10" style="width:18px;"></i>';
-            if (window.lucide) window.lucide.createIcons();
+            btn.innerHTML = '<span>Access Dashboard</span> <div class="btn-stitch-v4"></div>';
+            if (window.lucide) window.lucide.createIcons({ root: btn.parentElement });
         }
     }
 }

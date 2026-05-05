@@ -136,8 +136,10 @@ export const logAudit = async (action, details = {}) => {
         });
     } catch (e) {
         // Silently fail for logAudit to avoid init crashes
-        if (e?.code !== 'permission-denied') {
-            console.warn("[Audit] Log failed:", e);
+        if (e?.code === 'PERMISSION_DENIED' || e?.code === 'permission-denied') {
+            console.warn("[Audit] Log forbidden (App Check or Rules):", action);
+        } else {
+            console.warn("[Audit] Log failed:", action, e?.message || e);
         }
     }
 };
