@@ -16,6 +16,7 @@ const CACHE_DURATION = 300000; // 5 minutes
  * @param {Boolean} isReprint - Whether this is a reprint (affects template branding)
  */
 export async function printOrderReceipt(rawOrder, isReprint = false) {
+    console.time('[Print] Receipt Generation');
     const o = standardizeOrderData(rawOrder);
     if (!o) return;
 
@@ -31,7 +32,7 @@ export async function printOrderReceipt(rawOrder, isReprint = false) {
                     printWindow.print();
                     printWindow.close();
                 } catch (e) { console.error("Print error:", e); }
-            }, 800);
+            }, 400);
             return;
         }
     }
@@ -115,12 +116,14 @@ export async function printOrderReceipt(rawOrder, isReprint = false) {
     printWindow.document.close();
     printWindow.focus();
 
+    console.timeEnd('[Print] Receipt Generation');
     setTimeout(() => {
         try {
             printWindow.print();
             printWindow.close();
+            console.log("[Print] Job sent to system spooler.");
         } catch (e) { console.error("Print error:", e); }
-    }, 300); // Reduced delay for faster processing
+    }, 300); // Optimized for performance while ensuring layout stability
 }
 
 /**

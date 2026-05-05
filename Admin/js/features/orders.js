@@ -665,7 +665,7 @@ function renderPriorityOrders(orders) {
         `;
     }).join('');
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons(container);
 }
 
 function renderTopItems(orders) {
@@ -705,7 +705,7 @@ function renderTopItems(orders) {
         </div>
     `).join('');
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons(container);
 }
 
 function renderTopCustomers(orders) {
@@ -742,7 +742,7 @@ function renderTopCustomers(orders) {
         </div>
     `).join('');
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons(container);
 }
 
 

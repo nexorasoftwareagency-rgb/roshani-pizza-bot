@@ -220,7 +220,12 @@ export function renderRiders(searchTerm = "") {
     if (statEarnings) statEarnings.innerText = "₹" + totalEarnings.toLocaleString();
 
     // Re-init icons if Lucide is available
-    if (window.lucide) window.lucide.createIcons();
+    // Re-init icons only in management container
+    const manageTab = document.getElementById('management-tab-container');
+    if (window.lucide) {
+        if (manageTab) lucide.createIcons(manageTab);
+        else lucide.createIcons();
+    }
 }
 
 /**

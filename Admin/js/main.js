@@ -69,7 +69,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initRiderAnalytics();
 
     // Final check for icons on static content
-    if (window.lucide) window.lucide.createIcons();
+    // Global icons initialization limited to main layout
+    if (window.lucide) {
+        const layout = document.querySelector('.layout');
+        if (layout) lucide.createIcons(layout);
+        else lucide.createIcons();
+    }
 
     // 1. Static Event Binding
     const setupStaticListeners = () => {
@@ -161,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('btnPosQtyDec')?.addEventListener('click', () => adjustPOSModalQty(-1));
         document.getElementById('btnPosQtyInc')?.addEventListener('click', () => adjustPOSModalQty(1));
-        document.getElementById('posAddBtn')?.addEventListener('click', addToWalkinCartFromModal);
 
         // Dish Modal
         bindClickTo('btnUpdateDishPhoto', 'dishFile');
@@ -246,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'saveDeliveredOrder': saveDeliveredOrder(id, val); break;
                 case 'openPOSSelectionModal': openPOSSelectionModal(id); break;
                 case 'hidePOSSelectionModal': hidePOSSelectionModal(); break;
+                case 'addToWalkinCartFromModal': addToWalkinCartFromModal(); break;
                 case 'openCartAddonPicker': openCartAddonPicker(id); break;
                 case 'walkinQtyChange': walkinQtyChange(id, parseInt(val, 10)); break;
                 case 'walkinRemoveItem': removeFromWalkinCart(id); break;
@@ -355,7 +360,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupStaticListeners();
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof lucide !== 'undefined') {
+        const layout = document.querySelector('.layout');
+        if (layout) lucide.createIcons(layout);
+        else lucide.createIcons();
+    }
 
     // --- 3. REFRESH & SESSION SAFETY ---
     window.addEventListener('beforeunload', (e) => {

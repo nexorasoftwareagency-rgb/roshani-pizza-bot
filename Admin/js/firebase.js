@@ -28,6 +28,11 @@ if (!fb.apps.length) {
         // Initialize App Check immediately after app init
         if (fb.appCheck && window.reCaptchaSiteKey) {
             try {
+                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                if (isLocal) {
+                    console.log("[App Check] 🛠️ Localhost detected, enabling Debug Token...");
+                    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+                }
                 const appCheck = fb.appCheck();
                 appCheck.activate(
                     new fb.appCheck.ReCaptchaV3Provider(window.reCaptchaSiteKey),
