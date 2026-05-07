@@ -46,7 +46,7 @@ function resolvePath(path, outlet = 'pizza') {
     if (!path) return '';
 
     // Shared nodes that remain at root level
-    const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'bot', 'logs', 'botUsers', 'pizza', 'cake'];
+    const shared = ['admins', 'riders', 'riderStats', 'botStatus', 'migrationStatus', 'bot', 'logs', 'pizza', 'cake'];
     const rootNode = path.split('/')[0];
 
     // If already absolute or shared, return as is
@@ -108,20 +108,22 @@ async function deleteData(path, outlet = 'pizza') {
     }
 }
 
-async function getUserProfile(jid) {
+async function getUserProfile(jid, outlet = 'pizza') {
     try {
         const cleanJid = jid.replace(/[^0-9]/g, '');
-        const snap = await db.ref(`botUsers/${cleanJid}`).once('value');
+        const path = resolvePath(`botUsers/${cleanJid}`, outlet);
+        const snap = await db.ref(path).once('value');
         return snap.val();
     } catch (err) {
         return null;
     }
 }
 
-async function saveUserProfile(jid, data) {
+async function saveUserProfile(jid, data, outlet = 'pizza') {
     try {
         const cleanJid = jid.replace(/[^0-9]/g, '');
-        await db.ref(`botUsers/${cleanJid}`).update(data);
+        const path = resolvePath(`botUsers/${cleanJid}`, outlet);
+        await db.ref(path).update(data);
         return true;
     } catch (err) {
         return false;

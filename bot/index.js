@@ -1178,7 +1178,7 @@ async function startBot() {
             const pushName = msg.pushName || "";
 
             if (!sessions[sender]) {
-                const profile = await getUserProfile(sender);
+                const profile = await getUserProfile(sender, OUTLET);
                 sessions[sender] = { 
                     step: "START", 
                     current: {}, 
@@ -1262,23 +1262,10 @@ async function startBot() {
                     return sock.sendMessage(sender, { text: `🌙 *${OUTLET_NAME.toUpperCase()} IS CLOSED*\n\nHours: ${store.shopOpenTime || 'N/A'} - ${store.shopCloseTime || 'N/A'}\n\nSee you later! 👋` });
                 }
                 
-                let welcome = "";
-                if (user.hasProfile && user.name) {
-                    welcome += `Welcome back, *${user.name}*! 👋\n`;
-                    welcome += `Your favorite items are ready for you. ${OUTLET_EMOJI}\n\n`;
-                } else {
-                    welcome += `Hello *${pushName}*! 👋\n\n`;
-                }
-                
+                let welcome = `Hello *${pushName}*! 👋\n\n`;
                 welcome += `✨ *WELCOME TO ${OUTLET_NAME.toUpperCase()}* ${OUTLET_EMOJI}\n`;
                 welcome += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                 welcome += `Delicious food, delivered fast to your doorstep! 🚀\n\n`;
-                
-                // Cross-promotion for other outlet
-                if (OTHER_OUTLET_NUMBER) {
-                    welcome += `${OTHER_OUTLET_EMOJI} Also try *${OTHER_OUTLET_NAME}*!\n`;
-                    welcome += `📱 Order at: wa.me/${OTHER_OUTLET_NUMBER}\n\n`;
-                }
                 
                 welcome += `_Loading menu... one moment_ ⏳`;
                 
@@ -1477,7 +1464,7 @@ async function startBot() {
                 user.name = text;
                 user.step = "PHONE";
                 if (user.name) {
-                    await saveUserProfile(sender, { name: user.name, phone: user.phone || "" });
+                    await saveUserProfile(sender, { name: user.name, phone: user.phone || "" }, OUTLET);
                 }
                 return sock.sendMessage(sender, { text: await appendContactInfo("📞 *STEP 2: ENTER YOUR 10 DIGIT MOBILE NUMBER*\n\n_Example: 9876543210. We will use this to contact you regarding your order._\n0️⃣ *Take one step Back* 🔙", user.outlet) });
             }
@@ -1600,7 +1587,7 @@ async function startBot() {
                     address: user.address,
                     location: user.location,
                     lastOutlet: user.outlet
-                });
+                }, OUTLET);
                 
                 // Save complete profile to outlet's customers node for POS access
                 if (user.phone) {
