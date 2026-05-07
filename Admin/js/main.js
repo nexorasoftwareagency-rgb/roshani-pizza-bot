@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnWhatsappReport.style.opacity = '0.7';
                 
                 showToast("Requesting WhatsApp Report...", "info");
-                const cmdRef = db.ref("bot/commands").push();
+                const cmdRef = db.ref(`bot/${state.currentOutlet}/commands`).push();
                 await cmdRef.set({
                     action: "SEND_DAILY_REPORT",
                     targetDate: new Date().toISOString().split('T')[0],
