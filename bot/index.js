@@ -1306,7 +1306,7 @@ async function startBot() {
                 if (user.dishList.length === 0) return sock.sendMessage(sender, { text: "❌ No items in this category." });
 
                 let dMsg = `🍽️ *${cat.name.toUpperCase()}*\n\n`;
-                user.dishList.forEach((d, i) => { dMsg += `${i + 1}️⃣  *${d.name}*\n💰 From ₹${d.price}\n\n`; });
+                user.dishList.forEach((d, i) => { dMsg += `${i + 1}️⃣  *${d.name}*\n\n`; });
                 dMsg += `🛒 *9* View Cart\n0️⃣ *Take one step Back* 🔙`;
                 user.step = "DISH";
                 return await sendImage(sock, sender, cat.image, dMsg);
@@ -1333,7 +1333,7 @@ async function startBot() {
                     if (dishList.length === 0) return sendCategories(sock, sender, user);
                     
                     let dMsg = `🍽️ *ITEM SELECTION*\n\n`;
-                    dishList.forEach((d, i) => { dMsg += `${i + 1}️⃣  *${d.name}*\n💰 From ₹${d.price}\n\n`; });
+                    dishList.forEach((d, i) => { dMsg += `${i + 1}️⃣  *${d.name}*\n\n`; });
                     dMsg += `🛒 *9* View Cart\n0️⃣ *Take one step Back* 🔙`;
                     user.step = "DISH";
                     return sock.sendMessage(sender, { text: dMsg });
