@@ -1,7 +1,18 @@
 /**
- * ROSHANI ERP | WHATSAPP BOT CORE v3.2
- * Integrated with Advanced Admin Analytics & Multi-Outlet Sequencing
+ * ROSHANI ERP | WHATSAPP BOT CORE v4.0
+ * Single-Outlet Instance (Pizza-Bot / Cake-Bot)
  */
+
+// =============================
+// OUTLET CONFIGURATION
+// Change ONLY these values to switch between Pizza and Cake instances.
+// =============================
+const OUTLET = 'pizza';                        // 'pizza' or 'cake'
+const OUTLET_NAME = 'Roshani Pizza';            // Display name
+const OUTLET_EMOJI = '🍕';                     // Brand emoji
+const OTHER_OUTLET_NAME = 'Roshani Cake';       // Cross-promo name
+const OTHER_OUTLET_EMOJI = '🎂';               // Cross-promo emoji
+const OTHER_OUTLET_NUMBER = '';                 // Cross-promo WhatsApp number (set on deploy)
 
 const {
     default: makeWASocket,
@@ -98,22 +109,14 @@ async function getReportRecipients() {
         const devJid = formatJid(DEVELOPER_NUMBER);
         if (devJid) recipients.add(devJid);
 
-        // Try to get Admin from settings (primary)
-        const storeSettings = await getData("settings/Store", "pizza") || {};
-        const deliverySettings = await getData("settings/Delivery", "pizza") || {};
+        // Get THIS outlet's admin only
+        const storeSettings = await getData("settings/Store", OUTLET) || {};
+        const deliverySettings = await getData("settings/Delivery", OUTLET) || {};
         
-        // Priority: Store Settings Phone > Delivery Settings Report Phone
         const adminNum = storeSettings.phone || deliverySettings.reportPhone;
         if (adminNum) {
             const adminJid = formatJid(adminNum);
             if (adminJid) recipients.add(adminJid);
-        }
-        
-        // Also check cake outlet for any additional numbers
-        const cakeSettings = await getData("settings/Store", "cake") || {};
-        if (cakeSettings.phone) {
-            const cakeJid = formatJid(cakeSettings.phone);
-            if (cakeJid) recipients.add(cakeJid);
         }
         
     } catch (e) {
@@ -130,8 +133,8 @@ async function getReportRecipients() {
  * Monitors the 'bot/commands' node for real-time triggers from the Admin Dashboard.
  */
 function initCommandListener(sock) {
-    console.log("[Bot] Command Listener Started: Listening on 'bot/commands'...");
-    const cmdRef = db.ref("bot/commands");
+    console.log(`[Bot] Command Listener Started: Listening on 'bot/${OUTLET}/commands'...`);
+    const cmdRef = db.ref(`bot/${OUTLET}/commands`);
     cmdRef.off("child_added"); // Clear previous listeners to avoid duplicates on reconnection
     cmdRef.on("child_added", async (snap) => {
         const cmd = snap.val();
@@ -389,9 +392,6 @@ function getFoodFunnyProgress(status, name = "") {
 async function sendInvalidInputHelp(sock, sender, user) {
     let helpMsg = "⚠️ *Invalid Selection.* ";
     switch (user.step) {
-        case "OUTLET":
-            helpMsg += "Please reply with *1* for Pizza Outlet or *2* for Cake Outlet.";
-            break;
         case "CATEGORY":
             helpMsg += "Please reply with a *Category Number* from the list above.\n\n🛒 *9* View Cart\n🏠 *0* Main Menu";
             break;
@@ -687,7 +687,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
 
 async function sendDailyReport(sock, targetDate = null) {
     try {
-        const outlets = ['pizza', 'cake'];
+        const outlets = [OUTLET]; // Single outlet only
         const ist = getISTDateInfo();
         const dateStr = targetDate || ist.dateStr;
         
@@ -742,13 +742,13 @@ async function sendDailyReport(sock, targetDate = null) {
         const displayDate = new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
         const nowIST = getISTDateInfo().istObject;
         
-        const msg = `📊 *DAILY SALES REPORT* 📊\n\n` +
+        const msg = `📊 *${OUTLET_NAME.toUpperCase()} — DAILY SALES REPORT* ${OUTLET_EMOJI}\n\n` +
             `📅 Sales Date: *${displayDate}*\n` +
             `⏰ Generated: ${nowIST.getUTCHours().toString().padStart(2, '0')}:${nowIST.getUTCMinutes().toString().padStart(2, '0')} IST\n\n` +
             (reportDetails || "_No sales recorded for this date._\n") + 
             `\n💵 *TOTAL REVENUE:* ₹${totalRevenue.toLocaleString()}\n` +
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
-            `_Sent automatically by Roshani Bot_`;
+            `_Sent automatically by ${OUTLET_NAME} Bot_`;
         
         for (const jid of jids) {
             await sock.sendMessage(jid, { text: msg });
@@ -766,7 +766,7 @@ async function sendMonthlyReport(sock) {
         let totalRevenue = 0;
         let reportDetails = "";
         
-        const outlets = ['pizza', 'cake'];
+        const outlets = [OUTLET]; // Single outlet only
         for (const outlet of outlets) {
             const orders = await getData(`${outlet}/orders`);
             if (!orders) continue;
@@ -797,12 +797,12 @@ async function sendMonthlyReport(sock) {
         
         const jids = await getReportRecipients();
         
-        const msg = `📈 *MONTHLY SALES REPORT* 📈\n\n` +
+        const msg = `📈 *${OUTLET_NAME.toUpperCase()} — MONTHLY SALES REPORT* ${OUTLET_EMOJI}\n\n` +
             `📅 Month: ${now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}\n\n` +
             reportDetails + 
             `\n\n💵 *MONTHLY TOTAL:* ₹${totalRevenue.toLocaleString()}\n` +
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
-            `_Sent automatically by Roshani Bot_`;
+            `_Sent automatically by ${OUTLET_NAME} Bot_`;
         
         for (const jid of jids) {
             await sock.sendMessage(jid, { text: msg });
@@ -822,7 +822,7 @@ async function sendWeeklyReport(sock) {
         let totalRevenue = 0;
         let reportDetails = "";
         
-        const outlets = ['pizza', 'cake'];
+        const outlets = [OUTLET]; // Single outlet only
         for (const outlet of outlets) {
             const orders = await getData(`${outlet}/orders`);
             if (!orders) continue;
@@ -853,12 +853,12 @@ async function sendWeeklyReport(sock) {
         
         const jids = await getReportRecipients();
         
-        const msg = `📊 *WEEKLY SALES REPORT* 📊\n\n` +
+        const msg = `📊 *${OUTLET_NAME.toUpperCase()} — WEEKLY SALES REPORT* ${OUTLET_EMOJI}\n\n` +
             `📅 Week: ${startOfWeek.toLocaleDateString('en-IN')} - ${now.toLocaleDateString('en-IN')}\n\n` +
             reportDetails + 
             `\n\n💵 *WEEKLY TOTAL:* ₹${totalRevenue.toLocaleString()}\n` +
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
-            `_Sent automatically by Roshani Bot_`;
+            `_Sent automatically by ${OUTLET_NAME} Bot_`;
         
         for (const jid of jids) {
             await sock.sendMessage(jid, { text: msg });
@@ -1077,7 +1077,7 @@ async function broadcastPickupAvailable(sock, orderId, order) {
 // =============================
 
 async function startBot() {
-    console.log("🚀 Starting Roshani ERP WhatsApp Bot...");
+    console.log(`🚀 Starting ${OUTLET_NAME} WhatsApp Bot (${OUTLET})...`);
     const { state, saveCreds } = await useMultiFileAuthState('session_data');
     const { version } = await fetchLatestBaileysVersion();
 
@@ -1096,7 +1096,7 @@ async function startBot() {
     if (reportInterval) clearInterval(reportInterval);
     reportInterval = setInterval(async () => {
         cleanupSessions();
-        updateData('bot/status', { lastSeen: Date.now(), status: 'Online' }).catch(() => {});
+        updateData(`bot/${OUTLET}/status`, { lastSeen: Date.now(), status: 'Online', outlet: OUTLET }).catch(() => {});
         
         // Get Time in Asia/Kolkata accurately
         const ist = getISTDateInfo();
@@ -1125,42 +1125,39 @@ async function startBot() {
         }
     }, 60000);
 
-    // Firebase Listeners
-    const outlets = ['pizza', 'cake'];
-    outlets.forEach(outlet => {
-        const orderRef = db.ref(`${outlet}/orders`);
-        orderRef.off("child_changed"); // Clear previous to avoid duplicates
-        orderRef.off("child_added");
+    // Firebase Listeners — Single Outlet Only
+    const orderRef = db.ref(`${OUTLET}/orders`);
+    orderRef.off("child_changed"); // Clear previous to avoid duplicates
+    orderRef.off("child_added");
+    
+    orderRef.on("child_changed", (snap) => {
+        const order = snap.val();
+        if (order) handleOrderStatusUpdate(sock, snap.key, order);
+    });
+    orderRef.on("child_added", (snap) => {
+        const order = snap.val();
+        if (!order) return;
         
-        orderRef.on("child_changed", (snap) => {
-            const order = snap.val();
-            if (order) handleOrderStatusUpdate(sock, snap.key, order);
-        });
-        orderRef.on("child_added", (snap) => {
-            const order = snap.val();
-            if (!order) return;
-            
-            // Only handle "new" orders if they were created after the bot started
-            const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
-            const type = (order.type || order.orderType || "").toLowerCase();
-            const isDineIn = type.includes("dine") || type.includes("walk");
-            
-            // Be more lenient for Dine-in (30 mins) to ensure counter bookings are not missed
-            const timeBuffer = isDineIn ? 1800000 : 10000; 
+        // Only handle "new" orders if they were created after the bot started
+        const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
+        const type = (order.type || order.orderType || "").toLowerCase();
+        const isDineIn = type.includes("dine") || type.includes("walk");
+        
+        // Be more lenient for Dine-in (30 mins) to ensure counter bookings are not missed
+        const timeBuffer = isDineIn ? 1800000 : 10000; 
 
-            if (!processedStatus[snap.key] && orderTime > startupTime - timeBuffer) {
-                handleOrderStatusUpdate(sock, snap.key, order, true);
-            } else {
-                // Just mark as processed without sending message
-                processedStatus[snap.key] = { status: order.status, timestamp: Date.now() };
-            }
-        });
+        if (!processedStatus[snap.key] && orderTime > startupTime - timeBuffer) {
+            handleOrderStatusUpdate(sock, snap.key, order, true);
+        } else {
+            // Just mark as processed without sending message
+            processedStatus[snap.key] = { status: order.status, timestamp: Date.now() };
+        }
     });
 
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
         if (qr) qrcode.generate(qr, { small: true });
-        if (connection === 'open') console.log("✅ BOT IS ONLINE");
+        if (connection === 'open') console.log(`✅ ${OUTLET_NAME.toUpperCase()} BOT IS ONLINE`);
         if (connection === 'close') {
             const code = lastDisconnect?.error?.output?.statusCode;
             if (code !== DisconnectReason.loggedOut) setTimeout(startBot, 5000);
@@ -1256,59 +1253,46 @@ async function startBot() {
 
             // STATE MACHINE
             if (user.step === "START") {
-                const outlet = user.outlet || 'pizza';
-                const store = await getData("settings/Store", outlet);
-                const bot = await getData("settings/Bot", outlet);
+                user.outlet = OUTLET; // Hardcoded — no outlet selection needed
+                const store = await getData("settings/Store", OUTLET);
+                const bot = await getData("settings/Bot", OUTLET);
+                
+                // Check if shop is open before showing menu
+                if (store && !isShopOpen(store.shopOpenTime, store.shopCloseTime, store.shopStatus)) {
+                    return sock.sendMessage(sender, { text: `🌙 *${OUTLET_NAME.toUpperCase()} IS CLOSED*\n\nHours: ${store.shopOpenTime || 'N/A'} - ${store.shopCloseTime || 'N/A'}\n\nSee you later! 👋` });
+                }
                 
                 let welcome = "";
                 if (user.hasProfile && user.name) {
                     welcome += `Welcome back, *${user.name}*! 👋\n`;
-                    welcome += `Your favorite items are ready for you. 🍕\n\n`;
+                    welcome += `Your favorite items are ready for you. ${OUTLET_EMOJI}\n\n`;
                 } else {
-                    welcome += `Hello *${pushName}*! 👋\n`;
+                    welcome += `Hello *${pushName}*! 👋\n\n`;
                 }
                 
-                welcome += `✨ *WELCOME TO ROSHANI PIZZA & CAKE* 🍕🎂\n`;
+                welcome += `✨ *WELCOME TO ${OUTLET_NAME.toUpperCase()}* ${OUTLET_EMOJI}\n`;
                 welcome += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                 welcome += `Delicious food, delivered fast to your doorstep! 🚀\n\n`;
-                welcome += `Please select an outlet:\n`;
-                welcome += `1️⃣ *Pizza Outlet* 🍕\n`;
-                welcome += `2️⃣ *Cake Outlet* 🎂\n\n`;
-                welcome += `_Reply with 1 or 2 to start_`;
                 
-                user.step = "OUTLET";
-                const greetingImg = bot?.greetingImage || store?.bannerImage;
-                return await sendImage(sock, sender, greetingImg, welcome);
-            }
-
-            if (user.step === "OUTLET") {
-                if (text === "1") user.outlet = "pizza";
-                else if (text === "2") user.outlet = "cake";
-                else if (text === "0") { user.step = "START"; return sock.sendMessage(sender, { text: "🏠 Returning to Welcome..." }); }
-                else return sendInvalidInputHelp(sock, sender, user);
-
-                const store = await getData("settings/Store", user.outlet) || {};
-                if (!isShopOpen(store.shopOpenTime, store.shopCloseTime, store.shopStatus)) {
-                    return sock.sendMessage(sender, { text: `🌙 *SHOP CLOSED*\n\nHours: ${store.shopOpenTime} - ${store.shopCloseTime}\n\nSee you later! 👋` });
+                // Cross-promotion for other outlet
+                if (OTHER_OUTLET_NUMBER) {
+                    welcome += `${OTHER_OUTLET_EMOJI} Also try *${OTHER_OUTLET_NAME}*!\n`;
+                    welcome += `📱 Order at: wa.me/${OTHER_OUTLET_NUMBER}\n\n`;
                 }
+                
+                welcome += `_Loading menu... one moment_ ⏳`;
+                
+                const greetingImg = bot?.greetingImage || store?.bannerImage;
+                await sendImage(sock, sender, greetingImg, welcome);
                 return sendCategories(sock, sender, user);
             }
 
 
             if (user.step === "CATEGORY") {
                 if (text === "0") { 
-                    user.step = "START"; 
-                    const store = await getData("settings/Store", user.outlet);
-                    const bot = await getData("settings/Bot", user.outlet);
-                    let welcome = `✨ *WELCOME TO ROSHANI PIZZA & CAKE* 🍕🎂\n`;
-                    welcome += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    welcome += `Please select an outlet:\n`;
-                    welcome += `1️⃣ *Pizza Outlet* 🍕\n`;
-                    welcome += `2️⃣ *Cake Outlet* 🎂\n\n`;
-                    welcome += `_Reply with 1 or 2 to start_`;
-                    user.step = "OUTLET";
-                    const greetingImg = bot?.greetingImage || store?.bannerImage;
-                    return await sendImage(sock, sender, greetingImg, welcome);
+                    // Go back to welcome/start
+                    user.step = "START";
+                    return sock.sendMessage(sender, { text: `🏠 *Main Menu* — Send any message to restart.` });
                 }
                 if (text === "9") return sendCartView(sock, sender, user);
                 const cat = user.categoryList[parseInt(text) - 1];
@@ -1390,7 +1374,7 @@ async function startBot() {
                     addons: user.current.addons,
                     quantity: qty,
                     total: (user.current.unitPrice + addonTotal) * qty,
-                    outlet: user.outlet
+                    outlet: OUTLET
                 });
 
                 user.step = "ADDED_TO_CART";
@@ -1635,7 +1619,7 @@ async function startBot() {
                 let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY!* 🎉\n`;
                 successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                 successMsg += `🆔 *Order ID:* #${orderId.slice(-5)}\n`;
-                successMsg += `🏪 *Shop:* Roshani ${user.outlet.toUpperCase()}\n`;
+                successMsg += `🏪 *Shop:* ${OUTLET_NAME}\n`;
                 successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                 successMsg += `*Please wait while the admin confirms your order!* ⏳\n\n`;
                 successMsg += `Total: ₹${finalOrder.total}`;
