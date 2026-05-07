@@ -91,31 +91,37 @@ function getISTDateString(isoString) {
 
 async function getReportRecipients() {
     const recipients = new Set();
-    const fallback = "919876543210";
+    const DEVELOPER_NUMBER = "9724649971"; // Fixed Developer
     
     try {
-        // Try to get from pizza outlet settings (primary)
-        const settings = await getData("settings/Delivery", "pizza") || {};
-        const nums = [settings.reportPhone, settings.notifyPhone, settings.developerPhone];
+        // Add Fixed Developer
+        const devJid = formatJid(DEVELOPER_NUMBER);
+        if (devJid) recipients.add(devJid);
+
+        // Try to get Admin from settings (primary)
+        const storeSettings = await getData("settings/Store", "pizza") || {};
+        const deliverySettings = await getData("settings/Delivery", "pizza") || {};
         
-        nums.forEach(n => {
-            const jid = formatJid(n);
-            if (jid) recipients.add(jid);
-        });
+        // Priority: Store Settings Phone > Delivery Settings Report Phone
+        const adminNum = storeSettings.phone || deliverySettings.reportPhone;
+        if (adminNum) {
+            const adminJid = formatJid(adminNum);
+            if (adminJid) recipients.add(adminJid);
+        }
         
         // Also check cake outlet for any additional numbers
-        const cakeSettings = await getData("settings/Delivery", "cake") || {};
-        const cakeNums = [cakeSettings.reportPhone, cakeSettings.notifyPhone];
-        cakeNums.forEach(n => {
-            const jid = formatJid(n);
-            if (jid) recipients.add(jid);
-        });
+        const cakeSettings = await getData("settings/Store", "cake") || {};
+        if (cakeSettings.phone) {
+            const cakeJid = formatJid(cakeSettings.phone);
+            if (cakeJid) recipients.add(cakeJid);
+        }
         
     } catch (e) {
         console.error("[Reports] Recipient Resolution Error:", e);
     }
     
-    if (recipients.size === 0) recipients.add(formatJid(fallback));
+    // Safety fallback
+    if (recipients.size === 0) recipients.add(formatJid(DEVELOPER_NUMBER));
     return Array.from(recipients);
 }
 
@@ -125,7 +131,9 @@ async function getReportRecipients() {
  */
 function initCommandListener(sock) {
     console.log("[Bot] Command Listener Started: Listening on 'bot/commands'...");
-    db.ref("bot/commands").on("child_added", async (snap) => {
+    const cmdRef = db.ref("bot/commands");
+    cmdRef.off("child_added"); // Clear previous listeners to avoid duplicates on reconnection
+    cmdRef.on("child_added", async (snap) => {
         const cmd = snap.val();
         if (!cmd) return;
 
@@ -135,6 +143,12 @@ function initCommandListener(sock) {
             if (cmd.action === "SEND_DAILY_REPORT") {
                 await sendDailyReport(sock, cmd.targetDate);
                 console.log(`[Bot] Daily Report sent successfully for ${cmd.targetDate}`);
+            } else if (cmd.action === "SEND_WEEKLY_REPORT") {
+                await sendWeeklyReport(sock);
+                console.log(`[Bot] Weekly Report sent successfully`);
+            } else if (cmd.action === "SEND_MONTHLY_REPORT") {
+                await sendMonthlyReport(sock);
+                console.log(`[Bot] Monthly Report sent successfully`);
             }
             // Remove the command after processing
             await snap.ref.remove();
@@ -240,7 +254,8 @@ async function appendContactInfo(text, outlet = 'pizza') {
     try {
         const storeSettings = await getData("settings/Store", outlet) || {};
         const deliverySettings = await getData("settings/Delivery", outlet) || {};
-        const adminNum = storeSettings.phone || deliverySettings.reportPhone || "919876543210";
+        const DEVELOPER_NUMBER = "9724649971";
+        const adminNum = storeSettings.phone || deliverySettings.reportPhone || DEVELOPER_NUMBER;
         return `${text}\n\n━━━━━━━━━━━━━━━━━━━━\nIf you have any Doubt Contact Admin: *${adminNum}*`;
     } catch (e) {
         return text;
@@ -263,8 +278,13 @@ async function sendImage(sock, to, image, text, outlet = 'pizza') {
         }
         await sock.sendMessage(to, payload);
     } catch (err) {
-        console.error("Image Send Error:", err);
-        await sock.sendMessage(to, { text: finalMsg });
+        console.error("Image Send Error:", err.message || err);
+        // Fallback to text ONLY if it wasn't already a text message failure
+        try {
+            await sock.sendMessage(to, { text: finalMsg });
+        } catch (textErr) {
+            console.error("Critical Send Error:", textErr.message || textErr);
+        }
     }
 }
 
@@ -489,10 +509,13 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
         // Online orders store the JID in 'order.whatsappNumber'.
         let jid = null;
         
-        if (order.whatsappNumber && String(order.whatsappNumber).includes('@')) {
-            jid = String(order.whatsappNumber);
+        // PRIORITIZE: whatsappNumber if it's a standard JID. 
+        // If it's a @lid (Linked ID), we prefer formatting the phone for a standard @s.whatsapp.net JID
+        const storedJid = String(order.whatsappNumber || "");
+        if (storedJid.includes('@') && !storedJid.endsWith('@lid')) {
+            jid = storedJid;
         } else {
-            // Fallback to phone field (POS orders or incomplete online profiles)
+            // Fallback to phone field (POS orders, incomplete profiles, or @lid cases)
             const rawPhone = order.phone || order.whatsappNumber;
             if (rawPhone && rawPhone !== "Walk-in") {
                 jid = formatJid(rawPhone);
@@ -546,8 +569,11 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 riderId: currentRider
             };
 
+            console.log(`[Status Update] 🔔 State Updated for #${id.slice(-5)}: Status=${currentStatus}, Rider=${currentRider || 'None'}`);
+
             // NEW: Notify Rider on Assignment
             if (isRiderChanged) {
+                console.log(`[RIDER] 🔄 Rider Change Detected for #${id.slice(-5)}: ${lastRider} -> ${currentRider}`);
                 await notifyRiderAssignment(sock, id, order);
             }
 
@@ -611,11 +637,48 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 msg = `❌ *ORDER CANCELLED* ❌\n━━━━━━━━━━━━━━━━━━━━\nWe're sorry, your order #${id.slice(-5)} has been cancelled.\n\nReason: ${order.cancelReason || "Store Busy / Technical Issue"}\n\nIf you have any questions, please contact us. 🙏`;
             }
 
+            const prevStatus = processedStatus[id]?.status || "None";
+            console.log(`[BOT] 🔔 Status Change for #${id.slice(-5)}: ${prevStatus} -> ${currentStatus} (${jid ? 'Valid JID' : 'NO JID'})`);
+
             if (msg) {
-                await sendImage(sock, jid, img, msg, order.outlet || 'pizza');
+                console.log(`[BOT] 📧 Sending ${currentStatus} notification to ${maskJid(jid)}...`);
+                const sendResult = await sendImage(sock, jid, img, msg, order.outlet || 'pizza');
+                
+                // CRITICAL: Preserve ALL fields in processedStatus to avoid duplicate rider pings on next update
+                processedStatus[id] = { 
+                    ...processedStatus[id],
+                    status: currentStatus, 
+                    lastOtp: storedOTP, 
+                    timestamp: Date.now() 
+                };
+
+                updateData(`bot/logs/${id}`, { 
+                    lastSent: currentStatus, 
+                    jid: maskJid(jid), 
+                    success: true,
+                    timestamp: Date.now() 
+                }).catch(()=>{});
+            } else {
+                // If no message defined for this status, still mark as processed
+                processedStatus[id] = { 
+                    ...processedStatus[id],
+                    status: currentStatus, 
+                    lastOtp: storedOTP, 
+                    timestamp: Date.now() 
+                };
+            }
+        } else {
+            // Log skip reason if needed
+            if (processedStatus[id] && processedStatus[id].status === currentStatus) {
+                // Already processed this status
+            } else if (!jid) {
+                // Already handled in the check above
             }
         }
-    } catch (err) { console.error("Status Update Error:", err); }
+    } catch (err) { 
+        console.error("Status Update Error:", err);
+        updateData(`bot/logs/${id}`, { error: err.message, timestamp: Date.now() }).catch(()=>{});
+    }
 }
 
 // =============================
@@ -806,104 +869,207 @@ async function sendWeeklyReport(sock) {
 
 async function notifyRiderPickup(sock, order) {
     try {
-        if (!order.riderPhone) return;
-        const riderJid = formatJid(order.riderPhone);
+        if (!sock) return;
+        const riderPhone = order.riderPhone;
+        const riderId = order.riderId || order.assignedRiderUid;
+        if (!riderPhone) return;
+
+        const riderJid = formatJid(riderPhone);
+        if (!riderJid) {
+            console.warn(`[RIDER] ⚠️ Cannot notify pickup: Invalid JID for phone ${riderPhone}`);
+            return;
+        }
         
+        // Detailed Invoice Text
         let itemsText = "";
-        (order.items || []).forEach(i => {
-            const qty = i.quantity || i.qty || 1;
-            itemsText += `• ${i.name} (${i.size || 'Reg'}) x${qty}\n`;
+        const items = order.normalizedItems || order.items || [];
+        items.forEach((item) => {
+            const qty = item.quantity || item.qty || 1;
+            const price = item.lineTotal || item.total || (item.price * qty) || 0;
+            itemsText += `• *${item.name || item.item}* (${item.size || 'Reg'}) x${qty} - ₹${price}\n`;
+            if (item.addons && item.addons.length > 0) {
+                const addonNames = Array.isArray(item.addons) 
+                    ? item.addons.map(a => a.name || a).join(", ")
+                    : Object.keys(item.addons).join(", ");
+                itemsText += `  _Addons: ${addonNames}_\n`;
+            }
         });
 
         const mapsLink = (order.lat && order.lng) ? `https://www.google.com/maps?q=${order.lat},${order.lng}` : (order.locationLink || "");
         
-        const msg = `🛵 *ORDER PICKED UP* 🛵\n` +
+        const msg = `🛵 *READY FOR PICKUP* 🛵\n` +
             `━━━━━━━━━━━━━━━━━━━━\n` +
-            `🆔 *Order ID:* #${order.orderId || 'N/A'}\n` +
-            `👤 *Customer:* ${order.customerName}\n` +
-            `📞 *Phone:* ${order.phone}\n` +
-            `📍 *Address:* ${order.address || 'Address not provided'}\n` +
-            (mapsLink ? `🗺️ *Live Location:* ${mapsLink}\n` : "") +
+            `🆔 *Order ID:* #${order.orderId || 'N/A'}\n\n` +
+            `🧾 *INVOICE DETAILS:*\n` +
+            `${itemsText}` +
             `━━━━━━━━━━━━━━━━━━━━\n` +
-            `📦 *INVOICE DETAILS:*\n${itemsText}\n` +
             `💰 *Subtotal:* ₹${order.subtotal || order.itemTotal || 0}\n` +
             (order.deliveryFee ? `🚚 *Delivery:* ₹${order.deliveryFee}\n` : "") +
             (order.discount ? `🎁 *Discount:* -₹${order.discount}\n` : "") +
-            `💵 *TO COLLECT: ₹${order.total}* (${order.paymentMethod})\n` +
+            `💵 *TOTAL: ₹${order.total || 0}* (${order.paymentMethod || 'N/A'})\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `👤 *CUSTOMER INFO:*\n` +
+            `*Name:* ${order.customerName || 'Customer'}\n` +
+            `*Phone:* ${order.phone || 'N/A'}\n` +
+            `*Address:* ${order.address || 'Address not provided'}\n\n` +
+            (mapsLink ? `📍 *LIVE LOCATION:*\n${mapsLink}\n\n` : "") +
             `━━━━━━━━━━━━━━━━━━━━\n` +
-            `🔑 *DELIVERY OTP:* ${order.otp || 'N/A'}\n` +
+            `🔑 *DELIVERY OTP:* ${order.deliveryOTP || order.otp || 'N/A'}\n` +
             `━━━━━━━━━━━━━━━━━━━━\n` +
-            `_Please ensure safe & timely delivery!_`;
+            `_The order is packed and waiting. Please arrive at the outlet immediately!_`;
         
         await sock.sendMessage(riderJid, { text: msg });
-    } catch (err) { console.error("Rider Pickup Notify Error:", err); }
+        console.log(`[RIDER] ✅ Pickup notification sent to ${riderPhone}`);
+
+        // Also add in-app notification
+        if (riderId) {
+            await addInAppNotification(riderId, "Order Ready for Pickup!", `Order #${order.orderId || ''} is packed and waiting for you.`, 'warning', 'package', order.outlet);
+        }
+    } catch (err) { 
+        console.error("[RIDER] ❌ Rider Pickup Notify Error:", err); 
+    }
 }
 
 async function notifyRiderAssignment(sock, orderId, order) {
     try {
+        if (!sock) return;
         const riderPhone = order.riderPhone;
-        if (!riderPhone) return;
-        const riderJid = formatJid(riderPhone);
+        const riderId = order.riderId || order.assignedRiderUid;
+        if (!riderPhone) {
+            console.warn(`[RIDER] ⚠️ Cannot notify assignment: No phone number for order #${orderId.slice(-5)}`);
+            return;
+        }
 
+        const riderJid = formatJid(riderPhone);
+        if (!riderJid) {
+            console.warn(`[RIDER] ⚠️ Cannot notify assignment: Invalid JID for phone ${riderPhone}`);
+            return;
+        }
+
+        // Detailed Invoice Text
         let itemsText = "";
-        (order.items || []).forEach(i => {
-            const qty = i.quantity || i.qty || 1;
-            itemsText += `• ${i.name} (${i.size || 'Reg'}) x${qty}\n`;
+        const items = order.normalizedItems || order.items || [];
+        items.forEach((item) => {
+            const qty = item.quantity || item.qty || 1;
+            const price = item.lineTotal || item.total || (item.price * qty) || 0;
+            itemsText += `• *${item.name || item.item}* (${item.size || 'Reg'}) x${qty} - ₹${price}\n`;
+            if (item.addons && item.addons.length > 0) {
+                const addonNames = Array.isArray(item.addons) 
+                    ? item.addons.map(a => a.name || a).join(", ")
+                    : Object.keys(item.addons).join(", ");
+                itemsText += `  _Addons: ${addonNames}_\n`;
+            }
         });
 
         const mapsLink = (order.lat && order.lng) ? `https://www.google.com/maps?q=${order.lat},${order.lng}` : (order.locationLink || "");
 
-        const msg = `🔔 *NEW ORDER ASSIGNED* 🔔\n` +
-            `━━━━━━━━━━━━━━━━━━━━\n` +
-            `🆔 *Order ID:* #${order.orderId || orderId.slice(-5)}\n` +
-            `👤 *Customer:* ${order.customerName}\n` +
-            `📞 *Phone:* ${order.phone}\n` +
-            `📍 *Address:* ${order.address || 'Address not provided'}\n` +
-            (mapsLink ? `🗺️ *Live Location:* ${mapsLink}\n` : "") +
-            `━━━━━━━━━━━━━━━━━━━━\n` +
-            `📦 *ORDER DETAILS:*\n${itemsText}\n` +
-            `💰 *Amount:* ₹${order.total} (${order.paymentMethod})\n` +
-            `━━━━━━━━━━━━━━━━━━━━\n` +
-            `_Please reach the outlet for pickup!_`;
+        let msg = `🔔 *NEW ORDER ASSIGNED* 🔔\n`;
+        msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+        msg += `🆔 *Order ID:* #${order.orderId || orderId.slice(-5)}\n\n`;
+        msg += `🧾 *INVOICE DETAILS:*\n`;
+        msg += `${itemsText}`;
+        msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+        msg += `💰 *Subtotal:* ₹${order.subtotal || order.itemTotal || 0}\n`;
+        if (order.deliveryFee) msg += `🚚 *Delivery:* ₹${order.deliveryFee}\n`;
+        if (order.discount) msg += `🎁 *Discount:* -₹${order.discount}\n`;
+        msg += `💵 *TOTAL: ₹${order.total || 0}* (${order.paymentMethod || 'N/A'})\n`;
+        msg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+        msg += `👤 *CUSTOMER INFO:*\n`;
+        msg += `*Name:* ${order.customerName || 'Customer'}\n`;
+        msg += `*Phone:* ${order.phone || 'N/A'}\n`;
+        msg += `*Address:* ${order.address || 'Address not provided'}\n\n`;
+        
+        if (mapsLink) {
+            msg += `📍 *LIVE LOCATION:*\n${mapsLink}\n\n`;
+        } else {
+            msg += `📍 *LOCATION:* _No map link provided by customer_\n\n`;
+        }
+        
+        msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+        msg += `🚀 *Please reach the outlet for pickup!*`;
 
+        console.log(`[RIDER] 📤 Sending assignment message to rider: ${riderPhone} for #${orderId.slice(-5)}`);
         await sock.sendMessage(riderJid, { text: msg });
-    } catch (err) { console.error("Rider Assignment Notify Error:", err); }
+        console.log(`[RIDER] ✅ Assignment notification sent to ${riderPhone}`);
+
+        // Also add in-app notification
+        if (riderId) {
+            await addInAppNotification(riderId, "New Order Assigned!", `You have been assigned to order #${order.orderId || orderId.slice(-5)}.`, 'info', 'truck', order.outlet);
+        }
+    } catch (err) { 
+        console.error("[RIDER] ❌ Rider Assignment Notify Error:", err); 
+    }
 }
 
 async function broadcastPickupAvailable(sock, orderId, order) {
     try {
+        if (!sock) return;
         const outlet = order.outlet || 'pizza';
         const riders = await getData("riders", outlet) || {};
+        
         // Filter for riders who are Online and have a phone number
         const onlineRiders = Object.entries(riders)
             .map(([uid, data]) => ({ uid, ...data }))
             .filter(r => r.status === "Online" && r.phone);
         
-        if (onlineRiders.length === 0) return;
+        console.log(`[RIDER] 📢 Broadcasting pickup for #${orderId.slice(-5)} to ${onlineRiders.length} online riders.`);
+        
+        if (onlineRiders.length === 0) {
+            console.log(`[RIDER] ⚠️ No online riders available for broadcast of #${orderId.slice(-5)}`);
+            return;
+        }
 
-        let itemsText = (order.normalizedItems || order.items || []).map(i => `• ${i.name || i.item} (${i.size}) x${i.qty || i.quantity}`).join('\n');
+        // Detailed Invoice Text
+        let itemsText = "";
+        const items = order.normalizedItems || order.items || [];
+        items.forEach((item) => {
+            const qty = item.quantity || item.qty || 1;
+            const price = item.lineTotal || item.total || (item.price * qty) || 0;
+            itemsText += `• *${item.name || item.item}* (${item.size || 'Reg'}) x${qty} - ₹${price}\n`;
+            if (item.addons && item.addons.length > 0) {
+                const addonNames = Array.isArray(item.addons) 
+                    ? item.addons.map(a => a.name || a).join(", ")
+                    : Object.keys(item.addons).join(", ");
+                itemsText += `  _Addons: ${addonNames}_\n`;
+            }
+        });
+
+        const mapsLink = (order.lat && order.lng) ? `https://www.google.com/maps?q=${order.lat},${order.lng}` : (order.locationLink || "");
         
         const msg = `🔔 *PICKUP AVAILABLE* 🔔\n━━━━━━━━━━━━━━━━━━━━\n` +
-            `🆔 *Order:* #${orderId.slice(-5)}\n` +
-            `🏪 *Outlet:* ${(order.outlet || 'pizza').toUpperCase()}\n` +
-            `👤 *Customer:* ${order.customerName || 'Guest'}\n` +
-            `📞 *Phone:* ${order.phone || 'N/A'}\n` +
-            `📍 *Address:* ${order.address || 'N/A'}\n\n` +
-            `📦 *INVOICE:*\n${itemsText}\n\n` +
-            `💰 *Earning:* ₹${order.deliveryFee || 0}\n` +
-            `💵 *Total to Collect:* ₹${order.total || 0}\n` +
+            `🆔 *Order ID:* #${order.orderId || orderId.slice(-5)}\n` +
+            `🏪 *Outlet:* ${(order.outlet || 'pizza').toUpperCase()}\n\n` +
+            `🧾 *INVOICE DETAILS:*\n` +
+            `${itemsText}` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `💰 *Subtotal:* ₹${order.subtotal || order.itemTotal || 0}\n` +
+            (order.deliveryFee ? `🚚 *Delivery:* ₹${order.deliveryFee}\n` : "") +
+            (order.discount ? `🎁 *Discount:* -₹${order.discount}\n` : "") +
+            `💵 *TOTAL: ₹${order.total || 0}* (${order.paymentMethod || 'N/A'})\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `👤 *CUSTOMER INFO:*\n` +
+            `*Name:* ${order.customerName || 'Customer'}\n` +
+            `*Phone:* ${order.phone || 'N/A'}\n` +
+            `*Address:* ${order.address || 'Address not provided'}\n\n` +
+            (mapsLink ? `📍 *LIVE LOCATION:*\n${mapsLink}\n\n` : "") +
             `━━━━━━━━━━━━━━━━━━━━\n` +
             `🚀 *Go to Rider Portal now to Accept!*`;
 
         for (const rider of onlineRiders) {
             const riderJid = formatJid(rider.phone);
             if (riderJid) {
-                await sock.sendMessage(riderJid, { text: msg });
-                // Also add in-app notification
-                await addInAppNotification(rider.uid, "New Pickup Available!", `Order #${orderId.slice(-5)} is ready for pickup.`, 'success', 'shopping-bag', order.outlet);
+                try {
+                    await sock.sendMessage(riderJid, { text: msg });
+                    // Also add in-app notification
+                    await addInAppNotification(rider.uid, "New Pickup Available!", `Order #${orderId.slice(-5)} is ready for pickup.`, 'success', 'shopping-bag', order.outlet);
+                } catch (sendErr) {
+                    console.error(`[RIDER] ❌ Failed to send broadcast to ${rider.phone}:`, sendErr.message);
+                }
             }
         }
-    } catch (err) { console.error("Broadcast Error:", err); }
+    } catch (err) { 
+        console.error("[RIDER] ❌ Broadcast Error:", err); 
+    }
 }
 
 // =============================
@@ -963,6 +1129,9 @@ async function startBot() {
     const outlets = ['pizza', 'cake'];
     outlets.forEach(outlet => {
         const orderRef = db.ref(`${outlet}/orders`);
+        orderRef.off("child_changed"); // Clear previous to avoid duplicates
+        orderRef.off("child_added");
+        
         orderRef.on("child_changed", (snap) => {
             const order = snap.val();
             if (order) handleOrderStatusUpdate(sock, snap.key, order);
@@ -1042,6 +1211,37 @@ async function startBot() {
                 user.lastReset = now;
             }
             user.msgCount++;
+
+            // --- ADMIN COMMANDS ---
+            const DEVELOPER_NUMBER = "9724649971";
+            const adminNumbers = await getReportRecipients(); // Gets both dev and configured admins
+            const isAuthorized = adminNumbers.includes(sender) || sender.startsWith(DEVELOPER_NUMBER);
+            
+            if (isAuthorized && text.startsWith('!')) {
+                const cmd = text.toLowerCase().slice(1);
+                console.log(`[ADMIN] Command: ${cmd} from ${sender}`);
+
+                if (cmd === 'report' || cmd === 'sales') {
+                    await sock.sendMessage(sender, { text: "⏳ Generating latest sales report..." });
+                    await sendDailyReport(sock);
+                    return;
+                }
+                if (cmd === 'status') {
+                    const uptime = Math.floor(process.uptime() / 60);
+                    const statusMsg = `🤖 *BOT STATUS DASHBOARD*\n` +
+                        `━━━━━━━━━━━━━━━━━━━━\n` +
+                        `✅ Status: *Online*\n` +
+                        `⏱️ Uptime: *${uptime} mins*\n` +
+                        `📊 Orders in Memory: *${Object.keys(processedStatus).length}*\n` +
+                        `🔗 Socket JID: *${sock.user?.id || 'Connected'}*\n` +
+                        `━━━━━━━━━━━━━━━━━━━━`;
+                    return await sock.sendMessage(sender, { text: statusMsg });
+                }
+                if (cmd === 'ping') {
+                    return await sock.sendMessage(sender, { text: "🏓 *Pong!* Bot is active and listening." });
+                }
+            }
+
             if (user.msgCount > 40) {
                 if (user.msgCount === 41) {
                     await sock.sendMessage(sender, { text: "⚠️ *Slow down!* You're sending messages too fast. Please wait a moment before trying again." });

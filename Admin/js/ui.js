@@ -42,8 +42,34 @@ export const closeSidebar = () => {
 };
 
 
-export const switchTab = (tabId, skipHistory = false) => {
+export const switchTab = async (tabId, skipHistory = false) => {
     if (state.currentActiveTab === tabId) return;
+
+    // --- PHASE 3: DIRTY STATE TRACKING ---
+    if (state.settingsDirty && state.currentActiveTab === 'settings') {
+        const confirm = await showConfirm({
+            title: 'Unsaved Changes',
+            text: 'You have unsaved changes in Settings. Do you want to discard them?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Discard',
+            cancelButtonText: 'No, Stay',
+            confirmButtonColor: '#e74c3c'
+        });
+        
+        if (!confirm.isConfirmed) {
+            // Restore active state in sidebar if it was changed by click
+            document.querySelectorAll('.sidebar li, .bottom-nav .nav-item').forEach(el => {
+                el.classList.remove('active');
+                if (el.id === `menu-${state.currentActiveTab}` || el.getAttribute('data-tab') === state.currentActiveTab) {
+                    el.classList.add('active');
+                }
+            });
+            return;
+        }
+        state.settingsDirty = false;
+    }
+
     state.currentActiveTab = tabId;
     console.log(`[Navigation] Switching to: ${tabId}`);
 

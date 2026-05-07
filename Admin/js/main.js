@@ -250,10 +250,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = e.target.closest('[data-action], [data-tab]');
             if (!el) return;
 
+            // Auto-close sidebar on mobile for ANY action/tab click
+            if (window.innerWidth <= 1024) {
+                const sidebar = document.getElementById('sidebarNav');
+                if (sidebar && sidebar.classList.contains('active')) {
+                    const isToggleBtn = el.getAttribute('data-action') === 'toggleSidebar' || el.closest('#mobileHamburger');
+                    if (!isToggleBtn) {
+                        import('./ui.js').then(u => u.closeSidebar());
+                    }
+                }
+            }
+
             const action = el.getAttribute('data-action');
             const tab = el.getAttribute('data-tab');
             
             console.log(`[Interaction] Click detected: Action=${action}, Tab=${tab}`, el);
+
+            // Handle Bulk Selection
+            if (el.classList.contains('order-selector')) {
+                const id = el.dataset.id;
+                const { toggleOrderSelection } = await import('./features/orders.js');
+                toggleOrderSelection(id, el.checked);
+                return;
+            }
 
             if (tab) {
                 switchTab(tab);
@@ -268,6 +287,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const price = el.getAttribute('data-price');
 
             switch (action) {
+                case 'selectAllOrders': {
+                    const { selectAllOrders } = await import('./features/orders.js');
+                    selectAllOrders(el.checked, 'orders');
+                    break;
+                }
+                case 'selectAllLive': {
+                    const { selectAllOrders: selectAllLive } = await import('./features/orders.js');
+                    selectAllLive(el.checked, 'live');
+                    break;
+                }
+                case 'bulkStatusUpdate': {
+                    const { bulkStatusUpdate } = await import('./features/orders.js');
+                    bulkStatusUpdate(el.dataset.status);
+                    break;
+                }
+                case 'bulkCancel': {
+                    const { bulkCancel } = await import('./features/orders.js');
+                    bulkCancel();
+                    break;
+                }
+                case 'clearSelection': {
+                    const { clearSelection } = await import('./features/orders.js');
+                    clearSelection();
+                    break;
+                }
                 case 'updateStatusFromDrawer': updateStatus(id, val); break;
                 case 'closeOrderDrawer': closeOrderDrawer(); break;
                 case 'chatOnWhatsapp': /* window.chatOnWhatsapp(id); */ break; 
@@ -395,6 +439,34 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('orderFrom')?.addEventListener('change', triggerOrderRender);
     document.getElementById('orderTo')?.addEventListener('change', triggerOrderRender);
 
+    // --- 3. GLOBAL KEYBOARD ACCESSIBILITY ---
+    document.addEventListener('keydown', (e) => {
+        // Global ESC to close modals/drawers
+        if (e.key === 'Escape') {
+            // 1. Close Modals
+            const activeModal = document.querySelector('.modal.active:not(.hidden)');
+            if (activeModal) {
+                activeModal.classList.add('hidden');
+                activeModal.classList.remove('active', 'flex');
+                return;
+            }
+
+            // 2. Close Sidebar on Mobile
+            if (window.innerWidth <= 1024) {
+                import('./ui.js').then(u => u.closeSidebar());
+            }
+
+            // 3. Close Order Drawer
+            import('./features/orders.js').then(o => o.closeOrderDrawer());
+            
+            // 4. Close Notification Sheet
+            import('./features/notifications.js').then(n => n.toggleNotificationSheet(false));
+
+            // 5. Hide POS Modal
+            import('./features/pos.js').then(p => p.hidePOSSelectionModal());
+        }
+    });
+
     setupStaticListeners();
 
     if (window.lucide) {
@@ -402,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.lucide.createIcons({ root: layout || document.body });
     }
 
-    // --- 3. REFRESH & SESSION SAFETY ---
+    // --- 4. REFRESH & SESSION SAFETY ---
     window.addEventListener('beforeunload', (e) => {
         // Only trigger if we are logged in and not in the middle of a nuclear refresh
         if (state.adminData && !window.location.search.includes('nuclear')) {

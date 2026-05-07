@@ -392,6 +392,9 @@ export function renderOrders(snap) {
             `).join('');
 
             tr.innerHTML = `
+                <td class="checkbox-cell" style="width: 40px; text-align: center;">
+                    <input type="checkbox" class="checkbox-custom order-selector" data-id="${id}" ${state.selectedOrders.has(id) ? 'checked' : ''}>
+                </td>
                 <td data-label="Order">
                     <div class="identity-chip-v4">
                         <div class="kpi-icon-box ${o.outlet === 'pizza' ? 'orange' : 'pink'}" style="width:32px; height:32px; font-size:14px;">
@@ -472,6 +475,9 @@ export function renderOrders(snap) {
             `;
         } else {
             tr.innerHTML = `
+                <td class="checkbox-cell" style="width: 40px; text-align: center;">
+                    <input type="checkbox" class="checkbox-custom order-selector" data-id="${id}" ${state.selectedOrders.has(id) ? 'checked' : ''}>
+                </td>
                 <td data-label="Order">
                     <div class="identity-chip-v4">
                         <div class="kpi-icon-box ${o.outlet === 'pizza' ? 'blue' : 'pink'}" style="width:32px; height:32px; font-size:14px;">
@@ -1090,4 +1096,113 @@ export function filterOrders(searchTerm) {
     });
 }
 
-// No window re-exposures here. Functions are exported as needed.
+
+/**
+ * BULK ACTIONS
+ */
+
+export function toggleOrderSelection(id, force) {
+    if (force === true) {
+        state.selectedOrders.add(id);
+    } else if (force === false) {
+        state.selectedOrders.delete(id);
+    } else {
+        if (state.selectedOrders.has(id)) {
+            state.selectedOrders.delete(id);
+        } else {
+            state.selectedOrders.add(id);
+        }
+    }
+    updateBulkToolbar();
+}
+
+export function selectAllOrders(checked, tab) {
+    const tableId = tab === 'live' ? 'liveOrdersTable' : 'ordersTableFull';
+    const checkboxes = document.querySelectorAll(`#${tableId} .order-selector`);
+    
+    checkboxes.forEach(cb => {
+        const id = cb.dataset.id;
+        if (checked) {
+            state.selectedOrders.add(id);
+            cb.checked = true;
+        } else {
+            state.selectedOrders.delete(id);
+            cb.checked = false;
+        }
+    });
+    updateBulkToolbar();
+}
+
+export function clearSelection() {
+    state.selectedOrders.clear();
+    document.querySelectorAll('.order-selector, [data-action="selectAllOrders"], [data-action="selectAllLive"]').forEach(cb => cb.checked = false);
+    updateBulkToolbar();
+}
+
+export function updateBulkToolbar() {
+    const toolbar = document.getElementById('bulkActionToolbar');
+    const countEl = document.getElementById('selectedCount');
+    if (!toolbar || !countEl) return;
+
+    const count = state.selectedOrders.size;
+    countEl.innerText = count;
+
+    if (count > 0) {
+        toolbar.classList.add('active');
+    } else {
+        toolbar.classList.remove('active');
+    }
+}
+
+export async function bulkStatusUpdate(status) {
+    const ids = Array.from(state.selectedOrders);
+    if (ids.length === 0) return;
+
+    const confirm = await showAlert({
+        title: `Bulk Update to ${status}`,
+        text: `Are you sure you want to move ${ids.length} orders to "${status}"?`,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Update All'
+    });
+
+    if (confirm.isConfirmed) {
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const id of ids) {
+            try {
+                await updateStatus(id, status);
+                successCount++;
+            } catch (err) {
+                console.error(`Bulk update failed for ${id}:`, err);
+                failCount++;
+            }
+        }
+
+        showToast(`Bulk Update Complete: ${successCount} successful, ${failCount} failed.`, successCount > 0 ? "success" : "error");
+        if (successCount > 0) clearSelection();
+    }
+}
+
+export async function bulkCancel() {
+    const ids = Array.from(state.selectedOrders);
+    if (ids.length === 0) return;
+
+    const confirm = await showAlert({
+        title: `Bulk Cancellation`,
+        text: `Are you sure you want to CANCEL ${ids.length} orders? This cannot be undone.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Cancel Them',
+        confirmButtonColor: '#e74c3c'
+    });
+
+    if (confirm.isConfirmed) {
+        for (const id of ids) {
+            await updateStatus(id, "Cancelled");
+        }
+        showToast(`Bulk Cancellation Complete for ${ids.length} orders.`, "success");
+        clearSelection();
+    }
+}
