@@ -5,9 +5,11 @@
   "targets": {
     "prashant-pizza-e86e4": {
       "hosting": {
-        "admin": ["roshani-sudha-admin"],
-        "rider": ["roshani-sudha-rider"]
+        "prashant-pizza-admin": [
+          "Admin"
+        ]
       }
     }
-  }
+  },
+  "etags": {}
 }

@@ -230,7 +230,7 @@
                 </li>
             </ul>
             <div class="sidebar-footer">
-                <div class="user-profile-mini">
+                <div class="user-profile-mini" data-action="switchTab" data-tab="settings" title="Open Store Settings">
                     <img src="https://ui-avatars.com/api/?name=Admin&background=f36b21&color=fff" alt="Admin">
                     <div class="user-info">
                         <span class="user-name">Store Admin</span>
@@ -243,7 +243,21 @@
         <!-- MAIN -->
         <div class="main">
 
-            <!-- MOBILE APP HEADER -->
+            <!-- BULK ACTION TOOLBAR -->
+    <div id="bulkActionToolbar" class="bulk-action-toolbar">
+        <div class="selection-count">
+            <span id="selectedCount">0</span> Selected
+        </div>
+        <div class="bulk-btn-group">
+            <button class="btn-primary btn-small" data-action="bulkStatusUpdate" data-status="Confirmed">Confirm</button>
+            <button class="btn-secondary btn-small" data-action="bulkStatusUpdate" data-status="Ready">Ready</button>
+            <button class="btn-action-green btn-small" data-action="bulkStatusUpdate" data-status="Delivered">Deliver</button>
+            <button class="btn-action-danger btn-small" data-action="bulkCancel">Cancel</button>
+        </div>
+        <button class="btn-text" data-action="clearSelection">Clear</button>
+    </div>
+
+    <!-- MAIN APP STRUCTURE -->
             <div id="mobileAppHeader" class="mobile-header mobile-only">
                 <div id="mobileHamburger" class="mobile-header-left" data-action="toggleSidebar"
                     title="Toggle Side Navigation Drawer">
@@ -424,7 +438,8 @@
                     <div class="scroll-x">
                         <table class="premium-table-v4">
                             <thead>
-                                <tr>
+                                <tr class="table-header-row">
+                                    <th class="w-40"><input type="checkbox" data-action="selectAllOrders" class="checkbox-custom" title="Select all orders" aria-label="Select all orders"></th>
                                     <th>Order ID</th>
                                     <th>Customer</th>
                                     <th>Address</th>
@@ -447,7 +462,8 @@
                     <div class="scroll-x">
                         <table class="premium-table-v4">
                             <thead>
-                                <tr>
+                                <tr class="table-header-row">
+                                    <th class="w-40"><input type="checkbox" data-action="selectAllLive" class="checkbox-custom" title="Select all live orders" aria-label="Select all live orders"></th>
                                     <th>Order ID</th>
                                     <th>Customer</th>
                                     <th>Items</th>
@@ -1396,7 +1412,7 @@
                 <div class="panel flex-center p-60">
                     <div class="coming-soon-v4 center-text">
                         <div class="cs-icon-glow mb-24">
-                            <i data-lucide="sparkles" style="width: 48px; height: 48px; color: var(--primary);"></i>
+                            <i data-lucide="sparkles" class="icon-48 color-primary"></i>
                         </div>
                         <h2 class="panel-title fs-32 mb-12">Inventory Management</h2>
                         <p class="panel-subtitle fs-18 mb-32">Advanced Raw Material & Stock Tracking is currently under development.</p>
@@ -1919,7 +1935,7 @@
             <form id="reauthForm">
                 <div class="modal-body p-20">
                     <!-- Hidden username for accessibility/password managers -->
-                    <input type="text" name="username" style="display:none;" autocomplete="username">
+                    <input type="text" name="username" class="hidden-access" autocomplete="username" title="Username">
                     <p class="text-muted-small mb-16">For security, please enter your password to proceed with this sensitive action (e.g. deleting riders or catalog items).</p>
                     <div class="form-group">
                         <label class="form-label-small">Confirm Admin Password</label>

@@ -1,3 +1,4 @@
+import { state } from '../state.js';
 import { Outlet } from '../firebase.js';
 import { logAudit, showToast } from '../utils.js';
 import { ui } from '../ui.js';
@@ -163,6 +164,7 @@ export async function loadStoreSettings() {
 
         if (window.updateOutletStatusIndicator) window.updateOutletStatusIndicator(s.shopStatus || 'AUTO');
         
+        state.settingsDirty = false;
         console.log("[Settings] All data populated.");
     } catch (e) {
         console.error("[Settings] Load Error:", e);
@@ -274,6 +276,7 @@ export async function saveStoreSettings() {
         ]);
 
         showToast("Settings saved successfully!", "success");
+        state.settingsDirty = false;
         logAudit("Settings", "Updated Store Settings", "Global");
         document.getElementById('displayCoords').innerText = `${lat}, ${lng}`;
         if (window.updateOutletStatusIndicator) window.updateOutletStatusIndicator(storeData.shopStatus);
@@ -441,6 +444,20 @@ document.addEventListener('click', (e) => {
     }
     if (e.target.getAttribute('data-action') === 'removeFeeSlab') {
         const row = e.target.closest('tr');
-        if (row) row.remove();
+        if (row) {
+            row.remove();
+            state.settingsDirty = true;
+        }
+    }
+});
+
+// Mark settings as dirty on ANY input change within the settings container
+document.addEventListener('input', (e) => {
+    const settingsTab = document.getElementById('tab-settings');
+    if (settingsTab && settingsTab.contains(e.target)) {
+        if (!state.settingsDirty) {
+            console.log("[Settings] State is now DIRTY");
+            state.settingsDirty = true;
+        }
     }
 });
