@@ -858,9 +858,45 @@ window.startNavigation = async (id, outletId) => {
     }
 };
 
+window.reachedDropLocation = async (id, outletId) => {
+    window.haptic(30);
+    if (!window.currentUser) return window.showToast("Authentication error.", "error");
+
+    try {
+        const orderPath = `${outletId}/orders/${id}`;
+        
+        // Safety check to prevent duplicate triggers
+        const currentSnap = await get(ref(db, orderPath));
+        const currentOrder = currentSnap.val();
+        if (currentOrder && (currentOrder.status || "").toLowerCase() === "reached drop location") {
+            window.activeOrderId = id;
+            window._currentOrderOutlet = outletId;
+            return window.openOTPPanel();
+        }
+
+        await update(ref(db, orderPath), { status: "Reached Drop Location" });
+        window.showToast("Customer notified of arrival!", "success");
+        
+        window.activeOrderId = id;
+        window._currentOrderOutlet = outletId;
+        window.openOTPPanel();
+    } catch (e) {
+        console.error(e);
+        window.showToast("Failed to update status.", "error");
+    }
+};
+
 window.pingTimerInterval = null;
 window.showPingModal = (id, outletId, order) => {
     window.haptic([100, 50, 100, 50, 200]);
+    try {
+        const audio = document.getElementById('pingAudio');
+        if (audio) {
+            audio.currentTime = 0;
+            audio.play().catch(e => console.warn('Audio play blocked:', e));
+        }
+    } catch(e) {}
+    
     const modal = document.getElementById('newOrderPingModal');
     if (!modal) return;
     
@@ -915,6 +951,14 @@ window.hidePingModal = () => {
         modal.classList.remove('active');
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
+    try {
+        const audio = document.getElementById('pingAudio');
+        if (audio) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+    } catch(e) {}
+    
     if (window.pingTimerInterval) {
         clearInterval(window.pingTimerInterval);
         window.pingTimerInterval = null;
