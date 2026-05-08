@@ -860,6 +860,173 @@ body {
 }
 
 /* -------------------------------------------------------------------------- */
+/* NEW ORDER PING MODAL                                                       */
+/* -------------------------------------------------------------------------- */
+.ping-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ping-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.ping-modal-content {
+    background: white;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 24px;
+    padding: 30px 20px;
+    box-shadow: 0 20px 50px rgba(255, 82, 0, 0.15);
+    transform: translateY(20px) scale(0.95);
+    transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.ping-modal-overlay.active .ping-modal-content {
+    transform: translateY(0) scale(1);
+}
+
+.ping-header {
+    text-align: center;
+    margin-bottom: 30px;
+    position: relative;
+}
+
+.pulsing-ring {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 82, 0, 0.1);
+    border-radius: 50%;
+    margin: 0 auto 15px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.pulsing-ring::before {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: var(--primary);
+    border-radius: 50%;
+    box-shadow: 0 0 15px rgba(255, 82, 0, 0.5);
+}
+
+@keyframes pulse-ring {
+    0% { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(2.5); opacity: 0; }
+}
+
+.ping-header h2 {
+    color: var(--text-main);
+    font-size: 1.5rem;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    margin-bottom: 5px;
+}
+
+.ping-timer {
+    display: inline-block;
+    background: #FEF2F2;
+    color: #EF4444;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 0.9rem;
+}
+
+.ping-body {
+    background: #F8FAFC;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.ping-route {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.ping-location {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.ping-location i {
+    margin-top: 2px;
+}
+
+.ping-location div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ping-location strong {
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+.ping-dots {
+    width: 2px;
+    height: 20px;
+    background-image: linear-gradient(to bottom, #CBD5E1 50%, transparent 50%);
+    background-size: 2px 8px;
+    background-repeat: repeat-y;
+    margin: 4px 0 4px 11px;
+}
+
+.ping-meta {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 15px;
+    border-top: 1px dashed #E2E8F0;
+}
+
+.ping-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ping-meta-item strong {
+    font-size: 1.2rem;
+}
+
+.ping-accept-btn {
+    padding: 16px !important;
+    font-size: 1.1rem !important;
+    letter-spacing: 0.5px;
+    animation: bounce-subtle 2s infinite;
+}
+
+.ping-ignore-btn {
+    border-color: #E2E8F0;
+    color: var(--text-muted);
+}
+
+@keyframes bounce-subtle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+/* -------------------------------------------------------------------------- */
 /* SIDEBAR (HAMBURGER MENU)                                                   */
 /* -------------------------------------------------------------------------- */
 .sidebar {

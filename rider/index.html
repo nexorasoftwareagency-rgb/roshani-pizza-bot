@@ -261,6 +261,57 @@
         </nav>
     </div>
 
+    <!-- New Order Ping Modal -->
+    <div id="newOrderPingModal" class="ping-modal-overlay hidden">
+        <div class="ping-modal-content">
+            <div class="ping-header">
+                <div class="pulsing-ring"></div>
+                <h2>NEW ORDER PING</h2>
+                <div class="ping-timer" id="pingTimer">30s</div>
+            </div>
+            
+            <div class="ping-body">
+                <div class="ping-route">
+                    <div class="ping-location">
+                        <i data-lucide="store" class="text-orange"></i>
+                        <div>
+                            <span class="text-muted-small">Pickup From</span>
+                            <strong id="pingOutletName">Pizza Outlet</strong>
+                        </div>
+                    </div>
+                    <div class="ping-dots"></div>
+                    <div class="ping-location">
+                        <i data-lucide="map-pin" class="text-green"></i>
+                        <div>
+                            <span class="text-muted-small">Drop To</span>
+                            <strong id="pingCustomerAddress">Loading...</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ping-meta">
+                    <div class="ping-meta-item">
+                        <span class="text-muted-small">Order ID</span>
+                        <strong id="pingOrderId">#---</strong>
+                    </div>
+                    <div class="ping-meta-item">
+                        <span class="text-muted-small">Earning</span>
+                        <strong class="text-success" id="pingEarning">₹0</strong>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ping-actions">
+                <button class="btn-primary full-width ping-accept-btn" id="pingAcceptBtn">
+                    <i data-lucide="check-circle"></i> ACCEPT ORDER
+                </button>
+                <button class="btn-outline full-width mt-10 ping-ignore-btn" id="pingIgnoreBtn">
+                    IGNORE
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="verificationModal" class="modal-overlay hidden">
         <div class="modal-content-bottom">
             <div class="modal-handle"></div>

@@ -187,6 +187,7 @@ let lastNotifCount = -1;
 window.activeOrderData = null;
 window.activeOrderId = null;
 window.activeOrderOutlet = null;
+window.ignoredPings = new Set();
 window.orderCache = { pizza: {}, cake: {} };
 window.outletCoords = { pizza: { lat: 25.887944, lng: 85.026194 }, cake: { lat: 25.887472, lng: 85.026861 } };
 
@@ -229,6 +230,9 @@ window.triggerWhatsAppAlert = (phone, orderId, actionType, extraData = {}) => {
     }
     else if (actionType === "PICKED_UP") {
         message = `Great news! I have picked up your order #${orderId}. If you need anything, you can call me at ${riderPhone}. I am on my way! 🍕🎂`;
+    }
+    else if (actionType === "REACHED_DROP") {
+        message = `I have arrived at your drop location with your order #${orderId}! Please have your 4-digit OTP ready. ✅`;
     }
     else if (actionType === "SEND_OTP") {
         message = `Your Roshani Sudha order #${orderId} has arrived! 📍 \n\nTo safely receive your order, please provide this 4-digit OTP to the rider: *${extraData.otp}* ✅`;
@@ -445,6 +449,26 @@ window.confirmPickup = async () => {
     }
 };
 
+window.reachedDropLocation = async (id, outletId) => {
+    window.haptic(30);
+    try {
+        const orderPath = `${outletId}/orders/${id}`;
+        await update(ref(db, orderPath), { status: "Reached Drop Location" });
+        window.showToast("Marked as Reached! Asking customer for OTP...", "info");
+        
+        // Trigger Whatsapp
+        const snap = await get(ref(db, orderPath));
+        const order = snap.val();
+        if (order) {
+            const phone = order.customerPhone || order.phone;
+            window.triggerWhatsAppAlert(phone, order.orderId || id.slice(-6), "REACHED_DROP");
+        }
+    } catch (e) {
+        logError("reachedDropLocation", e);
+        window.showToast("Failed to update status.", "error");
+    }
+};
+
 let activeMap = null;
 let customerMarker = null;
 let riderMarker = null;
@@ -656,11 +680,6 @@ window.openOTPPanel = () => {
 
     const emergencyBtn = document.getElementById('emergencyBtn');
     if (emergencyBtn) emergencyBtn.classList.toggle('hidden', !(currentUser && currentUser.profile && currentUser.profile.isAdmin));
-
-    if (window.activeOrderData) {
-        const phone = window.activeOrderData.customerPhone || window.activeOrderData.phone;
-        window.triggerWhatsAppAlert(phone, currentOrderId, "ARRIVED");
-    }
 };
 
 window.closeOTPPanel = () => { document.getElementById('otpPanel').classList.add('hidden'); };
@@ -839,6 +858,69 @@ window.startNavigation = async (id, outletId) => {
     }
 };
 
+window.pingTimerInterval = null;
+window.showPingModal = (id, outletId, order) => {
+    window.haptic([100, 50, 100, 50, 200]);
+    const modal = document.getElementById('newOrderPingModal');
+    if (!modal) return;
+    
+    document.getElementById('pingOutletName').innerText = outletId === 'pizza' ? 'Pizza Outlet' : 'Cake Outlet';
+    document.getElementById('pingCustomerAddress').innerText = order.address || 'Unknown';
+    document.getElementById('pingOrderId').innerText = '#' + (order.orderId || id.slice(-6)).toUpperCase();
+    document.getElementById('pingEarning').innerText = '₹' + (order.deliveryFee || '0');
+    
+    const acceptBtn = document.getElementById('pingAcceptBtn');
+    const ignoreBtn = document.getElementById('pingIgnoreBtn');
+    const timerEl = document.getElementById('pingTimer');
+    
+    // Clear old listeners by cloning
+    const newAcceptBtn = acceptBtn.cloneNode(true);
+    acceptBtn.parentNode.replaceChild(newAcceptBtn, acceptBtn);
+    const newIgnoreBtn = ignoreBtn.cloneNode(true);
+    ignoreBtn.parentNode.replaceChild(newIgnoreBtn, ignoreBtn);
+    
+    newAcceptBtn.addEventListener('click', () => {
+        window.hidePingModal();
+        window.acceptOrder(id, outletId);
+    });
+    
+    newIgnoreBtn.addEventListener('click', () => {
+        window.ignoredPings.add(id);
+        window.hidePingModal();
+        window.renderAllOrders(); // re-render to pick next
+    });
+    
+    modal.classList.remove('hidden');
+    void modal.offsetWidth; // force reflow
+    modal.classList.add('active');
+    
+    let timeLeft = 30;
+    timerEl.innerText = timeLeft + 's';
+    if (window.pingTimerInterval) clearInterval(window.pingTimerInterval);
+    
+    window.pingTimerInterval = setInterval(() => {
+        timeLeft--;
+        timerEl.innerText = timeLeft + 's';
+        if (timeLeft <= 0) {
+            window.ignoredPings.add(id);
+            window.hidePingModal();
+            window.renderAllOrders();
+        }
+    }, 1000);
+};
+
+window.hidePingModal = () => {
+    const modal = document.getElementById('newOrderPingModal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+    if (window.pingTimerInterval) {
+        clearInterval(window.pingTimerInterval);
+        window.pingTimerInterval = null;
+    }
+};
+
 // REALTIME LISTENERS & PREMIUM UI RENDERER
 window.clearAllListeners = () => {
     console.log("[Sync] Clearing all listeners...");
@@ -973,6 +1055,7 @@ window.renderAllOrders = () => {
     let totalCashToSettle = 0;
     
     const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+    window._pingCandidate = null;
 
     Object.keys(window.orderCache).forEach(outletId => {
         const orders = window.orderCache[outletId];
@@ -992,6 +1075,11 @@ window.renderAllOrders = () => {
 
             // 1. UNASSIGNED
             if (!o.assignedRider && ["ready", "cooked", "preparing", "confirmed"].includes(status)) {
+                if (!window.activeOrderId && !window.ignoredPings.has(id)) {
+                    if (!window._pingCandidate) {
+                        window._pingCandidate = { id, outletId, order: o };
+                    }
+                }
                 const safeOrderId = escapeHtml((o.orderId || id.slice(-6)).toUpperCase());
                 const safeAddress = escapeHtml(o.address || 'Unknown');
                 const safeFee = escapeHtml(String(o.deliveryFee || 0));
@@ -1075,7 +1163,14 @@ window.renderAllOrders = () => {
                 if (["ready", "cooked", "arriving at restaurant", "confirmed", "preparing", "placed", "waiting for pickup"].includes(currentStatus)) {
                     actionButtons = `<button class="btn-primary full-width mt-10" data-action="pickup" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="package-check"></i> CONFIRM PICKUP</button>`;
                 } else if (currentStatus === "picked up" || currentStatus === "out for delivery" || currentStatus === "delivering") {
-                    actionButtons = `<button class="btn-primary full-width mt-10" style="background:#10B981;" data-action="navigate" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="navigation"></i> LET'S GO TO DELIVER</button>`;
+                    actionButtons = `
+                        <div class="flex-row gap-10 mt-10">
+                            <button class="btn-outline flex-1" style="background: white;" data-action="navigate" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="navigation"></i> NAVIGATE</button>
+                            <button class="btn-primary flex-1" style="background:#10B981;" data-action="drop" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="map-pin"></i> REACHED DROP</button>
+                        </div>
+                    `;
+                } else if (currentStatus === "reached drop location") {
+                    actionButtons = `<button class="btn-primary full-width mt-10" style="background:#F59E0B;" data-action="otp" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="key-round"></i> ENTER OTP TO DELIVER</button>`;
                 }
 
                 const activeContent = `
@@ -1220,6 +1315,14 @@ window.renderAllOrders = () => {
         `;
     }
 
+    // Trigger Ping Modal if not currently active
+    const pingModal = document.getElementById('newOrderPingModal');
+    if (!window.activeOrderId && window._pingCandidate && pingModal && pingModal.classList.contains('hidden')) {
+        window.showPingModal(window._pingCandidate.id, window._pingCandidate.outletId, window._pingCandidate.order);
+    } else if (window.activeOrderId && pingModal && !pingModal.classList.contains('hidden')) {
+        window.hidePingModal();
+    }
+
     // Final Render for History
     if (historyList) {
         if (historyCount > 0) {
@@ -1317,6 +1420,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (action === 'pickup') window.confirmPickup();
         else if (action === 'accept') window.acceptOrder(btn.dataset.id, btn.dataset.outlet);
         else if (action === 'navigate') window.startNavigation(btn.dataset.id, btn.dataset.outlet);
+        else if (action === 'drop') window.reachedDropLocation(btn.dataset.id, btn.dataset.outlet);
     });
 
     // Modals
