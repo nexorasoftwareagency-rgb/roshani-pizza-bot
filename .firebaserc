@@ -7,6 +7,15 @@
       "hosting": {
         "prashant-pizza-admin": [
           "Admin"
+        ],
+        "roshani-sudha-rider": [
+          "rider"
+        ],
+        "admin": [
+          "prashant-pizza-admin"
+        ],
+        "rider": [
+          "roshani-sudha-rider"
         ]
       }
     }
