@@ -927,6 +927,23 @@ window.startNavigation = async (id, outletId) => {
     }
 };
 
+window.confirmPickup = async () => {
+    if (!window.activeOrderId) return window.showToast("No active order found.", "error");
+    window.haptic(40);
+    const id = window.activeOrderId;
+    const outletId = window.activeOrderOutlet;
+    try {
+        const orderPath = `${outletId}/orders/${id}`;
+        await update(ref(db, orderPath), { status: "Picked Up", pickedUpAt: serverTimestamp() });
+        window.showToast("Order Picked Up! 🍕", "success");
+        const snap = await get(ref(db, orderPath));
+        const o = snap.val();
+        window.triggerWhatsAppAlert(o.customerPhone || o.phone, o.orderId || id, "PICKED_UP");
+    } catch (e) {
+        window.showToast("Failed to confirm pickup.", "error");
+    }
+};
+
 window.reachedDropLocation = async (id, outletId) => {
     window.haptic(30);
     if (!window.currentUser) return window.showToast("Authentication error.", "error");
@@ -985,13 +1002,13 @@ window.showPingModal = (id, outletId, order) => {
     const modal = document.getElementById('newOrderPingModal');
     if (!modal) return;
     
-    document.getElementById('pingOutletName').innerText = outletId === 'pizza' ? 'Pizza Outlet' : 'Cake Outlet';
+    document.getElementById('pingOutletName').innerText = (outletId === 'pizza' ? 'Pizza' : 'Cake') + ' Outlet';
     document.getElementById('pingCustomerAddress').innerText = order.address || 'Unknown';
     document.getElementById('pingOrderId').innerText = '#' + (order.orderId || id.slice(-6)).toUpperCase();
-    document.getElementById('pingEarning').innerText = '₹' + (order.deliveryFee || '0');
+    document.getElementById('pingOrderTotal').innerText = '₹' + (order.deliveryFee || '0');
     
-    const acceptBtn = document.getElementById('pingAcceptBtn');
-    const ignoreBtn = document.getElementById('pingIgnoreBtn');
+    const acceptBtn = document.getElementById('btnAcceptOrder');
+    const ignoreBtn = document.getElementById('btnIgnoreOrder');
     const timerEl = document.getElementById('pingTimer');
     
     // Clear old listeners by cloning
