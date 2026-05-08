@@ -28,6 +28,9 @@
     --orange-light: #FF9F00;
     --radius-premium: 24px;
 
+    --pizza: #FF5200;
+    --cake: #D946EF;
+
     --header-height: 70px;
     --bottom-nav-height: 75px;
 }
@@ -67,35 +70,17 @@ body {
 .mb-10 { margin-bottom: 10px; }
 .mb-15 { margin-bottom: 15px; }
 .mb-20 { margin-bottom: 20px; }
-.mt-10 { margin-top: 10px; }/* -------------------------------------------------------------------------- */
-/* ROSHANI RIDER - PREMIUM DESIGN SYSTEM (ORANGE THEME)                       */
-/* -------------------------------------------------------------------------- */
-:root {
-    --primary: #FF5200;
-    --primary-dark: #E64A19;
-    --primary-light: #FFF5F1;
-    --bg-app: #F4F6F8;
-    --bg-surface: #FFFFFF;
-
-    --text-main: #1E293B;
-    --text-muted: #64748B;
-    --text-danger: #EF4444;
-
-    --success: #10B981;
-    --info: #3B82F6;
-    --warning: #F59E0B;
-    --danger: #EF4444;
-
-    --shadow-sm: 0 8px 24px rgba(255, 82, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
-    --shadow-md: 0 20px 48px rgba(255, 82, 0, 0.18), 0 8px 20px rgba(0, 0, 0, 0.06);
-    --shadow-float: 0 -15px 50px rgba(255, 82, 0, 0.15);
-    --border-premium: 2.5px solid rgba(255, 82, 0, 0.25);
-    --glass-bg: rgba(255, 255, 255, 0.95);
-    --glass-border: 1.5px solid rgba(255, 255, 255, 0.4);
-    --orange: #FF5200;
-    --orange-dark: #E64A00;
-    --orange-light: #FF9F00;
-}
+.mt-10 { margin-top: 10px; }
+.mt-20 { margin-top: 20px; }
+.p-20 { padding: 20px; }
+.full-width { width: 100%; }
+.font-bold { font-weight: 800; }
+.text-center { text-align: center; }
+.text-small { font-size: 0.8rem; }
+.text-success { color: var(--success); }
+.text-danger { color: var(--danger); }
+.text-muted { color: var(--text-muted); }
+.text-main { color: var(--text-main); }
 
 .mt-15 {
     margin-top: 15px;
@@ -807,20 +792,26 @@ body {
 
 .otp-input {
     width: 100%;
+    max-width: 280px;
     padding: 15px;
-    font-size: 2rem;
+    font-size: 2.2rem;
     font-weight: 900;
     text-align: center;
-    letter-spacing: 15px;
-    border: 2px solid #E2E8F0;
-    border-radius: var(--radius-premium);
-    margin-bottom: 20px;
+    letter-spacing: 0.5em;
+    padding-left: 0.5em; /* Compensate for letter spacing to center correctly */
+    border: 2.5px solid rgba(0,0,0,0.08);
+    border-radius: 16px;
+    margin-bottom: 25px;
     outline: none;
     color: var(--primary);
+    background: #f8fafc;
+    transition: all 0.2s ease;
 }
 
 .otp-input:focus {
     border-color: var(--primary);
+    background: white;
+    box-shadow: 0 0 0 4px rgba(255, 82, 0, 0.1);
 }
 
 .checklist-container {
@@ -1122,6 +1113,88 @@ body {
     margin-bottom: 20px;
 }
 
+/* Outlet Badges */
+.outlet-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: white;
+}
+.outlet-badge.pizza { background: var(--pizza); }
+.outlet-badge.cake { background: var(--cake); }
+
+/* Responsive Card Grid (Mobile Only) */
+.order-card-grid {
+    display: none; /* Hidden on desktop */
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.order-card-compact {
+    background: var(--bg-surface);
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.04);
+    position: relative;
+    overflow: hidden;
+}
+
+.order-card-compact .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.order-card-compact .order-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.order-card-compact .address-line {
+    font-size: 0.9rem;
+    color: var(--text-main);
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.order-card-compact .address-line i {
+    color: var(--primary);
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.order-card-compact .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    padding-top: 12px;
+}
+
+.order-card-compact .earn-badge {
+    color: var(--success);
+    font-weight: 800;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .premium-table-wrapper { display: none; }
+    .order-card-grid { display: grid; }
+}
+
+
 .premium-table {
     width: 100%;
     border-collapse: collapse;
@@ -1360,22 +1433,24 @@ body {
 /* -------------------------------------------------------------------------- */
 @media (max-width: 1024px) {
     :root {
-        --header-height: 64px;
-        --bottom-nav-height: 70px;
+        --header-height: 60px;
+        --bottom-nav-height: 65px;
     }
 
     .app-header {
         padding: 0 1rem;
+        height: var(--header-height);
     }
 
     /* Fix header overlap: reset margins on header children */
     .app-header h2.app-logo {
         margin: 0;
-        font-size: 17px;
+        font-size: 16px;
         line-height: 1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        letter-spacing: -0.02em;
     }
 
     .app-header .header-main,
@@ -1386,18 +1461,50 @@ body {
     }
 
     .main-content {
-        padding-top: calc(var(--header-height) + 10px);
-        padding-bottom: calc(var(--bottom-nav-height) + 20px);
+        padding-top: calc(var(--header-height) + 15px);
+        padding-bottom: calc(var(--bottom-nav-height) + 30px);
+        padding-left: 15px;
+        padding-right: 15px;
     }
 
     .welcome-text {
-        font-size: 1.5rem;
+        font-size: 1.3rem;
+        letter-spacing: -0.03em;
     }
 
     .premium-dashboard-card, .order-card-premium {
-        padding: 1.2rem;
+        padding: 1rem;
+        border-radius: 20px;
+    }
+
+    .bottom-nav {
+        height: var(--bottom-nav-height);
+        padding-bottom: env(safe-area-inset-bottom, 15px);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+    }
+
+    .nav-badge {
+        top: -6px;
+        right: -12px;
+        font-size: 0.55rem;
+        padding: 1px 4px;
+    }
+
+    .nav-item {
+        padding: 8px 0;
+    }
+
+    .nav-item i {
+        width: 20px;
+        height: 20px;
+    }
+
+    .nav-item span {
+        font-size: 0.65rem;
     }
 }
+
 
 .map-status-chip {
     background: rgba(16, 185, 129, 0.1);
@@ -1460,7 +1567,16 @@ body {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.icon-btn:active { transform: scale(0.9); background: rgba(255, 82, 0, 0.15); }
+.icon-btn:active, .btn-primary:active, .btn-outline:active, .nav-item:active { 
+    transform: scale(0.95); 
+    opacity: 0.9;
+}
+
+.order-card-compact:active {
+    transform: scale(0.98);
+    background: #fafafa;
+    transition: transform 0.1s ease;
+}
 
 .sync-status {
     position: fixed;
@@ -1501,5 +1617,60 @@ body {
 .trip-map-container {
     height: 350px;
     width: 100%;
+}
+
+/* --- Premium Rider Mobile Polish --- */
+.bottom-nav {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.bottom-nav .nav-item {
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bottom-nav .nav-item.active {
+    color: var(--primary);
+}
+
+.bottom-nav .nav-item.active i {
+    transform: translateY(-4px);
+    filter: drop-shadow(0 4px 8px rgba(255, 82, 0, 0.3));
+}
+
+.bottom-nav .nav-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: var(--primary);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--primary);
+}
+
+.order-card-compact {
+    transition: all 0.2s ease;
+}
+
+.order-card-compact:active {
+    transform: scale(0.97);
+    background: #fdfdfd;
+}
+
+.sidebar-user-section {
+    background: linear-gradient(135deg, var(--primary) 0%, #ff7a00 100%);
+}
+
+.solid-stat-card {
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease;
+}
+
+.solid-stat-card:active {
+    transform: scale(0.96);
 }
 

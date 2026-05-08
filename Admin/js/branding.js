@@ -49,6 +49,22 @@ export function updateBranding() {
 }
 
 export function switchOutlet(val) {
+    // 100% Compatibility & Security Check
+    const isAdmin = state.adminData;
+    const canSwitch = isAdmin && (isAdmin.isSuper || isAdmin.isSupreme);
+
+    if (!canSwitch && isAdmin && isAdmin.outlet !== val) {
+        console.error("[Security] Unauthorized switch attempt blocked:", val);
+        import('./utils.js').then(u => u.showToast("Unauthorized: Access restricted to your assigned outlet", "error"));
+        
+        // Revert UI if needed
+        const desktopSwitcher = document.getElementById('outletSwitcher');
+        const mobileSwitcher = document.getElementById('outletSwitcherMobile');
+        if (desktopSwitcher) desktopSwitcher.value = state.currentOutlet;
+        if (mobileSwitcher) mobileSwitcher.value = state.currentOutlet;
+        return;
+    }
+
     sessionStorage.setItem('adminSelectedOutlet', val);
     state.currentOutlet = val;
     window.currentOutlet = val;

@@ -109,6 +109,31 @@ export function initAuth() {
             adminData = adminSnap.val();
             console.log("[Auth] Admin Data Received:", adminData ? "OK" : "MISSING");
             
+            // --- Tiered Access Logic Injection ---
+            const email = user.email.toLowerCase();
+            const SUPREME_ADMIN = "nexorasoftware@gmail.com";
+            const SUPER_ADMIN = "roshanisudha@gmail.com";
+
+            if (email === SUPREME_ADMIN) {
+                console.log("[Auth] Supreme Admin Detected");
+                if (!adminData) adminData = { name: "Supreme Admin", email: SUPREME_ADMIN };
+                adminData.isSuper = true;
+                adminData.isSupreme = true;
+                adminData.role = "Supreme Admin";
+                // Supreme admin can access any outlet, default to pizza if none set
+                if (!adminData.outlet) adminData.outlet = "pizza"; 
+            } else if (email === SUPER_ADMIN) {
+                console.log("[Auth] Super Admin Detected");
+                if (!adminData) adminData = { name: "Super Admin", email: SUPER_ADMIN };
+                adminData.isSuper = true;
+                adminData.role = "Super Admin";
+                // Super admin can access pizza and cake
+            } else if (adminData) {
+                // Regular Admin: Enforce outlet isolation
+                adminData.isSuper = false;
+                adminData.isSupreme = false;
+            }
+
             if (!adminData) {
                 console.error("[Auth] Access Denied: No profile found for UID", user.uid);
                 throw new Error("ACCESS_DENIED");
@@ -168,14 +193,23 @@ export function initAuth() {
         window.currentOutlet = savedOutlet.toLowerCase();
         state.currentOutlet = window.currentOutlet;
 
-        // Handle Multi-Outlet Logic
-        if (adminData.isSuper) {
+        // Handle Multi-Outlet Logic (Supreme/Super Admin)
+        if (adminData.isSuper || adminData.isSupreme) {
             const switcher = document.getElementById('outletSwitcher');
             const switcherMobile = document.getElementById('outletSwitcherMobile');
-            const outletOptionsHtml = `
+            
+            // Build options based on access level
+            let outletOptionsHtml = `
                 <option value="pizza">🍕 Pizza ERP</option>
                 <option value="cake">🎂 Cakes ERP</option>
             `;
+            
+            // Future-proofing for Supreme Admin
+            if (adminData.isSupreme) {
+                // For now only pizza and cake exist, but Supreme Admin is flagged for future expansion
+                console.log("[Auth] Supreme Admin: All future outlets enabled.");
+            }
+
             if (switcher) {
                 switcher.classList.remove('hidden');
                 switcher.innerHTML = outletOptionsHtml;
@@ -185,6 +219,20 @@ export function initAuth() {
                 switcherMobile.classList.remove('hidden');
                 switcherMobile.innerHTML = outletOptionsHtml;
                 switcherMobile.value = window.currentOutlet;
+            }
+        } else {
+            // Ensure switcher is hidden for regular admins
+            const switcher = document.getElementById('outletSwitcher');
+            const switcherMobile = document.getElementById('outletSwitcherMobile');
+            if (switcher) switcher.classList.add('hidden');
+            if (switcherMobile) switcherMobile.classList.add('hidden');
+            
+            // Force assigned outlet if they try to bypass via sessionStorage
+            if (adminData.outlet && window.currentOutlet !== adminData.outlet) {
+                console.warn("[Auth] Unauthorized outlet access attempt. Resetting to:", adminData.outlet);
+                window.currentOutlet = adminData.outlet;
+                state.currentOutlet = adminData.outlet;
+                sessionStorage.setItem('adminSelectedOutlet', adminData.outlet);
             }
         }
 

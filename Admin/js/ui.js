@@ -10,6 +10,7 @@ import { loadStoreSettings } from './features/settings.js';
 import { loadCustomers, loadReports, loadLostSales } from './features/customers.js';
 import { toggleNotificationSheet, updateNotificationUI, updateNotificationSettingsUI } from './features/notifications.js';
 import { renderOrders } from './features/orders.js';
+import { loadInventory, cleanupInventory } from './features/inventory.js';
 
 
 
@@ -162,6 +163,7 @@ export const switchTab = async (tabId, skipHistory = false) => {
         if (tabId !== 'riders' && tabId !== 'dashboard' && tabId !== 'live') cleanupRiders();
         if (tabId !== 'feedback') cleanupFeedbacks();
         if (tabId !== 'liveTracker') cleanupLiveRiderTracker();
+        if (tabId !== 'inventory') cleanupInventory();
 
         // --- PHASE 3.25: DATA REFRESH ---
         // Refresh appropriate data based on the tab
@@ -201,6 +203,9 @@ export const switchTab = async (tabId, skipHistory = false) => {
                 break;
             case 'lostSales':
                 loadLostSales();
+                break;
+            case 'inventory':
+                loadInventory();
                 break;
         }
 

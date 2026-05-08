@@ -18,25 +18,31 @@ export function loadCategories() {
         if (!container) return;
         container.innerHTML = "";
 
+        const cats = [];
         snap.forEach(child => {
-            const cat = { id: child.key, ...child.val() };
-            state.categories.push(cat);
+            cats.push({ id: child.key, ...child.val() });
+        });
 
+        // Sort by order field
+        cats.sort((a, b) => (a.order || 0) - (b.order || 0));
+        state.categories = cats;
+
+        cats.forEach(cat => {
             const div = document.createElement('div');
-            div.className = "premium-row-v4 p-15 flex-row flex-center flex-gap-15 br-12";
+            div.className = "premium-row-v4 p-10 flex-row flex-center flex-gap-10 br-12";
             div.style.border = "1px solid rgba(0,0,0,0.02)";
 
             div.innerHTML = `
                 <div class="identity-chip-v4" style="flex: 1;">
-                    <img src="${cat.image || 'https://placehold.co/100/orange/white?text=Category'}" class="identity-avatar-v4" style="width:50px; height:50px;">
+                    <img src="${cat.image || 'https://placehold.co/100/orange/white?text=Category'}" class="identity-avatar-v4" style="width:40px; height:40px;">
                     <div class="identity-info-v4">
-                        <span class="name">${escapeHtml(cat.name)}</span>
-                        <span class="sub">ID: ${child.key.slice(-4).toUpperCase()}</span>
+                        <span class="name" style="font-size:13px;">${escapeHtml(cat.name)}</span>
+                        <span class="sub" style="font-size:10px;">Serial: ${cat.order || 0}</span>
                     </div>
                 </div>
                 <div class="action-group-v4">
                     <button data-action="deleteCategory" data-id="${cat.id}" class="btn-action-v4 danger" title="Delete Category">
-                         <i data-lucide="trash-2" style="width:14px;"></i>
+                         <i data-lucide="trash-2" style="width:12px;"></i>
                     </button>
                 </div>
             `;
@@ -46,7 +52,9 @@ export function loadCategories() {
     });
 }
 
+let isProcessingCategory = false;
 export async function addCategory() {
+    if (isProcessingCategory) return;
     const nameInput = document.getElementById('newCatName');
     const name = nameInput.value.trim();
     if (!name) return showToast('Enter category name', 'warning');
@@ -56,6 +64,13 @@ export async function addCategory() {
     let imageUrl = "";
 
     try {
+        isProcessingCategory = true;
+        const btn = document.getElementById('btnAddCategory');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-sm"></span> Processing...';
+        }
+
         if (fileInput.files.length > 0) {
             const file = fileInput.files[0];
             imageUrl = await uploadImage(file, `categories/${Date.now()}_${file.name}`);
@@ -69,9 +84,13 @@ export async function addCategory() {
             }
         });
 
+        const orderInput = document.getElementById('newCatOrder');
+        const order = parseInt(orderInput?.value) || 0;
+
         await Outlet.ref('categories').push({
             name: name,
             image: imageUrl,
+            order: order,
             outlet: (window.currentOutlet || 'pizza').toLowerCase(),
             addons: Object.keys(addons).length > 0 ? addons : null
         });
@@ -80,6 +99,7 @@ export async function addCategory() {
         if (addonsList) addonsList.innerHTML = "";
 
         nameInput.value = "";
+        if (orderInput) orderInput.value = "";
         fileInput.value = "";
         if (previewImg) previewImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='100%25' height='100%25' fill='%23eee'/%3E%3C/svg%3E";
         showToast('Category added successfully!', 'success');
@@ -87,16 +107,60 @@ export async function addCategory() {
     } catch (err) {
         console.error(err);
         showToast('Operation failed: ' + err.message, 'error');
+    } finally {
+        isProcessingCategory = false;
+        const btn = document.getElementById('btnAddCategory');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '🚀 Add Category';
+        }
     }
 }
 
 export async function deleteCategory(id) {
     requireAdminReauth(async () => {
-        if (await showConfirm("Delete this category?")) {
-            const snap = await Outlet.ref('categories/' + id).once('value');
-            const catName = snap.val()?.name || "Unknown";
-            await Outlet.ref('categories/' + id).remove();
-            logAudit("Catalog", `Deleted Category: ${catName}`, id);
+        if (await showConfirm("Delete this category and ALL associated dishes? This cannot be undone.", "Delete Category")) {
+            try {
+                const catSnap = await Outlet.ref('categories/' + id).once('value');
+                const category = catSnap.val();
+                if (!category) return showToast("Category not found", "error");
+
+                const catName = category.name;
+                const catImage = category.image;
+
+                // 1. Get all dishes to find those in this category
+                const dishesSnap = await Outlet.ref('dishes').once('value');
+                const dishes = dishesSnap.val() || {};
+
+                const updates = {};
+                updates[`categories/${id}`] = null;
+
+                const imagesToDelete = [];
+                if (catImage) imagesToDelete.push(catImage);
+
+                Object.keys(dishes).forEach(dishId => {
+                    if (dishes[dishId].category === catName) {
+                        updates[`dishes/${dishId}`] = null;
+                        if (dishes[dishId].image) {
+                            imagesToDelete.push(dishes[dishId].image);
+                        }
+                    }
+                });
+
+                // 2. Perform atomic database cleanup
+                await Outlet.ref('').update(updates);
+
+                // 3. Cleanup storage (Background)
+                imagesToDelete.forEach(img => {
+                    deleteImage(img).catch(err => console.warn("[Catalog] Image deletion failed:", img, err));
+                });
+
+                logAudit("Catalog", `Deleted Category and associated dishes: ${catName}`, id);
+                showToast(`Category "${catName}" and all its items deleted.`, 'success');
+            } catch (err) {
+                console.error("[Catalog] Delete failed:", err);
+                showToast("Operation failed: " + err.message, "error");
+            }
         }
     });
 }
@@ -110,13 +174,20 @@ export function loadMenu() {
     const grid = document.getElementById("menuGrid");
     if (!grid) return;
 
+    cleanupCatalog();
     console.log("[Catalog] Loading menu...");
     Outlet.ref(`dishes`).on("value", snap => {
         grid.innerHTML = "";
+        const dishes = [];
         snap.forEach(child => {
-            const d = child.val();
-            const dishId = child.key;
+            dishes.push({ id: child.key, ...child.val() });
+        });
 
+        // Sort by order field
+        dishes.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        dishes.forEach(d => {
+            const dishId = d.id;
             let sizesHtml = "";
             if (d.sizes) {
                 sizesHtml = `
@@ -189,7 +260,9 @@ export function loadMenu() {
     });
 }
 
+let isProcessingDish = false;
 export async function saveDish() {
+    if (isProcessingDish) return;
     if (!window.currentOutlet || window.currentOutlet === 'null' || window.currentOutlet === 'undefined') {
         return showToast("Error: Current outlet context is missing. Please refresh or select an outlet first.", "error");
     }
@@ -203,8 +276,15 @@ export async function saveDish() {
 
     const file = document.getElementById('dishFile').files[0];
     const statusLabel = document.getElementById('uploadStatus');
+    const saveBtn = document.querySelector('#dishModal .btn-primary');
 
     try {
+        isProcessingDish = true;
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.dataset.originalText = saveBtn.innerText;
+            saveBtn.innerHTML = '<span class="spinner-sm"></span> Saving...';
+        }
         if (file) {
             if (statusLabel) statusLabel.classList.remove('hidden');
             let oldImageUrl = null;
@@ -235,12 +315,15 @@ export async function saveDish() {
             }
         });
 
+        const order = parseInt(document.getElementById('dishOrder')?.value) || 0;
+
         const data = {
             name,
             category: cat,
             price: Number(basePrice) || 0,
             image,
             stock: true,
+            order: order,
             sizes: Object.keys(sizes).length > 0 ? sizes : null,
             addons: Object.keys(addons).length > 0 ? addons : null
         };
@@ -259,6 +342,12 @@ export async function saveDish() {
     } catch (e) {
         showToast("Error: " + e.message, "error");
         if (statusLabel) statusLabel.classList.add('hidden');
+    } finally {
+        isProcessingDish = false;
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerText = saveBtn.dataset.originalText || "Save Dish";
+        }
     }
 }
 
@@ -340,6 +429,7 @@ export async function showDishModal(dishId = null) {
         document.getElementById('dishPriceBase').value = '';
         document.getElementById('dishImage').value = '';
         document.getElementById('dishPreview').src = "https://placehold.co/100";
+        document.getElementById('dishOrder').value = '';
         document.getElementById('sizesContainer').innerHTML = '';
         document.getElementById('addonsContainer').innerHTML = '';
     } else {
@@ -358,6 +448,7 @@ export async function showDishModal(dishId = null) {
             }
             select.value = catValue;
             document.getElementById('dishPriceBase').value = d.price || '';
+            document.getElementById('dishOrder').value = d.order || '';
             document.getElementById('dishImage').value = d.image || '';
             document.getElementById('dishPreview').src = d.image || "https://placehold.co/100";
 

@@ -6,6 +6,7 @@
 import { state } from '../state.js';
 import { db, auth, Outlet, ServerValue } from '../firebase.js';
 import { standardizeOrderData, haptic, escapeHtml, playSuccessSound, logAudit } from '../utils.js';
+import { autoDeductStock } from './inventory.js';
 import { ui } from '../ui.js';
 import { printOrderReceipt } from './printing.js';
 
@@ -636,7 +637,10 @@ export async function submitWalkinSale() {
         // 1. Save Order
         await Outlet.ref(`orders/${orderId}`).set(orderData);
 
-        // 2. Update Customer LTV if phone provided
+        // 2. Auto-deduct inventory
+        await autoDeductStock(items);
+
+        // 3. Update Customer LTV if phone provided
         if (phone && phone.length >= 10) {
             const custRef = Outlet.ref(`customers/${phone}`);
             await custRef.transaction(c => {
