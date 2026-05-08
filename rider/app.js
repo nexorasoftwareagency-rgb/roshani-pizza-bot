@@ -1245,11 +1245,6 @@ window.renderAllOrders = () => {
                 dashboardActiveView.innerHTML = activeContent;
                 if (activeOrderView) {
                     activeOrderView.innerHTML = `
-                        <div class="view-header mb-15">
-                            <h2 class="section-heading">Live Trip Navigation</h2>
-                            <p class="text-muted text-small">Tracking delivery for #${safeOrderId}</p>
-                        </div>
-                        <div id="activeTripMap" class="trip-map-container glass-panel mb-20" style="height:350px;"></div>
                         <div class="order-details-panel">
                             ${activeContent}
                         </div>
