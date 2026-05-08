@@ -951,8 +951,11 @@ window.renderAllOrders = () => {
     }
 
     let unassignedRows = "";
+    let unassignedCards = "";
     let historyRows = "";
+    let historyCards = "";
     let unassignedCount = 0;
+    let historyCount = 0;
     
     // Stats for Today
     let todayOrders = 0; 
@@ -966,14 +969,13 @@ window.renderAllOrders = () => {
     let pizzaToday = 0;
     let cakeToday = 0;
     
-    // Cash to Settle (Orders with paymentMethod === 'CASH')
+    // Cash to Settle
     let totalCashToSettle = 0;
     
     const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
 
     Object.keys(window.orderCache).forEach(outletId => {
         const orders = window.orderCache[outletId];
-        // Correct date sorting for ISO strings
         const sortedIds = Object.keys(orders).sort((a, b) => {
             const timeA = orders[a].createdAt ? new Date(orders[a].createdAt).getTime() : 0;
             const timeB = orders[b].createdAt ? new Date(orders[b].createdAt).getTime() : 0;
@@ -984,12 +986,11 @@ window.renderAllOrders = () => {
             const o = orders[id];
             if (!o) return;
             const status = (o.status || "").toLowerCase();
-            // Use riderId (UID) for more robust matching
             const currentEmail = (window.currentUser?.email || "").toLowerCase();
             const riderUid = window.currentUser?.uid || window.currentUser?.profile?.id;
             const isMine = (riderUid && o.riderId === riderUid) || (o.assignedRider && o.assignedRider.toLowerCase() === currentEmail);
 
-            // 1. UNASSIGNED / PICKUP SECTION
+            // 1. UNASSIGNED
             if (!o.assignedRider && ["ready", "cooked", "preparing", "confirmed"].includes(status)) {
                 const safeOrderId = escapeHtml((o.orderId || id.slice(-6)).toUpperCase());
                 const safeAddress = escapeHtml(o.address || 'Unknown');
@@ -999,9 +1000,17 @@ window.renderAllOrders = () => {
                 const safeOutlet = escapeHtml(outletId);
                 const statusLabel = (status === "ready" || status === "cooked") ? "READY" : "PREPARING";
                 
+                const outletName = outletId === 'pizza' ? 'Pizza' : 'Cake';
+                const outletIcon = outletId === 'pizza' ? '🍕' : '🎂';
+                
                 unassignedRows += `
                     <tr>
-                        <td><span class="order-id">#${safeOrderId}</span></td>
+                        <td>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <span class="order-id">#${safeOrderId}</span>
+                                <span class="outlet-badge ${safeOutlet}">${outletIcon} ${outletName}</span>
+                            </div>
+                        </td>
                         <td><span class="badge-${statusLabel.toLowerCase()}">${statusLabel}</span></td>
                         <td class="address-cell">${safeAddress}</td>
                         <td class="text-success font-bold">₹${safeFee}</td>
@@ -1009,42 +1018,63 @@ window.renderAllOrders = () => {
                         <td><button class="btn-primary" data-action="accept" data-id="${safeId}" data-outlet="${safeOutlet}">ACCEPT</button></td>
                     </tr>
                 `;
+
+                unassignedCards += `
+                    <div class="order-card-compact animate-fade-in">
+                        <div class="card-header">
+                            <div class="order-meta">
+                                <span class="order-id-badge">#${safeOrderId}</span>
+                                <span class="outlet-badge ${safeOutlet}">${outletIcon} ${outletName}</span>
+                            </div>
+                            <span class="status-pill ${statusLabel.toLowerCase()}">${statusLabel}</span>
+                        </div>
+                        <div class="address-line">
+                            <i data-lucide="map-pin"></i>
+                            <span>${safeAddress}</span>
+                        </div>
+                        <div class="card-footer">
+                            <div class="price-info">
+                                <div class="text-muted-small">Your Pay</div>
+                                <div class="earn-badge">₹${safeFee}</div>
+                            </div>
+                            <button class="btn-primary" data-action="accept" data-id="${safeId}" data-outlet="${safeOutlet}" style="padding: 10px 20px;">ACCEPT</button>
+                        </div>
+                    </div>
+                `;
                 unassignedCount++;
             }
-                // 2. ACTIVE ORDER SECTION
-                else if (status !== "delivered" && isMine) {
-                    // Store ALL active orders, but keep track of the first one for the main view
-                    if (!window.activeOrderId) {
-                        window.activeOrderId = id;
-                        window.activeOrderOutlet = outletId;
-                        window.activeOrderData = o;
-                    }
+            // 2. ACTIVE
+            else if (status !== "delivered" && isMine) {
+                if (!window.activeOrderId) {
+                    window.activeOrderId = id;
+                    window.activeOrderOutlet = outletId;
+                    window.activeOrderData = o;
+                }
 
-                    const cName = o.customerName || 'Customer';
-                    const cAdd = o.address || 'Location Details';
-                    const cPhone = (o.customerPhone || o.phone || '').replace(/\D/g, '').slice(-10);
-                    const oId = (o.orderId || id.slice(-6)).toUpperCase();
+                const cName = o.customerName || 'Customer';
+                const cAdd = o.address || 'Location Details';
+                const cPhone = (o.customerPhone || o.phone || '').replace(/\D/g, '').slice(-10);
+                const oId = (o.orderId || id.slice(-6)).toUpperCase();
 
-                    const safeName = escapeHtml(cName);
-                    const safeAdd = escapeHtml(cAdd);
-                    const safeStatus = escapeHtml(o.status.toUpperCase());
-                    const safePhone = escapeHtml(cPhone);
-                    const safeOrderId = escapeHtml(oId);
-                    const initial = escapeHtml(cName.charAt(0).toUpperCase());
-                    const safeId = escapeHtml(id);
-                    const safeOutlet = escapeHtml(outletId);
+                const safeName = escapeHtml(cName);
+                const safeAdd = escapeHtml(cAdd);
+                const safeStatus = escapeHtml(o.status.toUpperCase());
+                const safePhone = escapeHtml(cPhone);
+                const safeOrderId = escapeHtml(oId);
+                const initial = escapeHtml(cName.charAt(0).toUpperCase());
+                const safeId = escapeHtml(id);
+                const safeOutlet = escapeHtml(outletId);
 
-                    const itemsList = (o.normalizedItems || o.items || []).map(i => 
-                        `<div class="pickup-item-row">• ${escapeHtml(i.name || i.item)} (${escapeHtml(i.size)}) x${i.qty || i.quantity}</div>`
-                    ).join('');
+                const itemsList = (o.normalizedItems || o.items || []).map(i => 
+                    `<div class="pickup-item-row">• ${escapeHtml(i.name || i.item)} (${escapeHtml(i.size)}) x${i.qty || i.quantity}</div>`
+                ).join('');
 
-                    let actionButtons = "";
-                    const currentStatus = (o.status || "").toLowerCase();
+                let actionButtons = "";
+                const currentStatus = (o.status || "").toLowerCase();
 
-                    // Show pickup button for any status that is before delivery
-                    if (["ready", "cooked", "arriving at restaurant", "confirmed", "preparing", "placed", "waiting for pickup"].includes(currentStatus)) {
-                        actionButtons = `<button class="btn-primary full-width mt-10" data-action="pickup" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="package-check"></i> CONFIRM PICKUP</button>`;
-                    } else if (currentStatus === "picked up" || currentStatus === "out for delivery" || currentStatus === "delivering") {
+                if (["ready", "cooked", "arriving at restaurant", "confirmed", "preparing", "placed", "waiting for pickup"].includes(currentStatus)) {
+                    actionButtons = `<button class="btn-primary full-width mt-10" data-action="pickup" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="package-check"></i> CONFIRM PICKUP</button>`;
+                } else if (currentStatus === "picked up" || currentStatus === "out for delivery" || currentStatus === "delivering") {
                     actionButtons = `<button class="btn-primary full-width mt-10" style="background:#10B981;" data-action="navigate" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="navigation"></i> LET'S GO TO DELIVER</button>`;
                 }
 
@@ -1091,7 +1121,7 @@ window.renderAllOrders = () => {
                     setTimeout(() => window.initActiveMap(o), 200);
                 }
             }
-            // 3. HISTORY SECTION
+            // 3. HISTORY
             else if (status === "delivered" && isMine) {
                 const fee = Number(o.deliveryFee || 0);
                 const orderTotal = Number(o.total || 0);
@@ -1108,36 +1138,64 @@ window.renderAllOrders = () => {
                 if (outletId === 'pizza') pizzaEarnings += fee;
                 else if (outletId === 'cake') cakeEarnings += fee;
 
-                // Cash to Settle: If rider collected cash, they need to return the order total to shop
-                if (isCash) {
-                    totalCashToSettle += orderTotal;
-                }
+                if (isCash) totalCashToSettle += orderTotal;
 
                 const oId = (o.orderId || id.slice(-6)).toUpperCase();
                 const dTime = o.deliveredAt ? new Date(o.deliveredAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
                 const safeAddress = escapeHtml(o.address || '---');
                 
+                const outletName = outletId === 'pizza' ? 'Pizza' : 'Cake';
+                const outletIcon = outletId === 'pizza' ? '🍕' : '🎂';
+
                 historyRows += `
                     <tr>
-                        <td><span class="order-id">#${oId}</span></td>
+                        <td>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <span class="order-id">#${oId}</span>
+                                <span class="outlet-badge ${outletId}">${outletIcon} ${outletName}</span>
+                            </div>
+                        </td>
                         <td><span class="text-muted-small">${dTime}</span></td>
                         <td class="address-cell">${safeAddress}</td>
                         <td class="text-success font-bold">₹${fee}</td>
                         <td><span class="rider-status-pill">DONE</span></td>
                     </tr>
                 `;
+
+                historyCards += `
+                    <div class="order-card-compact" style="opacity: 0.85;">
+                        <div class="card-header">
+                            <div class="order-meta">
+                                <span class="order-id-badge">#${oId}</span>
+                                <span class="outlet-badge ${outletId}">${outletIcon} ${outletName}</span>
+                            </div>
+                            <span class="rider-status-pill">DONE</span>
+                        </div>
+                        <div class="address-line">
+                            <i data-lucide="calendar"></i>
+                            <span class="text-muted-small">${dTime}</span>
+                        </div>
+                        <div class="card-footer" style="border-top: none; padding-top: 0;">
+                            <div class="price-info">
+                                <div class="text-muted-small">Earned</div>
+                                <div class="earn-badge" style="color: var(--primary);">₹${fee}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                historyCount++;
             }
         });
     });
 
-    // Final Render for Pickup Table
+    // Final Render for Pickup Section
     if (unassignedCount > 0) {
         unassignedList.innerHTML = `
-            <div class="pickup-table-wrapper">
+            <div class="premium-table-wrapper">
                 <table class="premium-table">
                     <thead>
                         <tr>
-                            <th>ORDER</th>
+                            <th>ORDER / OUTLET</th>
                             <th>STATUS</th>
                             <th>DESTINATION</th>
                             <th>EARN</th>
@@ -1148,38 +1206,55 @@ window.renderAllOrders = () => {
                     <tbody>${unassignedRows}</tbody>
                 </table>
             </div>
+            <div class="order-card-grid">
+                ${unassignedCards}
+            </div>
         `;
     } else {
-        unassignedList.innerHTML = `<div class="glass-panel text-center p-20"><p class="text-muted">No orders available for pickup right now.</p></div>`;
+        unassignedList.innerHTML = `
+            <div class="glass-panel empty-state-glass animate-fade-in">
+                <i data-lucide="package-search" style="width:48px; height:48px; margin-bottom:15px; opacity:0.5;"></i>
+                <p>No new orders available right now.</p>
+                <span class="text-muted-small">Pull down to check for new tasks</span>
+            </div>
+        `;
     }
 
-    // Final Render for History Table
+    // Final Render for History
     if (historyList) {
-        if (historyRows) {
+        if (historyCount > 0) {
             historyList.innerHTML = `
-                <div class="premium-table-wrapper animate-fade-in">
+                <div class="premium-table-wrapper">
                     <table class="premium-table">
                         <thead>
                             <tr>
                                 <th>ORDER</th>
-                                <th>TIME</th>
+                                <th>DATE</th>
                                 <th>DESTINATION</th>
-                                <th>EARN</th>
+                                <th>EARNED</th>
                                 <th>STATUS</th>
                             </tr>
                         </thead>
                         <tbody>${historyRows}</tbody>
                     </table>
                 </div>
+                <div class="order-card-grid">
+                    ${historyCards}
+                </div>
             `;
         } else {
-            historyList.innerHTML = `<div class="glass-panel text-center p-40"><i data-lucide="history" style="width:48px;height:48px;color:#ccc;margin-bottom:15px;"></i><p class="text-muted">No completed trips found for today.</p></div>`;
+            historyList.innerHTML = `
+                <div class="glass-panel empty-state-glass">
+                    <p>No delivery history yet.</p>
+                </div>
+            `;
         }
     }
 
-    if (pickupBadge) { 
-        pickupBadge.innerText = unassignedCount; 
-        pickupBadge.classList.toggle('hidden', unassignedCount === 0); 
+    // Update Badges & Stats
+    if (pickupBadge) {
+        pickupBadge.textContent = unassignedCount;
+        pickupBadge.style.display = unassignedCount > 0 ? 'flex' : 'none';
     }
     const pCountEl = document.getElementById('pickupCount');
     if (pCountEl) pCountEl.innerText = `${unassignedCount} Orders`;
@@ -1187,15 +1262,19 @@ window.renderAllOrders = () => {
     document.getElementById('stats-delivered').innerText = todayOrders;
     document.getElementById('stats-earnings').innerText = `₹${todayPay.toLocaleString()}`;
     
-    // Detailed Stats
     if (document.getElementById('e-total')) document.getElementById('e-total').innerText = `₹${totalCashToSettle.toLocaleString()}`;
     if (document.getElementById('e-pizza')) document.getElementById('e-pizza').innerText = `₹${pizzaEarnings.toLocaleString()}`;
     if (document.getElementById('e-cake')) document.getElementById('e-cake').innerText = `₹${cakeEarnings.toLocaleString()}`;
     if (document.getElementById('e-pizza-today')) document.getElementById('e-pizza-today').innerText = `₹${pizzaToday.toLocaleString()}`;
     if (document.getElementById('e-cake-today')) document.getElementById('e-cake-today').innerText = `₹${cakeToday.toLocaleString()}`;
 
-    console.log(`[UI] Render Complete. Pickups: ${unassignedCount}, History: ${todayOrders}`);
-    if (window.lucide) window.lucide.createIcons({ root: document.querySelector('.main-content-v4') || document.body });
+    // Refresh Icons
+    if (window.lucide) {
+        window.lucide.createIcons({ root: unassignedList });
+        if (historyList) window.lucide.createIcons({ root: historyList });
+        if (dashboardActiveView) window.lucide.createIcons({ root: dashboardActiveView });
+        if (activeOrderView) window.lucide.createIcons({ root: activeOrderView });
+    }
 };
 
 document.addEventListener('DOMContentLoaded', () => {

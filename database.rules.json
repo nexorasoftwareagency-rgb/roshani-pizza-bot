@@ -2,140 +2,140 @@
   "rules": {
     "admins": {
       "$uid": {
-        ".read": "auth != null && (auth.uid == $uid || root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)",
+        ".read": "auth != null && (auth.uid == $uid || auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('isSuper').val() == true)",
+        ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || root.child('admins').child(auth.uid).child('isSuper').val() == true)",
         ".validate": "newData.hasChildren(['email', 'outlet'])"
       }
     },
     "riders": {
       "$uid": {
-        ".read": "auth != null && (auth.uid == $uid || root.child('admins').child(auth.uid).exists())",
-        ".write": "auth != null && (auth.uid == $uid || root.child('admins').child(auth.uid).exists())"
+        ".read": "auth != null && (auth.uid == $uid || root.child('admins').child(auth.uid).exists() || auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com')",
+        ".write": "auth != null && (auth.uid == $uid || root.child('admins').child(auth.uid).exists() || auth.token.email == 'nexorasoftware@gmail.com')"
       },
-      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com')",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email == 'nexorasoftware@gmail.com')",
       ".indexOn": ["email"]
     },
     "riderStats": {
       "$riderId": {
-        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.uid == $riderId)",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.uid == $riderId)"
+        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.uid == $riderId || auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com')",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.uid == $riderId || auth.token.email == 'nexorasoftware@gmail.com')"
       }
     },
     "logs": {
       "audit": {
-        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-        ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com')",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email == 'nexorasoftware@gmail.com')",
         "$logId": {
           ".validate": "newData.hasChildren(['action', 'timestamp', 'adminEmail']) && !data.exists()"
         }
       },
       "lostSales": {
-        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-        ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com')",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email == 'nexorasoftware@gmail.com')"
       },
       "riderErrors": {
         "$riderId": {
-          ".read": "auth != null && (auth.uid == $riderId || root.child('admins').child(auth.uid).exists())",
+          ".read": "auth != null && (auth.uid == $riderId || root.child('admins').child(auth.uid).exists() || auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com')",
           ".write": "auth != null && auth.uid == $riderId"
         }
       }
     },
     "bot": {
-       ".read": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)",
-       ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
+       ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com')",
+       ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email == 'nexorasoftware@gmail.com')"
     },
     "migrationStatus": {
-       ".read": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)",
-       ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
+       ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('isSuper').val() == true)",
+       ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
     },
     "pizza": {
       "orders": {
-        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && query.orderByChild == 'assignedRider' && (query.equalTo == null || query.equalTo == '' || query.equalTo == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
+        ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza' || (root.child('riders').child(auth.uid).exists() && query.orderByChild == 'assignedRider' && (query.equalTo == null || query.equalTo == '' || query.equalTo == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
         ".indexOn": ["createdAt", "status", "riderId", "assignedRider"],
         "$orderId": {
-          ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && (!data.child('assignedRider').exists() || data.child('assignedRider').val().toLowerCase() == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
-          ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && (!data.child('riderId').exists() || data.child('riderId').val() == auth.uid)))",
-          ".validate": "newData.hasChildren(['items', 'total', 'status', 'createdAt']) && (root.child('admins').child(auth.uid).exists() || (newData.child('items').val() == data.child('items').val() && newData.child('total').val() == data.child('total').val() && (data.child('riderId').exists() ? newData.child('riderId').val() == data.child('riderId').val() : newData.child('riderId').val() == auth.uid)))"
+          ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza' || (root.child('riders').child(auth.uid).exists() && (!data.child('assignedRider').exists() || data.child('assignedRider').val().toLowerCase() == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
+          ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza' || (root.child('riders').child(auth.uid).exists() && (!data.child('riderId').exists() || data.child('riderId').val() == auth.uid)))",
+          ".validate": "newData.hasChildren(['items', 'total', 'status', 'createdAt']) && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza' || (newData.child('items').val() == data.child('items').val() && newData.child('total').val() == data.child('total').val() && (data.child('riderId').exists() ? newData.child('riderId').val() == data.child('riderId').val() : newData.child('riderId').val() == auth.uid)))"
         }
       },
       "dishes": {
         ".read": "true",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
+        ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza')"
       },
       "Menu": {
         ".read": "true",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
+        ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza')"
       },
       "categories": {
         ".read": "true",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
+        ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza')"
       },
       "lostSales": {
-        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-        ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+        ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza')",
+        ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza')"
       },
       "customers": {
-        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || root.child('riders').child(auth.uid).exists())"
+        ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza')",
+        ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza' || root.child('riders').child(auth.uid).exists())"
       },
       "feedbacks": {
-        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza')",
         ".write": "true"
       },
       "settings": {
         ".read": "auth != null",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
+        ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza')"
       },
       "metadata": {
         "orderSequence": {
-          ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-          ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+          ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza')",
+          ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza')"
         }
       },
       "uiConfig": {
         ".read": "true",
-        ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+        ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'pizza')"
       }
     },
     "cake": {
       "orders": {
-        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && query.orderByChild == 'assignedRider' && (query.equalTo == null || query.equalTo == '' || query.equalTo == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
+        ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake' || (root.child('riders').child(auth.uid).exists() && query.orderByChild == 'assignedRider' && (query.equalTo == null || query.equalTo == '' || query.equalTo == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
         ".indexOn": ["createdAt", "status", "riderId", "assignedRider"],
         "$orderId": {
-          ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && (!data.child('assignedRider').exists() || data.child('assignedRider').val().toLowerCase() == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
-          ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (root.child('riders').child(auth.uid).exists() && (!data.child('riderId').exists() || data.child('riderId').val() == auth.uid)))",
-          ".validate": "newData.hasChildren(['items', 'total', 'status', 'createdAt']) && (root.child('admins').child(auth.uid).exists() || (newData.child('items').val() == data.child('items').val() && newData.child('total').val() == data.child('total').val() && (data.child('riderId').exists() ? newData.child('riderId').val() == data.child('riderId').val() : newData.child('riderId').val() == auth.uid)))"
+          ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake' || (root.child('riders').child(auth.uid).exists() && (!data.child('assignedRider').exists() || data.child('assignedRider').val().toLowerCase() == root.child('riders').child(auth.uid).child('email').val().toLowerCase())))",
+          ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake' || (root.child('riders').child(auth.uid).exists() && (!data.child('riderId').exists() || data.child('riderId').val() == auth.uid)))",
+          ".validate": "newData.hasChildren(['items', 'total', 'status', 'createdAt']) && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake' || (newData.child('items').val() == data.child('items').val() && newData.child('total').val() == data.child('total').val() && (data.child('riderId').exists() ? newData.child('riderId').val() == data.child('riderId').val() : newData.child('riderId').val() == auth.uid)))"
         }
       },
       "dishes": {
         ".read": "true",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
+        ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake')"
       },
       "categories": {
         ".read": "true",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
+        ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake')"
       },
       "lostSales": {
-        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-        ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+        ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake')",
+        ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake')"
       },
       "customers": {
-        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || root.child('riders').child(auth.uid).exists())"
+        ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake')",
+        ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake' || root.child('riders').child(auth.uid).exists())"
       },
       "feedbacks": {
-        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake')",
         ".write": "true"
       },
       "settings": {
         ".read": "auth != null",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).child('role').val() == 'Super Admin' || root.child('admins').child(auth.uid).child('isSuper').val() == true)"
+        ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake')"
       },
       "metadata": {
         "orderSequence": {
-          ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-          ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+          ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake')",
+          ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('outlet').val() == 'cake')"
         }
       }
     }

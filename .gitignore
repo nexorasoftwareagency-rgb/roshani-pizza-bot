@@ -1,8 +1,12 @@
+Pizza-bot/node_modules/
+Pizza-bot/session_data/
+Pizza-bot/service-account.json
+Cake-bot/node_modules/
+Cake-bot/session_data/
+Cake-bot/service-account.json
 node_modules/
 session/
 session_data/
-bot/session_data/
-bot/service-account.json
 .env
 .firebase/
 graphify-out/

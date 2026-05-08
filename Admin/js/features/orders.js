@@ -8,6 +8,8 @@ import { state } from '../state.js';
 import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit, calculateDistance, getFeeFromSlabs, addRiderNotification } from '../utils.js';
 import { showAlert, addNotification, highlightOrder } from './notifications.js';
 import { showPaymentPicker } from '../ui-utils.js';
+import { autoDeductStock } from './inventory.js';
+
 
 /**
  * STATUS WORKFLOW CONFIGURATION
@@ -876,6 +878,15 @@ export async function updateStatus(id, status) {
         }
     }
 
+    // Handle Stock Deduction on Confirmation
+    if (status === "Confirmed" && !order.stockDeducted) {
+        const items = order.normalizedItems || order.cart || [];
+        if (items.length > 0) {
+            autoDeductStock(items);
+            updates.stockDeducted = true;
+        }
+    }
+
     try {
         await Outlet.ref(`orders/${id}`).update(updates);
         logAudit("Orders", `Updated Status: #${id.slice(-5)} -> ${status}`, id);
@@ -911,6 +922,15 @@ export async function assignRider(id, riderId) {
         const currentStatus = (order.status || "").toLowerCase();
         if (currentStatus === "placed") {
             updateData.status = "Confirmed";
+            
+            // Handle Stock Deduction on Auto-Confirmation during Rider Assignment
+            if (!order.stockDeducted) {
+                const items = order.normalizedItems || order.cart || [];
+                if (items.length > 0) {
+                    autoDeductStock(items);
+                    updateData.stockDeducted = true;
+                }
+            }
         }
 
         // Manual assignment only - Rider will handle status advancement via "PICKUP"

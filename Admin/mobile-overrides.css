@@ -46,11 +46,23 @@
     .btn-primary, 
     .btn-secondary,
     .nav-btn,
+    .pos-dish-btn,
     [data-action],
     [data-tab] {
         touch-action: manipulation;
-        -webkit-tap-highlight-color: rgba(var(--primary-rgb), 0.3);
+        -webkit-tap-highlight-color: transparent;
         cursor: pointer;
+        transition: transform 0.1s ease, background 0.2s ease, opacity 0.2s ease !important;
+    }
+
+    button:active, 
+    .btn-primary:active, 
+    .btn-secondary:active,
+    .pos-dish-btn:active,
+    [data-action]:active,
+    [data-tab]:active {
+        transform: scale(0.96) !important;
+        opacity: 0.8;
     }
 
     .layout {
@@ -94,7 +106,7 @@
         min-height: 100vh !important; /* Fallback */
         min-height: 100dvh !important;
         width: 100% !important;
-        padding-top: var(--mobile-header-height) !important; /* Mobile Header height */
+        padding-top: calc(var(--mobile-header-height) + 10px) !important; /* Mobile Header height + buffer */
         padding-bottom: 100px !important; /* Space for bottom nav */
     }
 
@@ -105,14 +117,15 @@
         left: 0;
         right: 0;
         height: var(--mobile-header-height) !important;
-        background: rgba(255, 255, 255, 0.85) !important;
-        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-        backdrop-filter: blur(20px) saturate(180%) !important;
+        background: rgba(255, 255, 255, 0.8) !important;
+        -webkit-backdrop-filter: blur(15px) saturate(160%) !important;
+        backdrop-filter: blur(15px) saturate(160%) !important;
         border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
         display: flex !important;
         align-items: center !important;
         justify-content: space-between !important;
-        padding: 0 16px !important;
+        padding: 0 20px !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03) !important;
     }
 
     .bottom-nav {
@@ -123,10 +136,82 @@
         right: 0;
     }
 
+    .tab-pane {
+        animation: premiumFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes premiumFadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
     .tab-content {
         z-index: 20 !important;
         position: relative !important;
         pointer-events: auto !important;
+        padding-top: 10px !important;
+    }
+
+    /* Hide bottom nav on login and sidebar active */
+    #authOverlay:not(.hidden) ~ .bottom-nav,
+    body.sidebar-active .bottom-nav {
+        display: none !important;
+    }
+
+    /* Fix POS Back button */
+    [data-action="switchTab"][data-tab="dashboard"].btn-text.mobile-only {
+        width: 40px !important;
+        height: 40px !important;
+        background: #f1f5f9 !important;
+        border-radius: 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        color: var(--primary) !important;
+        margin-right: 12px !important;
+        padding: 0 !important;
+    }
+
+    .modal-header .close-btn {
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        background: #f1f5f9 !important;
+        border-radius: 10px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+
+    /* Highlight Mobile Logout */
+    .nav-item.logout-item-mobile {
+        color: var(--error) !important;
+    }
+    .nav-item.logout-item-mobile i {
+        color: var(--error) !important;
+    }
+
+    /* --- Mobile Header Polish --- */
+    .mobile-header #mobilePageTitle {
+        font-size: 1.1rem !important;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 140px; /* Prevent crowding the bell icon */
+        transition: max-width 0.3s ease;
+    }
+
+    @media (max-width: 360px) {
+        .mobile-header #mobilePageTitle {
+            max-width: 100px;
+            font-size: 1rem !important;
+        }
     }
 
     /* Ensure tab contents are clickable */
@@ -257,6 +342,13 @@
     .sheet-clear-btn:active {
         transform: scale(0.95);
         background: var(--primary-lighter) !important;
+        opacity: 0.8;
+    }
+
+    /* Active Nav State */
+    .nav-btn-mobile:active {
+        background: rgba(var(--primary-rgb), 0.1) !important;
+        transform: translateY(-2px) scale(0.95) !important;
     }
 
     .sheet-body {
@@ -283,8 +375,9 @@
         width: 280px !important;
         max-width: 85vw !important;
         z-index: 10000 !important;
-        transform: translateX(-100%) !important;
-        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        transform: translateX(-100%) scale(0.98) !important;
+        opacity: 0;
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease !important;
         box-shadow: 20px 0 50px rgba(0, 0, 0, 0.2) !important;
         background: white !important;
         display: flex !important;
@@ -295,7 +388,8 @@
     }
 
     .sidebar.active {
-        transform: translateX(0) !important;
+        transform: translateX(0) scale(1) !important;
+        opacity: 1;
     }
 
     .sidebar .sidebar-header {
@@ -532,20 +626,23 @@
     .mobile-cart-summary {
         display: flex !important;
         position: fixed !important;
-        bottom: 85px !important;
+        bottom: calc(85px + var(--safe-bottom)) !important;
         left: 15px !important;
         right: 15px !important;
         height: 64px !important;
-        background: #111 !important;
-        border-radius: 18px !important;
+        background: rgba(17, 17, 17, 0.9) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        backdrop-filter: blur(12px) !important;
+        border-radius: 20px !important;
         padding: 0 20px !important;
-        z-index: 9500 !important; /* Above everything except sidebar */
+        z-index: 9500 !important;
         color: #fff !important;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5) !important;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4) !important;
         align-items: center !important;
         justify-content: space-between !important;
         pointer-events: auto !important;
         width: auto !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
     .mobile-cart-summary.hidden {
@@ -684,29 +781,25 @@
     }
 
     .category-tab {
-        padding: 10px 20px !important;
-        background: #fff !important;
-        border: 2px solid #e2e8f0 !important;
-        border-radius: 24px !important;
+        padding: 8px 18px !important;
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
         font-size: 13px !important;
         font-weight: 600 !important;
         color: #64748b !important;
         white-space: nowrap !important;
         cursor: pointer !important;
-        transition: all 0.25s ease !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         flex-shrink: 0 !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
-    }
-
-    .category-tab:hover {
-        transform: none !important;
     }
 
     .category-tab.active {
         background: var(--primary) !important;
         border-color: var(--primary) !important;
         color: #fff !important;
-        box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.3) !important;
+        box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.2) !important;
+        transform: translateY(-1px);
     }
 
     /* Search input */

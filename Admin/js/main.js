@@ -36,6 +36,7 @@ import {
 } from './features/customers.js';
 import { saveStoreSettings, quickUpdateOutletStatus, addFeeSlab } from './features/settings.js';
 import { initRiderAnalytics } from './features/rider-analytics.js';
+import { initInventory } from './features/inventory.js';
 
 // Side-effect imports
 import './firebase.js';
@@ -66,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initAuth();
     initRiderAnalytics();
+    initInventory();
 
     // Final check for icons on static content
     // Scoped initialization for performance across both states
@@ -118,7 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', () => showDishModal());
         });
         document.getElementById('btnMigrateDishAddons')?.addEventListener('click', migrateAddonsToCategories);
-        document.getElementById('btnAddCategory')?.addEventListener('click', addCategory);
         bindClickTo('btnChangeCatPhoto', 'catFile');
 
         document.getElementById('catFile')?.addEventListener('change', (e) => {
@@ -222,15 +223,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnWhatsappReport.disabled = true;
                 btnWhatsappReport.style.opacity = '0.7';
                 
-                showToast("Requesting WhatsApp Report...", "info");
+                const reportDate = document.getElementById('reportFrom')?.value;
+                const dateLabel = reportDate ? reportDate : "Today";
+                
+                showToast(`Requesting WhatsApp Report for ${dateLabel}...`, "info");
                 const cmdRef = db.ref(`bot/${state.currentOutlet}/commands`).push();
                 await cmdRef.set({
                     action: "SEND_DAILY_REPORT",
-                    targetDate: new Date().toISOString().split('T')[0],
+                    targetDate: reportDate || null, // Bot will default to IST today if null
                     requestedBy: auth.currentUser?.email || 'admin',
                     timestamp: ServerValue.TIMESTAMP
                 });
-                showToast("Report request sent to Bot!", "success");
+                showToast(`Report request for ${dateLabel} sent to Bot!`, "success");
             } catch (err) {
                 console.error("Bot trigger error:", err);
                 showToast("Failed to trigger Bot: " + err.message, "error");
