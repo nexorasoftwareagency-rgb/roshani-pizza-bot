@@ -1921,3 +1921,280 @@ body {
     color: var(--success);
 }
 
+/* Zomato-Style Slide to Action (Phase 4.0) */
+.slide-action-container {
+    position: relative;
+    width: 100%;
+    height: 65px;
+    background: #F1F5F9;
+    border-radius: 35px;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    user-select: none;
+    margin-top: 20px;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.slide-text {
+    position: absolute;
+    color: #64748B;
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 1px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.slide-handle {
+    position: absolute;
+    left: 5px;
+    width: 55px;
+    height: 55px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 4px 15px rgba(255, 82, 0, 0.4);
+    z-index: 2;
+    cursor: grab;
+    transition: transform 0.1s ease;
+}
+
+.slide-handle:active {
+    cursor: grabbing;
+}
+
+.slide-bg-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    background: rgba(255, 82, 0, 0.15);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Zomato Task Card */
+.zomato-task-card {
+    background: white;
+    border-radius: 24px;
+    padding: 20px;
+    box-shadow: var(--shadow-md);
+    margin-bottom: 20px;
+}
+
+.task-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.task-id {
+    font-weight: 900;
+    color: var(--text-main);
+}
+
+.task-type-badge {
+    background: var(--primary-light);
+    color: var(--primary);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.task-location-box {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.loc-icon-wrapper {
+    width: 40px;
+    height: 40px;
+    background: #F8FAFC;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+}
+
+.loc-details h4 {
+    font-size: 16px;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+.loc-details p {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+/* Checklist Styling */
+.item-checklist {
+    background: #F8FAFC;
+    border-radius: 16px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.checklist-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.check-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+}
+
+.mb-15 { margin-bottom: 15px; }
+.full-width { width: 100%; }
+
+.action-grid {
+    display: flex;
+    gap: 10px;
+}
+
+.action-pill {
+    flex: 1;
+    height: 45px;
+    border-radius: 12px;
+    border: 1px solid #E2E8F0;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-main);
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.action-pill:active {
+    background: #F1F5F9;
+    transform: scale(0.98);
+}
+
+.action-pill i {
+    width: 18px;
+    height: 18px;
+}
+
+/* Zomato Ping Modal */
+#newOrderPingModal.active {
+    display: flex !important;
+    background: white;
+}
+
+.ping-modal-content {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.ping-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.ping-title {
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--text-main);
+    margin-bottom: 10px;
+}
+
+.ping-subtitle {
+    color: var(--primary);
+    font-weight: 800;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.ping-amount-card {
+    background: #F8FAFC;
+    padding: 20px;
+    border-radius: 20px;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.ping-amount {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--text-main);
+}
+
+.ping-timer-circle {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 4px solid #E2E8F0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    margin-bottom: 60px;
+}
+
+.ping-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.ping-btn-accept {
+    height: 65px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 35px;
+    font-size: 18px;
+    font-weight: 900;
+    box-shadow: 0 10px 25px rgba(255, 82, 0, 0.4);
+    cursor: pointer;
+}
+
+.ping-btn-ignore {
+    height: 50px;
+    color: #64748B;
+    font-weight: 800;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
