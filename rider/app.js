@@ -1317,7 +1317,7 @@ window.renderAllOrders = () => {
                 ];
 
                 let currentStep = 0;
-                const statusLower = currentStatus.toLowerCase();
+                const statusLower = (o.status || "").toLowerCase();
                 
                 if (statusLower === "reached drop location") currentStep = 3;
                 else if (statusLower === "picked up" || statusLower === "out for delivery") currentStep = 2;
