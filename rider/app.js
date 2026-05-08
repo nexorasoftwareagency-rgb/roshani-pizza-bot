@@ -276,7 +276,7 @@ window.getDistance = (lat1, lon1, lat2, lon2) => {
     return R * c;
 };
 
-window.triggerWhatsAppAlert = (phone, orderId, actionType, extraData = {}) => {
+window.triggerWhatsAppAlert = (phone, orderId, actionType, extraData = {}, isManual = false) => {
     if (!phone) return;
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
     let message = "";
@@ -300,8 +300,21 @@ window.triggerWhatsAppAlert = (phone, orderId, actionType, extraData = {}) => {
         message = `I have arrived with your order #${orderId}! Please have your 4-digit OTP ready. ✅`;
     }
 
-    const url = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
+    if (isManual) {
+        const url = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+        // Send via Bot command node
+        const outlet = window.activeOrderOutlet || 'pizza';
+        const cmdRef = ref(db, `bot/${outlet}/commands`);
+        push(cmdRef, {
+            action: "SEND_GENERIC_MESSAGE",
+            phone: cleanPhone,
+            message: message,
+            timestamp: serverTimestamp()
+        });
+        console.log(`[Alert] Pushed automated message to bot for ${cleanPhone}`);
+    }
 };
 
 function resolvePath(path, outlet = null) {
@@ -1650,7 +1663,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!btn) return;
         const action = btn.dataset.action;
         if (action === 'call') window.open(`tel:${btn.dataset.phone}`, '_blank', 'noopener,noreferrer');
-        else if (action === 'msg') window.triggerWhatsAppAlert(btn.dataset.phone, btn.dataset.orderid, 'PICKED_UP');
+        else if (action === 'msg') window.triggerWhatsAppAlert(btn.dataset.phone, btn.dataset.orderid, 'PICKED_UP', {}, true);
         else if (action === 'otp') window.openOTPPanel();
         else if (action === 'pickup') window.confirmPickup();
         else if (action === 'accept') window.acceptOrder(btn.dataset.id, btn.dataset.outlet);
