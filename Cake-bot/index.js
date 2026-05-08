@@ -152,6 +152,12 @@ function initCommandListener(sock) {
             } else if (cmd.action === "SEND_MONTHLY_REPORT") {
                 await sendMonthlyReport(sock);
                 console.log(`[Bot] Monthly Report sent successfully`);
+            } else if (cmd.action === "SEND_GENERIC_MESSAGE") {
+                const jid = formatJid(cmd.phone);
+                if (jid) {
+                    await sock.sendMessage(jid, { text: cmd.message });
+                    console.log(`[Bot] Generic message sent to ${cmd.phone}`);
+                }
             }
             // Remove the command after processing
             await snap.ref.remove();
