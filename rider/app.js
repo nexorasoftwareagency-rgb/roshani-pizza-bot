@@ -1100,6 +1100,11 @@ window.renderAllOrders = () => {
     
     const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
     window._pingCandidate = null;
+    
+    // Reset active order tracking to ensure it's fresh each render
+    window.activeOrderId = null;
+    window.activeOrderOutlet = null;
+    window.activeOrderData = null;
 
     Object.keys(window.orderCache).forEach(outletId => {
         const orders = window.orderCache[outletId];
