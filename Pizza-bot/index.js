@@ -681,6 +681,10 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                     msg = `🛵 *OUT FOR DELIVERY!* 🚀\n━━━━━━━━━━━━━━━━━━━━\nOur rider is on the way to your location! 🛵💨\n\n🆔 Order: #${id.slice(-5)}\n🔑 *OTP:* ${otp} (Share with rider only)${riderInfoText}\n💰 *Total:* ₹${order.total || 0}\n${getFoodFunnyProgress("Out for Delivery")}`;
                 }
                 img = botSettings.imgOut;
+            } else if (statusLower === "reached drop location") {
+                let otp = storedOTP || '---';
+                msg = `📍 *RIDER ARRIVED!* 🛵\n━━━━━━━━━━━━━━━━━━━━\nOur rider has reached your drop location with your order #${id.slice(-5)}! ${OUTLET_EMOJI}\n\nPlease meet the rider and keep your OTP ready:\n\n🔑 *OTP:* ${otp}\n\n_Thank you for choosing ${OUTLET_NAME}!_`;
+                img = botSettings.imgOut;
             } else if (statusLower === "delivered" || statusLower === "served") {
                 msg = `✅ *${isDineIn ? 'SERVED' : 'DELIVERED'} SUCCESSFULLY!* ${OUTLET_EMOJI}❤️\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n🤝 *Payment:* ${order.paymentMethod}\n💵 *Total Paid:* ₹${order.total || 0}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*Enjoy your meal!* 😋\n\n${getFunnyFoodJoke()}`;
                 img = botSettings.imgDelivered;
