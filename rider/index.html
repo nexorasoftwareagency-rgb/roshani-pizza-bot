@@ -373,6 +373,27 @@
         </div>
     </div>
 
+    <div id="newOrderPingModal" class="modal-overlay hidden">
+        <div class="ping-modal-content">
+            <div class="ping-header">
+                <div class="ping-subtitle">NEW DELIVERY TASK</div>
+                <h1 class="ping-title">Incoming Order</h1>
+            </div>
+
+            <div class="ping-amount-card">
+                <div class="ping-amount" id="pingOrderTotal">₹0.00</div>
+                <div class="text-muted" style="font-size: 11px; font-weight: 800; margin-top: 5px;">ESTIMATED EARNING</div>
+            </div>
+
+            <div class="ping-timer-circle" id="pingTimer">30s</div>
+
+            <div class="ping-actions">
+                <button id="btnAcceptOrder" class="ping-btn-accept">ACCEPT TASK</button>
+                <button id="btnIgnoreOrder" class="ping-btn-ignore">SKIP THIS TASK</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Audio for new order ping -->
     <audio id="pingAudio" src="/assets/audio/ping.mp3" preload="auto"></audio>
 

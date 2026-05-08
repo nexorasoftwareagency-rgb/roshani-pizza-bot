@@ -147,6 +147,65 @@ if ('serviceWorker' in navigator) {
 
 
 
+window.initSlider = (containerId, onComplete) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const handle = container.querySelector('.slide-handle');
+    const bg = container.querySelector('.slide-bg-fill');
+    let isDragging = false;
+    let startX = 0;
+    
+    // Use container width for limits
+    const maxDrag = container.clientWidth - handle.clientWidth - 10;
+
+    const onStart = (e) => {
+        isDragging = true;
+        startX = (e.type === 'mousedown') ? e.pageX : e.touches[0].pageX;
+        handle.style.transition = 'none';
+        window.haptic(10);
+    };
+
+    const onMove = (e) => {
+        if (!isDragging) return;
+        const currentX = (e.type === 'mousemove') ? e.pageX : e.touches[0].pageX;
+        let delta = currentX - startX;
+        if (delta < 0) delta = 0;
+        if (delta > maxDrag) delta = maxDrag;
+        handle.style.transform = `translateX(${delta}px)`;
+        bg.style.width = `${delta + 30}px`;
+        
+        // Haptic feel as it slides
+        if (Math.floor(delta) % 50 === 0) window.haptic(5);
+    };
+
+    const onEnd = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        
+        // Get current transform value
+        const style = window.getComputedStyle(handle);
+        const matrix = new WebKitCSSMatrix(style.transform);
+        const currentX = matrix.m41;
+
+        if (currentX >= maxDrag * 0.9) {
+            handle.style.transform = `translateX(${maxDrag}px)`;
+            window.haptic([50, 30, 50]);
+            onComplete();
+        } else {
+            handle.style.transition = 'transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
+            handle.style.transform = 'translateX(0px)';
+            bg.style.width = '0px';
+        }
+    };
+
+    handle.addEventListener('mousedown', onStart);
+    handle.addEventListener('touchstart', onStart, { passive: true });
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchend', onEnd);
+};
+
 const escapeHtml = (text) => {
     if (!text && text !== 0) return "";
     const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
@@ -1260,47 +1319,94 @@ window.renderAllOrders = () => {
                     `;
                 }).join('');
 
-                let actionButtons = "";
-                if (statusLower === "arriving at restaurant" || statusLower === "confirmed" || statusLower === "preparing" || statusLower === "placed") {
-                    actionButtons = `<button class="btn-primary full-width mt-10" data-action="reached-outlet" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="map-pin"></i> I HAVE REACHED OUTLET</button>`;
-                } else if (["ready", "cooked", "at restaurant", "arrived at outlet", "waiting for pickup"].includes(statusLower)) {
-                    actionButtons = `<button class="btn-primary full-width mt-10" style="background:#10B981;" data-action="pickup" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="package-check"></i> ORDER PICKED UP</button>`;
-                } else if (statusLower === "picked up" || statusLower === "out for delivery") {
-                    actionButtons = `
-                        <div class="flex-row gap-10 mt-10">
-                            <button class="btn-outline flex-1" style="background: white;" data-action="navigate" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="navigation"></i> NAVIGATE</button>
-                            <button class="btn-primary flex-1" style="background:#FF5200;" data-action="drop" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="map-pin"></i> REACHED DROP</button>
-                        </div>
-                    `;
-                } else if (statusLower === "reached drop location") {
-                    actionButtons = `<button class="btn-primary full-width mt-10" style="background:#F59E0B;" data-action="otp" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="key-round"></i> ENTER DELIVERY OTP</button>`;
+                // ZOMATO STYLE TASK CARD (Phase 4.0)
+                let taskIcon = "map-pin";
+                let taskTitle = "";
+                let taskSubtitle = "";
+                let sliderText = "";
+                let sliderAction = "";
+
+                if (currentStep === 0) {
+                    taskTitle = `Going to ${safeOutlet.toUpperCase()} OUTLET`;
+                    taskSubtitle = "Navigate to restaurant to pick up order";
+                    sliderText = "SLIDE TO REACH OUTLET";
+                    sliderAction = "reached-outlet";
+                } else if (currentStep === 1) {
+                    taskTitle = "At Restaurant";
+                    taskSubtitle = "Check items and pick up order";
+                    sliderText = "SLIDE TO PICK UP";
+                    sliderAction = "pickup";
+                } else if (currentStep === 2) {
+                    taskTitle = `Delivering to ${safeName}`;
+                    taskSubtitle = safeAdd;
+                    sliderText = "SLIDE TO REACH CUSTOMER";
+                    sliderAction = "drop";
+                    taskIcon = "navigation";
+                } else if (currentStep === 3) {
+                    taskTitle = "At Customer Location";
+                    taskSubtitle = "Collect payment and verify OTP";
+                    sliderText = "ENTER DELIVERY OTP";
+                    sliderAction = "otp";
+                    taskIcon = "key-round";
                 }
+
+                const zomatoCard = `
+                    <div class="zomato-task-card">
+                        <div class="task-meta">
+                            <span class="task-id">ORDER #${safeOrderId}</span>
+                            <span class="task-type-badge">${safeOutlet}</span>
+                        </div>
+                        
+                        <div class="task-location-box">
+                            <div class="loc-icon-wrapper">
+                                <i data-lucide="${taskIcon}"></i>
+                            </div>
+                            <div class="loc-details">
+                                <h4>${taskTitle}</h4>
+                                <p>${taskSubtitle}</p>
+                            </div>
+                        </div>
+
+                        ${currentStep === 1 ? `
+                        <div class="item-checklist">
+                            <div class="checklist-title">Verify Items</div>
+                            ${(o.normalizedItems || o.items || []).map(i => `
+                                <div class="check-item">
+                                    <input type="checkbox" id="check-${i.item || i.name}">
+                                    <label for="check-${i.item || i.name}">${i.name || i.item} (${i.size}) x${i.qty || i.quantity}</label>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ` : ''}
+
+                        <div class="action-grid mb-15">
+                            <button class="action-pill" data-action="call" data-phone="${safePhone}"><i data-lucide="phone"></i>CALL</button>
+                            <button class="action-pill" data-action="msg" data-phone="${safePhone}" data-orderid="${safeOrderId}"><i data-lucide="message-circle"></i>CHAT</button>
+                            ${currentStep === 2 ? `<button class="action-pill" data-action="navigate" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="map"></i>MAP</button>` : ''}
+                        </div>
+
+                        ${currentStep === 3 ? `
+                            <button class="btn-primary full-width" data-action="otp" data-id="${safeId}" data-outlet="${safeOutlet}">
+                                <i data-lucide="key-round"></i> ENTER OTP
+                            </button>
+                        ` : `
+                            <div class="slide-action-container" id="slider-${safeId}">
+                                <div class="slide-bg-fill"></div>
+                                <div class="slide-text">${sliderText}</div>
+                                <div class="slide-handle">
+                                    <i data-lucide="chevrons-right"></i>
+                                </div>
+                            </div>
+                        `}
+                    </div>
+                `;
 
                 const activeContent = `
                     <div class="active-delivery-card-premium">
-                        <div class="step-progress-container">
+                        <div class="step-progress-container" style="background:transparent;box-shadow:none;padding:0;margin-bottom:15px;">
                             ${stepsHtml}
                         </div>
-                        <div class="card-header-premium">
-                            <span class="order-id-badge">#${safeOrderId}</span>
-                            <span class="status-pill ${currentStatus}">${safeStatus}</span>
-                        </div>
-                        <div class="customer-info-row">
-                            <div class="customer-avatar">${initial}</div>
-                            <div class="customer-details">
-                                <div class="customer-name">${safeName}</div>
-                                <div class="customer-address">${safeAdd}</div>
-                            </div>
-                        </div>
-                        <div class="order-items-minimal">
-                            ${itemsList}
-                        </div>
-                        <div class="action-grid">
-                            <button class="action-pill" data-action="call" data-phone="${safePhone}"><i data-lucide="phone"></i>CALL</button>
-                            <button class="action-pill" data-action="msg" data-phone="${safePhone}" data-orderid="${safeOrderId}"><i data-lucide="message-circle"></i>MSG</button>
-                            <button class="action-pill" data-action="otp"><i data-lucide="key-round"></i>OTP</button>
-                        </div>
-                        ${actionButtons}
+                        ${zomatoCard}
                     </div>
                 `;
 
@@ -1311,6 +1417,17 @@ window.renderAllOrders = () => {
                             ${activeContent}
                         </div>
                     `;
+                }
+
+                // Initialize Slider if present
+                if (currentStep < 3) {
+                    setTimeout(() => {
+                        window.initSlider(`slider-${safeId}`, () => {
+                            if (sliderAction === 'reached-outlet') window.reachedOutlet(safeId, safeOutlet);
+                            else if (sliderAction === 'pickup') window.confirmPickup();
+                            else if (sliderAction === 'drop') window.reachedDropLocation(safeId, safeOutlet);
+                        });
+                    }, 100);
                 }
                 
                 if (document.getElementById('sec-active').classList.contains('active')) {
