@@ -901,6 +901,17 @@ window.reachedDropLocation = async (id, outletId) => {
     }
 };
 
+window.reachedOutlet = async (id, outletId) => {
+    window.haptic(20);
+    try {
+        const orderPath = `${outletId}/orders/${id}`;
+        await update(ref(db, orderPath), { status: "Arrived at Outlet" });
+        window.showToast("Status updated: Arrived at Outlet", "info");
+    } catch (e) {
+        window.showToast("Failed to update status.", "error");
+    }
+};
+
 window.pingTimerInterval = null;
 window.showPingModal = (id, outletId, order) => {
     window.haptic([100, 50, 100, 50, 200]);
@@ -1221,24 +1232,55 @@ window.renderAllOrders = () => {
                     `<div class="pickup-item-row">• ${escapeHtml(i.name || i.item)} (${escapeHtml(i.size)}) x${i.qty || i.quantity}</div>`
                 ).join('');
 
-                let actionButtons = "";
-                const currentStatus = (o.status || "").toLowerCase();
+                // Step Progress Component (Phase 3.3)
+                const steps = [
+                    { label: 'ACCEPTED', icon: 'check-circle' },
+                    { label: 'PICKUP', icon: 'package' },
+                    { label: 'TRANSIT', icon: 'navigation' },
+                    { label: 'DROP', icon: 'map-pin' }
+                ];
 
-                if (["ready", "cooked", "arriving at restaurant", "confirmed", "preparing", "placed", "waiting for pickup"].includes(currentStatus)) {
-                    actionButtons = `<button class="btn-primary full-width mt-10" data-action="pickup" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="package-check"></i> CONFIRM PICKUP</button>`;
-                } else if (currentStatus === "picked up" || currentStatus === "out for delivery" || currentStatus === "delivering") {
+                let currentStep = 0;
+                const statusLower = currentStatus.toLowerCase();
+                
+                if (statusLower === "reached drop location") currentStep = 3;
+                else if (statusLower === "picked up" || statusLower === "out for delivery") currentStep = 2;
+                else if (["ready", "cooked", "at restaurant", "arrived at outlet", "waiting for pickup"].includes(statusLower)) currentStep = 1;
+                else currentStep = 0; // Arriving at restaurant / Confirmed
+
+                const stepsHtml = steps.map((s, idx) => {
+                    let cls = "";
+                    if (idx < currentStep) cls = "completed";
+                    else if (idx === currentStep) cls = "active";
+                    return `
+                        <div class="step-item ${cls}">
+                            <div class="step-circle">${idx < currentStep ? '<i data-lucide="check" style="width:16px;"></i>' : idx + 1}</div>
+                            <div class="step-label">${s.label}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                let actionButtons = "";
+                if (statusLower === "arriving at restaurant" || statusLower === "confirmed" || statusLower === "preparing" || statusLower === "placed") {
+                    actionButtons = `<button class="btn-primary full-width mt-10" data-action="reached-outlet" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="map-pin"></i> I HAVE REACHED OUTLET</button>`;
+                } else if (["ready", "cooked", "at restaurant", "arrived at outlet", "waiting for pickup"].includes(statusLower)) {
+                    actionButtons = `<button class="btn-primary full-width mt-10" style="background:#10B981;" data-action="pickup" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="package-check"></i> ORDER PICKED UP</button>`;
+                } else if (statusLower === "picked up" || statusLower === "out for delivery") {
                     actionButtons = `
                         <div class="flex-row gap-10 mt-10">
                             <button class="btn-outline flex-1" style="background: white;" data-action="navigate" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="navigation"></i> NAVIGATE</button>
-                            <button class="btn-primary flex-1" style="background:#10B981;" data-action="drop" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="map-pin"></i> REACHED DROP</button>
+                            <button class="btn-primary flex-1" style="background:#FF5200;" data-action="drop" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="map-pin"></i> REACHED DROP</button>
                         </div>
                     `;
-                } else if (currentStatus === "reached drop location") {
-                    actionButtons = `<button class="btn-primary full-width mt-10" style="background:#F59E0B;" data-action="otp" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="key-round"></i> ENTER OTP TO DELIVER</button>`;
+                } else if (statusLower === "reached drop location") {
+                    actionButtons = `<button class="btn-primary full-width mt-10" style="background:#F59E0B;" data-action="otp" data-id="${safeId}" data-outlet="${safeOutlet}"><i data-lucide="key-round"></i> ENTER DELIVERY OTP</button>`;
                 }
 
                 const activeContent = `
                     <div class="active-delivery-card-premium">
+                        <div class="step-progress-container">
+                            ${stepsHtml}
+                        </div>
                         <div class="card-header-premium">
                             <span class="order-id-badge">#${safeOrderId}</span>
                             <span class="status-pill ${currentStatus}">${safeStatus}</span>
@@ -1469,7 +1511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (item) window.markNotifRead(item.dataset.id);
     });
 
-    document.getElementById('dashboardActiveDeliveryView')?.addEventListener('click', (e) => {
+    const handleActiveAction = (e) => {
         const btn = e.target.closest('[data-action]');
         if (!btn) return;
         const action = btn.dataset.action;
@@ -1480,7 +1522,11 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (action === 'accept') window.acceptOrder(btn.dataset.id, btn.dataset.outlet);
         else if (action === 'navigate') window.startNavigation(btn.dataset.id, btn.dataset.outlet);
         else if (action === 'drop') window.reachedDropLocation(btn.dataset.id, btn.dataset.outlet);
-    });
+        else if (action === 'reached-outlet') window.reachedOutlet(btn.dataset.id, btn.dataset.outlet);
+    };
+
+    document.getElementById('dashboardActiveDeliveryView')?.addEventListener('click', handleActiveAction);
+    document.getElementById('activeOrderView')?.addEventListener('click', handleActiveAction);
 
     // Modals
     document.getElementById('btnConfirmPickup')?.addEventListener('click', window.confirmPickup);
