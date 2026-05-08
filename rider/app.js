@@ -481,6 +481,16 @@ window.initActiveMap = (order) => {
     const lng = order.lng || order.longitude;
     if (!lat || !lng) return;
 
+    // Fix Leaflet broken marker icons (Phase 3.1)
+    if (typeof L !== 'undefined' && L.Icon && L.Icon.Default) {
+        delete L.Icon.Default.prototype._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        });
+    }
+
     if (!activeMap) {
         activeMap = L.map('activeTripMap', { zoomControl: false });
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1123,7 +1133,7 @@ window.renderAllOrders = () => {
             const isMine = (riderUid && o.riderId === riderUid) || (o.assignedRider && o.assignedRider.toLowerCase() === currentEmail);
 
             // 1. UNASSIGNED
-            if (!o.assignedRider && ["ready", "cooked", "preparing", "confirmed"].includes(status)) {
+            if (!o.assignedRider && ["placed", "ready", "cooked", "preparing", "confirmed", "arriving at restaurant"].includes(status)) {
                 if (!window.activeOrderId && !window.ignoredPings.has(id)) {
                     if (!window._pingCandidate) {
                         window._pingCandidate = { id, outletId, order: o };
@@ -1181,7 +1191,7 @@ window.renderAllOrders = () => {
                 unassignedCount++;
             }
             // 2. ACTIVE
-            else if (status !== "delivered" && isMine) {
+            else if (status !== "delivered" && status !== "cancelled" && isMine) {
                 if (!window.activeOrderId) {
                     window.activeOrderId = id;
                     window.activeOrderOutlet = outletId;
