@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'pizza-bot',
-      script: './Pizza-bot/index.js',
+      script: 'index.js',
       cwd: './Pizza-bot',
       watch: false,
       env: {
@@ -11,7 +11,7 @@ module.exports = {
     },
     {
       name: 'cake-bot',
-      script: './Cake-bot/index.js',
+      script: 'index.js',
       cwd: './Cake-bot',
       watch: false,
       env: {
