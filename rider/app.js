@@ -887,6 +887,11 @@ window.reachedDropLocation = async (id, outletId) => {
         await update(ref(db, orderPath), { status: "Reached Drop Location" });
         window.showToast("Customer notified of arrival!", "success");
         
+        // Phase 3.2: Trigger WhatsApp OTP alert manually for customer convenience
+        if (currentOrder && currentOrder.deliveryOTP) {
+            window.triggerWhatsAppAlert(currentOrder.customerPhone || currentOrder.phone, currentOrder.orderId || id, "SEND_OTP", { otp: currentOrder.deliveryOTP });
+        }
+        
         window.activeOrderId = id;
         window._currentOrderOutlet = outletId;
         window.openOTPPanel();
