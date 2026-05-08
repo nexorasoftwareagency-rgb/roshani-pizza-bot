@@ -14,11 +14,11 @@ import { autoDeductStock } from './inventory.js';
 /**
  * STATUS WORKFLOW CONFIGURATION
  */
-export const STATUS_SEQUENCE = ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Delivered"];
+export const STATUS_SEQUENCE = ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"];
 export const STATUS_SEQUENCES = {
-    'Online': ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Delivered"],
+    'Online': ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"],
     'Dine-in': ["Confirmed", "Preparing", "Cooked", "Ready", "Delivered"],
-    'Default': ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Delivered"]
+    'Default': ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"]
 };
 export const STATUS_MAPPING = {
     "New": 0, "Pending": 0, "Placed": 0,
@@ -28,7 +28,8 @@ export const STATUS_MAPPING = {
     "Ready": 4,
     "Picked Up": 5,
     "Out for Delivery": 6,
-    "Delivered": 7,
+    "Reached Drop Location": 7,
+    "Delivered": 8,
     "Cancelled": 0
 };
 
