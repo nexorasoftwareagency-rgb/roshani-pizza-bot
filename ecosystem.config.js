@@ -1,17 +1,22 @@
 module.exports = {
-  apps: [{
-    name: 'roshani-pizza-bot',
-    script: 'index.js',
-    instances: 1,
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '300M',
-    restart_delay: 10000, 
-    min_uptime: '10s',
-    max_restarts: 10,
-    env: {
-      NODE_ENV: 'production'
+  apps: [
+    {
+      name: 'pizza-bot',
+      script: './Pizza-bot/index.js',
+      cwd: './Pizza-bot',
+      watch: false,
+      env: {
+        NODE_ENV: 'production'
+      }
     },
-    exec_mode: 'fork'
-  }]
+    {
+      name: 'cake-bot',
+      script: './Cake-bot/index.js',
+      cwd: './Cake-bot',
+      watch: false,
+      env: {
+        NODE_ENV: 'production'
+      }
+    }
+  ]
 };

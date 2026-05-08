@@ -17,17 +17,19 @@ try {
                 credential: admin.credential.cert(serviceAccount),
                 databaseURL: FIREBASE_URL
             });
+            console.log("✅ [Firebase] Initialized with Service Account.");
         }
     } else {
-        // No service account file - use default
+        // No service account file - use default (Warning on non-GCP environments)
         if (!admin.apps.length) {
             admin.initializeApp({
                 databaseURL: FIREBASE_URL
             });
+            console.warn("⚠️ [Firebase] WARNING: service-account.json not found. Bot may face permission issues on EC2.");
         }
     }
 } catch (e) {
-    console.log("Firebase init:", e.message);
+    console.error("❌ [Firebase] Initialization Error:", e.message);
     if (!admin.apps.length) {
         admin.initializeApp({
             databaseURL: FIREBASE_URL
