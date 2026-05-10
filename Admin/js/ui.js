@@ -101,9 +101,11 @@ export const switchTab = async (tabId, skipHistory = false) => {
     const posTab = document.getElementById('tab-walkin');
 
     // Handle POS (Walk-in) Fullscreen on Mobile
+    const mobileHeader = document.getElementById('mobileAppHeader');
     if (tabId === 'walkin') {
         if (window.innerWidth < 768) {
             body.classList.add('pos-immersion-active');
+            if (mobileHeader) mobileHeader.style.setProperty('display', 'none', 'important');
         }
         if (posTab) posTab.classList.add('pos-fullscreen');
 
@@ -111,15 +113,17 @@ export const switchTab = async (tabId, skipHistory = false) => {
             const backBtn = document.createElement('button');
             backBtn.id = 'posExitBtn';
             backBtn.className = 'pos-back-btn mobile-only';
-            backBtn.innerHTML = '<i data-lucide="chevron-left"></i> Back to Dashboard';
+            backBtn.innerHTML = '<i data-lucide="chevron-left"></i>';
             backBtn.onclick = (e) => {
                 e.stopPropagation();
                 switchTab('dashboard');
             };
+            posTab.prepend(backBtn);
             if (window.lucide) window.lucide.createIcons({ root: posTab });
         }
     } else {
         body.classList.remove('pos-immersion-active');
+        if (mobileHeader) mobileHeader.style.display = '';
         if (posTab) posTab.classList.remove('pos-fullscreen');
     }
 

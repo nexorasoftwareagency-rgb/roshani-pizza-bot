@@ -1,22 +1,43 @@
 <!DOCTYPE html>
+<!-- FINAL_STABILITY_V463_HEARTBEAT -->
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#FF5200">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://*.firebaseio.com https://*.firebasedatabase.app https://unpkg.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.firebasestorage.googleapis.com https://*.tile.openstreetmap.org https://placehold.co https://*.googleusercontent.com https://*.gstatic.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; frame-src https://www.google.com/recaptcha/; object-src 'none'; base-uri 'self'; connect-src 'self' wss://*.firebaseio.com https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com https://*.firebaseapp.com https://www.google-analytics.com https://region1.google-analytics.com https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://*.tile.openstreetmap.org https://raw.githubusercontent.com https://www.google.com https://www.gstatic.com;">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Rider Portal | Roshani Sudha</title>
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://*.firebaseio.com https://*.firebasedatabase.app https://unpkg.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://apis.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://* http://* https://cdnjs.cloudflare.com https://unpkg.com https://*.tile.openstreetmap.org https://placehold.co https://*.googleusercontent.com https://*.gstatic.com; media-src 'self' blob: https://assets.mixkit.co; frame-src https://www.google.com/recaptcha/; object-src 'none'; base-uri 'self'; connect-src 'self' wss://*.firebaseio.com https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google-analytics.com https://region1.google-analytics.com https://raw.githubusercontent.com https://*.tile.openstreetmap.org https://www.google.com https://placehold.co https://fonts.gstatic.com https://www.gstatic.com https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
 
-    <link rel="stylesheet" href="style.css">
+    <script>
+        // Force cleanup of old service workers and caches if stuck on old versions
+        if (localStorage.getItem('app_version') !== '4.6.3') {
+            console.log('Stale version detected. Cleaning up (4.6.3)...');
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(regs => {
+                    for(let reg of regs) reg.unregister();
+                });
+            }
+            caches.keys().then(names => {
+                for (let name of names) caches.delete(name);
+            });
+            localStorage.setItem('app_version', '4.6.3');
+            // Give it a moment then reload
+            setTimeout(() => { window.location.reload(true); }, 500);
+        }
+    </script>
+    <link rel="stylesheet" href="style.css?v=4.6.3">
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-512.png">
     <link rel="apple-touch-icon" href="icon-512.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet">
-    <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" integrity="sha384-tTkFttkBclaU1cloKwOi9xk3pbao3VZxTjLNBt8iFABWDBQibbAbWpVmO28zMuxq" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
@@ -81,6 +102,11 @@
                 <li class="nav-separator"></li>
                 <li id="menu-downloadapp" class="pwa-download-item hidden">
                     <button class="nav-btn"><i data-lucide="download"></i> <span>Install App</span></button>
+                </li>
+                <li id="refreshBtn">
+                    <button class="nav-btn text-warning" onclick="window.completeSiteRefresh()">
+                        <i data-lucide="refresh-cw"></i> <span>Reset App</span>
+                    </button>
                 </li>
                 <li id="logoutBtn" class="logout-link">
                     <button class="nav-btn text-danger"><i data-lucide="log-out"></i> <span>Sign Out</span></button>
@@ -258,56 +284,7 @@
         </nav>
     </div>
 
-    <!-- New Order Ping Modal -->
-    <div id="newOrderPingModal" class="ping-modal-overlay hidden">
-        <div class="ping-modal-content">
-            <div class="ping-header">
-                <div class="pulsing-ring"></div>
-                <h2>NEW ORDER PING</h2>
-                <div class="ping-timer" id="pingTimer">30s</div>
-            </div>
-            
-            <div class="ping-body">
-                <div class="ping-route">
-                    <div class="ping-location">
-                        <i data-lucide="store" class="text-orange"></i>
-                        <div>
-                            <span class="text-muted-small">Pickup From</span>
-                            <strong id="pingOutletName">Pizza Outlet</strong>
-                        </div>
-                    </div>
-                    <div class="ping-dots"></div>
-                    <div class="ping-location">
-                        <i data-lucide="map-pin" class="text-green"></i>
-                        <div>
-                            <span class="text-muted-small">Drop To</span>
-                            <strong id="pingCustomerAddress">Loading...</strong>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="ping-meta">
-                    <div class="ping-meta-item">
-                        <span class="text-muted-small">Order ID</span>
-                        <strong id="pingOrderId">#---</strong>
-                    </div>
-                    <div class="ping-meta-item">
-                        <span class="text-muted-small">Earning</span>
-                        <strong class="text-success" id="pingEarning">₹0</strong>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="ping-actions">
-                <button class="btn-primary full-width ping-accept-btn" id="pingAcceptBtn">
-                    <i data-lucide="check-circle"></i> ACCEPT ORDER
-                </button>
-                <button class="btn-outline full-width mt-10 ping-ignore-btn" id="pingIgnoreBtn">
-                    IGNORE
-                </button>
-            </div>
-        </div>
-    </div>
+
 
     <div id="verificationModal" class="modal-overlay hidden">
         <div class="modal-content-bottom">
@@ -320,7 +297,7 @@
         </div>
     </div>
 
-    <div id="otpPanel" class="modal-overlay hidden">
+    <div id="otpPanel" class="modal-overlay">
         <div class="modal-card text-center">
             <h2 class="mb-10 text-orange">TRIP COMPLETE</h2>
             <p class="text-muted mb-20">Enter 4-digit verification code from customer</p>
@@ -335,7 +312,7 @@
         </div>
     </div>
 
-    <div id="paymentPanel" class="modal-overlay hidden">
+    <div id="paymentPanel" class="modal-overlay">
         <div class="modal-card text-center">
             <h2 class="mb-10 text-orange">COLLECT PAYMENT</h2>
             <p class="text-muted mb-20" id="paymentTotalTxt">Total to collect: ₹0</p>
@@ -378,17 +355,17 @@
             <div class="ping-header">
                 <div class="ping-subtitle" id="pingOutletName">NEW DELIVERY TASK</div>
                 <h1 class="ping-title">Incoming Order</h1>
-                <p class="text-muted" id="pingOrderId" style="font-weight: 800;"></p>
+                <p class="text-muted ping-order-id-sub" id="pingOrderId"></p>
             </div>
 
-            <div class="ping-location-card" style="width:100%; padding:15px; background:#F1F5F9; border-radius:15px; margin-bottom:20px; text-align:center;">
+            <div class="ping-location-premium-card">
                 <p class="text-muted-small">CUSTOMER ADDRESS</p>
-                <p id="pingCustomerAddress" style="font-size: 13px; font-weight: 700; color: var(--text-main);"></p>
+                <p id="pingCustomerAddress" class="ping-address-text"></p>
             </div>
 
             <div class="ping-amount-card">
                 <div class="ping-amount" id="pingOrderTotal">₹0.00</div>
-                <div class="text-muted" style="font-size: 11px; font-weight: 800; margin-top: 5px;">ESTIMATED EARNING</div>
+                <div class="text-muted ping-earning-label">ESTIMATED EARNING</div>
             </div>
 
             <div class="ping-timer-circle" id="pingTimer">30s</div>
@@ -398,12 +375,35 @@
                 <button id="btnIgnoreOrder" class="ping-btn-ignore">SKIP THIS TASK</button>
             </div>
         </div>
-    </div>
 
     <!-- Audio for new order ping -->
-    <audio id="pingAudio" src="/assets/audio/ping.mp3" preload="auto"></audio>
+    <audio id="pingAudio" src="assets/sounds/alert.mp3" preload="auto"></audio>
 
-    <script type="module" src="app.js?v=4.5.0"></script>
+    <script>
+        // Emergency Shims for cached sessions
+        window.initPingCheck = function() { console.warn("Legacy initPingCheck called and shimmed."); };
+        window.initSlideToActions = function() { console.warn("Legacy initSlideToActions called and shimmed."); };
+    </script>
+    <script src="app.js?v=4.6.3" type="module"></script>
+    <div id="successOverlay" class="modal-overlay">
+        <div class="modal-card text-center success-card">
+            <div class="success-icon-wrapper">
+                <i data-lucide="check-circle"></i>
+            </div>
+            <h2 class="mt-20 text-success">DELIVERED!</h2>
+            <p class="text-muted mb-25">Order completed successfully</p>
+            <div class="delivery-summary-box">
+                <div class="summary-row">
+                    <span>Payment</span>
+                    <strong id="summaryPayment">---</strong>
+                </div>
+                <div class="summary-row">
+                    <span>Earnings</span>
+                    <strong id="summaryCommission">---</strong>
+                </div>
+            </div>
+            <button onclick="window.closeSuccessOverlay()" class="btn-primary full-width mt-20">BACK TO HOME</button>
+        </div>
+    </div>
 </body>
-
 </html>

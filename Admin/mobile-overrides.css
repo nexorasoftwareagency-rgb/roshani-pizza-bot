@@ -8,14 +8,44 @@
     :root {
         --safe-bottom: env(safe-area-inset-bottom);
         --mobile-header-height: 64px;
+        --pos-header-height: 56px;
+        --pos-tabs-height: 54px;
     }
 
-    .flex-wrap-mobile {
-        flex-wrap: wrap !important;
+    /* POS Immersion - Hide main header when in POS */
+    body.pos-immersion-active .mobile-header {
+        display: none !important;
     }
 
-    .flex-1 {
-        flex: 1 !important;
+    body.pos-immersion-active .main {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+    }
+
+    body.pos-immersion-active .tab-content {
+        padding-top: 0 !important;
+    }
+
+    /* POS Immersion - Aggressive Hide */
+    body.pos-immersion-active #mobileAppHeader,
+    body.pos-immersion-active .mobile-header {
+        display: none !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        visibility: hidden !important;
+    }
+
+    body.pos-immersion-active .main {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+        height: 100vh !important;
+    }
+
+    body.pos-immersion-active .tab-content {
+        padding-top: 0 !important;
+        height: 100% !important;
     }
 
     * {
@@ -537,30 +567,76 @@
     /* Search - Sticky style */
     .walkin-picker .panel-header {
         position: sticky !important;
-        top: var(--mobile-header-height) !important; /* Matches Compact Mobile Header height */
+        top: 0 !important;
         background: #fff !important;
-        padding: 8px 12px !important;
-        margin-bottom: 0 !important;
+        padding: 0 10px !important;
+        margin: 0 !important;
         border-radius: 0 !important;
-        z-index: 1000 !important;
-        border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+        z-index: 2000 !important;
+        border-bottom: 1px solid rgba(0,0,0,0.08) !important;
         display: flex !important;
         flex-direction: row !important;
+        flex-wrap: nowrap !important; /* STRICT: No wrapping to prevent height expansion */
         align-items: center !important;
-        justify-content: space-between !important;
-        gap: 10px !important;
+        justify-content: flex-start !important;
+        gap: 8px !important;
+        height: var(--pos-header-height) !important;
+        min-height: var(--pos-header-height) !important;
+        width: 100% !important;
     }
 
-    /* Adjust the 'Select Items' text and search input to fit one line if possible */
+    /* Optimized Back Button for POS Header */
+    .walkin-picker .panel-header .btn-text.mobile-only,
+    .pos-back-btn.mobile-only {
+        width: 38px !important;
+        height: 38px !important;
+        background: #f1f5f9 !important;
+        border-radius: 10px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: 1px solid #e2e8f0 !important;
+        color: #1e293b !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* Compact Title for Small Screens */
     .walkin-picker .panel-header .panel-title {
-        font-size: 14px !important;
+        font-size: 13px !important;
+        font-weight: 800 !important;
+        color: #1e293b !important;
         white-space: nowrap !important;
+        letter-spacing: -0.5px !important;
+        margin: 0 !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+    }
+
+    /* Title emoji hidden on very small screens to save space */
+    @media (max-width: 360px) {
+        .walkin-picker .panel-header .panel-title {
+            font-size: 12px !important;
+        }
+        .walkin-picker .panel-header .panel-title span {
+            display: none;
+        }
     }
 
     #walkinDishSearch {
-        width: 150px !important;
-        margin-bottom: 0 !important;
+        flex: 1 !important;
+        min-width: 100px !important;
+        max-width: none !important;
+        margin: 0 !important;
         padding: 8px 12px !important;
+        font-size: 13px !important;
+        height: 36px !important;
+        border-radius: 10px !important;
+        border: 1px solid #cbd5e1 !important;
+        background: #f8fafc !important;
     }
 
     /* Dish Grid - Optimized for Mobile */
@@ -762,18 +838,21 @@
     /* --- Mobile Category Tabs - Filter Pills (Sticky) --- */
     .category-tabs-container {
         position: sticky !important;
-        top: var(--mobile-header-height) !important; /* Header height variable */
-        z-index: 999 !important;
-        background: #fff !important;
+        top: var(--pos-header-height) !important; /* Stacks exactly below POS header (56px) */
+        z-index: 1999 !important;
+        background: #ffffff !important;
         display: flex !important;
         overflow-x: auto !important;
-        gap: 8px !important;
-        padding: 10px 15px !important;
-        margin-bottom: 0 !important;
+        gap: 10px !important;
+        padding: 10px 12px !important;
+        margin: 0 !important;
+        width: 100% !important;
+        height: var(--pos-tabs-height) !important;
         
         scrollbar-width: none;
         scroll-behavior: smooth;
-        border-bottom: 1px solid rgba(0,0,0,0.03) !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.03) !important;
     }
 
     .category-tabs-container::-webkit-scrollbar {
@@ -781,25 +860,28 @@
     }
 
     .category-tab {
-        padding: 8px 18px !important;
-        background: #f8fafc !important;
+        padding: 10px 22px !important; /* Larger touch area */
+        background: #f1f5f9 !important;
         border: 1px solid #e2e8f0 !important;
-        border-radius: 12px !important;
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        color: #64748b !important;
+        border-radius: 30px !important; /* Pill style */
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        color: #475569 !important;
         white-space: nowrap !important;
         cursor: pointer !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
 
     .category-tab.active {
         background: var(--primary) !important;
         border-color: var(--primary) !important;
         color: #fff !important;
-        box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.2) !important;
-        transform: translateY(-1px);
+        box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.3) !important;
+        transform: translateY(-1px) scale(1.05) !important;
     }
 
     /* Search input */
@@ -993,6 +1075,7 @@
         box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.05) !important;
         border: 1px solid rgba(0, 0, 0, 0.08) !important;
         padding: 10px !important;
+        overflow: visible !important; /* Required for sticky children to work */
     }
 
     .kpi-card .kpi-value {

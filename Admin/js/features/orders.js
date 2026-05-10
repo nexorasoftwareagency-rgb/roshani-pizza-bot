@@ -364,6 +364,12 @@ export function renderOrders(snap) {
                 <td data-label="Total">
                     <span class="font-bold color-primary fs-15">₹${escapeHtml(o.total || '0')}</span>
                 </td>
+                <td data-label="Payment">
+                    <div class="badge-payment-v4" data-method="${escapeHtml((o.paymentMethod || '---').toLowerCase())}">
+                        <i data-lucide="${(o.paymentMethod || '').toLowerCase() === 'cash' ? 'banknote' : (o.paymentMethod || '').toLowerCase() === 'upi' ? 'smartphone' : 'credit-card'}" style="width:12px;height:12px;"></i>
+                        <span>${escapeHtml(o.paymentMethod || '---')}</span>
+                    </div>
+                </td>
                 <td data-label="Status">
                     <span class="status ${safeStatusClass}">${safeStatus}</span>
                 </td>
@@ -512,6 +518,12 @@ export function renderOrders(snap) {
                 </td>
                 <td data-label="Total">
                     <span class="font-bold color-primary">₹${escapeHtml(o.total || '0')}</span>
+                </td>
+                <td data-label="Payment">
+                    <div class="badge-payment-v4" data-method="${escapeHtml((o.paymentMethod || '---').toLowerCase())}">
+                        <i data-lucide="${(o.paymentMethod || '').toLowerCase() === 'cash' ? 'banknote' : (o.paymentMethod || '').toLowerCase() === 'upi' ? 'smartphone' : 'credit-card'}" style="width:12px;height:12px;"></i>
+                        <span>${escapeHtml(o.paymentMethod || '---')}</span>
+                    </div>
                 </td>
                 <td data-label="Status">
                     <span class="status ${safeStatusClass}">${safeStatus}</span>

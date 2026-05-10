@@ -182,6 +182,44 @@ function cleanupSessions() {
     }
 }
 
+async function cleanupStaleOrders(sock) {
+    try {
+        const ordersRef = db.ref(`${OUTLET}/orders`);
+        const snap = await ordersRef.once('value');
+        if (!snap.exists()) return;
+
+        const now = Date.now();
+        const FIVE_HOURS = 5 * 60 * 60 * 1000;
+        const updates = {};
+        const cancelMsg = "Sorry , Hame Maaf Kijiyega, ham aapka Order Deliver nahi kar payen, Please Order Again 🙏";
+
+        snap.forEach(child => {
+            const o = child.val();
+            const status = (o.status || "").toLowerCase();
+            if (status === "delivered" || status === "cancelled" || status === "archived") return;
+
+            const orderTime = o.createdAt || o.timestamp || o.assignedAt || 0;
+            if (orderTime > 0 && (now - orderTime) > FIVE_HOURS) {
+                updates[`${child.key}/status`] = "Cancelled";
+                updates[`${child.key}/cancellationReason`] = "System Auto-Cancel: Exceeded 5 hours";
+                updates[`${child.key}/cancelledAt`] = now;
+                
+                const jid = formatJid(o.phone || o.whatsappNumber);
+                if (jid && sock) {
+                    sock.sendMessage(jid, { text: cancelMsg }).catch(e => console.error("Auto-cancel notification failed", e));
+                }
+                console.log(`[Garbage Collector] Auto-cancelled stale order #${child.key}`);
+            }
+        });
+
+        if (Object.keys(updates).length > 0) {
+            await ordersRef.update(updates);
+        }
+    } catch (e) {
+        console.error("[Garbage Collector] Error:", e);
+    }
+}
+
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371; // Radius of earth in KM
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -1157,6 +1195,7 @@ async function startBot() {
     if (reportInterval) clearInterval(reportInterval);
     reportInterval = setInterval(async () => {
         cleanupSessions();
+        cleanupStaleOrders(sock);
         updateData(`bot/${OUTLET}/status`, { lastSeen: Date.now(), status: 'Online', outlet: OUTLET }).catch(() => {});
         
         // Get Time in Asia/Kolkata accurately
@@ -1327,15 +1366,6 @@ async function startBot() {
                     return sock.sendMessage(sender, { text: `🌙 *${OUTLET_NAME.toUpperCase()} IS CLOSED*\n\nHours: ${store.shopOpenTime || 'N/A'} - ${store.shopCloseTime || 'N/A'}\n\nSee you later! 👋` });
                 }
                 
-                let welcome = `Hello *${pushName}*! 👋\n\n`;
-                welcome += `✨ *WELCOME TO ${OUTLET_NAME.toUpperCase()}* ${OUTLET_EMOJI}\n`;
-                welcome += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                welcome += `Delicious food, delivered fast to your doorstep! 🚀\n\n`;
-                
-                welcome += `_Loading menu... one moment_ ⏳`;
-                
-                const greetingImg = bot?.greetingImage || store?.bannerImage;
-                await sendImage(sock, sender, greetingImg, welcome);
                 return sendCategories(sock, sender, user);
             }
 

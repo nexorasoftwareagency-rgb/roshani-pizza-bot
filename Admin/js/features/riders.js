@@ -162,6 +162,9 @@ export function renderRiders(searchTerm = "") {
                 </td>
                 <td data-label="Actions">
                     <div class="action-group-v4">
+                        <button data-action="settleRider" data-id="${safeId}" data-name="${safeName}" class="btn-action-v4" title="Settle Wallet" style="color: var(--primary);">
+                            <i data-lucide="wallet" style="width:14px;"></i>
+                        </button>
                         <button data-action="editRider" data-id="${safeId}" class="btn-action-v4" title="Edit Rider">
                             <i data-lucide="edit-2" style="width:14px;"></i>
                         </button>
@@ -460,5 +463,75 @@ export function toggleRiderPass() {
     const passInput = document.getElementById('riderPass');
     if (passInput) {
         passInput.type = passInput.type === 'password' ? 'text' : 'password';
+    }
+}
+
+/**
+ * SETTLE RIDER WALLET
+ * Calculates total cash from last 48 hours and marks orders as settled.
+ */
+export async function settleRiderWallet(riderId, riderName) {
+    // Show a loading toast
+    showToast("Calculating pending cash...", "info");
+    haptic();
+
+    try {
+        const timeLimit = Date.now() - (48 * 60 * 60 * 1000);
+        let pendingCash = 0;
+        let ordersToSettle = [];
+
+        // We must query both pizza and cake outlets
+        const outlets = ['pizza', 'cake'];
+        for (const outlet of outlets) {
+            // Query orders for this rider in the last 48 hours
+            const ordersRef = db.ref(`${outlet}/orders`);
+            // We'll query by riderId directly using indexing if possible, 
+            // but we might need to fetch and filter if index is not perfect.
+            // Since we indexOn riderId, we can do this:
+            const snap = await ordersRef.orderByChild('riderId').equalTo(riderId).once('value');
+            
+            if (snap.exists()) {
+                snap.forEach(child => {
+                    const o = child.val();
+                    const orderTime = o.createdAt || o.timestamp || o.assignedAt || 0;
+                    const isCash = (o.paymentMethod || "").toUpperCase() === "CASH";
+                    
+                    if (orderTime >= timeLimit && isCash && o.status === "delivered" && !o.settled) {
+                        pendingCash += Number(o.total || 0);
+                        ordersToSettle.push({ outlet: outlet, id: child.key });
+                    }
+                });
+            }
+        }
+
+        if (pendingCash === 0) {
+            showToast(`No pending cash to settle for ${riderName}.`, "info");
+            return;
+        }
+
+        if (!(await showConfirm(`Confirm collection of ₹${pendingCash} from ${riderName}?`))) return;
+
+        // Perform batch update
+        const updates = {};
+        ordersToSettle.forEach(o => {
+            updates[`${o.outlet}/orders/${o.id}/settled`] = true;
+        });
+
+        // Add to settlement ledger
+        const settlementId = "SETTLE_" + Date.now();
+        updates[`settlements/${riderId}/${settlementId}`] = {
+            timestamp: Date.now(),
+            amountCollected: pendingCash,
+            settledByAdmin: auth.currentUser?.email || "Admin",
+            ordersClearedCount: ordersToSettle.length
+        };
+
+        await db.ref().update(updates);
+        logAudit("Riders", `Settled Wallet for ${riderName}: ₹${pendingCash}`, riderId);
+        showToast(`Successfully settled ₹${pendingCash} for ${riderName}.`, "success");
+
+    } catch (error) {
+        console.error("Settlement Error:", error);
+        showToast("Failed to settle wallet. Check console for details.", "error");
     }
 }

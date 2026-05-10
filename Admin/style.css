@@ -1651,6 +1651,39 @@ tbody tr:hover td:first-child {
     background: rgba(37, 211, 102, 0.1);
 }
 
+.badge-payment-v4 {
+    background: #F1F5F9;
+    color: #64748B;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    border: 1px solid #E2E8F0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s;
+}
+
+.badge-payment-v4[data-method="cash"] {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.badge-payment-v4[data-method="upi"] {
+    background: rgba(99, 102, 241, 0.1);
+    color: #4F46E5;
+    border-color: rgba(99, 102, 241, 0.2);
+}
+
+.badge-payment-v4[data-method="card"] {
+    background: rgba(245, 158, 11, 0.1);
+    color: #D97706;
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
 .badge {
     border-radius: var(--radius-premium);
     font-size: 10px;
