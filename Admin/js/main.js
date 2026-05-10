@@ -23,7 +23,7 @@ import {
 import { printReceiptById, reprintLastPosReceipt } from './features/printing.js';
 import { 
     editRider, resetRiderPassword, deleteRider, 
-    showRiderModal, saveRiderAccount, renderRiders 
+    showRiderModal, saveRiderAccount, renderRiders, settleRiderWallet 
 } from './features/riders.js';
 import { 
     editDish, deleteDish, editCategory, deleteCategory, 
@@ -330,6 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'editRider': editRider(id); break;
                 case 'resetRiderPassword': resetRiderPassword(el.getAttribute('data-email')); break;
                 case 'deleteRider': deleteRider(id); break;
+                case 'settleRider': settleRiderWallet(id, name); break;
                 case 'saveSettings': saveStoreSettings(); break;
                 case 'saveDeliveredOrder': saveDeliveredOrder(id, val); break;
                 case 'openPOSSelectionModal': openPOSSelectionModal(id); break;

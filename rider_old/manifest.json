@@ -1,0 +1,17 @@
+{
+  "name": "Roshani Rider Hub",
+  "short_name": "Roshani Rider",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#F4F6F8",
+  "theme_color": "#FF5200",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
