@@ -1392,7 +1392,7 @@ window.renderAllOrders = () => {
             if (s === "reached drop location") return 4;
             if (s === "picked up" || s === "out for delivery") return 3;
             if (s === "arrived at restaurant" || s === "arrived at outlet") return 2;
-            if (["ready", "cooked", "waiting for pickup", "accepted"].includes(s)) return 1;
+            if (["ready", "cooked", "packed", "waiting for pickup", "accepted"].includes(s)) return 1;
             return 0;
         };
 
@@ -1419,7 +1419,7 @@ window.renderAllOrders = () => {
         if (isGhost || (!isActive && !isFresh)) return;
 
         // 1. UNASSIGNED
-        if (!o.assignedRider && ["placed", "ready", "cooked", "preparing", "confirmed", "arriving at restaurant"].includes(status)) {
+        if (!o.assignedRider && ["ready", "cooked", "packed"].includes(status)) {
             // Ping Modal logic for VERY fresh orders (2 hours)
             const isPingFresh = item.orderTime > (Date.now() - (2 * 60 * 60 * 1000));
 
@@ -1514,7 +1514,7 @@ window.renderAllOrders = () => {
                 if (statusLower === "reached drop location") currentStep = 3;
                 else if (statusLower === "picked up" || statusLower === "out for delivery") currentStep = 2;
                 else if (statusLower === "arrived at restaurant" || statusLower === "arrived at outlet") currentStep = 1;
-                else if (["ready", "cooked", "waiting for pickup"].includes(statusLower)) currentStep = 0; 
+                else if (["ready", "cooked", "packed", "waiting for pickup"].includes(statusLower)) currentStep = 0; 
                 else currentStep = 0; 
 
                 const outletCoords = window.outletCoords[outletId] || { lat: 0, lng: 0 };

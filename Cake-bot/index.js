@@ -690,6 +690,14 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
             } else if (statusLower === "cooked") {
                 msg = `🔥 *KITCHEN FINISHED!* 🔥\n━━━━━━━━━━━━━━━━━━━━\nChef has finished cooking your order #${id.slice(-5)}! ${OUTLET_EMOJI}\n\nMoving to packing station... ❤️\n${getFoodFunnyProgress("Cooked")}`;
                 img = botSettings.imgCooked;
+                
+                if (!isDineIn) {
+                    if (order.riderPhone) {
+                        await notifyRiderPickup(sock, order);
+                    } else {
+                        await broadcastPickupAvailable(sock, id, order);
+                    }
+                }
             } else if (statusLower === "ready" || statusLower === "packed") {
                 msg = `📦 *PACKED & READY!* 🚀\n━━━━━━━━━━━━━━━━━━━━\nYour delicious order #${id.slice(-5)} is ready and packed! 🍱\n\n${isDineIn ? "It's ready to be served! 🍽️" : "Waiting for the rider to pick it up. 🛵"}\n${getFoodFunnyProgress("Ready")}`;
                 img = botSettings.imgReady || botSettings.imgCooked;
