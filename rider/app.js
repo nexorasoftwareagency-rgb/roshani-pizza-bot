@@ -1434,7 +1434,7 @@ window.renderAllOrders = () => {
                 const safeTotal = escapeHtml(String(o.total || 0));
                 const safeId = escapeHtml(id);
                 const safeOutlet = escapeHtml(outletId);
-                const statusLabel = (status === "ready" || status === "cooked") ? "READY" : "PREPARING";
+                const statusLabel = status.toUpperCase();
                 
                 const outletName = outletId === 'pizza' ? 'Pizza' : 'Cake';
                 const outletIcon = outletId === 'pizza' ? '🍕' : '🎂';
