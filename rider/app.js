@@ -1418,8 +1418,10 @@ window.renderAllOrders = () => {
         // HARD SKIP for Ghost orders or stale non-active items
         if (isGhost || (!isActive && !isFresh)) return;
 
-        // 1. UNASSIGNED
-        if (!o.assignedRider && ["ready", "cooked", "packed"].includes(status)) {
+        // 1. UNASSIGNED - STRICT FILTERING
+        const allowedUnassignedStatus = ["ready", "cooked", "packed"];
+        if (!o.assignedRider && allowedUnassignedStatus.includes(status)) {
+            console.log(`[RiderUI] Rendering Unassigned Order #${id} | Status: ${status}`);
             // Ping Modal logic for VERY fresh orders (2 hours)
             const isPingFresh = item.orderTime > (Date.now() - (2 * 60 * 60 * 1000));
 
@@ -1479,6 +1481,9 @@ window.renderAllOrders = () => {
                 `;
                 unassignedCount++;
             }
+        else if (!o.assignedRider && (status === "preparing" || status === "confirmed" || status === "cooking")) {
+            console.log(`[RiderUI] Hiding Unassigned Order #${id} | Status: ${status} (Not yet cooked/ready)`);
+        }
         // 2. ACTIVE (Assigned to me and not delivered)
         else if (isActive && isMine && !isGhost) {
 

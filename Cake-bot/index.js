@@ -1023,6 +1023,12 @@ async function notifyRiderPickup(sock, order) {
 async function notifyRiderAssignment(sock, orderId, order) {
     try {
         if (!sock) return;
+        const status = (order.status || "").toLowerCase();
+        if (!["ready", "cooked", "packed"].includes(status)) {
+            console.log(`[RIDER] ⏳ Skipping assignment notification for #${orderId.slice(-5)}: Status is ${order.status}. Rider will be notified once it is READY.`);
+            return;
+        }
+
         const riderPhone = order.riderPhone;
         const riderId = order.riderId || order.assignedRiderUid;
         if (!riderPhone) {
