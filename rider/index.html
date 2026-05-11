@@ -18,7 +18,7 @@
         }
         
         // Version Enforcement
-        const APP_VERSION = '4.7.0';
+        const APP_VERSION = '4.7.1';
         if (localStorage.getItem('rider_app_version') !== APP_VERSION) {
             localStorage.setItem('rider_app_version', APP_VERSION);
             // Optionally clear specific caches
@@ -30,7 +30,7 @@
 
     <script>
         // Force cleanup of old service workers and caches if stuck on old versions
-        const CURRENT_VERSION = '4.7.0';
+        const CURRENT_VERSION = '4.7.1';
         if (localStorage.getItem('app_version') !== CURRENT_VERSION) {
             console.log(`Stale version detected. Cleaning up (${CURRENT_VERSION})...`);
             if ('serviceWorker' in navigator) {
@@ -52,7 +52,7 @@
             }
         });
     </script>
-    <link rel="stylesheet" href="style.css?v=4.7.0">
+    <link rel="stylesheet" href="style.css?v=4.7.1">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="icon-512.png">
     <link rel="apple-touch-icon" href="icon-512.png">
@@ -273,7 +273,10 @@
                 <h2 class="section-heading mb-15">Wallet Summary</h2>
                 <div class="premium-dashboard-card mb-20 text-center">
                     <span class="text-muted font-bold text-small uppercase">Total Cash to Settle</span>
-                    <h1 class="text-orange fs-2-5rem fw-900" id="e-total">&#8377;0</h1>
+                    <h1 class="text-orange fs-2-5rem fw-900" id="e-total">₹0</h1>
+                    <button class="btn-text-primary-sm mt-10" id="btnViewSettlements" style="font-size: 0.8rem;">
+                        <i data-lucide="history" style="width:12px; height:12px; margin-right:4px;"></i> VIEW SETTLEMENT HISTORY
+                    </button>
                 </div>
                 <div class="earnings-grid-split">
                     <div class="premium-dashboard-card border-left-orange">
@@ -456,7 +459,22 @@
         window.initPingCheck = function() { console.warn("Legacy initPingCheck called and shimmed."); };
         window.initSlideToActions = function() { console.warn("Legacy initSlideToActions called and shimmed."); };
     </script>
-    <script src="app.js?v=4.6.8" type="module"></script>
+    <!-- SETTLEMENT HISTORY MODAL -->
+    <div id="settlementModal" class="modal-premium">
+        <div class="modal-content animate-fade-in-up">
+            <div class="modal-header">
+                <h3>Settlement History</h3>
+                <button class="close-modal" id="btnCloseSettlement">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="settlementList" class="history-list">
+                    <p class="text-muted text-center p-20">Loading settlements...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js?v=4.7.1"></script>
     <div id="successOverlay" class="modal-overlay">
         <div class="modal-card text-center success-card">
             <div class="success-icon-wrapper">

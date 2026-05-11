@@ -6,6 +6,7 @@
 import { db, Outlet } from '../firebase.js';
 import { state } from '../state.js';
 import { escapeHtml, showToast, formatDate } from '../utils.js';
+import { settleRiderWallet } from './riders.js';
 
 let riderEarningsChart = null;
 
@@ -35,6 +36,7 @@ export function initRiderAnalytics() {
     document.getElementById('btnGenerateRiderReport')?.addEventListener('click', generateRiderPerformanceReport);
     document.getElementById('btnRiderExportExcel')?.addEventListener('click', () => exportRiderReport('excel'));
     document.getElementById('btnRiderExportPDF')?.addEventListener('click', () => exportRiderReport('pdf'));
+    document.getElementById('btnSettleRiderAnalytics')?.addEventListener('click', settleRiderBalanceAnalytics);
 }
 
 /**
@@ -44,10 +46,10 @@ export function cleanupRiderAnalytics() {
     console.log("[RiderAnalytics] Cleaning up...");
     
     // Clear KPIs
-    const kpis = ['riderStatEarnings', 'riderStatDeliveries', 'riderStatAvgTime', 'riderStatRating'];
+    const kpis = ['riderStatEarnings', 'riderStatDeliveries', 'riderStatAvgTime', 'riderStatRating', 'riderStatPendingCash'];
     kpis.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerText = "0";
+        if (el) el.innerText = id === 'riderStatEarnings' || id === 'riderStatPendingCash' ? "₹0" : "0";
     });
 
     // Clear Table
@@ -146,14 +148,20 @@ function calculateRiderStats(orders) {
     let deliveredCount = 0;
     let totalDeliveryTime = 0; // in minutes
     let deliveryTimeCount = 0;
+    let pendingCash = 0;
 
     orders.forEach(o => {
         if (o.status === "Delivered") {
             deliveredCount++;
             
             // Assuming delivery fee is what rider earns
-            // Or use a fixed payout if defined in settings
             totalEarnings += (Number(o.deliveryFee) || 0);
+
+            // Calculate Pending Cash
+            const isCash = (o.paymentMethod || "").toUpperCase() === "CASH";
+            if (isCash && !o.settled) {
+                pendingCash += Number(o.total || 0);
+            }
 
             // Calculate delivery duration
             if (o.pickedUpAt && o.deliveredAt) {
@@ -169,8 +177,9 @@ function calculateRiderStats(orders) {
     return {
         totalEarnings,
         deliveredCount,
+        pendingCash,
         avgTime: deliveryTimeCount > 0 ? Math.round(totalDeliveryTime / deliveryTimeCount) : 0,
-        rating: deliveredCount > 0 ? (4.5 + (Math.random() * 0.4)) : 0 // Premium dynamic rating simulation
+        rating: deliveredCount > 0 ? (4.5 + (Math.random() * 0.4)) : 0 
     };
 }
 
@@ -182,6 +191,11 @@ function updateRiderKPIs(stats) {
     document.getElementById('riderStatDeliveries').innerText = stats.deliveredCount;
     document.getElementById('riderStatAvgTime').innerText = `${stats.avgTime}m`;
     document.getElementById('riderStatRating').innerText = stats.rating.toFixed(1);
+    const pendingCashEl = document.getElementById('riderStatPendingCash');
+    if (pendingCashEl) {
+        pendingCashEl.innerText = `₹${stats.pendingCash.toLocaleString()}`;
+        pendingCashEl.style.color = stats.pendingCash > 0 ? 'var(--orange)' : 'var(--success)';
+    }
 }
 
 /**
@@ -361,4 +375,28 @@ export async function exportRiderReport(type) {
             showToast("PDF library not loaded", "error");
         }
     }
+}
+
+/**
+ * TRIGGER SETTLEMENT FROM ANALYTICS
+ */
+export async function settleRiderBalanceAnalytics() {
+    const riderId = document.getElementById('riderSelectAnalytics').value;
+    if (!riderId) {
+        showToast("Please select a rider first", "warning");
+        return;
+    }
+
+    const rider = state.ridersList.find(r => r.id === riderId);
+    const riderName = rider ? rider.name : "Rider";
+
+    // Respect the selected date range for settlement
+    const fromDateStr = document.getElementById('riderReportFrom').value;
+    const customLimit = fromDateStr ? new Date(fromDateStr).getTime() : null;
+
+    // Call the shared settlement logic from riders.js
+    await settleRiderWallet(riderId, riderName, customLimit);
+
+    // Refresh report to reflect changes
+    generateRiderPerformanceReport();
 }
