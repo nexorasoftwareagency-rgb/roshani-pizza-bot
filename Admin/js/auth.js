@@ -5,7 +5,6 @@ import * as ui from './ui.js';
 import { initRealtimeListeners } from './features/orders.js';
 import { loadRiders } from './features/riders.js';
 import { updateBranding } from './branding.js';
-import { setupPushNotifications } from './features/notifications.js';
 
 let idleTimer;
 const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
@@ -257,7 +256,6 @@ export function initAuth() {
         updateBranding();
         loadRiders();
         initRealtimeListeners();
-        setupPushNotifications(user.uid);
         
         // Initial Tab Navigation (Respect Hash or Default to Dashboard)
         const initialTab = window.location.hash.replace('#', '') || 'dashboard';

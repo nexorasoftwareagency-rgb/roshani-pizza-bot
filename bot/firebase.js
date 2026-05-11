@@ -57,14 +57,38 @@ function resolvePath(path, outlet = 'pizza') {
 }
 
 // =============================
-// HELPERS
+// CACHE LAYER
 // =============================
+const _cache = new Map();
+const DEFAULT_TTL = 30000; // 30 seconds default cache
+const SETTINGS_TTL = 300000; // 5 minutes for settings/categories
+
+function getTTL(path) {
+    if (path.includes('settings') || path.includes('categories') || path.includes('dishes')) {
+        return SETTINGS_TTL;
+    }
+    return DEFAULT_TTL;
+}
 
 async function getData(path, outlet = 'pizza') {
+    const resolved = resolvePath(path, outlet);
+    const now = Date.now();
+
+    if (_cache.has(resolved)) {
+        const cached = _cache.get(resolved);
+        if (now < cached.expiry) {
+            return cached.data;
+        }
+    }
+
     try {
-        const resolved = resolvePath(path, outlet);
         const snap = await db.ref(resolved).once('value');
-        return snap.val();
+        const data = snap.val();
+        _cache.set(resolved, { 
+            data, 
+            expiry: now + getTTL(resolved) 
+        });
+        return data;
     } catch (err) {
         console.error("GET ERROR:", err, "Path:", path);
         return null;
@@ -74,6 +98,7 @@ async function getData(path, outlet = 'pizza') {
 async function setData(path, data, outlet = 'pizza') {
     try {
         const resolved = resolvePath(path, outlet);
+        _cache.delete(resolved); // Invalidate cache
         await db.ref(resolved).set(data);
         return true;
     } catch (err) {
@@ -84,6 +109,7 @@ async function setData(path, data, outlet = 'pizza') {
 async function updateData(path, data, outlet = 'pizza') {
     try {
         const resolved = resolvePath(path, outlet);
+        _cache.delete(resolved); // Invalidate cache
         await db.ref(resolved).update(data);
     } catch (err) {
         console.error("UPDATE ERROR:", err, "Path:", path);
@@ -93,6 +119,7 @@ async function updateData(path, data, outlet = 'pizza') {
 async function pushData(path, data, outlet = 'pizza') {
     try {
         const resolved = resolvePath(path, outlet);
+        _cache.delete(resolved); // Invalidate cache (parent list changed)
         await db.ref(resolved).push(data);
     } catch (err) {
         console.error("PUSH ERROR:", err, "Path:", path);
@@ -102,6 +129,7 @@ async function pushData(path, data, outlet = 'pizza') {
 async function deleteData(path, outlet = 'pizza') {
     try {
         const resolved = resolvePath(path, outlet);
+        _cache.delete(resolved); // Invalidate cache
         await db.ref(resolved).remove();
     } catch (err) {
         console.error("DELETE ERROR:", err, "Path:", path);
@@ -109,23 +137,16 @@ async function deleteData(path, outlet = 'pizza') {
 }
 
 async function getUserProfile(jid) {
-    try {
-        const cleanJid = jid.replace(/[^0-9]/g, '');
-        const snap = await db.ref(`botUsers/${cleanJid}`).once('value');
-        return snap.val();
-    } catch (err) {
-        return null;
-    }
+    const cleanJid = jid.replace(/[^0-9]/g, '');
+    const path = `botUsers/${cleanJid}`;
+    return getData(path);
 }
 
 async function saveUserProfile(jid, data) {
-    try {
-        const cleanJid = jid.replace(/[^0-9]/g, '');
-        await db.ref(`botUsers/${cleanJid}`).update(data);
-        return true;
-    } catch (err) {
-        return false;
-    }
+    const cleanJid = jid.replace(/[^0-9]/g, '');
+    const path = `botUsers/${cleanJid}`;
+    _cache.delete(resolvePath(path));
+    return updateData(path, data);
 }
 
 // =============================

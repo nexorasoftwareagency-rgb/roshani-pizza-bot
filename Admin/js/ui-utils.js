@@ -74,7 +74,6 @@ export const showPaymentPicker = (total) => {
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <button data-method="Cash" style="padding: 15px; border-radius: 12px; border: 1px solid #333; background: #262626; color: #fff; cursor: pointer; font-weight: 600;">💵 Cash</button>
                     <button data-method="UPI" style="padding: 15px; border-radius: 12px; border: 1px solid #333; background: #262626; color: #fff; cursor: pointer; font-weight: 600;">📱 UPI</button>
-                    <button data-method="Card" style="padding: 15px; border-radius: 12px; border: 1px solid #333; background: #262626; color: #fff; cursor: pointer; font-weight: 600;">💳 Card</button>
                     <button id="cancelPay" style="padding: 15px; border-radius: 12px; border: 1px solid #c53030; background: transparent; color: #c53030; cursor: pointer; font-weight: 600;">Cancel</button>
                 </div>
             </div>`;

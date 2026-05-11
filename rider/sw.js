@@ -3,7 +3,7 @@ if (self.location.protocol !== 'https:' && self.location.hostname !== 'localhost
   throw new Error('Service Worker requires HTTPS');
 }
 
-const CACHE_NAME = 'roshani-rider-v6.4-premium';
+const CACHE_NAME = 'roshani-rider-v7.0';
 const ASSETS = [
   './',
   './login.html',

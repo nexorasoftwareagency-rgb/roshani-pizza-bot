@@ -60,10 +60,6 @@
     background: var(--bg-app);
 }
 
-html.seamless-mode #auth-section {
-    display: none !important;
-}
-
 #initial-loader.fade-out {
     opacity: 0;
     visibility: hidden;
@@ -1582,99 +1578,6 @@ body {
 @media (max-width: 768px) {
     .premium-table-wrapper { display: none; }
     .order-card-grid { display: grid; }
-}
-
-/* Enhanced History Card Styles */
-.history-card-premium {
-    border-left: 5px solid var(--primary);
-    background: linear-gradient(to right, #fff, #fafafa);
-    padding: 20px !important;
-    gap: 15px;
-    display: flex;
-    flex-direction: column;
-}
-
-.history-card-premium .card-body-metrics {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    border-top: 1px dashed rgba(0,0,0,0.06);
-    border-bottom: 1px dashed rgba(0,0,0,0.06);
-    padding: 15px 0;
-}
-
-.history-card-premium .metric-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.9rem;
-    color: var(--text-main);
-    font-weight: 600;
-}
-
-.history-card-premium .metric-item i {
-    width: 18px;
-    height: 18px;
-    color: var(--primary);
-    opacity: 0.8;
-}
-
-.history-card-premium .truncate-address {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    opacity: 0.8;
-    font-weight: 500;
-}
-
-.history-card-premium .metrics-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin-top: 5px;
-}
-
-.history-card-premium .metric-sub {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    font-weight: 700;
-}
-
-.history-card-premium .metric-sub i {
-    width: 16px;
-    height: 16px;
-    color: var(--info);
-}
-
-.history-card-premium .card-footer {
-    border-top: none !important;
-    padding-top: 0 !important;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.history-card-premium .price-info {
-    text-align: right;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-.history-card-premium .price-info .label {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    font-weight: 800;
-    margin-bottom: 2px;
-}
-
-.history-card-premium .price-info .value {
-    font-size: 1.3rem;
-    font-weight: 900;
-    color: var(--success);
 }
 
 

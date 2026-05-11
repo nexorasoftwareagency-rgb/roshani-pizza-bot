@@ -275,19 +275,6 @@ window.getDistance = (lat1, lon1, lat2, lon2) => {
     return R * c;
 };
 
-window.calculateDuration = (start, end) => {
-    if (!start || !end) return "N/A";
-    const diff = Math.floor((end - start) / 1000); // seconds
-    const mins = Math.floor(diff / 60);
-    const secs = diff % 60;
-    if (mins > 60) {
-        const hrs = Math.floor(mins / 60);
-        const rm = mins % 60;
-        return `${hrs}h ${rm}m`;
-    }
-    return `${mins}m ${secs}s`;
-};
-
 window.triggerWhatsAppAlert = (phone, orderId, actionType, extraData = {}, isManual = false) => {
     if (!phone) return;
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
@@ -460,7 +447,7 @@ window.addEventListener('touchstart', (e) => {
 window.addEventListener('touchend', (e) => {
     if (touchStart === -1) return;
     const touchEnd = e.changedTouches[0].pageY;
-    if (window.scrollY === 0 && touchEnd - touchStart > 250) {
+    if (window.scrollY === 0 && touchEnd - touchStart > 180) {
         window.completeSiteRefresh();
     }
     touchStart = -1;
@@ -866,29 +853,13 @@ window.recordPaymentAndComplete = async (method) => {
 
 window.finalizeDeliverySequence = async (orderPath, matchesFallback, order, paymentMethod = 'CASH') => {
     if (!window.currentUser || !window.currentUser.profile) return window.showToast("Authentication error. Please login again.", "error");
-
-    const outletId = orderPath.split('/')[0] || 'pizza';
-    const riderId = window.currentUser.profile.id;
-    const commission = Number(order.deliveryFee || 0);
-
-    // Calculate Metrics
-    const nowTs = Date.now();
-    const tripDuration = window.calculateDuration(order.pickedUpAt, nowTs);
     
-    let tripDistance = "0.0 km";
-    if (order.lat && order.lng && window.outletCoords[outletId]) {
-        const d = window.getDistance(window.outletCoords[outletId].lat, window.outletCoords[outletId].lng, order.lat, order.lng);
-        tripDistance = d.toFixed(1) + " km";
-    }
-
     const updates = { 
         status: "Delivered", 
-        deliveredAt: nowTs, 
+        deliveredAt: serverTimestamp(), 
         verifiedBy: matchesFallback ? 'ADMIN_FALLBACK' : 'OTP', 
         paymentCollected: true,
-        paymentMethod: paymentMethod.toUpperCase(),
-        tripDuration: tripDuration,
-        tripDistance: tripDistance
+        paymentMethod: paymentMethod.toUpperCase()
     };
 
     await update(ref(db, orderPath), updates);
@@ -1728,15 +1699,6 @@ window._doRenderAllOrders = () => {
                 const outletName = outletId === 'pizza' ? 'Pizza' : 'Cake';
                 const outletIcon = outletId === 'pizza' ? '🍕' : '🎂';
 
-                // Calculate metrics if not stored
-                const tripDuration = o.tripDuration || window.calculateDuration(o.pickedUpAt, o.deliveredAt);
-                let tripDistance = o.tripDistance;
-                if (!tripDistance && o.lat && o.lng && window.outletCoords[outletId]) {
-                    const d = window.getDistance(window.outletCoords[outletId].lat, window.outletCoords[outletId].lng, o.lat, o.lng);
-                    tripDistance = d.toFixed(1) + " km";
-                }
-                tripDistance = tripDistance || "---";
-
                 historyRows += `
                     <tr>
                         <td>
@@ -1746,15 +1708,14 @@ window._doRenderAllOrders = () => {
                             </div>
                         </td>
                         <td><span class="text-muted-small">${dTime}</span></td>
-                        <td><span class="text-muted-small">${tripDistance}</span></td>
-                        <td><span class="text-muted-small">${tripDuration}</span></td>
+                        <td class="address-cell">${safeAddress}</td>
                         <td class="text-success font-bold">₹${fee}</td>
                         <td><span class="rider-status-pill">DONE</span></td>
                     </tr>
                 `;
 
                 historyCards += `
-                    <div class="order-card-compact history-card-premium">
+                    <div class="order-card-compact" style="opacity: 0.85;">
                         <div class="card-header">
                             <div class="order-meta">
                                 <span class="order-id-badge">#${oId}</span>
@@ -1762,32 +1723,14 @@ window._doRenderAllOrders = () => {
                             </div>
                             <span class="rider-status-pill">DONE</span>
                         </div>
-                        
-                        <div class="card-body-metrics">
-                            <div class="metric-item">
-                                <i data-lucide="calendar"></i>
-                                <span>${dTime}</span>
-                            </div>
-                            <div class="metric-item">
-                                <i data-lucide="map-pin"></i>
-                                <span class="truncate-address">${safeAddress}</span>
-                            </div>
-                            <div class="metrics-grid">
-                                <div class="metric-sub">
-                                    <i data-lucide="navigation"></i>
-                                    <span>${tripDistance}</span>
-                                </div>
-                                <div class="metric-sub">
-                                    <i data-lucide="clock"></i>
-                                    <span>${tripDuration}</span>
-                                </div>
-                            </div>
+                        <div class="address-line">
+                            <i data-lucide="calendar"></i>
+                            <span class="text-muted-small">${dTime}</span>
                         </div>
-
-                        <div class="card-footer">
+                        <div class="card-footer" style="border-top: none; padding-top: 0;">
                             <div class="price-info">
-                                <span class="label">Total Earnings</span>
-                                <span class="value">₹${fee}</span>
+                                <div class="text-muted-small">Earned</div>
+                                <div class="earn-badge" style="color: var(--primary);">₹${fee}</div>
                             </div>
                         </div>
                     </div>
@@ -1847,8 +1790,7 @@ window._doRenderAllOrders = () => {
                             <tr>
                                 <th>ORDER</th>
                                 <th>DATE</th>
-                                <th>DIST</th>
-                                <th>TIME</th>
+                                <th>DESTINATION</th>
                                 <th>EARNED</th>
                                 <th>STATUS</th>
                             </tr>
@@ -1986,7 +1928,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Pull to Refresh Logic
     let touchStart = 0;
     const ptr = document.getElementById('ptrIndicator');
-    const PTR_THRESHOLD = 150; // Increased threshold for lower sensitivity
     
     window.addEventListener('touchstart', e => {
         if (window.scrollY === 0) touchStart = e.touches[0].pageY;
@@ -1996,26 +1937,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (touchStart === 0) return;
         const touch = e.touches[0].pageY;
         const diff = touch - touchStart;
-        
-        // Only start showing indicator if pull is at least 30px
-        if (diff > 30 && window.scrollY === 0) {
+        if (diff > 0 && window.scrollY === 0) {
             ptr.classList.add('active');
             const rotation = Math.min(diff * 2, 360);
-            ptr.style.transform = `translateX(-50%) translateY(${Math.min(diff/2, 60)}px) rotate(${rotation}deg)`;
-            
-            if (diff > PTR_THRESHOLD) {
+            ptr.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+            if (diff > 80) {
                 ptr.classList.add('refreshing');
                 if (!ptr._haptic) { window.haptic(30); ptr._haptic = true; }
-            } else {
-                ptr.classList.remove('refreshing');
-                ptr._haptic = false;
             }
         }
     }, { passive: true });
 
     window.addEventListener('touchend', e => {
         const touchEnd = e.changedTouches[0].pageY;
-        if (touchEnd - touchStart > PTR_THRESHOLD && window.scrollY === 0) {
+        if (touchEnd - touchStart > 80 && window.scrollY === 0) {
             console.log("[UI] Gesture Refresh Triggered");
             window.completeSiteRefresh();
         } else {

@@ -18,7 +18,7 @@
         }
         
         // Version Enforcement
-        const APP_VERSION = '4.6.4';
+        const APP_VERSION = '4.7.0';
         if (localStorage.getItem('rider_app_version') !== APP_VERSION) {
             localStorage.setItem('rider_app_version', APP_VERSION);
             // Optionally clear specific caches
@@ -30,7 +30,7 @@
 
     <script>
         // Force cleanup of old service workers and caches if stuck on old versions
-        const CURRENT_VERSION = '4.6.4';
+        const CURRENT_VERSION = '4.7.0';
         if (localStorage.getItem('app_version') !== CURRENT_VERSION) {
             console.log(`Stale version detected. Cleaning up (${CURRENT_VERSION})...`);
             if ('serviceWorker' in navigator) {
@@ -52,7 +52,7 @@
             }
         });
     </script>
-    <link rel="stylesheet" href="style.css?v=4.6.4">
+    <link rel="stylesheet" href="style.css?v=4.7.0">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="icon-512.png">
     <link rel="apple-touch-icon" href="icon-512.png">
@@ -392,7 +392,6 @@
             <div class="payment-options-grid">
                 <button class="payment-btn" data-method="Cash"><i data-lucide="banknote"></i> <span>CASH</span></button>
                 <button class="payment-btn" data-method="UPI"><i data-lucide="smartphone"></i> <span>UPI</span></button>
-                <button class="payment-btn" data-method="Card"><i data-lucide="credit-card"></i> <span>CARD</span></button>
             </div>
             <button id="btnCancelPayment" class="btn-ghost-small full-width mt-15">CANCEL</button>
         </div>
@@ -457,7 +456,7 @@
         window.initPingCheck = function() { console.warn("Legacy initPingCheck called and shimmed."); };
         window.initSlideToActions = function() { console.warn("Legacy initSlideToActions called and shimmed."); };
     </script>
-    <script src="app.js?v=4.6.3" type="module"></script>
+    <script src="app.js?v=4.6.8" type="module"></script>
     <div id="successOverlay" class="modal-overlay">
         <div class="modal-card text-center success-card">
             <div class="success-icon-wrapper">

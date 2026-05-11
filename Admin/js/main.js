@@ -280,7 +280,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log(`[Interaction] Click detected: Action=${action}, Tab=${tab}`, el);
 
-            // Handle Bulk Selection
 
 
             if (tab) {

@@ -1178,6 +1178,9 @@ async function startBot() {
             const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
             const pushName = msg.pushName || "";
 
+            // Show typing status immediately for better perceived speed
+            await sock.sendPresenceUpdate('composing', sender);
+
             if (!sessions[sender]) {
                 const profile = await getUserProfile(sender);
                 sessions[sender] = { 
