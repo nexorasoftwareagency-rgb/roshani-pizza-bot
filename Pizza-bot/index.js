@@ -1363,7 +1363,7 @@ async function startBot() {
                 if (cmd === 'report' || cmd === 'sales') {
                     await sock.sendMessage(sender, { text: "⏳ Generating latest sales report..." });
                     await sendDailyReport(sock);
-                    continue;
+                    return;
                 }
                 if (cmd === 'status') {
                     const uptime = Math.floor(process.uptime() / 60);
@@ -1375,11 +1375,11 @@ async function startBot() {
                         `🔗 Socket JID: *${sock.user?.id || 'Connected'}*\n` +
                         `━━━━━━━━━━━━━━━━━━━━`;
                     await sock.sendMessage(sender, { text: statusMsg });
-                    continue;
+                    return;
                 }
                 if (cmd === 'ping') {
                     await sock.sendMessage(sender, { text: "🏓 *Pong!* Bot is active and listening." });
-                    continue;
+                    return;
                 }
             }
 
@@ -1387,13 +1387,13 @@ async function startBot() {
                 if (user.msgCount === 41) {
                     await sock.sendMessage(sender, { text: "⚠️ *Slow down!* You're sending messages too fast. Please wait a moment before trying again." });
                 }
-                continue;
+                return;
             }
 
             if (text.toLowerCase() === "cancel" || text.toLowerCase() === "reset") {
                 sessions[sender] = { step: "START", current: {}, cart: [] };
                 await sock.sendMessage(sender, { text: "❌ *Order Reset.* Reply with any message to start again." });
-                continue;
+                return;
             }
 
             // STATE MACHINE
