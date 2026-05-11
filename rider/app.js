@@ -797,8 +797,11 @@ window.verifyOTP = async () => {
             return;
         }
 
-        const settingsSnap = await get(ref(db, `${outletId}/settings/Store`));
-        const fallbackCode = (settingsSnap.val() || {}).deliveryBackupCode;
+        const [storeSnap, deliverySnap] = await Promise.all([
+            get(ref(db, `${outletId}/settings/Store`)),
+            get(ref(db, `${outletId}/settings/Delivery`))
+        ]);
+        const fallbackCode = (deliverySnap.val() || {}).backupCode || (storeSnap.val() || {}).deliveryBackupCode;
 
         const storedOTP = order.deliveryOTP || order.otp || order.otpCode;
         const matchesCustomer = String(otp).trim() === String(storedOTP).trim();
