@@ -29,6 +29,7 @@ const { getData, setData, updateData, db, pushData, getUserProfile, saveUserProf
 const sessions = {};
 const processedStatus = {};
 const processedOTP = {};
+const processedMessages = new Set(); // To prevent duplicate message handling
 let reportInterval = null;
 let dailyReportSent = false;
 let weeklyReportSent = false;
@@ -1291,12 +1292,32 @@ async function startBot() {
     sock.ev.on('messages.upsert', async (m) => {
         try {
             if (m.type !== 'notify') return;
-            const msg = m.messages[0];
-            if (!msg.message || msg.key.fromMe) return;
+            
+            for (const msg of m.messages) {
+                if (!msg.message || msg.key.fromMe) continue;
 
-            const sender = msg.key.remoteJid;
-            const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
-            const pushName = msg.pushName || "";
+                const messageId = msg.key.id;
+                if (processedMessages.has(messageId)) continue;
+                processedMessages.add(messageId);
+                
+                // Keep cache size manageable
+                if (processedMessages.size > 500) {
+                    const first = processedMessages.values().next().value;
+                    processedMessages.delete(first);
+                }
+
+                // Ignore messages older than 60 seconds to avoid backlog spam on restart
+                const messageTimestamp = (msg.messageTimestamp || 0) * 1000;
+                if (Date.now() - messageTimestamp > 60000) {
+                    console.log(`[Bot] Skipping old message from ${msg.key.remoteJid}`);
+                    continue;
+                }
+
+                const sender = msg.key.remoteJid;
+                const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
+                const pushName = msg.pushName || "";
+
+                await (async () => {
 
             if (!sessions[sender]) {
                 const profile = await getUserProfile(sender, OUTLET);
@@ -1342,7 +1363,7 @@ async function startBot() {
                 if (cmd === 'report' || cmd === 'sales') {
                     await sock.sendMessage(sender, { text: "⏳ Generating latest sales report..." });
                     await sendDailyReport(sock);
-                    return;
+                    continue;
                 }
                 if (cmd === 'status') {
                     const uptime = Math.floor(process.uptime() / 60);
@@ -1353,10 +1374,12 @@ async function startBot() {
                         `📊 Orders in Memory: *${Object.keys(processedStatus).length}*\n` +
                         `🔗 Socket JID: *${sock.user?.id || 'Connected'}*\n` +
                         `━━━━━━━━━━━━━━━━━━━━`;
-                    return await sock.sendMessage(sender, { text: statusMsg });
+                    await sock.sendMessage(sender, { text: statusMsg });
+                    continue;
                 }
                 if (cmd === 'ping') {
-                    return await sock.sendMessage(sender, { text: "🏓 *Pong!* Bot is active and listening." });
+                    await sock.sendMessage(sender, { text: "🏓 *Pong!* Bot is active and listening." });
+                    continue;
                 }
             }
 
@@ -1364,12 +1387,13 @@ async function startBot() {
                 if (user.msgCount === 41) {
                     await sock.sendMessage(sender, { text: "⚠️ *Slow down!* You're sending messages too fast. Please wait a moment before trying again." });
                 }
-                return;
+                continue;
             }
 
             if (text.toLowerCase() === "cancel" || text.toLowerCase() === "reset") {
                 sessions[sender] = { step: "START", current: {}, cart: [] };
-                return sock.sendMessage(sender, { text: "❌ *Order Reset.* Reply with any message to start again." });
+                await sock.sendMessage(sender, { text: "❌ *Order Reset.* Reply with any message to start again." });
+                continue;
             }
 
             // STATE MACHINE
@@ -1719,9 +1743,11 @@ async function startBot() {
                     delete sessions[sender];
                     return;
                 }
-                return sendInvalidInputHelp(sock, sender, user);
+                await sendInvalidInputHelp(sock, sender, user);
+                return;
             }
-
+        })(); // End of message IIFE
+        } // End of message loop
         } catch (err) { console.error("Message Handler Error:", err); }
     });
 }
