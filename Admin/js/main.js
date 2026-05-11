@@ -1,4 +1,4 @@
-import { previewImage, showToast, logAudit } from './utils.js';
+import { previewImage, showToast, logAudit, getISTDateString } from './utils.js';
 import { state } from './state.js';
 import { auth, db, ServerValue } from './firebase.js';
 import { switchOutlet, openOutletInNewTab } from './branding.js';
@@ -61,12 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
     
-    const formatDate = (d) => {
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        return `${yyyy}-${mm}-${dd}`;
-    };
+    const fromVal = getISTDateString(yesterday);
+    const toVal = getISTDateString(today);
     
     const fromInput = document.getElementById('orderFrom');
     const toInput = document.getElementById('orderTo');
@@ -74,12 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const rTo = document.getElementById('reportTo');
 
     if (fromInput && toInput && !fromInput.value && !toInput.value) {
-        fromInput.value = formatDate(yesterday);
-        toInput.value = formatDate(today);
+        fromInput.value = fromVal;
+        toInput.value = toVal;
     }
     if (rFrom && rTo && !rFrom.value && !rTo.value) {
-        rFrom.value = formatDate(yesterday);
-        rTo.value = formatDate(today);
+        rFrom.value = fromVal;
+        rTo.value = toVal;
     }
 
     initAuth();
