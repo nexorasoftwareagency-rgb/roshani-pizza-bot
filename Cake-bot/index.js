@@ -550,7 +550,7 @@ async function sendCategories(sock, sender, user) {
     await sendImage(sock, sender, menuImg, msg);
 }
 
-async function sendCartView(sock, sender, user) {
+async function sendCartView(sock, sender, user, isAdded = false) {
     if (!user.cart || user.cart.length === 0) {
         let msg = `🛒 *YOUR CART IS EMPTY*\n\n`;
         msg += `You haven't added anything to your cart yet. ${OUTLET_EMOJI}\n\n`;
@@ -560,15 +560,18 @@ async function sendCartView(sock, sender, user) {
         return sock.sendMessage(sender, { text: msg });
     }
     const { lines, subtotal } = formatCartSummary(user.cart);
-    let msg = `🛒 *YOUR CART SUMMARY*\n\n${lines}`;
+    let msg = isAdded ? `✅ *ADDED TO CART!* 🛒\n\n` : `🛒 *YOUR CART SUMMARY*\n\n`;
+    msg += lines;
     msg += `💰 *Subtotal: ₹${subtotal}*\n\n`;
     msg += `1️⃣  *Add another item* ${OUTLET_EMOJI}\n`;
     msg += `2️⃣  *Proceed to Checkout* 🚀\n`;
-    msg += `3️⃣  *Clear Cart* 🗑️\n\n`;
-    msg += `_Reply with 1, 2 or 3_`;
+    msg += `3️⃣  *Clear Cart* 🗑️\n`;
+    msg += `0️⃣  *Back* 🔙\n\n`;
+    msg += `_Reply with 1, 2, 3 or 0_`;
     user.step = "CART_VIEW";
     return sock.sendMessage(sender, { text: await appendContactInfo(msg, user.outlet) });
 }
+
 
 async function notifyAdmin(sock, orderId, order, type = 'NEW') {
     try {
@@ -1445,28 +1448,9 @@ async function startBot() {
                     outlet: OUTLET
                 });
 
-                user.step = "ADDED_TO_CART";
-                let addedMsg = `✅ *ADDED TO CART!* 🛒\n\n`;
-                addedMsg += `1️⃣ *Add another item* 🍕\n`;
-                addedMsg += `2️⃣ *View Cart & Checkout* 🛒\n`;
-                addedMsg += `0️⃣ *Take one step Back* 🔙`;
-                return sock.sendMessage(sender, { text: await appendContactInfo(addedMsg, user.outlet) });
+                return sendCartView(sock, sender, user, true);
             }
 
-            if (user.step === "ADDED_TO_CART") {
-                if (text === "1") return sendCategories(sock, sender, user);
-                if (text === "2") return sendCartView(sock, sender, user);
-                if (text === "0") {
-                    const dish = user.current.dish;
-                    user.sizeList = Object.entries(dish.sizes || { "Regular": dish.price });
-                    let sMsg = `📏 *SELECT SIZE*\n\n`;
-                    user.sizeList.forEach(([s, p], i) => { sMsg += `${i + 1}️⃣  ${s} — ₹${p}\n`; });
-                    sMsg += `\n0️⃣ *Take one step Back* 🔙`;
-                    user.step = "SIZE";
-                    return await sendImage(sock, sender, dish.image, sMsg);
-                }
-                return sock.sendMessage(sender, { text: "⚠️ Reply *1* to add more, *2* to view cart or *0* to go back." });
-            }
 
             if (user.step === "EMPTY_CART_VIEW") {
                 if (text === "1") return sendCategories(sock, sender, user);
