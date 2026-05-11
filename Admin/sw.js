@@ -3,7 +3,7 @@ if (self.location.protocol !== 'https:' && self.location.hostname !== 'localhost
   throw new Error('Service Worker requires HTTPS');
 }
 
-const CACHE_NAME = 'roshani-erp-v4.3';
+const CACHE_NAME = 'roshani-erp-v4.7';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -84,9 +84,16 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => {
+      .catch(async () => {
         // Return cached version if offline
-        return caches.match(event.request);
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) return cachedResponse;
+        
+        // Final fallback for missing assets (avoids TypeError)
+        return new Response('Network error and not in cache', {
+          status: 408,
+          statusText: 'Network Timeout'
+        });
       })
   );
 });

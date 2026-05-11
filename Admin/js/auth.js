@@ -189,6 +189,10 @@ export function initAuth() {
         state.adminData = adminData;
         localStorage.setItem('adminIsLoggedIn', 'true');
         logAudit('LOGIN_SUCCESS', { email: user.email });
+        if (sessionStorage.getItem('PENDING_LOGIN_AUDIT') === 'true') {
+            logAudit('LOGIN_ATTEMPT_SUCCESS', { email: user.email });
+            sessionStorage.removeItem('PENDING_LOGIN_AUDIT');
+        }
         resetIdleTimer();
         initActivityListeners();
 
@@ -331,7 +335,7 @@ export async function doLogin(email, pass) {
         }
         if (errEl) errEl.classList.add('hidden');
         
-        logAudit('LOGIN_ATTEMPT', { email });
+        sessionStorage.setItem('PENDING_LOGIN_AUDIT', 'true');
         await auth.signInWithEmailAndPassword(email, pass);
     } catch (error) {
         console.error("Login Error:", error);
