@@ -1,5 +1,6 @@
 import { state } from '../state.js';
-import { escapeHtml, playNotificationSound } from '../utils.js';
+import { escapeHtml, playNotificationSound, showToast } from '../utils.js';
+import { messaging, db } from '../firebase.js';
 
 /**
  * SHOW ALERT
@@ -245,4 +246,41 @@ export function highlightOrder(orderId) {
             setTimeout(() => row.classList.remove('highlight'), 5000);
         }
     }, 120);
+}
+
+/**
+ * SETUP PUSH NOTIFICATIONS (FCM)
+ */
+export async function setupPushNotifications(userId) {
+    if (!messaging) return;
+    try {
+        const permission = await Notification.permission;
+        if (permission === 'default') {
+            await Notification.requestPermission();
+        }
+        
+        if (Notification.permission === 'granted') {
+            const token = await messaging.getToken({ 
+                serviceWorkerRegistration: await navigator.serviceWorker.ready 
+            });
+            
+            if (token) {
+                console.log("[FCM] Token acquired:", token);
+                await db.ref(`admins/${userId}`).update({ fcmToken: token });
+            }
+        }
+    } catch (error) {
+        console.error("[FCM] Setup Error:", error);
+    }
+}
+
+// Foreground Message Handler
+if (messaging) {
+    messaging.onMessage((payload) => {
+        console.log("[FCM] Foreground message received:", payload);
+        if (payload.notification) {
+            addNotification(payload.notification.title, payload.notification.body, 'new');
+            showToast(`${payload.notification.title}: ${payload.notification.body}`, "info");
+        }
+    });
 }
