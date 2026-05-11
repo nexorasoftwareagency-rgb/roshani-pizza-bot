@@ -318,7 +318,7 @@ window.triggerWhatsAppAlert = (phone, orderId, actionType, extraData = {}, isMan
 
 function resolvePath(path, outlet = null) {
     if (!path) return "";
-    const sharedNodes = ['admins', 'migrationStatus', 'riders', 'riderStats', 'logs', 'errorLogs'];
+    const sharedNodes = ['admins', 'migrationStatus', 'riders', 'logs', 'errorLogs'];
     const parts = path.split('/');
     const rootNode = parts[0];
 
@@ -422,6 +422,7 @@ window.login = async () => {
 
     try {
         await signInWithEmailAndPassword(auth, loginEmail, pass);
+        localStorage.setItem('isLoggedIn', 'true');
     } catch (e) {
         console.error("Login Error:", e);
         let msg = "Authentication failed. Check credentials.";
@@ -462,7 +463,6 @@ window.logout = async () => {
         window.clearAllListeners();
         localStorage.removeItem('rider_authenticated');
         await signOut(auth);
-        window.location.reload();
     }
 };
 
@@ -863,8 +863,9 @@ window.finalizeDeliverySequence = async (orderPath, matchesFallback, order, paym
     
     const riderId = window.currentUser.profile.id;
     const commission = Number(order.deliveryFee || 0);
+    const outletId = orderPath.split('/')[0] || 'pizza';
     
-    await runTransaction(ref(db, resolvePath(`riderStats/${riderId}`)), (current) => {
+    await runTransaction(ref(db, resolvePath(`riderStats/${riderId}`, outletId)), (current) => {
         if (!current) return { totalOrders: 1, totalEarnings: commission };
         return { ...current, totalOrders: (current.totalOrders || 0) + 1, totalEarnings: (current.totalEarnings || 0) + commission };
     });
@@ -1188,6 +1189,7 @@ let sliderState = {
     id: null,
     outlet: null
 };
+window.sliderState = sliderState;
 
 window.initGlobalSlider = () => {
     const onStart = (e) => {
@@ -1292,7 +1294,13 @@ window.initGlobalSlider = () => {
     window.addEventListener('touchend', onEnd);
 };
 
+let _renderTimeout;
 window.renderAllOrders = () => {
+    if (_renderTimeout) clearTimeout(_renderTimeout);
+    _renderTimeout = setTimeout(_doRenderAllOrders, 50);
+};
+
+window._doRenderAllOrders = () => {
     const unassignedList = document.getElementById('unassignedOrdersList');
     const dashboardActiveView = document.getElementById('dashboardActiveDeliveryView');
     const activeOrderView = document.getElementById('activeOrderView');
@@ -1300,7 +1308,18 @@ window.renderAllOrders = () => {
     const pickupBadge = document.getElementById('navPickupBadge');
 
     if (!unassignedList || !dashboardActiveView || !window.currentUser) return;
-    if (sliderState.isDragging) return;
+    if (window.sliderState && window.sliderState.isDragging) return;
+
+    // SKELETON STATE: If no data yet, show placeholders
+    const hasData = Object.values(window.orderCache).some(outlet => Object.keys(outlet).length > 0);
+    if (!hasData) {
+        dashboardActiveView.innerHTML = `
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+        `;
+        if (activeOrderView) activeOrderView.innerHTML = `<div class="skeleton-card" style="height: 300px;"></div>`;
+        return;
+    }
 
     // Reset views
     unassignedList.innerHTML = '';
@@ -1436,7 +1455,7 @@ window.renderAllOrders = () => {
                 const safeTotal = escapeHtml(String(o.total || 0));
                 const safeId = escapeHtml(id);
                 const safeOutlet = escapeHtml(outletId);
-                const statusLabel = status.toUpperCase();
+                const statusLabel = (status === "ready" || status === "cooked" || status === "packed") ? "READY" : "PREPARING";
                 
                 const outletName = outletId === 'pizza' ? 'Pizza' : 'Cake';
                 const outletIcon = outletId === 'pizza' ? '🍕' : '🎂';
@@ -1449,7 +1468,7 @@ window.renderAllOrders = () => {
                                 <span class="outlet-badge ${safeOutlet}">${outletIcon} ${outletName}</span>
                             </div>
                         </td>
-                        <td><span class="badge-${statusLabel.toLowerCase()}">${statusLabel}</span></td>
+                        <td><span class="rider-status-pill">${statusLabel}</span></td>
                         <td class="address-cell">${safeAddress}</td>
                         <td class="text-success font-bold">₹${safeFee}</td>
                         <td class="font-bold">₹${safeTotal}</td>
@@ -1464,7 +1483,7 @@ window.renderAllOrders = () => {
                                 <span class="order-id-badge">#${safeOrderId}</span>
                                 <span class="outlet-badge ${safeOutlet}">${outletIcon} ${outletName}</span>
                             </div>
-                            <span class="status-pill ${statusLabel.toLowerCase()}">${statusLabel}</span>
+                            <span class="rider-status-pill">${statusLabel}</span>
                         </div>
                         <div class="address-line">
                             <i data-lucide="map-pin"></i>
@@ -1482,7 +1501,7 @@ window.renderAllOrders = () => {
                 unassignedCount++;
             }
         else if (!o.assignedRider && (status === "preparing" || status === "confirmed" || status === "cooking")) {
-            console.log(`[RiderUI] Hiding Unassigned Order #${id} | Status: ${status} (Not yet cooked/ready)`);
+            // Silently skip - order is not yet ready for pickup
         }
         // 2. ACTIVE (Assigned to me and not delivered)
         else if (isActive && isMine && !isGhost) {
@@ -1949,10 +1968,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+window.hideLoader = () => {
+    const loader = document.getElementById('initial-loader');
+    if (loader) {
+        loader.classList.add('fade-out');
+        setTimeout(() => loader.classList.add('hidden'), 400);
+    }
+};
+
 onAuthStateChanged(auth, async user => {
-    const isLoginPage = window.location.pathname.includes('login.html');
-    if (!user) { if (!isLoginPage) window.location.href = 'login.html'; return; }
-    if (isLoginPage) { window.location.href = 'index.html'; return; }
+    const dashboard = document.getElementById('dashboard');
+    const authSection = document.getElementById('auth-section');
+
+    if (!user) {
+        localStorage.removeItem('isLoggedIn');
+        if (dashboard) dashboard.classList.add('hidden');
+        if (authSection) authSection.classList.remove('hidden');
+        window.hideLoader();
+        return;
+    }
+
+    // Optimization: Skip re-init if user is same and already loaded
+    if (window.currentUser && window.currentUser.uid === user.uid && !dashboard.classList.contains('hidden')) {
+        console.log("[Auth] Session stable. Skipping redundant init.");
+        window.hideLoader();
+        return;
+    }
+
+    if (authSection) authSection.classList.add('hidden');
 
     try {
         const profileRef = ref(db, `riders/${user.uid}`);
@@ -1962,6 +2005,7 @@ onAuthStateChanged(auth, async user => {
             console.error(`[Auth] No rider profile found for UID: ${user.uid} (${user.email})`);
             window.showToast("Your account is not registered as a Rider. Contact Admin.", "error");
             setTimeout(() => signOut(auth), 3000);
+            window.hideLoader();
             return;
         }
 
@@ -1997,20 +2041,30 @@ onAuthStateChanged(auth, async user => {
         initRealtimeListeners();
         setupPushNotifications(user.uid);
 
-        document.getElementById('dashboard').classList.remove('hidden');
+        if (dashboard) dashboard.classList.remove('hidden');
         window.showSection('home');
-        if (window.lucide) window.lucide.createIcons({ root: document.getElementById('dashboard') || document.body });
-    } catch (e) { console.error(e); }
+        if (window.lucide) window.lucide.createIcons({ root: dashboard || document.body });
+        
+        // Hide loader after everything is ready
+        setTimeout(window.hideLoader, 300);
+    } catch (e) { 
+        console.error(e);
+        window.hideLoader();
+    }
 });
 
 // Realtime Connection Monitoring
+let isFirstConnect = true;
 onValue(ref(db, '.info/connected'), (snap) => {
     if (snap.val() === true) {
         console.log("[Firebase] Database Connected");
-        window.showToast("Connection Restored", "success");
+        if (!isFirstConnect) window.showToast("Connection Restored", "success");
+        isFirstConnect = false;
     } else {
-        console.warn("[Firebase] Database Disconnected");
-        window.showToast("Connection Lost. Reconnecting...", "warning");
+        if (!isFirstConnect) {
+            console.warn("[Firebase] Database Disconnected");
+            window.showToast("Connection Lost. Reconnecting...", "warning");
+        }
     }
 });
 

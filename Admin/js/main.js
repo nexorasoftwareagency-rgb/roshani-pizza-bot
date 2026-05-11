@@ -46,6 +46,16 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("[Main] DOM Content Loaded. Initializing...");
     initGestures();
 
+    window.hideLoader = () => {
+        const loader = document.getElementById('initial-loader');
+        if (loader) {
+            loader.classList.add('fade-out');
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 600);
+        }
+    };
+
     // Set default date range: Yesterday and Today for Orders History
     const today = new Date();
     const yesterday = new Date();

@@ -219,7 +219,7 @@ export const Outlet = {
         if (!path) return db.ref();
 
         // Shared paths that stay at root level
-        const globalPaths = ['admins', 'riders', 'logs', 'bot', 'riderStats', 'migrationStatus', 'admins_list'];
+        const globalPaths = ['admins', 'riders', 'logs', 'bot', 'migrationStatus', 'admins_list'];
 
         // Normalize path and get first segment
         const cleanPath = path.startsWith('/') ? path.slice(1) : path;

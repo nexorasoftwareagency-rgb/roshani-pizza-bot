@@ -38,6 +38,35 @@ export function initRiderAnalytics() {
 }
 
 /**
+ * CLEANUP RIDER ANALYTICS
+ */
+export function cleanupRiderAnalytics() {
+    console.log("[RiderAnalytics] Cleaning up...");
+    
+    // Clear KPIs
+    const kpis = ['riderStatEarnings', 'riderStatDeliveries', 'riderStatAvgTime', 'riderStatRating'];
+    kpis.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = "0";
+    });
+
+    // Clear Table
+    const tbody = document.getElementById('riderAnalyticsTableBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-20 text-muted">Select a rider and dates to generate report.</td></tr>';
+
+    // Clear Summary
+    const summary = document.getElementById('riderStatusSummary');
+    if (summary) summary.innerHTML = "";
+
+    // Destroy Chart
+    if (riderEarningsChart) {
+        riderEarningsChart.destroy();
+        riderEarningsChart = null;
+    }
+}
+
+
+/**
  * POPULATE RIDER SELECTION DROPDOWN
  */
 export function populateRiderSelect() {
@@ -81,25 +110,16 @@ export async function generateRiderPerformanceReport() {
     btn.innerHTML = 'Analyzing...';
 
     try {
-        // Fetch all orders for both outlets to filter
-        // Note: In a large system, we'd use Firebase queries, 
-        // but here we already have some data in state or can fetch the range.
-        
-        const pizzaOrdersSnap = await db.ref("pizza/orders").orderByChild("createdAt").startAt(fromStr).endAt(toStr).once('value');
-        const cakeOrdersSnap = await db.ref("cake/orders").orderByChild("createdAt").startAt(fromStr).endAt(toStr).once('value');
+        // Fetch orders ONLY for the current outlet to ensure isolation
+        const ordersSnap = await Outlet.ref("orders").orderByChild("createdAt").startAt(fromStr).endAt(toStr).once('value');
         
         const allOrders = [];
-        const processSnap = (snap, outlet) => {
-            snap.forEach(child => {
-                const o = child.val();
-                if (o.riderId === riderId) {
-                    allOrders.push({ id: child.key, outlet, ...o });
-                }
-            });
-        };
-
-        processSnap(pizzaOrdersSnap, 'Pizza');
-        processSnap(cakeOrdersSnap, 'Cake');
+        ordersSnap.forEach(child => {
+            const o = child.val();
+            if (o.riderId === riderId) {
+                allOrders.push({ id: child.key, outlet: state.currentOutlet, ...o });
+            }
+        });
 
         // Calculate Stats
         const stats = calculateRiderStats(allOrders);

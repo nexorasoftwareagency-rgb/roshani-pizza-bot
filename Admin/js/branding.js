@@ -1,6 +1,46 @@
 import { state } from './state.js';
-import { initRealtimeListeners } from './features/orders.js';
+import { initRealtimeListeners, cleanupOrders } from './features/orders.js';
+import { cleanupCatalog } from './features/catalog.js';
+import { cleanupRiders } from './features/riders.js';
+import { cleanupInventory } from './features/inventory.js';
+import { cleanupFeedbacks } from './features/feedback.js';
+import { cleanupLiveRiderTracker } from './features/tracker.js';
+import { cleanupRiderAnalytics } from './features/rider-analytics.js';
 import * as ui from './ui.js';
+
+
+export function clearStateForOutletSwitch() {
+    console.log("[State] Clearing state for outlet isolation...");
+    
+    // 1. Detach all listeners first
+    cleanupCatalog();
+    cleanupRiders();
+    cleanupInventory();
+    cleanupOrders();
+    cleanupFeedbacks();
+    cleanupLiveRiderTracker();
+    cleanupRiderAnalytics();
+    
+    // 2. Clear relevant state arrays/objects
+    state.categories = [];
+    state.allWalkinDishes = [];
+    state.ordersMap.clear();
+    state.liveOrdersMap.clear();
+    state.lastOrdersSnap = null;
+    state.lastDishesSnap = null;
+    state.ridersList = [];
+    state.riderStatsData = {};
+    
+    // 3. Clear UI containers (optional but recommended to prevent flash of old data)
+    const containers = [
+        'categoryList', 'menuGrid', 'walkinDishGrid', 'walkinCategoryTabs',
+        'ordersTable', 'ordersTableFull', 'liveOrdersTable', 'ridersTable'
+    ];
+    containers.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = "";
+    });
+}
 
 
 export function updateBranding() {
@@ -65,6 +105,7 @@ export function switchOutlet(val) {
         return;
     }
 
+    clearStateForOutletSwitch();
     sessionStorage.setItem('adminSelectedOutlet', val);
     state.currentOutlet = val;
     window.currentOutlet = val;
@@ -74,6 +115,7 @@ export function switchOutlet(val) {
     const mobileSwitcher = document.getElementById('outletSwitcherMobile');
     if (desktopSwitcher && desktopSwitcher.value !== val) desktopSwitcher.value = val;
     if (mobileSwitcher && mobileSwitcher.value !== val) mobileSwitcher.value = val;
+
 
     updateBranding();
     initRealtimeListeners();

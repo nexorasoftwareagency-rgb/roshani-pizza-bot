@@ -506,9 +506,6 @@ async function sendInvalidInputHelp(sock, sender, user) {
         case "CONFIRM_PAY":
             helpMsg += "Please reply with *1* to Confirm Order or *2* to Cancel.";
             break;
-        case "PLACE_ORDER":
-            helpMsg += "Please reply with *1* for Cash or *2* for UPI.";
-            break;
         case "CART_VIEW":
             helpMsg += "Please reply with *1* to Proceed to Checkout or *2* to Clear Cart.";
             break;
@@ -1607,7 +1604,7 @@ async function startBot() {
                         timestamp: new Date().toISOString(),
                         customer: user.name || "Anonymous",
                         phone: user.phone || "N/A",
-                        total: subtotal, // Changed subtotal to total for report compatibility
+                        total: subtotal,
                         subtotal: subtotal,
                         reason: "Cancelled at final invoice step",
                         outlet: user.outlet || OUTLET
@@ -1627,77 +1624,68 @@ async function startBot() {
                     return sock.sendMessage(sender, { text: await appendContactInfo("❌ Order Cancelled. We hope to serve you next time! 🙏", user.outlet) }); 
                 }
                 if (text === "1") {
-                    user.step = "PLACE_ORDER";
-                    return sock.sendMessage(sender, { text: await appendContactInfo("💳 *Payment Method?*\n\n1️⃣ Cash\n2️⃣ UPI\n0️⃣ *Take one step Back* 🔙", user.outlet) });
+                    // Directly Place Order as COD
+                    const orderId = await generateOrderId(user.outlet);
+                    const { subtotal } = formatCartSummary(user.cart);
+                    const deliveryFee = user.deliveryFee || 0;
+
+                    const finalOrder = {
+                        orderId, outlet: user.outlet, 
+                        type: "Online",
+                        customerName: escapeHtml(user.name),
+                        phone: user.phone, 
+                        whatsappNumber: sender,
+                        address: escapeHtml(user.address),
+                        lat: user.location.lat, lng: user.location.lng,
+                        subtotal, deliveryFee, total: subtotal + deliveryFee - (user.discount || 0),
+                        status: "Placed", paymentMethod: "Cash", paymentStatus: "Pending",
+                        createdAt: new Date().toISOString(),
+                        assignedRider: "",
+                        items: user.cart
+                    };
+
+                    await setData(`orders/${orderId}`, finalOrder, user.outlet);
+                    await notifyAdmin(sock, orderId, finalOrder, 'NEW');
+
+                    // Auto-Deduct Inventory Stock
+                    await deductInventoryStock(sock, user.cart, user.outlet);
+
+                    // Save user profile
+                    await saveUserProfile(sender, {
+                        name: user.name,
+                        phone: user.phone,
+                        address: user.address,
+                        location: user.location,
+                        lastOutlet: user.outlet
+                    }, OUTLET);
+                    
+                    if (user.phone) {
+                        const cleanPhone = String(user.phone).replace(/\D/g, '').slice(-10);
+                        const custData = {
+                            name: user.name,
+                            phone: cleanPhone,
+                            address: user.address || "",
+                            location: user.location || null,
+                            mapsLink: user.location ? `https://maps.google.com/?q=${user.location.lat},${user.location.lng}` : "",
+                            lastOrderDate: new Date().toISOString()
+                        };
+                        await updateData(`customers/${cleanPhone}`, custData, user.outlet);
+                    }
+
+                    let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY!* 🎉\n`;
+                    successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    successMsg += `🆔 *Order ID:* #${orderId.slice(-5)}\n`;
+                    successMsg += `🏪 *Shop:* ${OUTLET_NAME}\n`;
+                    successMsg += `💳 *Payment:* COD (Cash on Delivery)\n`;
+                    successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    successMsg += `*Please wait while the admin confirms your order!* ⏳\n\n`;
+                    successMsg += `Total: ₹${finalOrder.total}`;
+
+                    await sock.sendMessage(sender, { text: await appendContactInfo(successMsg, user.outlet) });
+                    delete sessions[sender];
+                    return;
                 }
                 return sendInvalidInputHelp(sock, sender, user);
-            }
-
-            if (user.step === "PLACE_ORDER") {
-                if (text === "0") {
-                    return handleCheckoutFinal(sock, sender, user);
-                }
-                if (text !== "1" && text !== "2") return sendInvalidInputHelp(sock, sender, user);
-                
-                const method = text === "2" ? "UPI" : "Cash";
-                const orderId = await generateOrderId(user.outlet);
-                const { subtotal } = formatCartSummary(user.cart);
-
-                const deliveryFee = user.deliveryFee || 0;
-                const finalOrder = {
-                    orderId, outlet: user.outlet, 
-                    type: "Online", // Explicitly tag as Online order
-                    customerName: escapeHtml(user.name),
-                    phone: user.phone, 
-                    whatsappNumber: sender, // Save sender JID for status updates
-                    address: escapeHtml(user.address),
-                    lat: user.location.lat, lng: user.location.lng,
-                    subtotal, deliveryFee, total: subtotal + deliveryFee - (user.discount || 0),
-                    status: "Placed", paymentMethod: method, paymentStatus: "Pending",
-                    createdAt: new Date().toISOString(),
-                    assignedRider: "",
-                    items: user.cart
-                };
-
-                await setData(`orders/${orderId}`, finalOrder, user.outlet);
-                await notifyAdmin(sock, orderId, finalOrder, 'NEW');
-
-                // Auto-Deduct Inventory Stock
-                await deductInventoryStock(sock, user.cart, user.outlet);
-
-                // Save user profile for next time
-                await saveUserProfile(sender, {
-                    name: user.name,
-                    phone: user.phone,
-                    address: user.address,
-                    location: user.location,
-                    lastOutlet: user.outlet
-                }, OUTLET);
-                
-                // Save complete profile to outlet's customers node for POS access
-                if (user.phone) {
-                    const cleanPhone = String(user.phone).replace(/\D/g, '').slice(-10);
-                    const custData = {
-                        name: user.name,
-                        phone: cleanPhone,
-                        address: user.address || "",
-                        location: user.location || null,
-                        mapsLink: user.location ? `https://maps.google.com/?q=${user.location.lat},${user.location.lng}` : "",
-                        lastOrderDate: new Date().toISOString()
-                    };
-                    await updateData(`customers/${cleanPhone}`, custData, user.outlet);
-                }
-
-                let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY!* 🎉\n`;
-                successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                successMsg += `🆔 *Order ID:* #${orderId.slice(-5)}\n`;
-                successMsg += `🏪 *Shop:* ${OUTLET_NAME}\n`;
-                successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                successMsg += `*Please wait while the admin confirms your order!* ⏳\n\n`;
-                successMsg += `Total: ₹${finalOrder.total}`;
-
-                await sock.sendMessage(sender, { text: await appendContactInfo(successMsg, user.outlet) });
-                delete sessions[sender];
             }
 
         } catch (err) { console.error("Message Handler Error:", err); }
@@ -1730,7 +1718,9 @@ async function handleCheckoutFinal(sock, sender, user) {
         sum += `💰 Subtotal: ₹${subtotal}\n`;
         sum += `🚚 Delivery (${dist.toFixed(1)}km): ₹${fee}\n`;
         if (user.discount) sum += `🎁 Discount Allotted: -₹${user.discount}\n`;
-        sum += `💵 *TOTAL: ₹${subtotal + fee - (user.discount || 0)}*\n\n`;
+        sum += `💵 *TOTAL: ₹${subtotal + fee - (user.discount || 0)}*\n`;
+        sum += `💳 *Payment:* COD (Cash on Delivery)\n`;
+        sum += `━━━━━━━━━━━━━━━━━━━━\n`;
         sum += `1️⃣ Confirm Order\n`;
         sum += `2️⃣ Cancel\n`;
         sum += `0️⃣ *Take one step Back* 🔙`;
