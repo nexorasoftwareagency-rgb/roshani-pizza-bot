@@ -15,21 +15,21 @@
 
     <script>
         // Seamless Loading Engine
-        if (localStorage.getItem('adminIsLoggedIn') === 'true') {
+        const adminIsLoggedIn = localStorage.getItem('adminIsLoggedIn') === 'true';
+        if (adminIsLoggedIn) {
             document.documentElement.classList.add('seamless-mode');
         }
         
         // Version Enforcement
-        const ADMIN_VERSION = '4.6.4';
+        const ADMIN_VERSION = '4.6.5';
         if (localStorage.getItem('admin_app_version') !== ADMIN_VERSION) {
             localStorage.setItem('admin_app_version', ADMIN_VERSION);
-            // Optionally clear specific caches if needed
         }
     </script>
 
     <!-- Dynamic Branding Engine -->
-    <script src="branding.js?v=4.6.4"></script>
-    <script src="firebase-config.js?v=4.6.4"></script>
+    <script src="branding.js?v=4.6.5"></script>
+    <script src="firebase-config.js?v=4.6.5"></script>
 
     <link rel="stylesheet" href="style.css?v=4.6.4">
     <link rel="stylesheet" href="mobile-overrides.css?v=4.6.4">
@@ -69,10 +69,40 @@
         <div class="loader-bar-v4">
             <div class="loader-progress-v4"></div>
         </div>
+
+        <div class="skeleton-container-admin">
+            <div class="skeleton-sidebar-admin">
+                <div class="skeleton-item" style="height: 40px; margin-bottom: 30px;"></div>
+                <div class="skeleton-item" style="height: 30px; margin-bottom: 20px;"></div>
+                <div class="skeleton-item" style="height: 30px; margin-bottom: 20px;"></div>
+                <div class="skeleton-item" style="height: 30px; margin-bottom: 20px;"></div>
+                <div class="skeleton-item" style="height: 30px; margin-bottom: 20px;"></div>
+            </div>
+            <div class="skeleton-main-admin">
+                <div class="skeleton-header-admin">
+                    <div class="skeleton-item" style="height: 30px; width: 200px;"></div>
+                    <div class="skeleton-item" style="height: 40px; width: 40px; border-radius: 50%;"></div>
+                </div>
+                <div class="skeleton-grid-admin">
+                    <div class="skeleton-card-admin" style="height: 120px;"></div>
+                    <div class="skeleton-card-admin" style="height: 120px;"></div>
+                    <div class="skeleton-card-admin" style="height: 120px;"></div>
+                    <div class="skeleton-card-admin" style="height: 120px;"></div>
+                </div>
+                <div class="skeleton-card-admin" style="height: 300px; margin-top: 30px;"></div>
+            </div>
+        </div>
     </div>
 
     <!-- LOGIN (Ultra Premium v4) -->
-    <div id="authOverlay" class="login-container-v4" title="Admin Login Screen">
+    <script>
+        // Apply 'hidden' class immediately if likely logged in to prevent flash
+        if (localStorage.getItem('adminIsLoggedIn') === 'true') {
+            document.write('<div id="authOverlay" class="login-container-v4 hidden" title="Admin Login Screen">');
+        } else {
+            document.write('<div id="authOverlay" class="login-container-v4" title="Admin Login Screen">');
+        }
+    </script>
         <div class="login-card-v4 animate-fade-in-up">
             <form id="loginForm" class="login-form-v4" title="Sign into the Admin Dashboard">
                 <div class="login-logo-container">
