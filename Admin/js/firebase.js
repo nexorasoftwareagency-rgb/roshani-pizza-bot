@@ -63,6 +63,7 @@ if (!fb.apps.length) {
 
 export const db = fb.database();
 export const auth = fb.auth();
+export const messaging = fb.messaging.isSupported() ? fb.messaging() : null;
 export const ServerValue = fb.database.ServerValue;
 export const EmailAuthProvider = fb.auth.EmailAuthProvider;
 
