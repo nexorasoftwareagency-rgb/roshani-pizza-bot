@@ -1,7 +1,7 @@
 import { state } from '../state.js';
 import { Outlet } from '../firebase.js';
 import { ui } from '../ui.js';
-import { logAudit, escapeHtml, formatDate, haptic } from '../utils.js';
+import { logAudit, escapeHtml, formatDate, haptic, getISTDateString } from '../utils.js';
 
 // --- CUSTOMERS ---
 
@@ -124,33 +124,41 @@ export function generateCustomReport() {
     const ordersRef = Outlet.ref("orders");
     console.log(`[Reports] Generating report from path: ${ordersRef.toString()}`);
     
-    ordersRef.once("value", snap => {
+    try {
+        console.log(`[Report] Starting generation for ${from} to ${to}...`);
+        
+        // Broaden range by 1 day to catch IST/UTC drift, then filter strictly client-side
+        const dFrom = new Date(from); dFrom.setDate(dFrom.getDate() - 1);
+        const dTo = new Date(to); dTo.setDate(dTo.getDate() + 1);
+        
+        const qStart = `${dFrom.toISOString().split('T')[0]}T00:00:00.000Z`;
+        const qEnd = `${dTo.toISOString().split('T')[0]}T23:59:59.999Z`;
+
+        const [customersSnap, ordersSnap] = await Promise.all([
+            Outlet.ref("customers").once("value"),
+            Outlet.ref("orders").orderByChild("createdAt").startAt(qStart).endAt(qEnd).once("value")
+        ]);
+
+        const customers = customersSnap.val() || {};
         let totalRev = 0;
         let totalOrd = 0;
         salesData = [];
 
-        snap.forEach(child => {
+        ordersSnap.forEach(child => {
             const o = child.val();
-            // Standardize outlet comparison
-            if (o.outlet && state.currentOutlet && o.outlet.toLowerCase().trim() !== state.currentOutlet.toLowerCase().trim()) return;
-            if (o.status === "Cancelled") return;
+            if (!o) return;
+
+            // IST Date Normalization
+            const dateStr = getISTDateString(o.createdAt);
             
-            let itemDate;
-            try {
-                itemDate = new Date(o.createdAt);
-            } catch (e) { return; }
-
-            if (isNaN(itemDate.getTime())) return;
-            const dateStr = itemDate.toISOString().split('T')[0];
-
-            // Apply date filter only if both dates are provided
-            const shouldInclude = (!from || !to) || (dateStr >= from && dateStr <= to);
-            if (shouldInclude) {
-                totalRev += Number(o.total || 0);
+            if (dateStr >= from && dateStr <= to) {
+                totalRev += parseFloat(o.total || 0);
                 totalOrd++;
                 salesData.push({ id: child.key, ...o, dateStr });
             }
         });
+
+        console.log(`[Report] Processed ${salesData.length} orders matching range.`);
 
         // Update KPI Cards & Period
         const fromDate = from ? formatDate(new Date(from).getTime()) : "Start";
@@ -204,7 +212,11 @@ export function generateCustomReport() {
 
         // Render visual chart
         renderRevenueChart(salesData);
-    });
+    } catch (e) {
+        console.error("[Reports] Generation Error:", e);
+        showToast("Error generating report", "error");
+        tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px; color:var(--danger);'>⚠️ Failed to load report data.</td></tr>";
+    }
 }
 
 let revenueChart; // Chart instance

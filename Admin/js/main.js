@@ -70,9 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const fromInput = document.getElementById('orderFrom');
     const toInput = document.getElementById('orderTo');
+    const rFrom = document.getElementById('reportFrom');
+    const rTo = document.getElementById('reportTo');
+
     if (fromInput && toInput && !fromInput.value && !toInput.value) {
         fromInput.value = formatDate(yesterday);
         toInput.value = formatDate(today);
+    }
+    if (rFrom && rTo && !rFrom.value && !rTo.value) {
+        rFrom.value = formatDate(yesterday);
+        rTo.value = formatDate(today);
     }
 
     initAuth();
@@ -221,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reports
         const btnGenerateReport = document.getElementById('btnGenerateReport');
         if (btnGenerateReport) btnGenerateReport.addEventListener('click', () => {
-            if (window.generateReport) window.generateReport();
+            if (generateReport) generateReport();
         });
 
         const btnWhatsappReport = document.getElementById('btnWhatsappReport');
@@ -254,8 +261,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        bindFn('btnDownloadExcel', 'downloadExcel');
-        bindFn('btnDownloadPDF', 'downloadPDF');
+        document.getElementById('btnDownloadExcel')?.addEventListener('click', () => downloadExcel?.());
+        document.getElementById('btnDownloadPDF')?.addEventListener('click', () => downloadPDF?.());
     };
 
     // --- 2. Dynamic Event Delegation ---
