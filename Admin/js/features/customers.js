@@ -101,7 +101,7 @@ export function loadReports() {
 /**
  * Generates a sales report based on the selected date range.
  */
-export function generateCustomReport() {
+export async function generateCustomReport() {
     const fromInput = document.getElementById("reportFrom");
     const toInput = document.getElementById("reportTo");
     const from = fromInput?.value?.trim() || '';
