@@ -1,6 +1,6 @@
-import { db, auth, secondaryAuth, secondaryAuthAvailable, Outlet } from '../firebase.js';
+import { db, auth, secondaryAuth, secondaryAuthAvailable, Outlet, ServerValue } from '../firebase.js';
 import { state } from '../state.js';
-import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm } from '../utils.js';
+import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm, addRiderNotification } from '../utils.js';
 import { uploadImage } from '../firebase.js';
 import { requireAdminReauth } from '../auth.js';
 import { populateRiderSelect } from './rider-analytics.js';
@@ -470,24 +470,21 @@ export function toggleRiderPass() {
  * SETTLE RIDER WALLET
  * Calculates total cash from last 48 hours and marks orders as settled.
  */
-export async function settleRiderWallet(riderId, riderName) {
+export async function settleRiderWallet(riderId, riderName, customTimeLimit = null) {
     // Show a loading toast
     showToast("Calculating pending cash...", "info");
     haptic();
 
     try {
-        const timeLimit = Date.now() - (48 * 60 * 60 * 1000);
+        const timeLimit = customTimeLimit || (Date.now() - (48 * 60 * 60 * 1000));
         let pendingCash = 0;
         let ordersToSettle = [];
 
         // We must query both pizza and cake outlets
         const outlets = ['pizza', 'cake'];
         for (const outlet of outlets) {
-            // Query orders for this rider in the last 48 hours
+            // Query orders for this rider
             const ordersRef = db.ref(`${outlet}/orders`);
-            // We'll query by riderId directly using indexing if possible, 
-            // but we might need to fetch and filter if index is not perfect.
-            // Since we indexOn riderId, we can do this:
             const snap = await ordersRef.orderByChild('riderId').equalTo(riderId).once('value');
             
             if (snap.exists()) {
@@ -495,8 +492,9 @@ export async function settleRiderWallet(riderId, riderName) {
                     const o = child.val();
                     const orderTime = o.createdAt || o.timestamp || o.assignedAt || 0;
                     const isCash = (o.paymentMethod || "").toUpperCase() === "CASH";
+                    const status = (o.status || "").toLowerCase();
                     
-                    if (orderTime >= timeLimit && isCash && o.status === "delivered" && !o.settled) {
+                    if (orderTime >= timeLimit && isCash && status === "delivered" && !o.settled) {
                         pendingCash += Number(o.total || 0);
                         ordersToSettle.push({ outlet: outlet, id: child.key });
                     }
@@ -529,6 +527,35 @@ export async function settleRiderWallet(riderId, riderName) {
         await db.ref().update(updates);
         logAudit("Riders", `Settled Wallet for ${riderName}: ₹${pendingCash}`, riderId);
         showToast(`Successfully settled ₹${pendingCash} for ${riderName}.`, "success");
+
+        // --- AUTOMATED NOTIFICATIONS ---
+        try {
+            // 1. In-App Notification
+            addRiderNotification(riderId, "Settlement Complete", `Settled ₹${pendingCash} for ${ordersToSettle.length} orders.`, "settlement");
+
+            // 2. WhatsApp Notification via Bot
+            const rider = state.ridersList.find(r => r.id === riderId);
+            const rawPhone = rider?.phone || "";
+            const cleanPhone = rawPhone.replace(/\D/g, '').slice(-10);
+
+            if (cleanPhone && cleanPhone.length === 10) {
+                const message = `Hello ${riderName}! 🌟\n\nYour cash settlement has been completed successfully.\n\n💰 *Total Collected:* ₹${pendingCash}\n📦 *Orders Cleared:* ${ordersToSettle.length}\n✅ *Status:* Settled\n\nThank you for your hard work! 🙏`;
+                
+                // Use the first order's outlet or default to pizza
+                const botOutlet = ordersToSettle[0]?.outlet || 'pizza';
+                const cmdRef = db.ref(`bot/${botOutlet}/commands`).push();
+                
+                await cmdRef.set({
+                    action: "SEND_GENERIC_MESSAGE",
+                    phone: cleanPhone,
+                    message: message,
+                    timestamp: ServerValue.TIMESTAMP
+                });
+                console.log(`[Riders] WhatsApp settlement notification triggered for ${cleanPhone} via ${botOutlet} bot.`);
+            }
+        } catch (notifError) {
+            console.warn("[Riders] Post-settlement notification failed:", notifError);
+        }
 
     } catch (error) {
         console.error("Settlement Error:", error);

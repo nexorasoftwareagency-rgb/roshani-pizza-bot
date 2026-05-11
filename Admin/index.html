@@ -1348,6 +1348,8 @@
                         <input type="date" id="riderReportTo" class="form-input report-date-input" title="To Date">
                         <button id="btnGenerateRiderReport" class="btn-primary report-gen-btn"
                             title="Generate Performance Data">Analyze</button>
+                        <button id="btnSettleRiderAnalytics" class="btn-secondary report-gen-btn"
+                            title="Settle Pending Cash Balance" style="border-color: var(--primary); color: var(--primary);">Settle Balance</button>
                     </div>
                 </div>
 
@@ -1357,6 +1359,13 @@
                         <div class="info-wrap">
                             <span class="val" id="riderStatEarnings">₹0</span>
                             <span class="lbl">Total Earnings</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card-v4 orange">
+                        <div class="icon-wrap orange"><i data-lucide="banknote"></i></div>
+                        <div class="info-wrap">
+                            <span class="val" id="riderStatPendingCash">₹0</span>
+                            <span class="lbl">Pending Cash</span>
                         </div>
                     </div>
                     <div class="kpi-card-v4 success">
@@ -2033,8 +2042,8 @@
         </div>
     </div>
 
-    <script src="receipt-templates.js?v=4.7.0"></script>
-    <script type="module" src="js/main.js?v=4.7.0"></script>
+    <script src="receipt-templates.js?v=4.7.2"></script>
+    <script type="module" src="js/main.js?v=4.7.2"></script>
 </body>
 
 </html>
