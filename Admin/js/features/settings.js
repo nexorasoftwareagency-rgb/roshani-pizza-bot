@@ -55,10 +55,10 @@ function validateFSSAI(fssai) {
 }
 
 /**
- * Validates Backup/Access Code (6 digits)
+ * Validates Backup/Access Code (4 digits)
  */
 function validateBackupCode(code) {
-    if (!/^[0-9]{6}$/.test(code)) return { valid: false, msg: "Backup Code must be 6 digits" };
+    if (!/^[0-9]{4}$/.test(code)) return { valid: false, msg: "Backup Code must be 4 digits" };
     return { valid: true };
 }
 
