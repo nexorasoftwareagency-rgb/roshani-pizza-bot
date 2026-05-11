@@ -1928,6 +1928,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Pull to Refresh Logic
     let touchStart = 0;
     const ptr = document.getElementById('ptrIndicator');
+    const PTR_THRESHOLD = 150; // Increased threshold for lower sensitivity
     
     window.addEventListener('touchstart', e => {
         if (window.scrollY === 0) touchStart = e.touches[0].pageY;
@@ -1937,20 +1938,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (touchStart === 0) return;
         const touch = e.touches[0].pageY;
         const diff = touch - touchStart;
-        if (diff > 0 && window.scrollY === 0) {
+        
+        // Only start showing indicator if pull is at least 30px
+        if (diff > 30 && window.scrollY === 0) {
             ptr.classList.add('active');
             const rotation = Math.min(diff * 2, 360);
-            ptr.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
-            if (diff > 80) {
+            ptr.style.transform = `translateX(-50%) translateY(${Math.min(diff/2, 60)}px) rotate(${rotation}deg)`;
+            
+            if (diff > PTR_THRESHOLD) {
                 ptr.classList.add('refreshing');
                 if (!ptr._haptic) { window.haptic(30); ptr._haptic = true; }
+            } else {
+                ptr.classList.remove('refreshing');
+                ptr._haptic = false;
             }
         }
     }, { passive: true });
 
     window.addEventListener('touchend', e => {
         const touchEnd = e.changedTouches[0].pageY;
-        if (touchEnd - touchStart > 80 && window.scrollY === 0) {
+        if (touchEnd - touchStart > PTR_THRESHOLD && window.scrollY === 0) {
             console.log("[UI] Gesture Refresh Triggered");
             window.completeSiteRefresh();
         } else {
