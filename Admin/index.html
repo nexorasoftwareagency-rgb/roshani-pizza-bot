@@ -15,24 +15,24 @@
 
     <script>
         // Seamless Loading Engine
-        const adminIsLoggedIn = localStorage.getItem('adminIsLoggedIn') === 'true';
-        if (adminIsLoggedIn) {
+        if (localStorage.getItem('adminIsLoggedIn') === 'true') {
             document.documentElement.classList.add('seamless-mode');
         }
         
         // Version Enforcement
-        const ADMIN_VERSION = '4.6.5';
+        const ADMIN_VERSION = '4.7.0';
         if (localStorage.getItem('admin_app_version') !== ADMIN_VERSION) {
             localStorage.setItem('admin_app_version', ADMIN_VERSION);
+            // Optionally clear specific caches if needed
         }
     </script>
 
     <!-- Dynamic Branding Engine -->
-    <script src="branding.js?v=4.6.5"></script>
-    <script src="firebase-config.js?v=4.6.5"></script>
+    <script src="branding.js?v=4.7.0"></script>
+    <script src="firebase-config.js?v=4.7.0"></script>
 
-    <link rel="stylesheet" href="style.css?v=4.6.4">
-    <link rel="stylesheet" href="mobile-overrides.css?v=4.6.4">
+    <link rel="stylesheet" href="style.css?v=4.7.0">
+    <link rel="stylesheet" href="mobile-overrides.css?v=4.7.0">
     <link rel="manifest" href="manifest-pizza.json?v=2">
     <link rel="icon" type="image/png" href="icon-512.png">
     <link rel="apple-touch-icon" href="icon-512.png">
@@ -47,7 +47,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-check-compat.js" crossorigin="anonymous"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js" crossorigin="anonymous"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
@@ -70,40 +69,10 @@
         <div class="loader-bar-v4">
             <div class="loader-progress-v4"></div>
         </div>
-
-        <div class="skeleton-container-admin">
-            <div class="skeleton-sidebar-admin">
-                <div class="skeleton-item" style="height: 40px; margin-bottom: 30px;"></div>
-                <div class="skeleton-item" style="height: 30px; margin-bottom: 20px;"></div>
-                <div class="skeleton-item" style="height: 30px; margin-bottom: 20px;"></div>
-                <div class="skeleton-item" style="height: 30px; margin-bottom: 20px;"></div>
-                <div class="skeleton-item" style="height: 30px; margin-bottom: 20px;"></div>
-            </div>
-            <div class="skeleton-main-admin">
-                <div class="skeleton-header-admin">
-                    <div class="skeleton-item" style="height: 30px; width: 200px;"></div>
-                    <div class="skeleton-item" style="height: 40px; width: 40px; border-radius: 50%;"></div>
-                </div>
-                <div class="skeleton-grid-admin">
-                    <div class="skeleton-card-admin" style="height: 120px;"></div>
-                    <div class="skeleton-card-admin" style="height: 120px;"></div>
-                    <div class="skeleton-card-admin" style="height: 120px;"></div>
-                    <div class="skeleton-card-admin" style="height: 120px;"></div>
-                </div>
-                <div class="skeleton-card-admin" style="height: 300px; margin-top: 30px;"></div>
-            </div>
-        </div>
     </div>
 
     <!-- LOGIN (Ultra Premium v4) -->
-    <script>
-        // Apply 'hidden' class immediately if likely logged in to prevent flash
-        if (localStorage.getItem('adminIsLoggedIn') === 'true') {
-            document.write('<div id="authOverlay" class="login-container-v4 hidden" title="Admin Login Screen">');
-        } else {
-            document.write('<div id="authOverlay" class="login-container-v4" title="Admin Login Screen">');
-        }
-    </script>
+    <div id="authOverlay" class="login-container-v4" title="Admin Login Screen">
         <div class="login-card-v4 animate-fade-in-up">
             <form id="loginForm" class="login-form-v4" title="Sign into the Admin Dashboard">
                 <div class="login-logo-container">
@@ -484,7 +453,7 @@
                         <table class="premium-table-v4">
                             <thead>
                                 <tr class="table-header-row">
-                                    
+
                                     <th>Order ID</th>
                                     <th>Customer</th>
                                     <th>Address</th>
@@ -509,7 +478,7 @@
                         <table class="premium-table-v4">
                             <thead>
                                 <tr class="table-header-row">
-                                    
+
                                     <th>Order ID</th>
                                     <th>Customer</th>
                                     <th>Items</th>
@@ -1698,8 +1667,6 @@
                                         data-method="Cash" title="Pay by Cash">💵 Cash</button>
                                     <button class="walkin-pay-btn" data-action="selectWalkinPayment" data-method="UPI"
                                         title="Pay by UPI / Scanner">📱 UPI</button>
-                                    <button class="walkin-pay-btn" data-action="selectWalkinPayment" data-method="Card"
-                                        title="Pay by Credit/Debit Card">💳 Card</button>
                                 </div>
                             </div>
 
@@ -2066,8 +2033,8 @@
         </div>
     </div>
 
-    <script src="receipt-templates.js?v=4.6.0"></script>
-    <script type="module" src="js/main.js?v=4.6.0"></script>
+    <script src="receipt-templates.js?v=4.7.0"></script>
+    <script type="module" src="js/main.js?v=4.7.0"></script>
 </body>
 
 </html>

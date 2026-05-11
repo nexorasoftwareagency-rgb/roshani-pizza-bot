@@ -48,6 +48,7 @@
         appleIcon.href = isPizza ? 'icon-pizza.webp' : 'icon-cake.webp';
 
         // 4. CRITICAL: SWAP PWA MANIFEST
+        // This ensures that when you "Add to Home Screen", you get the right app name/icon
         let manifest = document.querySelector('link[rel="manifest"]');
         const manifestFile = isPizza ? 'manifest-pizza.json' : 'manifest-cake.json';
 
@@ -58,21 +59,6 @@
             newManifest.rel = 'manifest';
             newManifest.href = manifestFile;
             document.head.appendChild(newManifest);
-        }
-
-        // 5. UPDATE INITIAL LOADER BRANDING
-        const loaderText = document.querySelector('.loader-text-v4');
-        if (loaderText) {
-            loaderText.textContent = isPizza ? 'ROSHANI PIZZA' : 'ROSHANI CAKES';
-        }
-
-        const loaderIcon = document.querySelector('.loader-logo-v4 i');
-        if (loaderIcon) {
-            loaderIcon.setAttribute('data-lucide', isPizza ? 'pizza' : 'cake');
-            // Trigger Lucide refresh if already loaded
-            if (window.lucide) {
-                window.lucide.createIcons();
-            }
         }
     };
 

@@ -479,26 +479,6 @@ html, body {
     align-items: center;
     justify-content: center;
     transition: opacity 0.5s ease, visibility 0.5s ease;
-    overflow: hidden;
-}
-
-/* Seamless Mode Adjustments */
-html.seamless-mode #initial-loader {
-    justify-content: flex-start;
-}
-
-html.seamless-mode .loader-logo-v4,
-html.seamless-mode .loader-text-v4,
-html.seamless-mode .loader-bar-v4 {
-    display: none;
-}
-
-html.seamless-mode .skeleton-container-admin {
-    display: flex;
-}
-
-html.seamless-mode #authOverlay {
-    display: none !important;
 }
 
 #initial-loader.fade-out {
@@ -563,86 +543,52 @@ html.seamless-mode #authOverlay {
     color: #ffffff;
 }
 
-/* SKELETON LOADING (Admin Premium) */
-.skeleton-container-admin {
-    display: none;
-    width: 100%;
-    height: 100%;
-    flex-direction: row;
-    position: absolute;
-    top: 0;
-    left: 0;
-    background: var(--neutral-50);
-    z-index: 100;
+@keyframes pulse-simple {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
 }
 
-.skeleton-sidebar-admin {
-    width: 260px;
-    height: 100%;
-    background: white;
-    padding: 30px 20px;
-    border-right: 1px solid var(--neutral-200);
-}
-
-.skeleton-main-admin {
-    flex: 1;
-    padding: 30px;
-    background: var(--neutral-50);
-}
-
-.skeleton-header-admin {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 40px;
-}
-
-.skeleton-grid-admin {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-}
-
-.skeleton-item {
-    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-    background-size: 200% 100%;
-    animation: skeleton-shimmer 2s infinite linear;
+.loading-placeholder {
+    animation: pulse-simple 2s ease-in-out infinite;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.02));
     border-radius: 12px;
-}
-
-.skeleton-card-admin {
-    background: white;
-    border-radius: 20px;
     padding: 20px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-    animation: skeleton-shimmer 2s infinite linear;
-    background: linear-gradient(90deg, #ffffff 25%, #f8fafc 50%, #ffffff 75%);
-    background-size: 200% 100%;
+    text-align: center;
+    color: var(--text-muted);
 }
 
-@keyframes skeleton-shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+
+.font-700 { font-weight: 700; }
+.p-8 { padding: 8px; }
+
+/* --- Seamless Loading States --- */
+html.seamless-mode #initial-loader {
+    background: var(--neutral-100) !important;
 }
 
-/* Seamless States */
 html.seamless-mode #initial-loader .loader-logo-v4,
 html.seamless-mode #initial-loader .loader-text-v4,
 html.seamless-mode #initial-loader .loader-bar-v4 {
     display: none !important;
 }
 
-html.seamless-mode #initial-loader .skeleton-container-admin {
-    display: flex !important;
-}
-
-@media screen and (max-width: 768px) {
-    .skeleton-sidebar-admin {
-        display: none;
-    }
-    .skeleton-grid-admin {
-        grid-template-columns: repeat(2, 1fr);
-    }
+/* Add a shimmer effect to seamless mode loader if desired */
+html.seamless-mode #initial-loader::after {
+    content: '';
+    position: fixed;
+    top: 70px; /* Header area */
+    left: 20px;
+    right: 20px;
+    height: 150px;
+    background: linear-gradient(90deg, transparent, rgba(0,0,0,0.03), transparent);
+    animation: shimmer 1.5s infinite;
 }
 
 /* 4. LAYOUT & SIDEBAR */
@@ -1597,7 +1543,6 @@ tbody tr:hover td:first-child {
     background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.1), rgba(var(--primary-rgb), 0.05));
 }
 
-/* -------------------------------------------------------------------------- */
 
 /* POS Selection Modal Refactor Styles */
 .size-grid {
@@ -1772,10 +1717,6 @@ tbody tr:hover td:first-child {
     border-color: rgba(99, 102, 241, 0.2);
 }
 
-.badge-payment-v4[data-method="card"] {
-    background: rgba(245, 158, 11, 0.1);
-    color: #D97706;
-    border-color: rgba(245, 158, 11, 0.2);
 }
 
 .badge {

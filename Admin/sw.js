@@ -1,36 +1,9 @@
-// ROSHANI ERP SERVICE WORKER
-importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js');
-
-firebase.initializeApp({
-  apiKey: "AIzaSyDcx-SN5eak8PAs-8NtTGelJ_sICr5yb7Y",
-  authDomain: "prashant-pizza-e86e4.firebaseapp.com",
-  databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
-  projectId: "prashant-pizza-e86e4",
-  messagingSenderId: "857471482885",
-  appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c"
-});
-
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  console.log('[sw.js] Background message received:', payload);
-  const title = payload.notification.title || "New ERP Update";
-  const options = {
-    body: payload.notification.body || "Open your dashboard to see what's new.",
-    icon: './icon-pizza.webp',
-    badge: './icon-pizza.webp',
-    data: { url: './index.html' }
-  };
-  self.registration.showNotification(title, options);
-});
-
-// Fail-fast if not on HTTPS
+// Fail-fast if not on HTTPS (security best practice for Phase 2.20)
 if (self.location.protocol !== 'https:' && self.location.hostname !== 'localhost' && self.location.hostname !== '127.0.0.1') {
   throw new Error('Service Worker requires HTTPS');
 }
 
-const CACHE_NAME = 'roshani-erp-v4.0';
+const CACHE_NAME = 'roshani-erp-v4.3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -116,6 +89,23 @@ self.addEventListener('fetch', (event) => {
         return caches.match(event.request);
       })
   );
+});
+
+// 4. Push Notification Event
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : { title: 'New Alert', body: 'Check your dashboard.' };
+  const options = {
+    body: data.body,
+    icon: './icon-pizza.webp',
+    badge: './icon-pizza.webp',
+    vibrate: [100, 50, 100],
+    data: { url: './index.html' },
+    actions: [
+      { action: 'open', title: 'Open' },
+      { action: 'dismiss', title: 'Dismiss' }
+    ]
+  };
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
 // 5. Notification Click Event
