@@ -479,6 +479,26 @@ html, body {
     align-items: center;
     justify-content: center;
     transition: opacity 0.5s ease, visibility 0.5s ease;
+    overflow: hidden;
+}
+
+/* Seamless Mode Adjustments */
+html.seamless-mode #initial-loader {
+    justify-content: flex-start;
+}
+
+html.seamless-mode .loader-logo-v4,
+html.seamless-mode .loader-text-v4,
+html.seamless-mode .loader-bar-v4 {
+    display: none;
+}
+
+html.seamless-mode .skeleton-container-admin {
+    display: flex;
+}
+
+html.seamless-mode #authOverlay {
+    display: none !important;
 }
 
 #initial-loader.fade-out {
@@ -553,6 +573,7 @@ html, body {
     top: 0;
     left: 0;
     background: var(--neutral-50);
+    z-index: 100;
 }
 
 .skeleton-sidebar-admin {
