@@ -29,6 +29,7 @@ const { getData, setData, updateData, db, pushData, getUserProfile, saveUserProf
 const sessions = {};
 const processedStatus = {};
 const processedOTP = {};
+const processedMessages = new Set(); // To prevent duplicate message handling
 let reportInterval = null;
 let dailyReportSent = false;
 let weeklyReportSent = false;
@@ -1257,12 +1258,32 @@ async function startBot() {
     sock.ev.on('messages.upsert', async (m) => {
         try {
             if (m.type !== 'notify') return;
-            const msg = m.messages[0];
-            if (!msg.message || msg.key.fromMe) return;
+            
+            for (const msg of m.messages) {
+                if (!msg.message || msg.key.fromMe) continue;
 
-            const sender = msg.key.remoteJid;
-            const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
-            const pushName = msg.pushName || "";
+                const messageId = msg.key.id;
+                if (processedMessages.has(messageId)) continue;
+                processedMessages.add(messageId);
+                
+                // Keep cache size manageable
+                if (processedMessages.size > 500) {
+                    const first = processedMessages.values().next().value;
+                    processedMessages.delete(first);
+                }
+
+                // Ignore messages older than 60 seconds to avoid backlog spam on restart
+                const messageTimestamp = (msg.messageTimestamp || 0) * 1000;
+                if (Date.now() - messageTimestamp > 60000) {
+                    console.log(`[Bot] Skipping old message from ${msg.key.remoteJid}`);
+                    continue;
+                }
+
+                const sender = msg.key.remoteJid;
+                const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
+                const pushName = msg.pushName || "";
+
+                await (async () => {
 
             if (!sessions[sender]) {
                 const profile = await getUserProfile(sender, OUTLET);
@@ -1675,8 +1696,11 @@ async function startBot() {
                     delete sessions[sender];
                     return;
                 }
-                return sendInvalidInputHelp(sock, sender, user);
+                await sendInvalidInputHelp(sock, sender, user);
+                return;
             }
+        })(); // End of message IIFE
+        } // End of message loop
 
         } catch (err) { console.error("Message Handler Error:", err); }
     });
