@@ -281,12 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`[Interaction] Click detected: Action=${action}, Tab=${tab}`, el);
 
             // Handle Bulk Selection
-            if (el.classList.contains('order-selector')) {
-                const id = el.dataset.id;
-                const { toggleOrderSelection } = await import('./features/orders.js');
-                toggleOrderSelection(id, el.checked);
-                return;
-            }
+
 
             if (tab) {
                 switchTab(tab);
@@ -301,31 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const price = el.getAttribute('data-price');
 
             switch (action) {
-                case 'selectAllOrders': {
-                    const { selectAllOrders } = await import('./features/orders.js');
-                    selectAllOrders(el.checked, 'orders');
-                    break;
-                }
-                case 'selectAllLive': {
-                    const { selectAllOrders: selectAllLive } = await import('./features/orders.js');
-                    selectAllLive(el.checked, 'live');
-                    break;
-                }
-                case 'bulkStatusUpdate': {
-                    const { bulkStatusUpdate } = await import('./features/orders.js');
-                    bulkStatusUpdate(el.dataset.status);
-                    break;
-                }
-                case 'bulkCancel': {
-                    const { bulkCancel } = await import('./features/orders.js');
-                    bulkCancel();
-                    break;
-                }
-                case 'clearSelection': {
-                    const { clearSelection } = await import('./features/orders.js');
-                    clearSelection();
-                    break;
-                }
+
                 case 'updateStatusFromDrawer': updateStatus(id, val); break;
                 case 'closeOrderDrawer': closeOrderDrawer(); break;
                 case 'chatOnWhatsapp': /* window.chatOnWhatsapp(id); */ break; 

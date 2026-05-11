@@ -34,6 +34,6 @@ export const state = {
     currentPOSModalAddons: {},
     currentActiveTab: 'dashboard',
     editingCartKey: null,
-    selectedOrders: new Set(), // Set of order IDs for bulk actions
+
     settingsDirty: false,      // Tracks unsaved changes in settings form
 };
