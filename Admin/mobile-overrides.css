@@ -6,10 +6,17 @@
 
     /* --- 1. GLOBAL MOBILE RESET --- */
     :root {
-        --safe-bottom: env(safe-area-inset-bottom);
-        --mobile-header-height: 64px;
+        --mobile-header-height: 60px;
+        --bottom-nav-height: 65px;
         --pos-header-height: 56px;
-        --pos-tabs-height: 54px;
+        --pos-tabs-height: 52px;
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+        
+        /* Professional Spacing & Radius */
+        --card-radius: clamp(12px, 4vw, 20px);
+        --section-padding: clamp(12px, 5vw, 20px);
+        --glass-bg: rgba(255, 255, 255, 0.9);
     }
 
     /* POS Immersion - Hide main header when in POS */
@@ -46,6 +53,16 @@
     body.pos-immersion-active .tab-content {
         padding-top: 0 !important;
         height: 100% !important;
+    }
+
+    body {
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow-x: hidden !important;
+        width: 100vw !important;
+        background: #f8fafc !important;
+        -webkit-font-smoothing: antialiased !important;
+        overscroll-behavior-y: none !important;
     }
 
     * {
@@ -140,13 +157,49 @@
         padding-bottom: 100px !important; /* Space for bottom nav */
     }
 
+    .scroll-x {
+        position: relative;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -10px;
+        padding: 0 10px;
+        width: calc(100% + 20px) !important;
+    }
+
+    .scroll-x::after {
+        content: 'Swipe \2192';
+        position: sticky;
+        right: 0;
+        top: 0;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--primary);
+        background: rgba(255, 255, 255, 0.9);
+        padding: 4px 8px;
+        border-radius: 4px;
+        opacity: 0.8;
+        pointer-events: none;
+        animation: fadeOutScroll 4s forwards;
+        z-index: 10;
+        display: block;
+        width: fit-content;
+        margin-left: auto;
+    }
+
+    @keyframes fadeOutScroll {
+        0%, 70% { opacity: 0.8; }
+        100% { opacity: 0; }
+    }
+
     .mobile-header {
         z-index: 4000 !important;
         position: fixed !important;
         top: 0;
         left: 0;
         right: 0;
-        height: var(--mobile-header-height) !important;
+        height: calc(var(--mobile-header-height) + var(--safe-top)) !important;
+        padding-top: var(--safe-top) !important;
         background: rgba(255, 255, 255, 0.8) !important;
         -webkit-backdrop-filter: blur(15px) saturate(160%) !important;
         backdrop-filter: blur(15px) saturate(160%) !important;
@@ -161,9 +214,56 @@
     .bottom-nav {
         z-index: 5000 !important;
         position: fixed !important;
-        bottom: 0;
-        left: 0;
-        right: 0;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: calc(var(--bottom-nav-height) + var(--safe-bottom)) !important;
+        background: rgba(255, 255, 255, 0.9) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        display: flex !important;
+        justify-content: space-around !important;
+        align-items: center !important;
+        padding: 0 10px var(--safe-bottom) !important;
+        border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+        box-shadow: 0 -10px 30px rgba(0,0,0,0.05) !important;
+    }
+
+    .bottom-nav .nav-item {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px !important;
+        color: var(--text-secondary) !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        position: relative !important;
+        background: transparent !important;
+        border: none !important;
+    }
+
+    .bottom-nav .nav-item i {
+        width: 22px !important;
+        height: 22px !important;
+        stroke-width: 2.5 !important;
+    }
+
+    .bottom-nav .nav-item.active {
+        color: var(--primary) !important;
+    }
+
+    .bottom-nav .nav-item.active::before {
+        content: '' !important;
+        position: absolute !important;
+        top: 0 !important;
+        width: 35px !important;
+        height: 3px !important;
+        background: var(--primary) !important;
+        border-radius: 0 0 10px 10px !important;
+        box-shadow: 0 2px 10px rgba(var(--primary-rgb), 0.3) !important;
     }
 
     .tab-pane {
@@ -392,8 +492,11 @@
     }
 
     body {
-        padding-bottom: calc(64px + var(--safe-bottom));
-        font-size: 13px;
+        padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 20px);
+        font-size: 14px; /* Increased from 13px for better readability */
+        line-height: 1.5;
+        background-color: #f8fafc;
+        -webkit-font-smoothing: antialiased;
     }
 
     /* --- 2. SIDEBAR NAVIGATION (DRAWER MODE) --- */
@@ -493,6 +596,12 @@
     select:focus, 
     textarea:focus {
         font-size: 16px !important;
+    }
+
+    .glass-card {
+        padding: var(--section-padding) !important;
+        border-radius: var(--card-radius) !important;
+        margin-bottom: 15px !important;
     }
 
     /* --- 5. FILTERS (SCROLLABLE BAR) --- */
@@ -702,14 +811,15 @@
     .mobile-cart-summary {
         display: flex !important;
         position: fixed !important;
-        bottom: calc(85px + var(--safe-bottom)) !important;
-        left: 15px !important;
-        right: 15px !important;
-        height: 64px !important;
-        background: rgba(17, 17, 17, 0.9) !important;
-        -webkit-backdrop-filter: blur(12px) !important;
-        backdrop-filter: blur(12px) !important;
-        border-radius: 20px !important;
+        bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 15px) !important;
+        left: 10px !important;
+        right: 10px !important;
+        height: auto !important;
+        min-height: 64px !important;
+        background: rgba(10, 10, 10, 0.95) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        backdrop-filter: blur(20px) !important;
+        border-radius: 18px !important;
         padding: 0 20px !important;
         z-index: 9500 !important;
         color: #fff !important;
@@ -721,8 +831,16 @@
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
-    .mobile-cart-summary.hidden {
+    .mobile-cart-summary.hidden,
+    body.pos-selection-mode .mobile-cart-summary {
         display: none !important;
+    }
+
+    .mobile-cart-summary .flex-between {
+        width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
     }
 
     .mobile-cart-summary .summary-icon {
@@ -744,7 +862,31 @@
     .mobile-cart-summary .summary-total {
         font-size: 16px;
         font-weight: 800;
-        color: var(--primary-color);
+        color: var(--primary);
+    }
+
+    .btn-checkout-mobile {
+        background: #fff !important;
+        color: #111 !important;
+        border: none !important;
+        padding: 8px 16px !important;
+        border-radius: 12px !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+        transition: transform 0.2s ease !important;
+    }
+
+    .btn-checkout-mobile:active {
+        transform: scale(0.95);
+    }
+
+    .btn-checkout-mobile i {
+        width: 14px !important;
+        height: 14px !important;
     }
 
     .walkin-cart .sticky-cart {
@@ -1033,7 +1175,7 @@
         font-size: 10px !important;
         letter-spacing: 0.5px !important;
         flex: 1 !important;
-        min-width: 80px !important;
+        min-width: clamp(70px, 22vw, 90px) !important;
     }
 
     /* Fix cutting off of dropdowns/inputs in cards */
@@ -1067,8 +1209,8 @@
 
     .kpi-row {
         grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px !important;
-        padding: 8px !important;
+        gap: clamp(6px, 2vw, 12px) !important;
+        padding: clamp(6px, 2vw, 12px) !important;
     }
 
     .kpi-card, .glass-card, .panel {
@@ -1079,7 +1221,8 @@
     }
 
     .kpi-card .kpi-value {
-        font-size: 18px !important;
+        font-size: clamp(16px, 5vw, 20px) !important;
+        font-weight: 800 !important;
     }
 
     /* Premium Component Mobile Shinkage */
@@ -1134,7 +1277,8 @@
 
 
     .kpi-card .kpi-label {
-        font-size: 11px !important;
+        font-size: clamp(10px, 3vw, 11px) !important;
+        letter-spacing: 0.2px !important;
     }
 
     /* --- 12. MODAL OPTIMIZATIONS --- */
@@ -1198,6 +1342,55 @@
     .btn-add-large {
         padding: 12px 20px !important;
         font-size: 14px !important;
+    }
+
+    /* --- 14. TABLE MOBILE OPTIMIZATION --- */
+    .glass-table {
+        background: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+        width: 100% !important;
+        border-collapse: separate !important;
+        border-spacing: 0 10px !important;
+    }
+
+    .glass-table thead {
+        background: #f1f5f9 !important;
+    }
+
+    .glass-table th {
+        padding: 12px 15px !important;
+        font-size: 11px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        color: #64748b !important;
+        font-weight: 700 !important;
+        border: none !important;
+    }
+
+    .glass-table tr {
+        background: white !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.02) !important;
+    }
+
+    .glass-table td {
+        padding: 16px 15px !important;
+        font-size: 13px !important;
+        border: none !important;
+        border-top: 1px solid #f1f5f9 !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+    }
+
+    .glass-table tr td:first-child {
+        border-left: 1px solid #f1f5f9 !important;
+        border-top-left-radius: 12px !important;
+        border-bottom-left-radius: 12px !important;
+    }
+
+    .glass-table tr td:last-child {
+        border-right: 1px solid #f1f5f9 !important;
+        border-top-right-radius: 12px !important;
+        border-bottom-right-radius: 12px !important;
     }
 }
 

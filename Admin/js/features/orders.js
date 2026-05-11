@@ -46,7 +46,7 @@ let _liveOrdersValueCb = null;
  * Syncs orders across outlets and triggers alerts for new ones.
  */
 export function initRealtimeListeners() {
-    // Detach any previous listeners
+    // Detach any previous listeners (using the current outlet as a safety, but we'll try both for good measure)
     ['pizza', 'cake'].forEach(o => {
         const r = db.ref(`${o}/orders`);
         if (_ordersChildCb) r.off("child_added", _ordersChildCb);
@@ -67,6 +67,7 @@ export function initRealtimeListeners() {
 
     let firstLoad = true;
     const loadTime = Date.now();
+    const currentOrdersRef = Outlet.ref("orders");
 
     // 1. New Orders Listener (Alerts)
     _ordersChildCb = snap => {
@@ -80,25 +81,23 @@ export function initRealtimeListeners() {
             if (order.status === "Placed" && isRecent && isPostLoad) {
                 showAlert(order);
                 playNotificationSound();
-                addNotification(`New Order #${snap.key.slice(-5)}`, `Order for ₹${order.total} is placed.`, 'new', order.outlet);
+                addNotification(`New Order #${snap.key.slice(-5)}`, `Order for ₹${order.total} is placed.`, 'new', state.currentOutlet);
                 setTimeout(() => { highlightOrder(snap.key); }, 1000);
             }
         }
     };
 
-    db.ref("pizza/orders").on("child_added", _ordersChildCb);
-    db.ref("cake/orders").on("child_added", _ordersChildCb);
+    currentOrdersRef.on("child_added", _ordersChildCb);
 
     // 2. Status Transitions
     _ordersChangedCb = snap => {
         const order = snap.val();
         if (order && order.status === "Delivered") {
-            addNotification(`Order Delivered (#${snap.key.slice(-5)})`, `Customer: ${order.customerName || 'Walk-in'} • ₹${order.total}`, 'delivered', order.outlet);
+            addNotification(`Order Delivered (#${snap.key.slice(-5)})`, `Customer: ${order.customerName || 'Walk-in'} • ₹${order.total}`, 'delivered', state.currentOutlet);
         }
     };
 
-    db.ref("pizza/orders").on("child_changed", _ordersChangedCb);
-    db.ref("cake/orders").on("child_changed", _ordersChangedCb);
+    currentOrdersRef.on("child_changed", _ordersChangedCb);
 
     // 3. Main Value Sync (Rendering) with Pagination
     const fromDate = document.getElementById("orderFrom")?.value;
@@ -159,6 +158,22 @@ export function initRealtimeListeners() {
         }
     };
     _liveOrdersRef.on("value", _liveOrdersValueCb);
+}
+
+export function cleanupOrders() {
+    console.log("[Orders] Detaching listeners...");
+    ['pizza', 'cake'].forEach(o => {
+        const r = db.ref(`${o}/orders`);
+        r.off();
+    });
+    if (_ordersRef) _ordersRef.off();
+    if (_liveOrdersRef) _liveOrdersRef.off();
+    _ordersRef = null;
+    _liveOrdersRef = null;
+    _ordersValueCb = null;
+    _ordersChildCb = null;
+    _ordersChangedCb = null;
+    _liveOrdersValueCb = null;
 }
 
 /**

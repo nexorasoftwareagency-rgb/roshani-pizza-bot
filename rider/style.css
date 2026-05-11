@@ -26,7 +26,9 @@
     --orange: #FF5200;
     --orange-dark: #E64A00;
     --orange-light: #FF9F00;
-    --radius-premium: 24px;
+    --radius-premium: clamp(16px, 4vw, 24px);
+    --card-padding: clamp(0.85rem, 4vw, 1.25rem);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
 
     --pizza: #FF5200;
     --cake: #D946EF;
@@ -37,6 +39,132 @@
 
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .animate-spin { animation: spin 1s linear infinite; }
+
+/* -------------------------------------------------------------------------- */
+/* SEAMLESS LOADER & SKELETONS                                                */
+/* -------------------------------------------------------------------------- */
+#initial-loader {
+    position: fixed;
+    inset: 0;
+    background: var(--primary);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s;
+    overflow: hidden;
+}
+
+#initial-loader.skeleton-mode {
+    background: var(--bg-app);
+}
+
+#initial-loader.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.loader-logo-box {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    transition: 0.3s ease;
+}
+
+#initial-loader.skeleton-mode .loader-logo-box {
+    display: none;
+}
+
+.logo-ripple {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    animation: ripple 2s infinite;
+}
+
+@keyframes ripple {
+    0% { transform: scale(0.8); opacity: 0.8; }
+    100% { transform: scale(2); opacity: 0; }
+}
+
+.loader-icon {
+    width: 50px;
+    height: 50px;
+    color: white;
+    z-index: 2;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.1));
+}
+
+.skeleton-container {
+    display: none;
+    width: 100%;
+    max-width: 500px;
+    padding: 20px;
+    flex-direction: column;
+}
+
+#initial-loader.skeleton-mode .skeleton-container {
+    display: flex;
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+}
+
+.skeleton-card {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+    transform: translateX(-100%);
+    animation: shimmer 1.5s infinite;
+}
+
+.skeleton-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.skeleton-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.skeleton-title {
+    height: 25px;
+    width: 150px;
+    background: #E2E8F0;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
 
 * {
     margin: 0;
@@ -49,6 +177,7 @@
 html {
     height: 100%;
     overflow: hidden;
+    overscroll-behavior: none;
 }
 
 body {
@@ -56,10 +185,12 @@ body {
     width: 100%;
     overflow-y: auto !important;
     overflow-x: hidden;
-    touch-action: pan-x pan-y !important;
+    overscroll-behavior-y: none;
+    touch-action: manipulation !important;
     background-color: var(--bg-app);
     color: var(--text-main);
     position: relative;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -436,9 +567,10 @@ body {
 }
 
 .welcome-text {
-    font-size: 1.8rem;
+    font-size: clamp(1.4rem, 6vw, 1.8rem);
     font-weight: 900;
     color: var(--text-main);
+    line-height: 1.2;
 }
 
 .welcome-subtext {
@@ -455,7 +587,7 @@ body {
 }
 
 .section-heading {
-    font-size: 1.3rem;
+    font-size: clamp(1.1rem, 5vw, 1.3rem);
     font-weight: 800;
     color: var(--text-main);
 }
@@ -482,11 +614,24 @@ body {
 .order-card-premium {
     background: var(--bg-surface);
     border-radius: var(--radius-premium);
-    padding: 1.5rem;
-    box-shadow: var(--shadow-sm);
-    border: var(--border-premium);
-    margin-bottom: 1.5rem;
+    padding: var(--card-padding);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04), 0 2px 6px rgba(255, 82, 0, 0.05);
+    border: 1px solid rgba(255, 82, 0, 0.1);
+    margin-bottom: 1.25rem;
     transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.premium-dashboard-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--orange-light));
+    opacity: 0.8;
 }
 
 .premium-dashboard-card:hover,
@@ -524,18 +669,33 @@ body {
 /* 2x2 SOLID STATS GRID */
 .solid-stats-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
 }
 
 .solid-stat-card {
-    border-radius: var(--radius-premium);
-    padding: 12px;
+    border-radius: clamp(12px, 3vw, 18px);
+    padding: 10px 12px;
     color: white;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 100px;
+    min-height: 90px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.solid-stat-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    pointer-events: none;
 }
 
 .solid-stat-card.green {
@@ -558,11 +718,11 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 800;
-    opacity: 0.9;
+    opacity: 0.85;
     text-transform: uppercase;
-    margin-bottom: 15px;
+    margin-bottom: 8px;
 }
 
 .stat-icon-top i {
@@ -576,14 +736,16 @@ body {
 }
 
 .stat-small-lbl {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     opacity: 0.8;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
+    line-height: 1.1;
 }
 
 .stat-main-val {
-    font-size: 1.4rem;
+    font-size: clamp(1.1rem, 5vw, 1.4rem);
     font-weight: 900;
+    letter-spacing: -0.5px;
 }
 
 /* -------------------------------------------------------------------------- */

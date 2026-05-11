@@ -45,7 +45,7 @@ export const getFeeFromSlabs = (dist, slabs) => {
 };
 
 import { showToast, showConfirm } from './ui-utils.js';
-export { showToast, showConfirm };
+export { showToast, showConfirm, showConfirm as confirmAction };
 
 export const playNotificationSound = () => {
     const audio = new Audio('assets/sounds/alert.mp3');

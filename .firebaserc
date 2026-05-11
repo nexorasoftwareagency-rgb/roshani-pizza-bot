@@ -5,14 +5,8 @@
   "targets": {
     "prashant-pizza-e86e4": {
       "hosting": {
-        "prashant-pizza-admin": [
-          "Admin"
-        ],
-        "roshani-sudha-rider": [
-          "rider"
-        ],
         "admin": [
-          "prashant-pizza-admin"
+          "roshani-sudha-admin"
         ],
         "rider": [
           "roshani-sudha-rider"

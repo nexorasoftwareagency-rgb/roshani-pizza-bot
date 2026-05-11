@@ -13,7 +13,7 @@ export function loadRiders() {
     cleanupRiders();
 
     const ridersRef = db.ref("riders");
-    const statsRef = db.ref("riderStats");
+    const statsRef = Outlet.ref("riderStats");
     
     console.log(`[Riders] Initializing listeners at: ${ridersRef.toString()}`);
     
@@ -54,7 +54,7 @@ export function loadRiders() {
 export function cleanupRiders() {
     console.log("[Riders] Detaching listeners...");
     db.ref("riders").off();
-    db.ref("riderStats").off();
+    Outlet.ref("riderStats").off();
 }
 
 /**

@@ -82,6 +82,8 @@ export function initAuth() {
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = '<span>Access Dashboard</span> <div class="btn-stitch-v4"></div>';
             }
+            localStorage.removeItem('adminIsLoggedIn');
+            window.hideLoader?.();
             return;
         }
 
@@ -185,6 +187,7 @@ export function initAuth() {
 
         // Initialize Session
         state.adminData = adminData;
+        localStorage.setItem('adminIsLoggedIn', 'true');
         logAudit('LOGIN_SUCCESS', { email: user.email });
         resetIdleTimer();
         initActivityListeners();
@@ -257,6 +260,7 @@ export function initAuth() {
         // Initial Tab Navigation (Respect Hash or Default to Dashboard)
         const initialTab = window.location.hash.replace('#', '') || 'dashboard';
         ui.switchTab(initialTab, true);
+        window.hideLoader?.();
     });
 }
 

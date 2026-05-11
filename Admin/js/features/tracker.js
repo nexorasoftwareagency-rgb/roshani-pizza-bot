@@ -3,7 +3,7 @@
  * Handles Leaflet map initialization and live rider location tracking.
  */
 
-import { Outlet } from '../firebase.js';
+import { db, Outlet } from '../firebase.js';
 import { escapeHtml } from '../utils.js';
 
 let adminTrackerMap = null;
@@ -49,7 +49,7 @@ export function initLiveRiderTracker() {
 export function cleanupLiveRiderTracker() {
     console.log("[Performance] Cleaning up Live Rider Tracker...");
     if (riderLocationCb) {
-        Outlet.ref('riders').off('value', riderLocationCb);
+        db.ref('riders').off('value', riderLocationCb);
         riderLocationCb = null;
     }
     if (adminTrackerMap) {
@@ -68,7 +68,7 @@ export function cleanupLiveRiderTracker() {
  */
 function startRiderLocationListener() {
     if (riderLocationCb) {
-        Outlet.ref('riders').off('value', riderLocationCb);
+        db.ref('riders').off('value', riderLocationCb);
     }
 
     riderLocationCb = snap => {
@@ -125,7 +125,7 @@ function startRiderLocationListener() {
         }
     };
 
-    Outlet.ref('riders').on('value', riderLocationCb);
+    db.ref('riders').on('value', riderLocationCb);
 }
 
 /**
