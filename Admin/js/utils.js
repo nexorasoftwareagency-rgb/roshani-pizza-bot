@@ -13,6 +13,18 @@ export const formatDate = (ts) => {
     return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ", " + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 };
 
+/**
+ * Returns YYYY-MM-DD in IST (GMT+5:30) for accurate report filtering
+ */
+export const getISTDateString = (dateInput = new Date()) => {
+    const date = new Date(dateInput);
+    // Add 5.5 hours to UTC time to get IST
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(date.getTime() + istOffset);
+    return istDate.toISOString().split('T')[0];
+};
+
+
 export const escapeHtml = (str) => {
     if (str === null || str === undefined) return '';
     if (typeof str !== 'string') str = String(str);

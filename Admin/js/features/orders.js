@@ -5,7 +5,7 @@
 
 import { db, Outlet, ServerValue } from '../firebase.js';
 import { state } from '../state.js';
-import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit, calculateDistance, getFeeFromSlabs, addRiderNotification } from '../utils.js';
+import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit, calculateDistance, getFeeFromSlabs, addRiderNotification, getISTDateString } from '../utils.js';
 import { showAlert, addNotification, highlightOrder } from './notifications.js';
 import { showPaymentPicker } from '../ui-utils.js';
 import { autoDeductStock } from './inventory.js';
@@ -131,7 +131,11 @@ export function initRealtimeListeners() {
             console.error("[Orders] Invalid date range provided, falling back to recent orders.");
             query = query.limitToLast(limit);
         } else {
-            query = query.startAt(`${fromDate}T00:00:00.000Z`).endAt(`${toDate}T23:59:59.999Z`);
+            // Broaden range by 1 day to catch IST/UTC drift
+            const qStart = new Date(d1); qStart.setDate(qStart.getDate() - 1);
+            const qEnd = new Date(d2); qEnd.setDate(qEnd.getDate() + 1);
+            
+            query = query.startAt(`${qStart.toISOString().split('T')[0]}T00:00:00.000Z`).endAt(`${qEnd.toISOString().split('T')[0]}T23:59:59.999Z`);
         }
     } else {
         // Fallback to recent 100 orders
@@ -233,9 +237,23 @@ export function renderOrders(snap) {
 
     // Update global maps
     if (snap) {
+        const fromDate = document.getElementById("orderFrom")?.value;
+        const toDate = document.getElementById("orderTo")?.value;
+
         state.ordersMap.clear();
         snap.forEach(child => {
-            state.ordersMap.set(child.key, child.val());
+            const o = child.val();
+            if (!o) return;
+
+            // Strict IST Date filtering for History/Payments tabs
+            if (activeTab === 'orders' || activeTab === 'payments') {
+                if (fromDate && toDate) {
+                    const dateStr = getISTDateString(o.createdAt);
+                    if (dateStr < fromDate || dateStr > toDate) return;
+                }
+            }
+
+            state.ordersMap.set(child.key, o);
         });
     }
 

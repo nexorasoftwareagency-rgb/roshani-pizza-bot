@@ -5,7 +5,7 @@
 
 import { db, Outlet } from '../firebase.js';
 import { state } from '../state.js';
-import { escapeHtml, showToast, formatDate } from '../utils.js';
+import { escapeHtml, showToast, formatDate, getISTDateString } from '../utils.js';
 import { settleRiderWallet } from './riders.js';
 
 let riderEarningsChart = null;
@@ -112,13 +112,24 @@ export async function generateRiderPerformanceReport() {
     btn.innerHTML = 'Analyzing...';
 
     try {
-        // Fetch orders ONLY for the current outlet to ensure isolation
+        // Broaden range by 1 day to catch IST/UTC drift, then filter client-side
+        const dFrom = new Date(fromDateStr);
+        dFrom.setDate(dFrom.getDate() - 1);
+        const dTo = new Date(toDateStr);
+        dTo.setDate(dTo.getDate() + 1);
+
+        const fromStr = `${dFrom.toISOString().split('T')[0]}T00:00:00.000Z`;
+        const toStr = `${dTo.toISOString().split('T')[0]}T23:59:59.999Z`;
+
         const ordersSnap = await Outlet.ref("orders").orderByChild("createdAt").startAt(fromStr).endAt(toStr).once('value');
         
         const allOrders = [];
         ordersSnap.forEach(child => {
             const o = child.val();
-            if (o.riderId === riderId) {
+            if (!o || o.riderId !== riderId) return;
+
+            const dateStr = getISTDateString(o.createdAt);
+            if (dateStr >= fromDateStr && dateStr <= toDateStr) {
                 allOrders.push({ id: child.key, outlet: state.currentOutlet, ...o });
             }
         });
