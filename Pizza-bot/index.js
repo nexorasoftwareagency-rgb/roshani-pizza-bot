@@ -642,9 +642,8 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
         // Track OTP changes to trigger resend notifications even if status is same
         const storedOTP = order.deliveryOTP || order.otp || order.otpCode;
         const isOtpChanged = processedStatus[id] && 
-                            processedStatus[id].status?.toLowerCase() === "out for delivery" && 
-                            statusLower === "out for delivery" && 
                             processedStatus[id].lastOtp && 
+                            storedOTP &&
                             processedStatus[id].lastOtp !== storedOTP;
 
         const maskedJid = maskJid(jid);
@@ -735,7 +734,11 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 img = botSettings.imgOut;
             } else if (statusLower === "reached drop location") {
                 let otp = storedOTP || '---';
-                msg = `📍 *RIDER ARRIVED!* 🛵\n━━━━━━━━━━━━━━━━━━━━\nOur rider has reached your drop location with your order #${id.slice(-5)}! ${OUTLET_EMOJI}\n\nPlease meet the rider and keep your OTP ready:\n\n🔑 *OTP:* ${otp}\n\n_Thank you for choosing ${OUTLET_NAME}!_`;
+                if (isOtpChanged) {
+                    msg = `🔑 *NEW DELIVERY OTP!* 🔄\n━━━━━━━━━━━━━━━━━━━━\nYour previous code is now invalid. Please use the new one below for your delivery #${id.slice(-5)}:\n\n🔑 *NEW OTP:* ${otp}\n💰 *Total:* ₹${order.total || 0}\n\n_Share this code ONLY with the rider upon arrival._`;
+                } else {
+                    msg = `📍 *RIDER ARRIVED!* 🛵\n━━━━━━━━━━━━━━━━━━━━\nOur rider has reached your drop location with your order #${id.slice(-5)}! ${OUTLET_EMOJI}\n\nPlease meet the rider and keep your OTP ready:\n\n🔑 *OTP:* ${otp}\n\n_Thank you for choosing ${OUTLET_NAME}!_`;
+                }
                 img = botSettings.imgOut;
             } else if (statusLower === "delivered" || statusLower === "served") {
                 msg = `✅ *${isDineIn ? 'SERVED' : 'DELIVERED'} SUCCESSFULLY!* ${OUTLET_EMOJI}❤️\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n🤝 *Payment:* ${order.paymentMethod}\n💵 *Total Paid:* ₹${order.total || 0}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*Enjoy your meal!* 😋\n\n${getFunnyFoodJoke()}`;
