@@ -260,6 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btnDownloadExcel')?.addEventListener('click', () => downloadExcel?.());
         document.getElementById('btnDownloadPDF')?.addEventListener('click', () => downloadPDF?.());
     };
+    setupStaticListeners();
 
     // --- 2. Dynamic Event Delegation ---
     document.addEventListener('click', async (e) => {
