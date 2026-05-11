@@ -21,13 +21,11 @@ export function initRiderAnalytics() {
     const lastWeek = new Date();
     lastWeek.setDate(today.getDate() - 7);
     
-    const formatDateInput = (d) => d.toISOString().split('T')[0];
-    
     const fromInput = document.getElementById('riderReportFrom');
     const toInput = document.getElementById('riderReportTo');
     
-    if (fromInput && !fromInput.value) fromInput.value = formatDateInput(lastWeek);
-    if (toInput && !toInput.value) toInput.value = formatDateInput(today);
+    if (fromInput && !fromInput.value) fromInput.value = getISTDateString(lastWeek);
+    if (toInput && !toInput.value) toInput.value = getISTDateString(today);
 
     // Populate rider select
     populateRiderSelect();

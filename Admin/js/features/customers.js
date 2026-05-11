@@ -84,13 +84,17 @@ let salesData = []; // Module scoped for exports
  * Initializes the reports view with default date range.
  */
 export function loadReports() {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    const lastDay = now.toISOString().split('T')[0];
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
 
-    if (document.getElementById("reportFrom")) document.getElementById("reportFrom").value = firstDay;
-    if (document.getElementById("reportTo")) document.getElementById("reportTo").value = lastDay;
+    const fromVal = getISTDateString(yesterday);
+    const toVal = getISTDateString(today);
 
+    if (document.getElementById("reportFrom")) document.getElementById("reportFrom").value = fromVal;
+    if (document.getElementById("reportTo")) document.getElementById("reportTo").value = toVal;
+
+    console.log(`[Reports] Initializing with default range: ${fromVal} to ${toVal}`);
     generateCustomReport();
 }
 
@@ -161,8 +165,8 @@ export function generateCustomReport() {
         console.log(`[Report] Processed ${salesData.length} orders matching range.`);
 
         // Update KPI Cards & Period
-        const fromDate = from ? formatDate(new Date(from).getTime()) : "Start";
-        const toDate = to ? formatDate(new Date(to).getTime()) : "Today";
+        const fromDate = from ? formatDate(new Date(from + 'T00:00:00')) : "Start";
+        const toDate = to ? formatDate(new Date(to + 'T23:59:59')) : "Today";
         const periodEl = document.getElementById("reportPeriod");
         if (periodEl) periodEl.innerText = `${fromDate} to ${toDate}`;
 
