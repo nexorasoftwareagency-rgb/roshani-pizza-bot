@@ -2042,6 +2042,25 @@
         </div>
     </div>
 
+    <!-- Premium Global Modal System -->
+    <div id="premiumModalOverlay" class="premium-modal-overlay hidden">
+        <div class="premium-modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Title</h3>
+                <button class="modal-close" onclick="window.closePremiumModal()">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Dynamic Inputs Go Here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="window.closePremiumModal()">Cancel</button>
+                <button class="btn-primary" id="modalSaveBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script src="receipt-templates.js?v=4.7.3"></script>
     <script type="module" src="js/main.js?v=4.7.3"></script>
 </body>

@@ -24,23 +24,15 @@ auth.onAuthStateChanged(async (user) => {
   // =============================
   // GET ADMIN OUTLET
   // =============================
-  const snap = await db.ref('admins').once('value');
+  const snap = await db.ref('admins/' + user.uid).once('value');
 
-  let found = false;
-
-  snap.forEach(child => {
-    const admin = child.val();
-
-    if (admin.email === user.email) {
-      currentOutlet = window.currentOutlet = admin.outlet;
-      found = true;
-    }
-  });
-
-  if (!found) {
-    alert("No outlet assigned to this admin");
+  if (!snap.exists()) {
+    alert("No outlet assigned to this admin. Contact Super Admin.");
     return;
   }
+
+  const admin = snap.val();
+  currentOutlet = window.currentOutlet = admin.outlet;
 
   console.log("Logged into outlet:", currentOutlet);
 
@@ -290,46 +282,89 @@ $('saveDishBtn').onclick = () => {
 // =============================
 // SIZES SYSTEM
 // =============================
-window.openSize = (dishId) => {
-  const size = prompt("Enter sizes JSON\nExample:\n{\"Small\":250,\"Medium\":300}");
+window.openPremiumModal = (title, htmlBody) => {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('premiumModalOverlay');
+        const titleEl = document.getElementById('modalTitle');
+        const bodyEl = document.getElementById('modalBody');
+        const saveBtn = document.getElementById('modalSaveBtn');
 
-  if (!size) return;
+        titleEl.innerText = title;
+        bodyEl.innerHTML = htmlBody;
+
+        overlay.classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons({ root: overlay });
+
+        const cleanup = () => {
+            saveBtn.onclick = null;
+            window.closePremiumModal = null;
+            overlay.classList.add('hidden');
+        };
+
+        window.closePremiumModal = () => {
+            cleanup();
+            resolve(null);
+        };
+
+        saveBtn.onclick = () => {
+            const inputs = {};
+            bodyEl.querySelectorAll('input, textarea').forEach(el => {
+                inputs[el.id] = el.value;
+            });
+            cleanup();
+            resolve(inputs);
+        };
+    });
+};
+
+window.openSize = async (dishId) => {
+  const html = `
+    <div class="input-group">
+      <label>Sizes JSON</label>
+      <textarea id="modalSizeInput" placeholder='{"Small":250,"Medium":300}'></textarea>
+      <p class="text-muted-small mt-5">Enter valid JSON mapping sizes to prices.</p>
+    </div>
+  `;
+  const result = await window.openPremiumModal("Configure Sizes", html);
+  if (!result || !result.modalSizeInput) return;
 
   try {
-    const parsed = JSON.parse(size);
-
+    const parsed = JSON.parse(result.modalSizeInput);
     db.ref(`sizes/${currentOutlet}/${dishId}`).set(parsed);
-    alert("Saved");
+    window.showToast("Sizes saved successfully", "success");
   } catch {
-    alert("Invalid JSON");
+    window.showToast("Invalid JSON format", "error");
   }
 };
 
 // =============================
 // ADDONS SYSTEM
 // =============================
-window.openAddon = (dishId) => {
-  const name = prompt("Addon Name (Extra Cheese)");
-
-  if (!name) return;
-
-  const price = prompt("Enter price JSON\nExample:\n{\"Small\":30,\"Medium\":40}");
-
-  if (!price) return;
+window.openAddon = async (dishId) => {
+  const html = `
+    <div class="input-group">
+      <label>Addon Name</label>
+      <input type="text" id="modalAddonName" class="form-input" placeholder="e.g. Extra Cheese">
+    </div>
+    <div class="input-group">
+      <label>Prices JSON</label>
+      <textarea id="modalAddonPrice" placeholder='{"Small":30,"Medium":40}'></textarea>
+    </div>
+  `;
+  const result = await window.openPremiumModal("Add New Addon", html);
+  if (!result || !result.modalAddonName || !result.modalAddonPrice) return;
 
   try {
-    const parsed = JSON.parse(price);
-
+    const parsed = JSON.parse(result.modalAddonPrice);
     const { name: _ignored, ...sanitizedParsed } = parsed;
 
     db.ref(`addons/${currentOutlet}/${dishId}`).push({
-      name,
+      name: result.modalAddonName,
       ...sanitizedParsed
     });
-
-    alert("Addon Added");
+    window.showToast("Addon added successfully", "success");
   } catch {
-    alert("Invalid format");
+    window.showToast("Invalid JSON format", "error");
   }
 };
 

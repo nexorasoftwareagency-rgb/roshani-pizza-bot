@@ -3,19 +3,21 @@ module.exports = {
     {
       name: 'pizza-bot',
       script: 'index.js',
-      cwd: './Pizza-bot',
+      cwd: './bot',
       watch: false,
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        OUTLET: 'pizza'
       }
     },
     {
       name: 'cake-bot',
       script: 'index.js',
-      cwd: './Cake-bot',
+      cwd: './bot',
       watch: false,
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        OUTLET: 'cake'
       }
     }
   ]
