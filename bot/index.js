@@ -1694,75 +1694,76 @@ async function startBot() {
                     return sock.sendMessage(sender, { text: await appendContactInfo("❌ Order Cancelled. We hope to serve you next time! 🙏", user.outlet) }); 
                 }
                 if (text === "1") {
-                    user.step = "PLACE_ORDER";
-                    return sock.sendMessage(sender, { text: await appendContactInfo("💳 *Payment Method?*\n\n1️⃣ Cash\n2️⃣ UPI\n0️⃣ *Take one step Back* 🔙", user.outlet) });
+                    user = await processOrderPlacement(sock, sender, user, "COD");
+                    return;
                 }
                 return sendInvalidInputHelp(sock, sender, user);
             }
 
-            if (user.step === "PLACE_ORDER") {
-                if (text === "0") {
-                    return handleCheckoutFinal(sock, sender, user);
-                }
-                if (text !== "1" && text !== "2") return sendInvalidInputHelp(sock, sender, user);
-                
-                const method = text === "2" ? "UPI" : "Cash";
-                const orderId = await generateOrderId(user.outlet);
-                const { subtotal } = formatCartSummary(user.cart);
+async function processOrderPlacement(sock, sender, user, method) {
+    try {
+        const orderId = await generateOrderId(user.outlet);
+        const { subtotal } = formatCartSummary(user.cart);
 
-                const deliveryFee = user.deliveryFee || 0;
-                const finalOrder = {
-                    orderId, outlet: user.outlet, 
-                    type: "Online", // Explicitly tag as Online order
-                    customerName: escapeHtml(user.name),
-                    phone: user.phone, 
-                    whatsappNumber: sender, // Save sender JID for status updates
-                    address: escapeHtml(user.address),
-                    lat: user.location.lat, lng: user.location.lng,
-                    subtotal, deliveryFee, total: subtotal + deliveryFee - (user.discount || 0),
-                    status: "Placed", paymentMethod: method, paymentStatus: "Pending",
-                    createdAt: new Date().toISOString(),
-                    assignedRider: "",
-                    items: user.cart
-                };
+        const deliveryFee = user.deliveryFee || 0;
+        const finalOrder = {
+            orderId, outlet: user.outlet, 
+            type: "Online", // Explicitly tag as Online order
+            customerName: escapeHtml(user.name),
+            phone: user.phone, 
+            whatsappNumber: sender, // Save sender JID for status updates
+            address: escapeHtml(user.address),
+            lat: user.location.lat, lng: user.location.lng,
+            subtotal, deliveryFee, total: subtotal + deliveryFee - (user.discount || 0),
+            status: "Placed", paymentMethod: method, paymentStatus: "Pending",
+            createdAt: new Date().toISOString(),
+            assignedRider: "",
+            items: user.cart
+        };
 
-                await setData(`orders/${orderId}`, finalOrder, user.outlet);
-                await notifyAdmin(sock, orderId, finalOrder, 'NEW');
+        await setData(`orders/${orderId}`, finalOrder, user.outlet);
+        await notifyAdmin(sock, orderId, finalOrder, 'NEW');
 
-                // Save user profile for next time
-                await saveUserProfile(sender, {
-                    name: user.name,
-                    phone: user.phone,
-                    address: user.address,
-                    location: user.location,
-                    lastOutlet: user.outlet
-                });
-                
-                // Save complete profile to outlet's customers node for POS access
-                if (user.phone) {
-                    const cleanPhone = String(user.phone).replace(/\D/g, '').slice(-10);
-                    const custData = {
-                        name: user.name,
-                        phone: cleanPhone,
-                        address: user.address || "",
-                        location: user.location || null,
-                        mapsLink: user.location ? `https://maps.google.com/?q=${user.location.lat},${user.location.lng}` : "",
-                        lastOrderDate: new Date().toISOString()
-                    };
-                    await updateData(`customers/${cleanPhone}`, custData, user.outlet);
-                }
+        // Save user profile for next time
+        await saveUserProfile(sender, {
+            name: user.name,
+            phone: user.phone,
+            address: user.address,
+            location: user.location,
+            lastOutlet: user.outlet
+        });
+        
+        // Save complete profile to outlet's customers node for POS access
+        if (user.phone) {
+            const cleanPhone = String(user.phone).replace(/\D/g, '').slice(-10);
+            const custData = {
+                name: user.name,
+                phone: cleanPhone,
+                address: user.address || "",
+                location: user.location || null,
+                mapsLink: user.location ? `https://maps.google.com/?q=${user.location.lat},${user.location.lng}` : "",
+                lastOrderDate: new Date().toISOString()
+            };
+            await updateData(`customers/${cleanPhone}`, custData, user.outlet);
+        }
 
-                let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY!* 🎉\n`;
-                successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                successMsg += `🆔 *Order ID:* #${orderId.slice(-5)}\n`;
-                successMsg += `🏪 *Shop:* ${OUTLET_NAME}\n`;
-                successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                successMsg += `*Please wait while the admin confirms your order!* ⏳\n\n`;
-                successMsg += `Total: ₹${finalOrder.total}`;
+        let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY!* 🎉\n`;
+        successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        successMsg += `🆔 *Order ID:* #${orderId.slice(-5)}\n`;
+        successMsg += `🏪 *Shop:* ${OUTLET_NAME}\n`;
+        successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        successMsg += `*Please wait while the admin confirms your order!* ⏳\n\n`;
+        successMsg += `Total: ₹${finalOrder.total}`;
 
-                await sock.sendMessage(sender, { text: await appendContactInfo(successMsg, user.outlet) });
-                user = null; // Mark session to be deleted from Redis
-            }
+        await sock.sendMessage(sender, { text: await appendContactInfo(successMsg, user.outlet) });
+        
+        // Return null to signify session should be cleared
+        return null;
+    } catch (e) {
+        console.error("Order Placement Error:", e);
+        return sock.sendMessage(sender, { text: "❌ Error placing your order. Please try again." });
+    }
+}
 
             })(); // <-- End of Message Handler IIFE
             
