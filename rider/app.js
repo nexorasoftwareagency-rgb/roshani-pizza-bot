@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, onValue, get, set, update, runTransaction, query, orderByChild, equalTo, off, serverTimestamp, remove, limitToLast, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
@@ -39,6 +39,8 @@ try {
     console.log("[App Check] Activated for Rider Portal");
 
     auth = getAuth(app);
+    // Explicitly set persistence to Local to survive PWA restarts on iOS/Android
+    setPersistence(auth, browserLocalPersistence).catch(e => console.error("[Auth] Persistence Error:", e));
     db = getDatabase(app);
     
     // Offline persistence is handled automatically by the browser/SDK for RTDB metadata, 
@@ -2004,7 +2006,48 @@ onAuthStateChanged(auth, async user => {
 
     if (authSection) authSection.classList.add('hidden');
 
+    // --- Helper to update UI ---
+    window.populateRiderProfileUI = (u) => {
+        const pName = u.profile.name || "Boss";
+        document.getElementById('profileName').innerText = pName;
+        document.getElementById('r-name').innerText = pName;
+        document.getElementById('sidebar-name').innerText = pName;
+        document.getElementById('sidebar-id').innerText = `RID-${u.uid.slice(0, 6).toUpperCase()}`;
+
+        document.getElementById('r-father-name').innerText = u.profile.fatherName || '---';
+        document.getElementById('r-age').innerText = u.profile.age || '---';
+        document.getElementById('r-aadhar-no').innerText = u.profile.aadharNo ? 'XXXXXXXX' + u.profile.aadharNo.slice(-4) : '---';
+        document.getElementById('r-qualification').innerText = u.profile.qualification || '---';
+        document.getElementById('r-address').innerText = u.profile.address || '---';
+
+        if (u.profile.profilePhoto) document.getElementById('r-profile-img').src = u.profile.profilePhoto;
+
+        // Sync Status Button
+        const status = u.profile.status || "Offline";
+        const btn = document.getElementById('statusToggleBtn');
+        if (btn) {
+            btn.className = `status-pill ${status.toLowerCase()}`;
+            btn.querySelector('span').innerText = status.toUpperCase();
+        }
+    };
+
     try {
+        // --- ⚡ INSTANT LOAD FROM CACHE ---
+        const cachedProfileStr = localStorage.getItem('riderProfile');
+        if (cachedProfileStr) {
+            try {
+                const cachedProfile = JSON.parse(cachedProfileStr);
+                currentUser = { ...user, profile: { id: user.uid, ...cachedProfile } };
+                window.currentUser = currentUser;
+                window.populateRiderProfileUI(currentUser);
+                if (dashboard) dashboard.classList.remove('hidden');
+                window.showSection('home');
+                if (window.lucide) window.lucide.createIcons({ root: dashboard || document.body });
+                window.hideLoader(); // Instant hide!
+            } catch(e) { console.error("Cache parse error", e); }
+        }
+
+        // --- 🔄 BACKGROUND SYNC ---
         const profileRef = ref(db, `riders/${user.uid}`);
         const snap = await get(profileRef);
         
@@ -2017,30 +2060,12 @@ onAuthStateChanged(auth, async user => {
         }
 
         const profileData = snap.val();
+        localStorage.setItem('riderProfile', JSON.stringify(profileData)); // Update cache
+        
         currentUser = { ...user, profile: { id: user.uid, ...profileData } };
         window.currentUser = currentUser;
 
-        const pName = currentUser.profile.name || "Boss";
-        document.getElementById('profileName').innerText = pName;
-        document.getElementById('r-name').innerText = pName;
-        document.getElementById('sidebar-name').innerText = pName;
-        document.getElementById('sidebar-id').innerText = `RID-${user.uid.slice(0, 6).toUpperCase()}`;
-
-        document.getElementById('r-father-name').innerText = window.currentUser.profile.fatherName || '---';
-        document.getElementById('r-age').innerText = window.currentUser.profile.age || '---';
-        document.getElementById('r-aadhar-no').innerText = window.currentUser.profile.aadharNo ? 'XXXXXXXX' + window.currentUser.profile.aadharNo.slice(-4) : '---';
-        document.getElementById('r-qualification').innerText = window.currentUser.profile.qualification || '---';
-        document.getElementById('r-address').innerText = window.currentUser.profile.address || '---';
-
-        if (window.currentUser.profile.profilePhoto) document.getElementById('r-profile-img').src = window.currentUser.profile.profilePhoto;
-
-        // Sync Status Button
-        const status = profileData.status || "Offline";
-        const btn = document.getElementById('statusToggleBtn');
-        if (btn) {
-            btn.className = `status-pill ${status.toLowerCase()}`;
-            btn.querySelector('span').innerText = status.toUpperCase();
-        }
+        window.populateRiderProfileUI(currentUser);
 
         await loadOutletCoords();
         window.clearAllListeners();
@@ -2052,7 +2077,7 @@ onAuthStateChanged(auth, async user => {
         window.showSection('home');
         if (window.lucide) window.lucide.createIcons({ root: dashboard || document.body });
         
-        // Hide loader after everything is ready
+        // Hide loader if it wasn't already hidden by cache
         setTimeout(window.hideLoader, 300);
     } catch (e) { 
         console.error(e);

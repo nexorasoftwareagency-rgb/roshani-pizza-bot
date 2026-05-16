@@ -4,16 +4,16 @@
  */
 
 // =============================
-// OUTLET CONFIGURATION
-// Change ONLY these values to switch between Pizza and Cake instances.
+// OUTLET CONFIGURATION (UNIFIED CORE)
 // =============================
-const OUTLET = 'pizza';                        // 'pizza' or 'cake'
-const OUTLET_NAME = 'Roshani Pizza';            // Display name
-const OUTLET_EMOJI = '🍕';                     // Brand emoji
-const OTHER_OUTLET_NAME = 'Roshani Cake';       // Cross-promo name
-const OTHER_OUTLET_EMOJI = '🎂';               // Cross-promo emoji
-const OTHER_OUTLET_NUMBER = '';                 // Cross-promo WhatsApp number (set on deploy)
+const OUTLET = process.env.OUTLET || 'pizza';
+const OUTLET_NAME = OUTLET === 'pizza' ? 'Roshani Pizza' : 'Roshani Cake';
+const OUTLET_EMOJI = OUTLET === 'pizza' ? '🍕' : '🎂';
+const OTHER_OUTLET_NAME = OUTLET === 'pizza' ? 'Roshani Cake' : 'Roshani Pizza';
+const OTHER_OUTLET_EMOJI = OUTLET === 'pizza' ? '🎂' : '🍕';
+const OTHER_OUTLET_NUMBER = '';
 
+const redis = require('redis');
 const {
     default: makeWASocket,
     useMultiFileAuthState,
@@ -25,18 +25,78 @@ const qrcode = require('qrcode-terminal');
 const pino = require('pino');
 const { getData, setData, updateData, db, pushData, getUserProfile, saveUserProfile } = require('./firebase');
 
-// --- GLOBAL STATE ---
-const sessions = {};
-const processedStatus = {};
-const processedOTP = {};
+let redisClient;
+const redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+
+if (redisUrl.includes('clustercfg')) {
+    // AWS ElastiCache Cluster Mode
+    redisClient = redis.createCluster({
+        rootNodes: [{ url: redisUrl }],
+        defaults: {
+            socket: {
+                tls: redisUrl.startsWith('rediss://'),
+                rejectUnauthorized: false // Often needed for AWS self-signed certs
+            }
+        }
+    });
+    console.log('🚀 Redis initialized in CLUSTER mode');
+} else {
+    // Standard Redis / Localhost
+    redisClient = redis.createClient({ url: redisUrl });
+    console.log('🚀 Redis initialized in STANDALONE mode');
+}
+
+redisClient.on('error', (err) => console.log('Redis Client Error', err));
+redisClient.connect().then(() => console.log('✅ Connected to Redis')).catch(console.error);
+
+// --- GLOBAL STATE (Migrating to Redis) ---
+// We keep local variables for temporary locks if needed, but primary state moves to Redis
 let reportInterval = null;
 let dailyReportSent = false;
 let weeklyReportSent = false;
 let monthlyReportSent = false;
 const startupTime = Date.now();
 
-const SESSION_TTL = 30 * 60 * 1000;
-const STATUS_TTL = 24 * 60 * 60 * 1000;
+const SESSION_TTL = 30 * 60; // Redis TTL is in seconds (30 mins)
+const STATUS_TTL = 24 * 60 * 60; // 24 hours
+
+// --- REDIS HELPERS ---
+async function getSession(sender) {
+    try {
+        const data = await redisClient.get(`session:${sender}`);
+        return data ? JSON.parse(data) : null;
+    } catch(e) { return null; }
+}
+async function saveSession(sender, data) {
+    try {
+        if(data) await redisClient.setEx(`session:${sender}`, SESSION_TTL, JSON.stringify(data));
+        else await redisClient.del(`session:${sender}`);
+    } catch(e) {}
+}
+
+async function getProcessedStatus(id) {
+    try {
+        const data = await redisClient.get(`status:${id}`);
+        return data ? JSON.parse(data) : null;
+    } catch(e) { return null; }
+}
+async function saveProcessedStatus(id, data) {
+    try {
+        if(data) await redisClient.setEx(`status:${id}`, STATUS_TTL, JSON.stringify(data));
+    } catch(e) {}
+}
+
+async function getProcessedOTP(phone) {
+    try {
+        const data = await redisClient.get(`otp:${phone}`);
+        return data ? JSON.parse(data) : null;
+    } catch(e) { return null; }
+}
+async function saveProcessedOTP(phone, data) {
+    try {
+        if(data) await redisClient.setEx(`otp:${phone}`, 300, JSON.stringify(data)); // 5 mins
+    } catch(e) {}
+}
 
 // =============================
 // 1. HELPERS & UTILS
@@ -162,18 +222,7 @@ function initCommandListener(sock) {
 }
 
 function cleanupSessions() {
-    const now = Date.now();
-    for (const sender in sessions) {
-        const user = sessions[sender];
-        if (user.lastActivity && now - user.lastActivity > SESSION_TTL) {
-            delete sessions[sender];
-        }
-    }
-    for (const id in processedStatus) {
-        if (now - (processedStatus[id]?.timestamp || 0) > STATUS_TTL) {
-            delete processedStatus[id];
-        }
-    }
+    // Sessions and processed status are now automatically managed by Redis TTL
 }
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -288,6 +337,84 @@ async function sendImage(sock, to, image, text, outlet = 'pizza') {
         } catch (textErr) {
             console.error("Critical Send Error:", textErr.message || textErr);
         }
+    }
+}
+
+async function deductInventoryStock(sock, items, outlet = 'pizza') {
+    try {
+        const inventoryRef = db.ref(`outlets/${outlet}/inventory`);
+        const snapshot = await inventoryRef.once('value');
+        const inventory = snapshot.val() || {};
+        const deliverySettings = await getData("settings/Delivery", outlet) || {};
+        const notifyPhone = deliverySettings.notifyPhone || deliverySettings.reportPhone;
+
+        for (const item of items) {
+            const itemName = (item.name || item.item).toLowerCase();
+            const invEntry = Object.entries(inventory).find(([id, data]) => data.name.toLowerCase() === itemName);
+
+            if (invEntry) {
+                const [id, data] = invEntry;
+                const qty = item.quantity || 1;
+                const newStock = Math.max(0, (data.stock || 0) - qty);
+                const threshold = data.threshold || 0;
+
+                await inventoryRef.child(id).update({ 
+                    stock: newStock,
+                    updatedAt: new Date().toISOString()
+                });
+
+                if (newStock <= threshold && notifyPhone) {
+                    const alertMsg = `⚠️ *LOW STOCK ALERT* ⚠️\n━━━━━━━━━━━━━━━━━━━━\n` +
+                        `📦 Item: *${data.name}*\n` +
+                        `📉 Current Stock: *${newStock}*\n` +
+                        `🚩 Threshold: *${threshold}*\n\n` +
+                        `_Please refill stock from Admin Panel immediately!_`;
+                    
+                    const jid = formatJid(notifyPhone);
+                    if (jid) await sock.sendMessage(jid, { text: alertMsg });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("[INVENTORY] ❌ Stock Deduction Error:", e);
+    }
+}
+
+async function cleanupStaleOrders(sock) {
+    try {
+        const ordersRef = db.ref(`${OUTLET}/orders`);
+        const snap = await ordersRef.once('value');
+        if (!snap.exists()) return;
+
+        const now = Date.now();
+        const FIVE_HOURS = 5 * 60 * 60 * 1000;
+        const updates = {};
+        const cancelMsg = "Sorry , Hame Maaf Kijiyega, ham aapka Order Deliver nahi kar payen, Please Order Again 🙏";
+
+        snap.forEach(child => {
+            const o = child.val();
+            const status = (o.status || "").toLowerCase();
+            if (status === "delivered" || status === "cancelled" || status === "archived") return;
+
+            const orderTime = o.createdAt || o.timestamp || o.assignedAt || 0;
+            if (orderTime > 0 && (now - orderTime) > FIVE_HOURS) {
+                updates[`${child.key}/status`] = "Cancelled";
+                updates[`${child.key}/cancellationReason`] = "System Auto-Cancel: Exceeded 5 hours";
+                updates[`${child.key}/cancelledAt`] = now;
+                
+                const jid = formatJid(o.phone || o.whatsappNumber);
+                if (jid && sock) {
+                    sock.sendMessage(jid, { text: cancelMsg }).catch(e => console.error("Auto-cancel notification failed", e));
+                }
+                console.log(`[Garbage Collector] Auto-cancelled stale order #${child.key}`);
+            }
+        });
+
+        if (Object.keys(updates).length > 0) {
+            await ordersRef.update(updates);
+        }
+    } catch (e) {
+        console.error("[Garbage Collector] Error:", e);
     }
 }
 
@@ -460,7 +587,7 @@ async function sendCategories(sock, sender, user) {
     await sendImage(sock, sender, menuImg, msg);
 }
 
-async function sendCartView(sock, sender, user) {
+async function sendCartView(sock, sender, user, isAdded = false) {
     if (!user.cart || user.cart.length === 0) {
         let msg = `🛒 *YOUR CART IS EMPTY*\n\n`;
         msg += `You haven't added anything to your cart yet. 🍕\n\n`;
@@ -470,12 +597,14 @@ async function sendCartView(sock, sender, user) {
         return sock.sendMessage(sender, { text: msg });
     }
     const { lines, subtotal } = formatCartSummary(user.cart);
-    let msg = `🛒 *YOUR CART SUMMARY*\n\n${lines}`;
+    let msg = isAdded ? `✅ *ADDED TO CART!* 🛒\n\n` : `🛒 *YOUR CART SUMMARY*\n\n`;
+    msg += lines;
     msg += `💰 *Subtotal: ₹${subtotal}*\n\n`;
     msg += `1️⃣  *Add another item* 🍕\n`;
     msg += `2️⃣  *Proceed to Checkout* 🚀\n`;
-    msg += `3️⃣  *Clear Cart* 🗑️\n\n`;
-    msg += `_Reply with 1, 2 or 3_`;
+    msg += `3️⃣  *Clear Cart* 🗑️\n`;
+    msg += `0️⃣  *Back* 🔙\n\n`;
+    msg += `_Reply with 1, 2, 3 or 0_`;
     user.step = "CART_VIEW";
     return sock.sendMessage(sender, { text: await appendContactInfo(msg, user.outlet) });
 }
@@ -544,30 +673,33 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
 
         const phoneDisplay = order.phone || order.whatsappNumber || "N/A";
         
+        // Fetch current status from Redis Cache
+        const currentProcessedStatus = await getProcessedStatus(id);
+
         // Track OTP changes to trigger resend notifications even if status is same
         const storedOTP = order.deliveryOTP || order.otp || order.otpCode;
-        const isOtpChanged = processedStatus[id] && 
-                            processedStatus[id].status?.toLowerCase() === "out for delivery" && 
+        const isOtpChanged = currentProcessedStatus && 
+                            currentProcessedStatus.status?.toLowerCase() === "out for delivery" && 
                             statusLower === "out for delivery" && 
-                            processedStatus[id].lastOtp && 
-                            processedStatus[id].lastOtp !== storedOTP;
+                            currentProcessedStatus.lastOtp && 
+                            currentProcessedStatus.lastOtp !== storedOTP;
 
         const maskedJid = maskJid(jid);
         console.log(`[Status Update] 🔍 Processing Order #${id.slice(-5)} | Status: ${currentStatus} | OTP Changed: ${isOtpChanged} | Target: ${maskedJid}`);
 
-        if (!processedStatus[id] || processedStatus[id].status !== currentStatus || isNew || isOtpChanged) {
+        if (!currentProcessedStatus || currentProcessedStatus.status !== currentStatus || isNew || isOtpChanged) {
             console.log(`[Status Update] 📤 SENDING MESSAGE: #${id.slice(-5)} -> ${currentStatus}${isOtpChanged ? ' (New OTP)' : ''} to ${maskedJid}`);
             
             const currentRider = order.riderId || order.assignedRider || "";
-            const lastRider = processedStatus[id]?.riderId || "";
+            const lastRider = currentProcessedStatus?.riderId || "";
             const isRiderChanged = currentRider && currentRider !== lastRider;
 
-            processedStatus[id] = { 
+            await saveProcessedStatus(id, { 
                 status: currentStatus, 
                 timestamp: Date.now(),
                 lastOtp: storedOTP,
                 riderId: currentRider
-            };
+            });
 
             console.log(`[Status Update] 🔔 State Updated for #${id.slice(-5)}: Status=${currentStatus}, Rider=${currentRider || 'None'}`);
 
@@ -637,7 +769,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 msg = `❌ *ORDER CANCELLED* ❌\n━━━━━━━━━━━━━━━━━━━━\nWe're sorry, your order #${id.slice(-5)} has been cancelled.\n\nReason: ${order.cancelReason || "Store Busy / Technical Issue"}\n\nIf you have any questions, please contact us. 🙏`;
             }
 
-            const prevStatus = processedStatus[id]?.status || "None";
+            const prevStatus = currentProcessedStatus?.status || "None";
             console.log(`[BOT] 🔔 Status Change for #${id.slice(-5)}: ${prevStatus} -> ${currentStatus} (${jid ? 'Valid JID' : 'NO JID'})`);
 
             if (msg) {
@@ -645,12 +777,12 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 const sendResult = await sendImage(sock, jid, img, msg, order.outlet || 'pizza');
                 
                 // CRITICAL: Preserve ALL fields in processedStatus to avoid duplicate rider pings on next update
-                processedStatus[id] = { 
-                    ...processedStatus[id],
+                await saveProcessedStatus(id, { 
+                    ...(currentProcessedStatus || {}),
                     status: currentStatus, 
                     lastOtp: storedOTP, 
                     timestamp: Date.now() 
-                };
+                });
 
                 updateData(`bot/logs/${id}`, { 
                     lastSent: currentStatus, 
@@ -660,16 +792,16 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 }).catch(()=>{});
             } else {
                 // If no message defined for this status, still mark as processed
-                processedStatus[id] = { 
-                    ...processedStatus[id],
+                await saveProcessedStatus(id, { 
+                    ...(currentProcessedStatus || {}),
                     status: currentStatus, 
                     lastOtp: storedOTP, 
                     timestamp: Date.now() 
-                };
+                });
             }
         } else {
             // Log skip reason if needed
-            if (processedStatus[id] && processedStatus[id].status === currentStatus) {
+            if (currentProcessedStatus && currentProcessedStatus.status === currentStatus) {
                 // Already processed this status
             } else if (!jid) {
                 // Already handled in the check above
@@ -1078,7 +1210,7 @@ async function broadcastPickupAvailable(sock, orderId, order) {
 
 async function startBot() {
     console.log(`🚀 Starting ${OUTLET_NAME} WhatsApp Bot (${OUTLET})...`);
-    const { state, saveCreds } = await useMultiFileAuthState('session_data');
+    const { state, saveCreds } = await useMultiFileAuthState('session_data_' + OUTLET);
     const { version } = await fetchLatestBaileysVersion();
 
     const sock = makeWASocket({
@@ -1123,7 +1255,7 @@ async function startBot() {
             weeklyReportSent = false;
             monthlyReportSent = false;
         }
-    }, 60000);
+    }, 300000);
 
     // Firebase Listeners — Single Outlet Only
     const orderRef = db.ref(`${OUTLET}/orders`);
@@ -1134,7 +1266,7 @@ async function startBot() {
         const order = snap.val();
         if (order) handleOrderStatusUpdate(sock, snap.key, order);
     });
-    orderRef.on("child_added", (snap) => {
+    orderRef.on("child_added", async (snap) => {
         const order = snap.val();
         if (!order) return;
         
@@ -1146,11 +1278,12 @@ async function startBot() {
         // Be more lenient for Dine-in (30 mins) to ensure counter bookings are not missed
         const timeBuffer = isDineIn ? 1800000 : 10000; 
 
-        if (!processedStatus[snap.key] && orderTime > startupTime - timeBuffer) {
+        const currentProcessedStatus = await getProcessedStatus(snap.key);
+        if (!currentProcessedStatus && orderTime > startupTime - timeBuffer) {
             handleOrderStatusUpdate(sock, snap.key, order, true);
         } else {
             // Just mark as processed without sending message
-            processedStatus[snap.key] = { status: order.status, timestamp: Date.now() };
+            await saveProcessedStatus(snap.key, { status: order.status, timestamp: Date.now() });
         }
     });
 
@@ -1181,9 +1314,10 @@ async function startBot() {
             // Show typing status immediately for better perceived speed
             await sock.sendPresenceUpdate('composing', sender);
 
-            if (!sessions[sender]) {
+            let user = await getSession(sender);
+            if (!user) {
                 const profile = await getUserProfile(sender);
-                sessions[sender] = { 
+                user = { 
                     step: "START", 
                     current: {}, 
                     cart: [], 
@@ -1198,12 +1332,14 @@ async function startBot() {
                 };
                 
                 if (profile && profile.name) {
-                    // We will send the combined welcome message in the START step logic
-                    sessions[sender].hasProfile = true;
+                    user.hasProfile = true;
                 }
             }
-            const user = sessions[sender];
             user.lastActivity = Date.now();
+
+            // Run message logic in an IIFE to capture all early returns,
+            // so we can safely save the user session to Redis at the end.
+            await (async () => {
 
             // --- RATE LIMITING ---
             const now = Date.now();
@@ -1251,7 +1387,7 @@ async function startBot() {
             }
 
             if (text.toLowerCase() === "cancel" || text.toLowerCase() === "reset") {
-                sessions[sender] = { step: "START", current: {}, cart: [] };
+                user.step = "START"; user.current = {}; user.cart = [];
                 return sock.sendMessage(sender, { text: "❌ *Order Reset.* Reply with any message to start again." });
             }
 
@@ -1382,11 +1518,7 @@ async function startBot() {
                 });
 
                 user.step = "ADDED_TO_CART";
-                let addedMsg = `✅ *ADDED TO CART!* 🛒\n\n`;
-                addedMsg += `1️⃣ *Add another item* 🍕\n`;
-                addedMsg += `2️⃣ *View Cart & Checkout* 🛒\n`;
-                addedMsg += `0️⃣ *Take one step Back* 🔙`;
-                return sock.sendMessage(sender, { text: await appendContactInfo(addedMsg, user.outlet) });
+                return sendCartView(sock, sender, user, true);
             }
 
             if (user.step === "ADDED_TO_CART") {
@@ -1433,7 +1565,7 @@ async function startBot() {
                     return sock.sendMessage(sender, { text: await appendContactInfo(nameMsg, user.outlet) }); 
                 }
                 if (text === "3") { 
-                    sessions[sender] = { step: "START", current: {}, cart: [], profile: user.profile }; 
+                    user.step = "START"; user.current = {}; user.cart = []; 
                     return sock.sendMessage(sender, { text: await appendContactInfo("🗑️ Cart cleared. Reply with any message to start again.", user.outlet) }); 
                 }
                 if (text === "0") {
@@ -1558,7 +1690,7 @@ async function startBot() {
                         outlet: user.outlet || "pizza"
                     }, 'CANCELLED');
 
-                    delete sessions[sender]; 
+                    user = null; // Mark session for deletion in Redis 
                     return sock.sendMessage(sender, { text: await appendContactInfo("❌ Order Cancelled. We hope to serve you next time! 🙏", user.outlet) }); 
                 }
                 if (text === "1") {
@@ -1629,8 +1761,13 @@ async function startBot() {
                 successMsg += `Total: ₹${finalOrder.total}`;
 
                 await sock.sendMessage(sender, { text: await appendContactInfo(successMsg, user.outlet) });
-                delete sessions[sender];
+                user = null; // Mark session to be deleted from Redis
             }
+
+            })(); // <-- End of Message Handler IIFE
+            
+            // Final Session Save
+            await saveSession(sender, user);
 
         } catch (err) { console.error("Message Handler Error:", err); }
     });
