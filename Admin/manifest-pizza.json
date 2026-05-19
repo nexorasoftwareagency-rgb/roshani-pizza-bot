@@ -10,6 +10,7 @@
   "scope": "./",
   "dir": "ltr",
   "lang": "en-US",
+  "id": "pizza-erp-roshani",
   "categories": [
     "business",
     "food",
@@ -18,43 +19,43 @@
   "icons": [
     {
       "src": "icon-pizza.webp",
-      "sizes": "72x72",
+      "sizes": "512x512",
       "type": "image/webp",
       "purpose": "any"
     },
     {
       "src": "icon-pizza.webp",
-      "sizes": "96x96",
+      "sizes": "512x512",
       "type": "image/webp",
       "purpose": "any"
     },
     {
       "src": "icon-pizza.webp",
-      "sizes": "128x128",
+      "sizes": "512x512",
       "type": "image/webp",
       "purpose": "any"
     },
     {
       "src": "icon-pizza.webp",
-      "sizes": "144x144",
+      "sizes": "512x512",
       "type": "image/webp",
       "purpose": "any"
     },
     {
       "src": "icon-pizza.webp",
-      "sizes": "152x152",
+      "sizes": "512x512",
       "type": "image/webp",
       "purpose": "any"
     },
     {
       "src": "icon-pizza.webp",
-      "sizes": "192x192",
+      "sizes": "512x512",
       "type": "image/webp",
       "purpose": "maskable"
     },
     {
       "src": "icon-pizza.webp",
-      "sizes": "384x384",
+      "sizes": "512x512",
       "type": "image/webp",
       "purpose": "any"
     },
@@ -72,7 +73,7 @@
       "icons": [
         {
           "src": "icon-pizza.webp",
-          "sizes": "192x192"
+            "sizes": "512x512"
         }
       ]
     },
@@ -82,7 +83,7 @@
       "icons": [
         {
           "src": "icon-pizza.webp",
-          "sizes": "192x192"
+            "sizes": "512x512"
         }
       ]
     }

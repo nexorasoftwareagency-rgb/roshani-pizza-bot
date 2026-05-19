@@ -4,7 +4,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#FF5200">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -75,17 +75,17 @@
         </div>
         <div class="skeleton-container">
             <div class="skeleton-header">
-                <div class="skeleton" style="height: 40px; width: 40px; border-radius: 12px;"></div>
-                <div class="skeleton" style="height: 25px; width: 120px; border-radius: 6px;"></div>
-                <div class="skeleton" style="height: 40px; width: 40px; border-radius: 12px;"></div>
+                <div class="skeleton sk-40"></div>
+                <div class="skeleton sk-25-120"></div>
+                <div class="skeleton sk-40"></div>
             </div>
             <div class="skeleton-stats-grid">
-                <div class="skeleton-card" style="height: 100px;"></div>
-                <div class="skeleton-card" style="height: 100px;"></div>
+                <div class="skeleton-card sk-h100"></div>
+                <div class="skeleton-card sk-h100"></div>
             </div>
-            <div class="skeleton-title" style="width: 60%; margin-top: 20px;"></div>
-            <div class="skeleton-card" style="height: 180px; margin-top: 15px;"></div>
-            <div class="skeleton-card" style="height: 180px; margin-top: 15px;"></div>
+            <div class="skeleton-title sk-w60"></div>
+            <div class="skeleton-card sk-h180"></div>
+            <div class="skeleton-card sk-h180"></div>
         </div>
     </div>
 
@@ -274,8 +274,8 @@
                 <div class="premium-dashboard-card mb-20 text-center">
                     <span class="text-muted font-bold text-small uppercase">Total Cash to Settle</span>
                     <h1 class="text-orange fs-2-5rem fw-900" id="e-total">₹0</h1>
-                    <button class="btn-text-primary-sm mt-10" id="btnViewSettlements" style="font-size: 0.8rem;">
-                        <i data-lucide="history" style="width:12px; height:12px; margin-right:4px;"></i> VIEW SETTLEMENT HISTORY
+                    <button class="btn-text-primary-sm mt-10 fs-08" id="btnViewSettlements">
+                        <i data-lucide="history" class="w-12 h-12 mr-4"></i> VIEW SETTLEMENT HISTORY
                     </button>
                 </div>
                 <div class="earnings-grid-split">

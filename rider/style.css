@@ -3117,6 +3117,7 @@ body {
     inset: 0;
     z-index: 5000;
     background: rgba(0, 0, 0, 0.4);
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     display: none;
     align-items: center;
@@ -3255,6 +3256,7 @@ body {
 
 .glass-panel {
     background: rgba(255, 255, 255, 0.6);
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     border: 1.5px dashed rgba(0, 0, 0, 0.1);
     border-radius: 20px;
