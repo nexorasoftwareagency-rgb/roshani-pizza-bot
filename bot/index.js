@@ -679,8 +679,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
         // Track OTP changes to trigger resend notifications even if status is same
         const storedOTP = order.deliveryOTP || order.otp || order.otpCode;
         const isOtpChanged = currentProcessedStatus && 
-                            currentProcessedStatus.status?.toLowerCase() === "out for delivery" && 
-                            statusLower === "out for delivery" && 
+                            (statusLower === "out for delivery" || statusLower === "reached drop location") &&
                             currentProcessedStatus.lastOtp && 
                             currentProcessedStatus.lastOtp !== storedOTP;
 
@@ -761,6 +760,14 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 } else {
                     msg = `🛵 *OUT FOR DELIVERY!* 🚀\n━━━━━━━━━━━━━━━━━━━━\nOur rider is on the way to your location! 🛵💨\n\n🆔 Order: #${id.slice(-5)}\n🔑 *OTP:* ${otp} (Share with rider only)${riderInfoText}\n💰 *Total:* ₹${order.total || 0}\n${getFoodFunnyProgress("Out for Delivery")}`;
                 }
+                img = botSettings.imgOut;
+            } else if (statusLower === "reached drop location") {
+                let otp = storedOTP;
+                if (!otp) {
+                    otp = Math.floor(1000 + Math.random() * 9000).toString();
+                    await updateData(`${order.outlet}/orders/${id}`, { otp: otp, deliveryOTP: otp });
+                }
+                msg = `📍 *RIDER HAS REACHED!* 🚨\n━━━━━━━━━━━━━━━━━━━━\nOur rider has arrived at your location for order #${id.slice(-5)}.\n\n🔑 *OTP:* ${otp} (Please share with rider)\n\nPlease be ready to receive your order. Thank you! 🙏`;
                 img = botSettings.imgOut;
             } else if (statusLower === "delivered" || statusLower === "served") {
                 msg = `✅ *${isDineIn ? 'SERVED' : 'DELIVERED'} SUCCESSFULLY!* 🍕❤️\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 *Order ID:* #${id.slice(-5)}\n🤝 *Payment:* ${order.paymentMethod}\n💵 *Total Paid:* ₹${order.total || 0}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*Enjoy your meal!* 😋\n\n${getFunnyFoodJoke()}`;
