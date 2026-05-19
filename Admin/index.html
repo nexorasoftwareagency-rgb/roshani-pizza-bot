@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#f36b21">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -63,7 +63,7 @@
     <!-- Initial Loader (Premium v4) -->
     <div id="initial-loader" title="Loading Admin Dashboard...">
         <div class="loader-logo-v4">
-            <i data-lucide="shield-check" style="width:40px; height:40px;"></i>
+            <i data-lucide="shield-check" class="w-10 h-10"></i>
         </div>
         <div class="loader-text-v4">ROSHANI ERP</div>
         <div class="loader-bar-v4">
@@ -1349,7 +1349,7 @@
                         <button id="btnGenerateRiderReport" class="btn-primary report-gen-btn"
                             title="Generate Performance Data">Analyze</button>
                         <button id="btnSettleRiderAnalytics" class="btn-secondary report-gen-btn"
-                            title="Settle Pending Cash Balance" style="border-color: var(--primary); color: var(--primary);">Settle Balance</button>
+                             title="Settle Pending Cash Balance">Settle Balance</button>
                     </div>
                 </div>
 
@@ -2047,7 +2047,7 @@
         <div class="premium-modal">
             <div class="modal-header">
                 <h3 id="modalTitle">Title</h3>
-                <button class="modal-close" onclick="window.closePremiumModal()">
+                <button class="modal-close" onclick="window.closePremiumModal()" aria-label="Close modal" title="Close">
                     <i data-lucide="x"></i>
                 </button>
             </div>
