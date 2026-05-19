@@ -97,9 +97,10 @@ export async function printOrderReceipt(rawOrder, isReprint = false) {
         console.warn("Could not load settings for print:", e);
     }
 
-    const printWindow = window.open('', '_blank', 'width=450,height=800');
-    if (!printWindow) {
-        showToast("Popup blocked! Please allow popups to print receipts.", "error");
+    // Use cached receipt HTML if available (big desktop performance win)
+    if (!isReprint && rawOrder.receiptHtml) {
+        printWithIframe(rawOrder.receiptHtml);
+        console.timeEnd('[Print] Receipt Generation');
         return;
     }
 
@@ -107,23 +108,43 @@ export async function printOrderReceipt(rawOrder, isReprint = false) {
     if (!window.ReceiptTemplates) {
         console.error("ReceiptTemplates not found!");
         showToast("Printing templates not loaded. Please refresh.", "error");
-        printWindow.close();
         return;
     }
 
     const html = window.ReceiptTemplates.generateThermalReceipt(o, store, isReprint);
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
+    
+    // Cache the generated HTML for future reprints
+    if (!isReprint) {
+        rawOrder.receiptHtml = html;
+    }
 
+    printWithIframe(html);
     console.timeEnd('[Print] Receipt Generation');
+}
+
+/** Fast desktop-friendly print using hidden iframe (avoids popup lag) */
+function printWithIframe(html) {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+
     setTimeout(() => {
         try {
-            printWindow.print();
-            printWindow.close();
-            console.log("[Print] Job sent to system spooler.");
-        } catch (e) { console.error("Print error:", e); }
-    }, 300); // Optimized for performance while ensuring layout stability
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        } catch (e) {
+            console.error("Iframe print error:", e);
+        }
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 400);
 }
 
 /**
