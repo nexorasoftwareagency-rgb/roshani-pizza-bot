@@ -1297,14 +1297,8 @@ async function startBot() {
                 if (!msg.message || msg.key.fromMe) continue;
 
                 const messageId = msg.key.id;
-                if (processedMessages.has(messageId)) continue;
-                processedMessages.add(messageId);
-                
-                // Keep cache size manageable
-                if (processedMessages.size > 500) {
-                    const first = processedMessages.values().next().value;
-                    processedMessages.delete(first);
-                }
+                if (await getProcessedStatus(messageId)) continue;
+                await saveProcessedStatus(messageId, { ts: Date.now() });
 
                 // Ignore messages older than 60 seconds to avoid backlog spam on restart
                 const messageTimestamp = (msg.messageTimestamp || 0) * 1000;
@@ -1313,6 +1307,7 @@ async function startBot() {
                     continue;
                 }
 
+                await sock.readMessages([msg.key]);
                 const sender = msg.key.remoteJid;
                 const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
                 const pushName = msg.pushName || "";

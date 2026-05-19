@@ -1307,6 +1307,14 @@ async function startBot() {
             const msg = m.messages[0];
             if (!msg.message || msg.key.fromMe) return;
 
+            // Deduplication to prevent double responses
+            const msgId = msg.key.id;
+            if (await getProcessedStatus(msgId)) return;
+            await saveProcessedStatus(msgId, { ts: Date.now() });
+
+            // Mark as read
+            await sock.readMessages([msg.key]);
+
             const sender = msg.key.remoteJid;
             const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
             const pushName = msg.pushName || "";
