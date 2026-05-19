@@ -1130,8 +1130,14 @@ function initRealtimeListeners() {
                 }
             });
 
-            // 2. Merge: Update/Add new data
-            Object.assign(currentCache, data);
+            // 2. Merge: Update/Add new data (FILTER OUT Dine-in / POS orders - they don't need delivery)
+            Object.keys(data).forEach(id => {
+                const item = data[id];
+                if (item && (item.type === 'Dine-in' || item.type === 'Walk-in' || item.type === 'POS')) {
+                    return; // Skip non-delivery orders
+                }
+                currentCache[id] = item;
+            });
             
             // 3. Render
             window.renderAllOrders();
