@@ -118,7 +118,12 @@ export function initRealtimeListeners() {
         firstLoad = false;
         console.log(`[Orders] Received snapshot: ${snap.numChildren()} orders at ${_ordersRef.toString()}`);
         state.lastOrdersSnap = snap;
-        renderOrders(snap);
+        
+        // Debounce heavy desktop renders (prevents lag from rapid snapshots)
+        if (window._renderDebounce) clearTimeout(window._renderDebounce);
+        window._renderDebounce = setTimeout(() => {
+            renderOrders(snap);
+        }, 120);
     };
 
     let query = _ordersRef.orderByChild("createdAt");
