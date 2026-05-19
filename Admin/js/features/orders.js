@@ -112,7 +112,7 @@ export function initRealtimeListeners() {
     }
 
     console.log(`[Orders] Initializing listeners for: ${_ordersRef.toString()} (Filter: ${fromDate || 'ALL'} to ${toDate || 'ALL'})`);
-    const limit = state.orderLimit || 100;
+    const limit = state.orderLimit || 50;
     
     _ordersValueCb = snap => {
         firstLoad = false;
