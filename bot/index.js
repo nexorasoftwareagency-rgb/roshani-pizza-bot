@@ -678,16 +678,21 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
 
         // Track OTP changes to trigger resend notifications even if status is same
         const storedOTP = order.deliveryOTP || order.otp || order.otpCode;
+        const isDeliveryOtpStatus = statusLower === "out for delivery" || statusLower === "reached drop location";
+        
         const isOtpChanged = currentProcessedStatus && 
-                            (statusLower === "out for delivery" || statusLower === "reached drop location") &&
+                            isDeliveryOtpStatus &&
                             currentProcessedStatus.lastOtp && 
                             currentProcessedStatus.lastOtp !== storedOTP;
+
+        // Also send if it's a delivery OTP status and we have a valid OTP (handles restart / first time)
+        const shouldSendOtpMessage = isDeliveryOtpStatus && storedOTP;
 
         const maskedJid = maskJid(jid);
         console.log(`[Status Update] 🔍 Processing Order #${id.slice(-5)} | Status: ${currentStatus} | OTP Changed: ${isOtpChanged} | Target: ${maskedJid}`);
 
-        if (!currentProcessedStatus || currentProcessedStatus.status !== currentStatus || isNew || isOtpChanged) {
-            console.log(`[Status Update] 📤 SENDING MESSAGE: #${id.slice(-5)} -> ${currentStatus}${isOtpChanged ? ' (New OTP)' : ''} to ${maskedJid}`);
+        if (!currentProcessedStatus || currentProcessedStatus.status !== currentStatus || isNew || isOtpChanged || shouldSendOtpMessage) {
+            console.log(`[Status Update] 📤 SENDING MESSAGE: #${id.slice(-5)} -> ${currentStatus}${isOtpChanged || shouldSendOtpMessage ? ' (OTP)' : ''} to ${maskedJid}`);
             
             const currentRider = order.riderId || order.assignedRider || "";
             const lastRider = currentProcessedStatus?.riderId || "";
