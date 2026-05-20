@@ -65,37 +65,37 @@ async function getSession(sender) {
     try {
         const data = await redisClient.get(`session:${sender}`);
         return data ? JSON.parse(data) : null;
-    } catch(e) { return null; }
+    } catch (e) { return null; }
 }
 async function saveSession(sender, data) {
     try {
-        if(data) await redisClient.setEx(`session:${sender}`, SESSION_TTL, JSON.stringify(data));
+        if (data) await redisClient.setEx(`session:${sender}`, SESSION_TTL, JSON.stringify(data));
         else await redisClient.del(`session:${sender}`);
-    } catch(e) {}
+    } catch (e) { }
 }
 
 async function getProcessedStatus(id) {
     try {
         const data = await redisClient.get(`status:${id}`);
         return data ? JSON.parse(data) : null;
-    } catch(e) { return null; }
+    } catch (e) { return null; }
 }
 async function saveProcessedStatus(id, data) {
     try {
-        if(data) await redisClient.setEx(`status:${id}`, STATUS_TTL, JSON.stringify(data));
-    } catch(e) {}
+        if (data) await redisClient.setEx(`status:${id}`, STATUS_TTL, JSON.stringify(data));
+    } catch (e) { }
 }
 
 async function getProcessedOTP(phone) {
     try {
         const data = await redisClient.get(`otp:${phone}`);
         return data ? JSON.parse(data) : null;
-    } catch(e) { return null; }
+    } catch (e) { return null; }
 }
 async function saveProcessedOTP(phone, data) {
     try {
-        if(data) await redisClient.setEx(`otp:${phone}`, 300, JSON.stringify(data)); // 5 mins
-    } catch(e) {}
+        if (data) await redisClient.setEx(`otp:${phone}`, 300, JSON.stringify(data)); // 5 mins
+    } catch (e) { }
 }
 
 // =============================
@@ -143,7 +143,7 @@ function getISTDateInfo(customDate = null) {
     // IST is UTC + 5:30
     const IST_OFFSET = 5.5 * 60 * 60 * 1000;
     const istTime = new Date(now.getTime() + IST_OFFSET);
-    
+
     return {
         dateStr: istTime.toISOString().split('T')[0], // YYYY-MM-DD in IST
         hour: istTime.getUTCHours(),
@@ -163,7 +163,7 @@ function getISTDateString(isoString) {
 async function getReportRecipients() {
     const recipients = new Set();
     const DEVELOPER_NUMBER = "9724649971"; // Fixed Developer
-    
+
     try {
         // Add Fixed Developer
         const devJid = formatJid(DEVELOPER_NUMBER);
@@ -172,17 +172,17 @@ async function getReportRecipients() {
         // Get THIS outlet's admin only
         const storeSettings = await getData("settings/Store", OUTLET) || {};
         const deliverySettings = await getData("settings/Delivery", OUTLET) || {};
-        
+
         const adminNum = storeSettings.phone || deliverySettings.reportPhone;
         if (adminNum) {
             const adminJid = formatJid(adminNum);
             if (adminJid) recipients.add(adminJid);
         }
-        
+
     } catch (e) {
         console.error("[Reports] Recipient Resolution Error:", e);
     }
-    
+
     // Safety fallback
     if (recipients.size === 0) recipients.add(formatJid(DEVELOPER_NUMBER));
     return Array.from(recipients);
@@ -201,7 +201,7 @@ function initCommandListener(sock) {
         if (!cmd) return;
 
         console.log(`[Bot] Command Received: ${cmd.action} (Target: ${cmd.targetDate || 'N/A'})`);
-        
+
         try {
             if (cmd.action === "SEND_DAILY_REPORT") {
                 await sendDailyReport(sock, cmd.targetDate);
@@ -358,7 +358,7 @@ async function deductInventoryStock(sock, items, outlet = 'pizza') {
                 const newStock = Math.max(0, (data.stock || 0) - qty);
                 const threshold = data.threshold || 0;
 
-                await inventoryRef.child(id).update({ 
+                await inventoryRef.child(id).update({
                     stock: newStock,
                     updatedAt: new Date().toISOString()
                 });
@@ -369,7 +369,7 @@ async function deductInventoryStock(sock, items, outlet = 'pizza') {
                         `📉 Current Stock: *${newStock}*\n` +
                         `🚩 Threshold: *${threshold}*\n\n` +
                         `_Please refill stock from Admin Panel immediately!_`;
-                    
+
                     const jid = formatJid(notifyPhone);
                     if (jid) await sock.sendMessage(jid, { text: alertMsg });
                 }
@@ -401,7 +401,7 @@ async function cleanupStaleOrders(sock) {
                 updates[`${child.key}/status`] = "Cancelled";
                 updates[`${child.key}/cancellationReason`] = "System Auto-Cancel: Exceeded 5 hours";
                 updates[`${child.key}/cancelledAt`] = now;
-                
+
                 const jid = formatJid(o.phone || o.whatsappNumber);
                 if (jid && sock) {
                     sock.sendMessage(jid, { text: cancelMsg }).catch(e => console.error("Auto-cancel notification failed", e));
@@ -453,7 +453,7 @@ function formatCartSummary(cart) {
         if (item.addons && item.addons.length > 0) {
             lines += `   + ${item.addons.map(a => a.name).join(', ')}\n`;
         }
-        lines += `   Qty: ${item.quantity} x ₹${item.unitPrice + (item.addons?.reduce((s,a)=>s+a.price,0)||0)} = ₹${itemTotal}\n\n`;
+        lines += `   Qty: ${item.quantity} x ₹${item.unitPrice + (item.addons?.reduce((s, a) => s + a.price, 0) || 0)} = ₹${itemTotal}\n\n`;
     });
     return { lines, subtotal };
 }
@@ -465,7 +465,7 @@ function formatOrderInvoice(orderId, order) {
         const price = item.lineTotal || item.total || (item.price * qty) || 0;
         itemsText += `• *${item.name}* (${item.size || 'Regular'}) x${qty} - ₹${price}\n`;
         if (item.addons && item.addons.length > 0) {
-            const addonNames = Array.isArray(item.addons) 
+            const addonNames = Array.isArray(item.addons)
                 ? item.addons.map(a => a.name).join(", ")
                 : Object.keys(item.addons).join(", ");
             itemsText += `  _Addons: ${addonNames}_\n`;
@@ -565,23 +565,23 @@ async function sendCategories(sock, sender, user) {
     if (!categories) return sock.sendMessage(sender, { text: "❌ No categories available right now." });
 
     user.categoryList = Object.entries(categories).map(([id, val]) => ({ id, ...val }));
-    
+
     const botSettings = await getData("settings/Bot", outlet) || {};
     const storeSettings = await getData("settings/Store", outlet) || {};
     const storeName = storeSettings.storeName || (outlet === 'pizza' ? "Roshani Pizza" : "Roshani Cake");
     const emoji = outlet === 'pizza' ? "🍕" : "🎂";
     const headerEmoji = outlet === 'pizza' ? "🔥" : "✨";
-    
+
     let msg = `✨ *${storeName.toUpperCase()}* ✨\n`;
     msg += `🍽️ *SELECT CATEGORY - ${outlet.toUpperCase()}*\n\n`;
-    
-    user.categoryList.forEach((c, i) => { 
-        msg += `${i + 1}️⃣  ${c.name}\n`; 
+
+    user.categoryList.forEach((c, i) => {
+        msg += `${i + 1}️⃣  ${c.name}\n`;
     });
-    
+
     msg += `\n🛒 *9* View Cart\n0️⃣ *Take one step Back* 🔙\n\n`;
     msg += `_Reply with a number to browse_`;
-    
+
     user.step = "CATEGORY";
     const menuImg = botSettings.menuImage || storeSettings.bannerImage;
     await sendImage(sock, sender, menuImg, msg);
@@ -624,7 +624,7 @@ async function notifyAdmin(sock, orderId, order, type = 'NEW') {
             adminMsg += `\n🆔 ID: #${orderId.slice(-5)}\n👤 Customer: ${order.customerName}\n📞 Phone: ${order.phone}\n📍 Address: ${order.address}\n\n📦 Items:\n${itemsText}\n\n💰 Total: ₹${order.total || 0}\n💳 Method: ${order.paymentMethod}`;
             msg = adminMsg;
         }
-        
+
         for (const jid of jids) {
             await sock.sendMessage(jid, { text: msg });
         }
@@ -637,7 +637,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
         // POS orders usually store the phone in 'order.phone'. 
         // Online orders store the JID in 'order.whatsappNumber'.
         let jid = null;
-        
+
         // PRIORITIZE: whatsappNumber if it's a standard JID. 
         // If it's a @lid (Linked ID), we prefer formatting the phone for a standard @s.whatsapp.net JID
         const storedJid = String(order.whatsappNumber || "");
@@ -650,13 +650,13 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 jid = formatJid(rawPhone);
             }
         }
-        
+
         if (!jid) {
             const status = (order.status || "Unknown").toUpperCase();
             const type = (order.type || order.orderType || "Walk-in");
             if (order.phone !== "Walk-in") {
                 console.warn(`[BOT] ⚠️ Skipping Notification for #${id.slice(-5)} (${type}): No valid phone. Value: "${order.phone}"`);
-                updateData(`bot/logs/${id}`, { error: "No valid JID", phone: order.phone, type, timestamp: Date.now() }).catch(()=>{});
+                updateData(`bot/logs/${id}`, { error: "No valid JID", phone: order.phone, type, timestamp: Date.now() }).catch(() => { });
             }
             return;
         }
@@ -672,34 +672,32 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
         }
 
         const phoneDisplay = order.phone || order.whatsappNumber || "N/A";
-        
+
         // Fetch current status from Redis Cache
         const currentProcessedStatus = await getProcessedStatus(id);
 
         // Track OTP changes to trigger resend notifications even if status is same
         const storedOTP = order.deliveryOTP || order.otp || order.otpCode;
         const isDeliveryOtpStatus = statusLower === "out for delivery" || statusLower === "reached drop location";
-        
-        const isOtpChanged = currentProcessedStatus && 
-                            isDeliveryOtpStatus &&
-                            currentProcessedStatus.lastOtp && 
-                            currentProcessedStatus.lastOtp !== storedOTP;
 
-        // Also send if it's a delivery OTP status and we have a valid OTP (handles restart / first time)
-        const shouldSendOtpMessage = isDeliveryOtpStatus && storedOTP;
+        const isOtpChanged = currentProcessedStatus &&
+            isDeliveryOtpStatus &&
+            currentProcessedStatus.lastOtp &&
+            currentProcessedStatus.lastOtp !== storedOTP;
+
+        // Also send if it's a delivery OTP status and we have a valid OTP but no cached lastOtp but no cached lastOtp (handles restart / first time)
+        const shouldSendOtpMessage = isDeliveryOtpStatus && storedOTP && !currentProcessedStatus?.lastOtp && !currentProcessedStatus?.lastOtp;
 
         const maskedJid = maskJid(jid);
         console.log(`[Status Update] 🔍 Processing Order #${id.slice(-5)} | Status: ${currentStatus} | OTP Changed: ${isOtpChanged} | Target: ${maskedJid}`);
 
         if (!currentProcessedStatus || currentProcessedStatus.status !== currentStatus || isNew || isOtpChanged || shouldSendOtpMessage) {
-            console.log(`[Status Update] 📤 SENDING MESSAGE: #${id.slice(-5)} -> ${currentStatus}${isOtpChanged || shouldSendOtpMessage ? ' (OTP)' : ''} to ${maskedJid}`);
-            
             const currentRider = order.riderId || order.assignedRider || "";
             const lastRider = currentProcessedStatus?.riderId || "";
             const isRiderChanged = currentRider && currentRider !== lastRider;
 
-            await saveProcessedStatus(id, { 
-                status: currentStatus, 
+            await saveProcessedStatus(id, {
+                status: currentStatus,
                 timestamp: Date.now(),
                 lastOtp: storedOTP,
                 riderId: currentRider
@@ -736,7 +734,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
             } else if (statusLower === "ready" || statusLower === "packed") {
                 msg = `📦 *PACKED & READY!* 🚀\n━━━━━━━━━━━━━━━━━━━━\nYour delicious order #${id.slice(-5)} is ready and packed! 🍱\n\n${isDineIn ? "It's ready to be served! 🍽️" : "Waiting for the rider to pick it up. 🛵"}\n${getFoodFunnyProgress("Ready")}`;
                 img = botSettings.imgReady || botSettings.imgCooked;
-                
+
                 if (!isDineIn) {
                     if (order.riderPhone) {
                         await notifyRiderPickup(sock, order);
@@ -787,28 +785,28 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
             if (msg) {
                 console.log(`[BOT] 📧 Sending ${currentStatus} notification to ${maskJid(jid)}...`);
                 const sendResult = await sendImage(sock, jid, img, msg, order.outlet || 'pizza');
-                
+
                 // CRITICAL: Preserve ALL fields in processedStatus to avoid duplicate rider pings on next update
-                await saveProcessedStatus(id, { 
+                await saveProcessedStatus(id, {
                     ...(currentProcessedStatus || {}),
-                    status: currentStatus, 
-                    lastOtp: storedOTP, 
-                    timestamp: Date.now() 
+                    status: currentStatus,
+                    lastOtp: storedOTP,
+                    timestamp: Date.now()
                 });
 
-                updateData(`bot/logs/${id}`, { 
-                    lastSent: currentStatus, 
-                    jid: maskJid(jid), 
+                updateData(`bot/logs/${id}`, {
+                    lastSent: currentStatus,
+                    jid: maskJid(jid),
                     success: true,
-                    timestamp: Date.now() 
-                }).catch(()=>{});
+                    timestamp: Date.now()
+                }).catch(() => { });
             } else {
                 // If no message defined for this status, still mark as processed
-                await saveProcessedStatus(id, { 
+                await saveProcessedStatus(id, {
                     ...(currentProcessedStatus || {}),
-                    status: currentStatus, 
-                    lastOtp: storedOTP, 
-                    timestamp: Date.now() 
+                    status: currentStatus,
+                    lastOtp: storedOTP,
+                    timestamp: Date.now()
                 });
             }
         } else {
@@ -819,9 +817,9 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                 // Already handled in the check above
             }
         }
-    } catch (err) { 
+    } catch (err) {
         console.error("Status Update Error:", err);
-        updateData(`bot/logs/${id}`, { error: err.message, timestamp: Date.now() }).catch(()=>{});
+        updateData(`bot/logs/${id}`, { error: err.message, timestamp: Date.now() }).catch(() => { });
     }
 }
 
@@ -834,26 +832,26 @@ async function sendDailyReport(sock, targetDate = null) {
         const outlets = [OUTLET]; // Single outlet only
         const ist = getISTDateInfo();
         const dateStr = targetDate || ist.dateStr;
-        
+
         console.log(`[Report] Generating Daily Report for: ${dateStr}`);
-        
+
         let totalOrders = 0;
         let totalRevenue = 0;
         let reportDetails = "";
-        
+
         for (const outlet of outlets) {
             const orders = await getData(`${outlet}/orders`);
             if (!orders) continue;
-            
+
             let outletOrders = 0;
             let outletRevenue = 0;
             let statusBreakdown = {};
-            
+
             Object.values(orders).forEach(order => {
                 if (!order.createdAt) return;
-                
+
                 const oDateStr = getISTDateString(order.createdAt);
-                
+
                 if (oDateStr === dateStr) {
                     outletOrders++;
                     const s = order.status || "Unknown";
@@ -865,35 +863,35 @@ async function sendDailyReport(sock, targetDate = null) {
                     }
                 }
             });
-            
+
             if (outletOrders > 0) {
                 reportDetails += `\n${outlet === 'pizza' ? '🍕' : '🎂'} *${outlet.toUpperCase()} OUTLET:*\n`;
                 reportDetails += `   📦 Total Orders: ${outletOrders}\n`;
                 reportDetails += `   💰 Real Sales: ₹${outletRevenue.toLocaleString()}\n`;
-                
+
                 // Add Breakdown
                 const breakdownStr = Object.entries(statusBreakdown)
                     .map(([s, count]) => `      ▫️ ${s}: ${count}`)
                     .join('\n');
                 reportDetails += `   📊 Breakdown:\n${breakdownStr}\n`;
             }
-            
+
             totalOrders += outletOrders;
             totalRevenue += outletRevenue;
         }
-        
+
         const jids = await getReportRecipients();
         const displayDate = new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
         const nowIST = getISTDateInfo().istObject;
-        
+
         const msg = `📊 *${OUTLET_NAME.toUpperCase()} — DAILY SALES REPORT* ${OUTLET_EMOJI}\n\n` +
             `📅 Sales Date: *${displayDate}*\n` +
             `⏰ Generated: ${nowIST.getUTCHours().toString().padStart(2, '0')}:${nowIST.getUTCMinutes().toString().padStart(2, '0')} IST\n\n` +
-            (reportDetails || "_No sales recorded for this date._\n") + 
+            (reportDetails || "_No sales recorded for this date._\n") +
             `\n💵 *TOTAL REVENUE:* ₹${totalRevenue.toLocaleString()}\n` +
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
             `_Sent automatically by ${OUTLET_NAME} Bot_`;
-        
+
         for (const jid of jids) {
             await sock.sendMessage(jid, { text: msg });
         }
@@ -905,19 +903,19 @@ async function sendMonthlyReport(sock) {
     try {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-        
+
         let totalOrders = 0;
         let totalRevenue = 0;
         let reportDetails = "";
-        
+
         const outlets = [OUTLET]; // Single outlet only
         for (const outlet of outlets) {
             const orders = await getData(`${outlet}/orders`);
             if (!orders) continue;
-            
+
             let outletOrders = 0;
             let outletRevenue = 0;
-            
+
             Object.values(orders).forEach(order => {
                 const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
                 if (orderTime >= startOfMonth) {
@@ -928,26 +926,26 @@ async function sendMonthlyReport(sock) {
                     }
                 }
             });
-            
+
             if (outletOrders > 0) {
                 reportDetails += `\n🎂 *${outlet.toUpperCase()} OUTLET:*\n`;
                 reportDetails += `   📦 Orders: ${outletOrders}\n`;
                 reportDetails += `   💰 Revenue: ₹${outletRevenue.toLocaleString()}\n`;
             }
-            
+
             totalOrders += outletOrders;
             totalRevenue += outletRevenue;
         }
-        
+
         const jids = await getReportRecipients();
-        
+
         const msg = `📈 *${OUTLET_NAME.toUpperCase()} — MONTHLY SALES REPORT* ${OUTLET_EMOJI}\n\n` +
             `📅 Month: ${now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}\n\n` +
-            reportDetails + 
+            reportDetails +
             `\n\n💵 *MONTHLY TOTAL:* ₹${totalRevenue.toLocaleString()}\n` +
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
             `_Sent automatically by ${OUTLET_NAME} Bot_`;
-        
+
         for (const jid of jids) {
             await sock.sendMessage(jid, { text: msg });
         }
@@ -961,19 +959,19 @@ async function sendWeeklyReport(sock) {
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - 7);
         const weekStartTime = startOfWeek.getTime();
-        
+
         let totalOrders = 0;
         let totalRevenue = 0;
         let reportDetails = "";
-        
+
         const outlets = [OUTLET]; // Single outlet only
         for (const outlet of outlets) {
             const orders = await getData(`${outlet}/orders`);
             if (!orders) continue;
-            
+
             let outletOrders = 0;
             let outletRevenue = 0;
-            
+
             Object.values(orders).forEach(order => {
                 const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
                 if (orderTime >= weekStartTime) {
@@ -984,26 +982,26 @@ async function sendWeeklyReport(sock) {
                     }
                 }
             });
-            
+
             if (outletOrders > 0) {
                 reportDetails += `\n🍕 *${outlet.toUpperCase()} OUTLET:*\n`;
                 reportDetails += `   📦 Orders: ${outletOrders}\n`;
                 reportDetails += `   💰 Revenue: ₹${outletRevenue.toLocaleString()}\n`;
             }
-            
+
             totalOrders += outletOrders;
             totalRevenue += outletRevenue;
         }
-        
+
         const jids = await getReportRecipients();
-        
+
         const msg = `📊 *${OUTLET_NAME.toUpperCase()} — WEEKLY SALES REPORT* ${OUTLET_EMOJI}\n\n` +
             `📅 Week: ${startOfWeek.toLocaleDateString('en-IN')} - ${now.toLocaleDateString('en-IN')}\n\n` +
-            reportDetails + 
+            reportDetails +
             `\n\n💵 *WEEKLY TOTAL:* ₹${totalRevenue.toLocaleString()}\n` +
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
             `_Sent automatically by ${OUTLET_NAME} Bot_`;
-        
+
         for (const jid of jids) {
             await sock.sendMessage(jid, { text: msg });
         }
@@ -1023,7 +1021,7 @@ async function notifyRiderPickup(sock, order) {
             console.warn(`[RIDER] ⚠️ Cannot notify pickup: Invalid JID for phone ${riderPhone}`);
             return;
         }
-        
+
         // Detailed Invoice Text
         let itemsText = "";
         const items = order.normalizedItems || order.items || [];
@@ -1032,7 +1030,7 @@ async function notifyRiderPickup(sock, order) {
             const price = item.lineTotal || item.total || (item.price * qty) || 0;
             itemsText += `• *${item.name || item.item}* (${item.size || 'Reg'}) x${qty} - ₹${price}\n`;
             if (item.addons && item.addons.length > 0) {
-                const addonNames = Array.isArray(item.addons) 
+                const addonNames = Array.isArray(item.addons)
                     ? item.addons.map(a => a.name || a).join(", ")
                     : Object.keys(item.addons).join(", ");
                 itemsText += `  _Addons: ${addonNames}_\n`;
@@ -1040,7 +1038,7 @@ async function notifyRiderPickup(sock, order) {
         });
 
         const mapsLink = (order.lat && order.lng) ? `https://www.google.com/maps?q=${order.lat},${order.lng}` : (order.locationLink || "");
-        
+
         const msg = `🛵 *READY FOR PICKUP* 🛵\n` +
             `━━━━━━━━━━━━━━━━━━━━\n` +
             `🆔 *Order ID:* #${order.orderId || 'N/A'}\n\n` +
@@ -1061,7 +1059,7 @@ async function notifyRiderPickup(sock, order) {
             `🔑 *DELIVERY OTP:* ${order.deliveryOTP || order.otp || 'N/A'}\n` +
             `━━━━━━━━━━━━━━━━━━━━\n` +
             `_The order is packed and waiting. Please arrive at the outlet immediately!_`;
-        
+
         await sock.sendMessage(riderJid, { text: msg });
         console.log(`[RIDER] ✅ Pickup notification sent to ${riderPhone}`);
 
@@ -1069,8 +1067,8 @@ async function notifyRiderPickup(sock, order) {
         if (riderId) {
             await addInAppNotification(riderId, "Order Ready for Pickup!", `Order #${order.orderId || ''} is packed and waiting for you.`, 'warning', 'package', order.outlet);
         }
-    } catch (err) { 
-        console.error("[RIDER] ❌ Rider Pickup Notify Error:", err); 
+    } catch (err) {
+        console.error("[RIDER] ❌ Rider Pickup Notify Error:", err);
     }
 }
 
@@ -1098,7 +1096,7 @@ async function notifyRiderAssignment(sock, orderId, order) {
             const price = item.lineTotal || item.total || (item.price * qty) || 0;
             itemsText += `• *${item.name || item.item}* (${item.size || 'Reg'}) x${qty} - ₹${price}\n`;
             if (item.addons && item.addons.length > 0) {
-                const addonNames = Array.isArray(item.addons) 
+                const addonNames = Array.isArray(item.addons)
                     ? item.addons.map(a => a.name || a).join(", ")
                     : Object.keys(item.addons).join(", ");
                 itemsText += `  _Addons: ${addonNames}_\n`;
@@ -1122,13 +1120,13 @@ async function notifyRiderAssignment(sock, orderId, order) {
         msg += `*Name:* ${order.customerName || 'Customer'}\n`;
         msg += `*Phone:* ${order.phone || 'N/A'}\n`;
         msg += `*Address:* ${order.address || 'Address not provided'}\n\n`;
-        
+
         if (mapsLink) {
             msg += `📍 *LIVE LOCATION:*\n${mapsLink}\n\n`;
         } else {
             msg += `📍 *LOCATION:* _No map link provided by customer_\n\n`;
         }
-        
+
         msg += `━━━━━━━━━━━━━━━━━━━━\n`;
         msg += `🚀 *Please reach the outlet for pickup!*`;
 
@@ -1140,8 +1138,8 @@ async function notifyRiderAssignment(sock, orderId, order) {
         if (riderId) {
             await addInAppNotification(riderId, "New Order Assigned!", `You have been assigned to order #${order.orderId || orderId.slice(-5)}.`, 'info', 'truck', order.outlet);
         }
-    } catch (err) { 
-        console.error("[RIDER] ❌ Rider Assignment Notify Error:", err); 
+    } catch (err) {
+        console.error("[RIDER] ❌ Rider Assignment Notify Error:", err);
     }
 }
 
@@ -1150,14 +1148,14 @@ async function broadcastPickupAvailable(sock, orderId, order) {
         if (!sock) return;
         const outlet = order.outlet || 'pizza';
         const riders = await getData("riders", outlet) || {};
-        
+
         // Filter for riders who are Online and have a phone number
         const onlineRiders = Object.entries(riders)
             .map(([uid, data]) => ({ uid, ...data }))
             .filter(r => r.status === "Online" && r.phone);
-        
+
         console.log(`[RIDER] 📢 Broadcasting pickup for #${orderId.slice(-5)} to ${onlineRiders.length} online riders.`);
-        
+
         if (onlineRiders.length === 0) {
             console.log(`[RIDER] ⚠️ No online riders available for broadcast of #${orderId.slice(-5)}`);
             return;
@@ -1171,7 +1169,7 @@ async function broadcastPickupAvailable(sock, orderId, order) {
             const price = item.lineTotal || item.total || (item.price * qty) || 0;
             itemsText += `• *${item.name || item.item}* (${item.size || 'Reg'}) x${qty} - ₹${price}\n`;
             if (item.addons && item.addons.length > 0) {
-                const addonNames = Array.isArray(item.addons) 
+                const addonNames = Array.isArray(item.addons)
                     ? item.addons.map(a => a.name || a).join(", ")
                     : Object.keys(item.addons).join(", ");
                 itemsText += `  _Addons: ${addonNames}_\n`;
@@ -1179,7 +1177,7 @@ async function broadcastPickupAvailable(sock, orderId, order) {
         });
 
         const mapsLink = (order.lat && order.lng) ? `https://www.google.com/maps?q=${order.lat},${order.lng}` : (order.locationLink || "");
-        
+
         const msg = `🔔 *PICKUP AVAILABLE* 🔔\n━━━━━━━━━━━━━━━━━━━━\n` +
             `🆔 *Order ID:* #${order.orderId || orderId.slice(-5)}\n` +
             `🏪 *Outlet:* ${(order.outlet || 'pizza').toUpperCase()}\n\n` +
@@ -1211,8 +1209,8 @@ async function broadcastPickupAvailable(sock, orderId, order) {
                 }
             }
         }
-    } catch (err) { 
-        console.error("[RIDER] ❌ Broadcast Error:", err); 
+    } catch (err) {
+        console.error("[RIDER] ❌ Broadcast Error:", err);
     }
 }
 
@@ -1240,25 +1238,25 @@ async function startBot() {
     if (reportInterval) clearInterval(reportInterval);
     reportInterval = setInterval(async () => {
         cleanupSessions();
-        updateData(`bot/${OUTLET}/status`, { lastSeen: Date.now(), status: 'Online', outlet: OUTLET }).catch(() => {});
-        
+        updateData(`bot/${OUTLET}/status`, { lastSeen: Date.now(), status: 'Online', outlet: OUTLET }).catch(() => { });
+
         // Get Time in Asia/Kolkata accurately
         const ist = getISTDateInfo();
         const hour = ist.hour;
         const minute = ist.minute;
-        
+
         // 1. Daily Report at 9:30 PM (21:30)
         if (hour === 21 && minute === 30 && !dailyReportSent) {
             await sendDailyReport(sock);
             dailyReportSent = true;
         }
-        
+
         // 2. Late Night Catch-up (If bot was off at 21:30, send it at 1:30 AM for YESTERDAY)
         if (hour === 1 && minute === 30 && !dailyReportSent) {
             const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
             const yDateStr = getISTDateString(yesterday.toISOString());
             await sendDailyReport(sock, yDateStr);
-            dailyReportSent = true; 
+            dailyReportSent = true;
         }
 
         // Reset flags at 4 AM IST
@@ -1273,7 +1271,7 @@ async function startBot() {
     const orderRef = db.ref(`${OUTLET}/orders`);
     orderRef.off("child_changed"); // Clear previous to avoid duplicates
     orderRef.off("child_added");
-    
+
     orderRef.on("child_changed", (snap) => {
         const order = snap.val();
         if (order) handleOrderStatusUpdate(sock, snap.key, order);
@@ -1281,14 +1279,14 @@ async function startBot() {
     orderRef.on("child_added", async (snap) => {
         const order = snap.val();
         if (!order) return;
-        
+
         // Only handle "new" orders if they were created after the bot started
         const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
         const type = (order.type || order.orderType || "").toLowerCase();
         const isDineIn = type.includes("dine") || type.includes("walk");
-        
+
         // Be more lenient for Dine-in (30 mins) to ensure counter bookings are not missed
-        const timeBuffer = isDineIn ? 1800000 : 10000; 
+        const timeBuffer = isDineIn ? 1800000 : 10000;
 
         const currentProcessedStatus = await getProcessedStatus(snap.key);
         if (!currentProcessedStatus && orderTime > startupTime - timeBuffer) {
@@ -1337,12 +1335,12 @@ async function startBot() {
             let user = await getSession(sender);
             if (!user) {
                 const profile = await getUserProfile(sender);
-                user = { 
-                    step: "START", 
-                    current: {}, 
-                    cart: [], 
-                    pushName: pushName, 
-                    msgCount: 0, 
+                user = {
+                    step: "START",
+                    current: {},
+                    cart: [],
+                    pushName: pushName,
+                    msgCount: 0,
                     lastReset: Date.now(),
                     profile: profile || null,
                     name: profile?.name || null,
@@ -1350,7 +1348,7 @@ async function startBot() {
                     address: profile?.address || null,
                     location: profile?.location || null
                 };
-                
+
                 if (profile && profile.name) {
                     user.hasProfile = true;
                 }
@@ -1361,192 +1359,126 @@ async function startBot() {
             // so we can safely save the user session to Redis at the end.
             await (async () => {
 
-            // --- RATE LIMITING ---
-            const now = Date.now();
-            if (now - user.lastReset > 60000) {
-                user.msgCount = 0;
-                user.lastReset = now;
-            }
-            user.msgCount++;
+                // --- RATE LIMITING ---
+                const now = Date.now();
+                if (now - user.lastReset > 60000) {
+                    user.msgCount = 0;
+                    user.lastReset = now;
+                }
+                user.msgCount++;
 
-            // --- ADMIN COMMANDS ---
-            const DEVELOPER_NUMBER = "9724649971";
-            const adminNumbers = await getReportRecipients(); // Gets both dev and configured admins
-            const isAuthorized = adminNumbers.includes(sender) || sender.startsWith(DEVELOPER_NUMBER);
-            
-            if (isAuthorized && text.startsWith('!')) {
-                const cmd = text.toLowerCase().slice(1);
-                console.log(`[ADMIN] Command: ${cmd} from ${sender}`);
+                // --- ADMIN COMMANDS ---
+                const DEVELOPER_NUMBER = "9724649971";
+                const adminNumbers = await getReportRecipients(); // Gets both dev and configured admins
+                const isAuthorized = adminNumbers.includes(sender) || sender.startsWith(DEVELOPER_NUMBER);
 
-                if (cmd === 'report' || cmd === 'sales') {
-                    await sock.sendMessage(sender, { text: "⏳ Generating latest sales report..." });
-                    await sendDailyReport(sock);
+                if (isAuthorized && text.startsWith('!')) {
+                    const cmd = text.toLowerCase().slice(1);
+                    console.log(`[ADMIN] Command: ${cmd} from ${sender}`);
+
+                    if (cmd === 'report' || cmd === 'sales') {
+                        await sock.sendMessage(sender, { text: "⏳ Generating latest sales report..." });
+                        await sendDailyReport(sock);
+                        return;
+                    }
+                    if (cmd === 'status') {
+                        const uptime = Math.floor(process.uptime() / 60);
+                        const processed = await getProcessedStatus('global') || {};
+                        const count = Object.keys(processed || {}).length;
+                        const statusMsg = `🤖 *BOT STATUS DASHBOARD*\n` +
+                            `━━━━━━━━━━━━━━━━━━━━\n` +
+                            `✅ Status: *Online*\n` +
+                            `⏱️ Uptime: *${uptime} mins*\n` +
+                            `📊 Orders in Memory: *${count}*\n` +
+                            `🔗 Socket JID: *${sock.user?.id || 'Connected'}*\n` +
+                            `━━━━━━━━━━━━━━━━━━━━`;
+                        return await sock.sendMessage(sender, { text: statusMsg });
+                    }
+                    if (cmd === 'ping') {
+                        return await sock.sendMessage(sender, { text: "🏓 *Pong!* Bot is active and listening." });
+                    }
+                }
+
+                if (user.msgCount > 40) {
+                    if (user.msgCount === 41) {
+                        await sock.sendMessage(sender, { text: "⚠️ *Slow down!* You're sending messages too fast. Please wait a moment before trying again." });
+                    }
                     return;
                 }
-                if (cmd === 'status') {
-                    const uptime = Math.floor(process.uptime() / 60);
-                    const statusMsg = `🤖 *BOT STATUS DASHBOARD*\n` +
-                        `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `✅ Status: *Online*\n` +
-                        `⏱️ Uptime: *${uptime} mins*\n` +
-                        `📊 Orders in Memory: *${Object.keys(processedStatus).length}*\n` +
-                        `🔗 Socket JID: *${sock.user?.id || 'Connected'}*\n` +
-                        `━━━━━━━━━━━━━━━━━━━━`;
-                    return await sock.sendMessage(sender, { text: statusMsg });
+
+                if (text.toLowerCase() === "cancel" || text.toLowerCase() === "reset") {
+                    user.step = "START"; user.current = {}; user.cart = [];
+                    return sock.sendMessage(sender, { text: "❌ *Order Reset.* Reply with any message to start again." });
                 }
-                if (cmd === 'ping') {
-                    return await sock.sendMessage(sender, { text: "🏓 *Pong!* Bot is active and listening." });
+
+                // STATE MACHINE
+                if (user.step === "START") {
+                    user.outlet = OUTLET; // Hardcoded — no outlet selection needed
+                    const store = await getData("settings/Store", OUTLET);
+                    const bot = await getData("settings/Bot", OUTLET);
+
+                    // Check if shop is open before showing menu
+                    if (store && !isShopOpen(store.shopOpenTime, store.shopCloseTime, store.shopStatus)) {
+                        return sock.sendMessage(sender, { text: `🌙 *${OUTLET_NAME.toUpperCase()} IS CLOSED*\n\nHours: ${store.shopOpenTime || 'N/A'} - ${store.shopCloseTime || 'N/A'}\n\nSee you later! 👋` });
+                    }
+
+                    let welcome = "";
+                    if (user.hasProfile && user.name) {
+                        welcome += `Welcome back, *${user.name}*! 👋\n`;
+                        welcome += `Your favorite items are ready for you. ${OUTLET_EMOJI}\n\n`;
+                    } else {
+                        welcome += `Hello *${pushName}*! 👋\n\n`;
+                    }
+
+                    welcome += `✨ *WELCOME TO ${OUTLET_NAME.toUpperCase()}* ${OUTLET_EMOJI}\n`;
+                    welcome += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    welcome += `Delicious food, delivered fast to your doorstep! 🚀\n\n`;
+
+                    // Cross-promotion for other outlet
+                    if (OTHER_OUTLET_NUMBER) {
+                        welcome += `${OTHER_OUTLET_EMOJI} Also try *${OTHER_OUTLET_NAME}*!\n`;
+                        welcome += `📱 Order at: wa.me/${OTHER_OUTLET_NUMBER}\n\n`;
+                    }
+
+                    welcome += `_Loading menu... one moment_ ⏳`;
+
+                    const greetingImg = bot?.greetingImage || store?.bannerImage;
+                    await sendImage(sock, sender, greetingImg, welcome);
+                    return sendCategories(sock, sender, user);
                 }
-            }
-
-            if (user.msgCount > 40) {
-                if (user.msgCount === 41) {
-                    await sock.sendMessage(sender, { text: "⚠️ *Slow down!* You're sending messages too fast. Please wait a moment before trying again." });
-                }
-                return;
-            }
-
-            if (text.toLowerCase() === "cancel" || text.toLowerCase() === "reset") {
-                user.step = "START"; user.current = {}; user.cart = [];
-                return sock.sendMessage(sender, { text: "❌ *Order Reset.* Reply with any message to start again." });
-            }
-
-            // STATE MACHINE
-            if (user.step === "START") {
-                user.outlet = OUTLET; // Hardcoded — no outlet selection needed
-                const store = await getData("settings/Store", OUTLET);
-                const bot = await getData("settings/Bot", OUTLET);
-                
-                // Check if shop is open before showing menu
-                if (store && !isShopOpen(store.shopOpenTime, store.shopCloseTime, store.shopStatus)) {
-                    return sock.sendMessage(sender, { text: `🌙 *${OUTLET_NAME.toUpperCase()} IS CLOSED*\n\nHours: ${store.shopOpenTime || 'N/A'} - ${store.shopCloseTime || 'N/A'}\n\nSee you later! 👋` });
-                }
-                
-                let welcome = "";
-                if (user.hasProfile && user.name) {
-                    welcome += `Welcome back, *${user.name}*! 👋\n`;
-                    welcome += `Your favorite items are ready for you. ${OUTLET_EMOJI}\n\n`;
-                } else {
-                    welcome += `Hello *${pushName}*! 👋\n\n`;
-                }
-                
-                welcome += `✨ *WELCOME TO ${OUTLET_NAME.toUpperCase()}* ${OUTLET_EMOJI}\n`;
-                welcome += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                welcome += `Delicious food, delivered fast to your doorstep! 🚀\n\n`;
-                
-                // Cross-promotion for other outlet
-                if (OTHER_OUTLET_NUMBER) {
-                    welcome += `${OTHER_OUTLET_EMOJI} Also try *${OTHER_OUTLET_NAME}*!\n`;
-                    welcome += `📱 Order at: wa.me/${OTHER_OUTLET_NUMBER}\n\n`;
-                }
-                
-                welcome += `_Loading menu... one moment_ ⏳`;
-                
-                const greetingImg = bot?.greetingImage || store?.bannerImage;
-                await sendImage(sock, sender, greetingImg, welcome);
-                return sendCategories(sock, sender, user);
-            }
 
 
-            if (user.step === "CATEGORY") {
-                if (text === "0") { 
-                    // Go back to welcome/start
-                    user.step = "START";
-                    return sock.sendMessage(sender, { text: `🏠 *Main Menu* — Send any message to restart.` });
-                }
-                if (text === "9") return sendCartView(sock, sender, user);
-                const cat = user.categoryList[parseInt(text) - 1];
-                if (!cat) return sendInvalidInputHelp(sock, sender, user);
+                if (user.step === "CATEGORY") {
+                    if (text === "0") {
+                        // Go back to welcome/start
+                        user.step = "START";
+                        return sock.sendMessage(sender, { text: `🏠 *Main Menu* — Send any message to restart.` });
+                    }
+                    if (text === "9") return sendCartView(sock, sender, user);
+                    const cat = user.categoryList[parseInt(text) - 1];
+                    if (!cat) return sendInvalidInputHelp(sock, sender, user);
 
-                const dishes = await getData(`dishes`, user.outlet) || {};
-                user.dishList = Object.entries(dishes)
-                    .filter(([id, d]) => d.category === cat.name && d.available !== false)
-                    .map(([id, d]) => ({ id, ...d }));
+                    const dishes = await getData(`dishes`, user.outlet) || {};
+                    user.dishList = Object.entries(dishes)
+                        .filter(([id, d]) => d.category === cat.name && d.available !== false)
+                        .map(([id, d]) => ({ id, ...d }));
 
-                if (user.dishList.length === 0) return sock.sendMessage(sender, { text: "❌ No items in this category." });
+                    if (user.dishList.length === 0) return sock.sendMessage(sender, { text: "❌ No items in this category." });
 
-                let dMsg = `🍽️ *${cat.name.toUpperCase()}*\n\n`;
-                user.dishList.forEach((d, i) => { dMsg += `${i + 1}️⃣  *${d.name}*\n\n`; });
-                dMsg += `🛒 *9* View Cart\n0️⃣ *Take one step Back* 🔙`;
-                user.step = "DISH";
-                return await sendImage(sock, sender, cat.image, dMsg);
-            }
-
-            if (user.step === "DISH") {
-                if (text === "0") return sendCategories(sock, sender, user);
-                if (text === "9") return sendCartView(sock, sender, user);
-                const dish = user.dishList[parseInt(text) - 1];
-                if (!dish) return sendInvalidInputHelp(sock, sender, user);
-
-                user.current = { dish };
-                user.sizeList = Object.entries(dish.sizes || { "Regular": dish.price });
-                let sMsg = `📏 *SELECT SIZE*\n\n`;
-                user.sizeList.forEach(([s, p], i) => { sMsg += `${i + 1}️⃣  ${s} — ₹${p}\n`; });
-                sMsg += `\n0️⃣ *Take one step Back* 🔙`;
-                user.step = "SIZE";
-                return await sendImage(sock, sender, dish.image, sMsg);
-            }
-
-            if (user.step === "SIZE") {
-                if (text === "0") {
-                    const dishList = user.dishList || [];
-                    if (dishList.length === 0) return sendCategories(sock, sender, user);
-                    
-                    let dMsg = `🍽️ *ITEM SELECTION*\n\n`;
-                    dishList.forEach((d, i) => { dMsg += `${i + 1}️⃣  *${d.name}*\n\n`; });
+                    let dMsg = `🍽️ *${cat.name.toUpperCase()}*\n\n`;
+                    user.dishList.forEach((d, i) => { dMsg += `${i + 1}️⃣  *${d.name}*\n\n`; });
                     dMsg += `🛒 *9* View Cart\n0️⃣ *Take one step Back* 🔙`;
                     user.step = "DISH";
-                    return sock.sendMessage(sender, { text: dMsg });
+                    return await sendImage(sock, sender, cat.image, dMsg);
                 }
-                const [size, price] = user.sizeList[parseInt(text) - 1] || [];
-                if (!size) return sendInvalidInputHelp(sock, sender, user);
 
-                user.current.size = size;
-                user.current.unitPrice = price;
-                user.current.addons = [];
+                if (user.step === "DISH") {
+                    if (text === "0") return sendCategories(sock, sender, user);
+                    if (text === "9") return sendCartView(sock, sender, user);
+                    const dish = user.dishList[parseInt(text) - 1];
+                    if (!dish) return sendInvalidInputHelp(sock, sender, user);
 
-                user.step = "QUANTITY";
-                let qtyMsg = `🔢 *STEP 4: ENTER QUANTITY* 🍕\n\n`;
-                qtyMsg += `*How many of this item would you like to order?*\n\n`;
-                qtyMsg += `_Example: Reply with 1, 2, 5, etc._\n`;
-                qtyMsg += `0️⃣ *Take one step Back* 🔙`;
-                return sock.sendMessage(sender, { text: await appendContactInfo(qtyMsg, user.outlet) }); 
-            }
-
-            if (user.step === "QUANTITY") {
-                const qty = parseInt(text);
-                if (text === "0") {
-                    const dish = user.current.dish;
-                    user.sizeList = Object.entries(dish.sizes || { "Regular": dish.price });
-                    let sMsg = `📏 *SELECT SIZE*\n\n`;
-                    user.sizeList.forEach(([s, p], i) => { sMsg += `${i + 1}️⃣  ${s} — ₹${p}\n`; });
-                    sMsg += `\n0️⃣ *Take one step Back* 🔙`;
-                    user.step = "SIZE";
-                    return sock.sendMessage(sender, { text: sMsg });
-                }
-                if (isNaN(qty) || qty < 1 || qty > 50) return sendInvalidInputHelp(sock, sender, user);
-
-                const addonTotal = user.current.addons.reduce((s, a) => s + a.price, 0);
-                user.cart.push({
-                    name: user.current.dish.name,
-                    size: user.current.size,
-                    unitPrice: user.current.unitPrice,
-                    addons: user.current.addons,
-                    quantity: qty,
-                    total: (user.current.unitPrice + addonTotal) * qty,
-                    outlet: OUTLET
-                });
-
-                user.step = "ADDED_TO_CART";
-                return sendCartView(sock, sender, user, true);
-            }
-
-            if (user.step === "ADDED_TO_CART") {
-                if (text === "1") return sendCategories(sock, sender, user);
-                if (text === "2") return sendCartView(sock, sender, user);
-                if (text === "0") {
-                    // Back to SIZE selection for the current dish
-                    const dish = user.current.dish;
+                    user.current = { dish };
                     user.sizeList = Object.entries(dish.sizes || { "Regular": dish.price });
                     let sMsg = `📏 *SELECT SIZE*\n\n`;
                     user.sizeList.forEach(([s, p], i) => { sMsg += `${i + 1}️⃣  ${s} — ₹${p}\n`; });
@@ -1554,239 +1486,308 @@ async function startBot() {
                     user.step = "SIZE";
                     return await sendImage(sock, sender, dish.image, sMsg);
                 }
-                return sock.sendMessage(sender, { text: "⚠️ Reply *1* to add more, *2* to view cart or *0* to go back." });
-            }
 
-            if (user.step === "EMPTY_CART_VIEW") {
-                if (text === "1") return sendCategories(sock, sender, user);
-                if (text === "0") { return sendCategories(sock, sender, user); }
-                return sock.sendMessage(sender, { text: "⚠️ Reply *1* to browse menu or *0* to go back." });
-            }
+                if (user.step === "SIZE") {
+                    if (text === "0") {
+                        const dishList = user.dishList || [];
+                        if (dishList.length === 0) return sendCategories(sock, sender, user);
 
-            if (user.step === "CART_VIEW") {
-                if (text === "1") return sendCategories(sock, sender, user);
-                if (text === "2") { 
-                    if (user.profile && user.profile.name) {
-                        user.step = "REUSE_PROFILE";
-                        let profileMsg = `👤 *REUSE YOUR SAVED DETAILS?*\n\n`;
-                        profileMsg += `Name: ${user.profile.name}\n`;
-                        profileMsg += `Phone: ${user.profile.phone}\n`;
-                        profileMsg += `Address: ${user.profile.address || "N/A"}\n\n`;
-                        profileMsg += `1️⃣ Yes, use these details\n`;
-                        profileMsg += `2️⃣ No, enter new details\n`;
-                        profileMsg += `0️⃣ *Take one step Back* 🔙`;
-                        return sock.sendMessage(sender, { text: await appendContactInfo(profileMsg, user.outlet) });
+                        let dMsg = `🍽️ *ITEM SELECTION*\n\n`;
+                        dishList.forEach((d, i) => { dMsg += `${i + 1}️⃣  *${d.name}*\n\n`; });
+                        dMsg += `🛒 *9* View Cart\n0️⃣ *Take one step Back* 🔙`;
+                        user.step = "DISH";
+                        return sock.sendMessage(sender, { text: dMsg });
                     }
-                    user.step = "NAME"; 
-                    let nameMsg = `👤 *STEP 1: ENTER YOUR FULL NAME* ✨\n\n`;
-                    nameMsg += `Please provide your name so we can address you correctly and prepare your order.\n\n`;
-                    nameMsg += `_Example: Rajesh Kumar_\n`;
-                    nameMsg += `0️⃣ *Take one step Back* 🔙`;
-                    return sock.sendMessage(sender, { text: await appendContactInfo(nameMsg, user.outlet) }); 
-                }
-                if (text === "3") { 
-                    user.step = "START"; user.current = {}; user.cart = []; 
-                    return sock.sendMessage(sender, { text: await appendContactInfo("🗑️ Cart cleared. Reply with any message to start again.", user.outlet) }); 
-                }
-                if (text === "0") {
-                    return sendCategories(sock, sender, user);
-                }
-                return sendInvalidInputHelp(sock, sender, user);
-            }
+                    const [size, price] = user.sizeList[parseInt(text) - 1] || [];
+                    if (!size) return sendInvalidInputHelp(sock, sender, user);
 
-            if (user.step === "REUSE_PROFILE") {
-                if (text === "1") {
-                    user.name = user.profile.name;
-                    user.phone = user.profile.phone;
-                    user.address = user.profile.address;
-                    // Note: We intentionally DO NOT reuse user.location here as per request
-                    
-                    user.step = "LOCATION";
+                    user.current.size = size;
+                    user.current.unitPrice = price;
+                    user.current.addons = [];
+
+                    user.step = "QUANTITY";
+                    let qtyMsg = `🔢 *STEP 4: ENTER QUANTITY* 🍕\n\n`;
+                    qtyMsg += `*How many of this item would you like to order?*\n\n`;
+                    qtyMsg += `_Example: Reply with 1, 2, 5, etc._\n`;
+                    qtyMsg += `0️⃣ *Take one step Back* 🔙`;
+                    return sock.sendMessage(sender, { text: await appendContactInfo(qtyMsg, user.outlet) });
+                }
+
+                if (user.step === "QUANTITY") {
+                    const qty = parseInt(text);
+                    if (text === "0") {
+                        const dish = user.current.dish;
+                        user.sizeList = Object.entries(dish.sizes || { "Regular": dish.price });
+                        let sMsg = `📏 *SELECT SIZE*\n\n`;
+                        user.sizeList.forEach(([s, p], i) => { sMsg += `${i + 1}️⃣  ${s} — ₹${p}\n`; });
+                        sMsg += `\n0️⃣ *Take one step Back* 🔙`;
+                        user.step = "SIZE";
+                        return sock.sendMessage(sender, { text: sMsg });
+                    }
+                    if (isNaN(qty) || qty < 1 || qty > 50) return sendInvalidInputHelp(sock, sender, user);
+
+                    const addonTotal = user.current.addons.reduce((s, a) => s + a.price, 0);
+                    user.cart.push({
+                        name: user.current.dish.name,
+                        size: user.current.size,
+                        unitPrice: user.current.unitPrice,
+                        addons: user.current.addons,
+                        quantity: qty,
+                        total: (user.current.unitPrice + addonTotal) * qty,
+                        outlet: OUTLET
+                    });
+
+                    user.step = "ADDED_TO_CART";
+                    return sendCartView(sock, sender, user, true);
+                }
+
+                if (user.step === "ADDED_TO_CART") {
+                    if (text === "1") return sendCategories(sock, sender, user);
+                    if (text === "2") return sendCartView(sock, sender, user);
+                    if (text === "0") {
+                        // Back to SIZE selection for the current dish
+                        const dish = user.current.dish;
+                        user.sizeList = Object.entries(dish.sizes || { "Regular": dish.price });
+                        let sMsg = `📏 *SELECT SIZE*\n\n`;
+                        user.sizeList.forEach(([s, p], i) => { sMsg += `${i + 1}️⃣  ${s} — ₹${p}\n`; });
+                        sMsg += `\n0️⃣ *Take one step Back* 🔙`;
+                        user.step = "SIZE";
+                        return await sendImage(sock, sender, dish.image, sMsg);
+                    }
+                    return sock.sendMessage(sender, { text: "⚠️ Reply *1* to add more, *2* to view cart or *0* to go back." });
+                }
+
+                if (user.step === "EMPTY_CART_VIEW") {
+                    if (text === "1") return sendCategories(sock, sender, user);
+                    if (text === "0") { return sendCategories(sock, sender, user); }
+                    return sock.sendMessage(sender, { text: "⚠️ Reply *1* to browse menu or *0* to go back." });
+                }
+
+                if (user.step === "CART_VIEW") {
+                    if (text === "1") return sendCategories(sock, sender, user);
+                    if (text === "2") {
+                        if (user.profile && user.profile.name) {
+                            user.step = "REUSE_PROFILE";
+                            let profileMsg = `👤 *REUSE YOUR SAVED DETAILS?*\n\n`;
+                            profileMsg += `Name: ${user.profile.name}\n`;
+                            profileMsg += `Phone: ${user.profile.phone}\n`;
+                            profileMsg += `Address: ${user.profile.address || "N/A"}\n\n`;
+                            profileMsg += `1️⃣ Yes, use these details\n`;
+                            profileMsg += `2️⃣ No, enter new details\n`;
+                            profileMsg += `0️⃣ *Take one step Back* 🔙`;
+                            return sock.sendMessage(sender, { text: await appendContactInfo(profileMsg, user.outlet) });
+                        }
+                        user.step = "NAME";
+                        let nameMsg = `👤 *STEP 1: ENTER YOUR FULL NAME* ✨\n\n`;
+                        nameMsg += `Please provide your name so we can address you correctly and prepare your order.\n\n`;
+                        nameMsg += `_Example: Rajesh Kumar_\n`;
+                        nameMsg += `0️⃣ *Take one step Back* 🔙`;
+                        return sock.sendMessage(sender, { text: await appendContactInfo(nameMsg, user.outlet) });
+                    }
+                    if (text === "3") {
+                        user.step = "START"; user.current = {}; user.cart = [];
+                        return sock.sendMessage(sender, { text: await appendContactInfo("🗑️ Cart cleared. Reply with any message to start again.", user.outlet) });
+                    }
+                    if (text === "0") {
+                        return sendCategories(sock, sender, user);
+                    }
+                    return sendInvalidInputHelp(sock, sender, user);
+                }
+
+                if (user.step === "REUSE_PROFILE") {
+                    if (text === "1") {
+                        user.name = user.profile.name;
+                        user.phone = user.profile.phone;
+                        user.address = user.profile.address;
+                        // Note: We intentionally DO NOT reuse user.location here as per request
+
+                        user.step = "LOCATION";
+                        let locMsg = `📍 *SHARE YOUR LOCATION* 🌍\n\n`;
+                        locMsg += `Please share your *Live* or *Current* Location so we can calculate the delivery fee.\n\n`;
+                        locMsg += `*How to share:*\n`;
+                        locMsg += `1️⃣ Click the 📎 (Paperclip) or *+* button in WhatsApp\n`;
+                        locMsg += `2️⃣ Select 'Location'\n`;
+                        locMsg += `3️⃣ Choose 'Send Your Current Location'\n\n`;
+                        locMsg += `_This step is mandatory for delivery calculation._`;
+                        return sock.sendMessage(sender, { text: await appendContactInfo(locMsg, user.outlet) });
+                    }
+                    if (text === "2") {
+                        user.step = "NAME";
+                        let nameMsg = `👤 *STEP 1: ENTER YOUR FULL NAME* ✨\n\n`;
+                        nameMsg += `Please provide your name so we can address you correctly and prepare your order.\n\n`;
+                        nameMsg += `_Example: Rajesh Kumar_\n`;
+                        nameMsg += `0️⃣ *Take one step Back* 🔙`;
+                        return sock.sendMessage(sender, { text: await appendContactInfo(nameMsg, user.outlet) });
+                    }
+                    if (text === "0") {
+                        user.step = "CART_VIEW";
+                        return sendCartView(sock, sender, user);
+                    }
+                    return sendInvalidInputHelp(sock, sender, user);
+                }
+                if (user.step === "NAME") {
+                    if (text === "0") {
+                        user.step = "CART_VIEW";
+                        return sendCartView(sock, sender, user);
+                    }
+                    user.name = text;
+                    user.step = "PHONE";
+                    if (user.name) {
+                        await saveUserProfile(sender, { name: user.name, phone: user.phone || "" });
+                    }
+                    return sock.sendMessage(sender, { text: await appendContactInfo("📞 *STEP 2: ENTER YOUR 10 DIGIT MOBILE NUMBER*\n\n_Example: 9876543210. We will use this to contact you regarding your order._\n0️⃣ *Take one step Back* 🔙", user.outlet) });
+                }
+
+                if (user.step === "PHONE") {
+                    if (text === "0") {
+                        user.step = "NAME";
+                        let nameMsg = `👤 *STEP 1: ENTER YOUR FULL NAME* ✨\n\n`;
+                        nameMsg += `Please provide your name so we can address you correctly and prepare your order.\n\n`;
+                        nameMsg += `_Example: Rajesh Kumar_\n`;
+                        nameMsg += `0️⃣ *Take one step Back* 🔙`;
+                        return sock.sendMessage(sender, { text: await appendContactInfo(nameMsg, user.outlet) });
+                    }
+                    user.phone = text;
+                    user.step = "ADDRESS";
+                    return sock.sendMessage(sender, { text: await appendContactInfo("🏠 *STEP 3: ENTER YOUR DELIVERY ADDRESS*\n\n_Please provide your complete address including landmark, house number, etc._\n0️⃣ *Take one step Back* 🔙", user.outlet) });
+                }
+
+                if (user.step === "ADDRESS") {
+                    if (text === "0") {
+                        user.step = "PHONE";
+                        return sock.sendMessage(sender, { text: await appendContactInfo("📞 *STEP 2: ENTER YOUR 10 DIGIT MOBILE NUMBER*\n\n_Example: 9876543210. We will use this to contact you regarding your order._\n0️⃣ *Take one step Back* 🔙", user.outlet) });
+                    }
+                    user.address = text; user.step = "LOCATION";
                     let locMsg = `📍 *SHARE YOUR LOCATION* 🌍\n\n`;
                     locMsg += `Please share your *Live* or *Current* Location so we can calculate the delivery fee.\n\n`;
                     locMsg += `*How to share:*\n`;
                     locMsg += `1️⃣ Click the 📎 (Paperclip) or *+* button in WhatsApp\n`;
                     locMsg += `2️⃣ Select 'Location'\n`;
                     locMsg += `3️⃣ Choose 'Send Your Current Location'\n\n`;
-                    locMsg += `_This step is mandatory for delivery calculation._`;
+                    locMsg += `_This step is mandatory for delivery calculation._\n`;
+                    locMsg += `0️⃣ *Take one step Back* 🔙`;
                     return sock.sendMessage(sender, { text: await appendContactInfo(locMsg, user.outlet) });
                 }
-                if (text === "2") {
-                    user.step = "NAME";
-                    let nameMsg = `👤 *STEP 1: ENTER YOUR FULL NAME* ✨\n\n`;
-                    nameMsg += `Please provide your name so we can address you correctly and prepare your order.\n\n`;
-                    nameMsg += `_Example: Rajesh Kumar_\n`;
-                    nameMsg += `0️⃣ *Take one step Back* 🔙`;
-                    return sock.sendMessage(sender, { text: await appendContactInfo(nameMsg, user.outlet) });
+
+                if (user.step === "LOCATION") {
+                    if (text === "0") {
+                        user.step = "ADDRESS";
+                        return sock.sendMessage(sender, { text: await appendContactInfo("🏠 *STEP 3: ENTER YOUR DELIVERY ADDRESS*\n\n_Please provide your complete address including landmark, house number, etc._\n0️⃣ *Take one step Back* 🔙", user.outlet) });
+                    }
+                    const loc = msg.message?.locationMessage;
+                    if (!loc) return sendInvalidInputHelp(sock, sender, user);
+
+                    user.location = { lat: loc.degreesLatitude, lng: loc.degreesLongitude };
+                    return handleCheckoutFinal(sock, sender, user);
                 }
-                if (text === "0") {
-                    user.step = "CART_VIEW";
-                    return sendCartView(sock, sender, user);
+
+                if (user.step === "CONFIRM_PAY") {
+                    if (text === "0") {
+                        user.step = "CART_VIEW";
+                        return sendCartView(sock, sender, user);
+                    }
+                    if (text === "2") {
+                        // Record Lost Sale
+                        const lostId = "L-" + Date.now();
+                        const { lines, subtotal } = formatCartSummary(user.cart);
+                        const lostData = {
+                            timestamp: new Date().toISOString(),
+                            customer: user.name || "Anonymous",
+                            phone: user.phone || "N/A",
+                            total: subtotal, // Changed subtotal to total for report compatibility
+                            subtotal: subtotal,
+                            reason: "Cancelled at final invoice step",
+                            outlet: user.outlet || "pizza"
+                        };
+
+                        await setData(`logs/lostSales/${lostId}`, lostData);
+
+                        // Notify Admin
+                        await notifyAdmin(sock, lostId, {
+                            customerName: user.name || "Anonymous",
+                            phone: user.phone || "N/A",
+                            total: subtotal,
+                            outlet: user.outlet || "pizza"
+                        }, 'CANCELLED');
+
+                        const outlet = user.outlet;
+                        user = null; // Mark session for deletion in Redis 
+                        return sock.sendMessage(sender, { text: await appendContactInfo("❌ Order Cancelled. We hope to serve you next time! 🙏", outlet) });
+                    }
+                    if (text === "1") {
+                        user = await processOrderPlacement(sock, sender, user, "COD");
+                        return;
+                    }
+                    return sendInvalidInputHelp(sock, sender, user);
                 }
-                return sendInvalidInputHelp(sock, sender, user);
-            }
-            if (user.step === "NAME") {
-                if (text === "0") {
-                    user.step = "CART_VIEW";
-                    return sendCartView(sock, sender, user);
+
+                async function processOrderPlacement(sock, sender, user, method) {
+                    try {
+                        const orderId = await generateOrderId(user.outlet);
+                        const { subtotal } = formatCartSummary(user.cart);
+
+                        const deliveryFee = user.deliveryFee || 0;
+                        const finalOrder = {
+                            orderId, outlet: user.outlet,
+                            type: "Online", // Explicitly tag as Online order
+                            customerName: escapeHtml(user.name),
+                            phone: user.phone,
+                            whatsappNumber: sender, // Save sender JID for status updates
+                            address: escapeHtml(user.address),
+                            lat: user.location.lat, lng: user.location.lng,
+                            subtotal, deliveryFee, total: subtotal + deliveryFee - (user.discount || 0),
+                            status: "Placed", paymentMethod: method, paymentStatus: "Pending",
+                            createdAt: new Date().toISOString(),
+                            assignedRider: "",
+                            items: user.cart
+                        };
+
+                        await setData(`orders/${orderId}`, finalOrder, user.outlet);
+                        await notifyAdmin(sock, orderId, finalOrder, 'NEW');
+
+                        // Save user profile for next time
+                        await saveUserProfile(sender, {
+                            name: user.name,
+                            phone: user.phone,
+                            address: user.address,
+                            location: user.location,
+                            lastOutlet: user.outlet
+                        });
+
+                        // Save complete profile to outlet's customers node for POS access
+                        if (user.phone) {
+                            const cleanPhone = String(user.phone).replace(/\D/g, '').slice(-10);
+                            const custData = {
+                                name: user.name,
+                                phone: cleanPhone,
+                                address: user.address || "",
+                                location: user.location || null,
+                                mapsLink: user.location ? `https://maps.google.com/?q=${user.location.lat},${user.location.lng}` : "",
+                                lastOrderDate: new Date().toISOString()
+                            };
+                            await updateData(`customers/${cleanPhone}`, custData, user.outlet);
+                        }
+
+                        let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY!* 🎉\n`;
+                        successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        successMsg += `🆔 *Order ID:* #${orderId.slice(-5)}\n`;
+                        successMsg += `🏪 *Shop:* ${OUTLET_NAME}\n`;
+                        successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        successMsg += `*Please wait while the admin confirms your order!* ⏳\n\n`;
+                        successMsg += `Total: ₹${finalOrder.total}`;
+
+                        await sock.sendMessage(sender, { text: await appendContactInfo(successMsg, user.outlet) });
+
+                        // Return null to signify session should be cleared
+                        return null;
+                    } catch (e) {
+                        console.error("Order Placement Error:", e);
+                        return sock.sendMessage(sender, { text: "❌ Error placing your order. Please try again." });
+                    }
                 }
-                user.name = text;
-                user.step = "PHONE";
-                if (user.name) {
-                    await saveUserProfile(sender, { name: user.name, phone: user.phone || "" });
-                }
-                return sock.sendMessage(sender, { text: await appendContactInfo("📞 *STEP 2: ENTER YOUR 10 DIGIT MOBILE NUMBER*\n\n_Example: 9876543210. We will use this to contact you regarding your order._\n0️⃣ *Take one step Back* 🔙", user.outlet) });
-            }
-
-            if (user.step === "PHONE") {
-                if (text === "0") {
-                    user.step = "NAME";
-                    let nameMsg = `👤 *STEP 1: ENTER YOUR FULL NAME* ✨\n\n`;
-                    nameMsg += `Please provide your name so we can address you correctly and prepare your order.\n\n`;
-                    nameMsg += `_Example: Rajesh Kumar_\n`;
-                    nameMsg += `0️⃣ *Take one step Back* 🔙`;
-                    return sock.sendMessage(sender, { text: await appendContactInfo(nameMsg, user.outlet) });
-                }
-                user.phone = text;
-                user.step = "ADDRESS";
-                return sock.sendMessage(sender, { text: await appendContactInfo("🏠 *STEP 3: ENTER YOUR DELIVERY ADDRESS*\n\n_Please provide your complete address including landmark, house number, etc._\n0️⃣ *Take one step Back* 🔙", user.outlet) });
-            }
-
-            if (user.step === "ADDRESS") {
-                if (text === "0") {
-                    user.step = "PHONE";
-                    return sock.sendMessage(sender, { text: await appendContactInfo("📞 *STEP 2: ENTER YOUR 10 DIGIT MOBILE NUMBER*\n\n_Example: 9876543210. We will use this to contact you regarding your order._\n0️⃣ *Take one step Back* 🔙", user.outlet) });
-                }
-                user.address = text; user.step = "LOCATION";
-                let locMsg = `📍 *SHARE YOUR LOCATION* 🌍\n\n`;
-                locMsg += `Please share your *Live* or *Current* Location so we can calculate the delivery fee.\n\n`;
-                locMsg += `*How to share:*\n`;
-                locMsg += `1️⃣ Click the 📎 (Paperclip) or *+* button in WhatsApp\n`;
-                locMsg += `2️⃣ Select 'Location'\n`;
-                locMsg += `3️⃣ Choose 'Send Your Current Location'\n\n`;
-                locMsg += `_This step is mandatory for delivery calculation._\n`;
-                locMsg += `0️⃣ *Take one step Back* 🔙`;
-                return sock.sendMessage(sender, { text: await appendContactInfo(locMsg, user.outlet) });
-            }
-
-            if (user.step === "LOCATION") {
-                if (text === "0") {
-                    user.step = "ADDRESS";
-                    return sock.sendMessage(sender, { text: await appendContactInfo("🏠 *STEP 3: ENTER YOUR DELIVERY ADDRESS*\n\n_Please provide your complete address including landmark, house number, etc._\n0️⃣ *Take one step Back* 🔙", user.outlet) });
-                }
-                const loc = msg.message?.locationMessage;
-                if (!loc) return sendInvalidInputHelp(sock, sender, user);
-
-                user.location = { lat: loc.degreesLatitude, lng: loc.degreesLongitude };
-                return handleCheckoutFinal(sock, sender, user);
-            }
-
-            if (user.step === "CONFIRM_PAY") {
-                if (text === "0") {
-                    user.step = "CART_VIEW";
-                    return sendCartView(sock, sender, user);
-                }
-                if (text === "2") { 
-                    // Record Lost Sale
-                    const lostId = "L-" + Date.now();
-                    const { lines, subtotal } = formatCartSummary(user.cart);
-                    const lostData = {
-                        timestamp: new Date().toISOString(),
-                        customer: user.name || "Anonymous",
-                        phone: user.phone || "N/A",
-                        total: subtotal, // Changed subtotal to total for report compatibility
-                        subtotal: subtotal,
-                        reason: "Cancelled at final invoice step",
-                        outlet: user.outlet || "pizza"
-                    };
-                    
-                    await setData(`logs/lostSales/${lostId}`, lostData);
-                    
-                    // Notify Admin
-                    await notifyAdmin(sock, lostId, { 
-                        customerName: user.name || "Anonymous", 
-                        phone: user.phone || "N/A", 
-                        total: subtotal,
-                        outlet: user.outlet || "pizza"
-                    }, 'CANCELLED');
-
-                    user = null; // Mark session for deletion in Redis 
-                    return sock.sendMessage(sender, { text: await appendContactInfo("❌ Order Cancelled. We hope to serve you next time! 🙏", user.outlet) }); 
-                }
-                if (text === "1") {
-                    user = await processOrderPlacement(sock, sender, user, "COD");
-                    return;
-                }
-                return sendInvalidInputHelp(sock, sender, user);
-            }
-
-async function processOrderPlacement(sock, sender, user, method) {
-    try {
-        const orderId = await generateOrderId(user.outlet);
-        const { subtotal } = formatCartSummary(user.cart);
-
-        const deliveryFee = user.deliveryFee || 0;
-        const finalOrder = {
-            orderId, outlet: user.outlet, 
-            type: "Online", // Explicitly tag as Online order
-            customerName: escapeHtml(user.name),
-            phone: user.phone, 
-            whatsappNumber: sender, // Save sender JID for status updates
-            address: escapeHtml(user.address),
-            lat: user.location.lat, lng: user.location.lng,
-            subtotal, deliveryFee, total: subtotal + deliveryFee - (user.discount || 0),
-            status: "Placed", paymentMethod: method, paymentStatus: "Pending",
-            createdAt: new Date().toISOString(),
-            assignedRider: "",
-            items: user.cart
-        };
-
-        await setData(`orders/${orderId}`, finalOrder, user.outlet);
-        await notifyAdmin(sock, orderId, finalOrder, 'NEW');
-
-        // Save user profile for next time
-        await saveUserProfile(sender, {
-            name: user.name,
-            phone: user.phone,
-            address: user.address,
-            location: user.location,
-            lastOutlet: user.outlet
-        });
-        
-        // Save complete profile to outlet's customers node for POS access
-        if (user.phone) {
-            const cleanPhone = String(user.phone).replace(/\D/g, '').slice(-10);
-            const custData = {
-                name: user.name,
-                phone: cleanPhone,
-                address: user.address || "",
-                location: user.location || null,
-                mapsLink: user.location ? `https://maps.google.com/?q=${user.location.lat},${user.location.lng}` : "",
-                lastOrderDate: new Date().toISOString()
-            };
-            await updateData(`customers/${cleanPhone}`, custData, user.outlet);
-        }
-
-        let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY!* 🎉\n`;
-        successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-        successMsg += `🆔 *Order ID:* #${orderId.slice(-5)}\n`;
-        successMsg += `🏪 *Shop:* ${OUTLET_NAME}\n`;
-        successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-        successMsg += `*Please wait while the admin confirms your order!* ⏳\n\n`;
-        successMsg += `Total: ₹${finalOrder.total}`;
-
-        await sock.sendMessage(sender, { text: await appendContactInfo(successMsg, user.outlet) });
-        
-        // Return null to signify session should be cleared
-        return null;
-    } catch (e) {
-        console.error("Order Placement Error:", e);
-        return sock.sendMessage(sender, { text: "❌ Error placing your order. Please try again." });
-    }
-}
 
             })(); // <-- End of Message Handler IIFE
-            
+
             // Final Session Save
             await saveSession(sender, user);
 
@@ -1824,7 +1825,7 @@ async function handleCheckoutFinal(sock, sender, user) {
         sum += `1️⃣ Confirm Order\n`;
         sum += `2️⃣ Cancel\n`;
         sum += `0️⃣ *Take one step Back* 🔙`;
-        
+
         return sock.sendMessage(sender, { text: await appendContactInfo(sum, user.outlet) });
     } catch (e) {
         console.error("Checkout Final Error:", e);
