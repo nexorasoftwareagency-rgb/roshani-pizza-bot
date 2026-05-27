@@ -7,10 +7,7 @@ This document outlines the current architecture of the Roshani Pizza/Cake ERP an
 ## 1. CURRENT STATE ANALYSIS
 
 ### 1.1 Multi-Outlet Strategy
-Currently, the system operates on a **Duplicate-Folder Architecture**:
-- `Pizza-bot/` and `Cake-bot/` are separate directory instances.
-- Each instance has its own `index.js` with hardcoded `OUTLET = 'pizza'` or `'cake'`.
-- Managed via `ecosystem.config.js` as independent PM2 processes.
+The system was originally built as a **Duplicate-Folder Architecture** with `Pizza-bot/` and `Cake-bot/` as separate directory instances (each with hardcoded `OUTLET = 'pizza'` or `'cake'`). This has since been consolidated into a single `bot/` directory driven by the `OUTLET` env var, managed via `ecosystem.config.js` as independent PM2 processes.
 
 ### 1.2 Data Structure (Firebase)
 The Realtime Database is structured with top-level nodes for specific outlets:

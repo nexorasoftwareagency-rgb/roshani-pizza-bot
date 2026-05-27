@@ -28,9 +28,8 @@ cd c:/Prasant-Pizza-ERP
 # 2. Pull the latest code from GitHub
 git pull origin main
 
-# 3. Update dependencies for both bots
-cd Pizza-bot && npm install
-cd ../Cake-bot && npm install
+# 3. Update bot dependencies
+cd bot && npm install
 
 # 4. Restart the bot processes
 cd ..

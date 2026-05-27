@@ -784,9 +784,6 @@ Prasant-Pizza-ERP/
 │   └── session_data_pizza/    # Auth session (auto-generated)
 │   └── session_data_cake/     # Auth session (auto-generated)
 │
-├── Pizza-bot/                 # Legacy pizza bot (deprecated)
-├── Cake-bot/                  # Legacy cake bot (deprecated)
-├── rider_old/                 # Legacy rider app (deprecated)
 │
 ├── ecosystem.config.js        # PM2 process manager config
 ├── firebase.json              # Firebase Hosting config
