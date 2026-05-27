@@ -72,6 +72,11 @@ let weeklyReportSent = false;
 let monthlyReportSent = false;
 const startupTime = Date.now();
 
+// Crypto/session error monitoring (for auto-healing and visibility)
+let cryptoErrorCount = 0;
+let reconnectAttempts = 0;
+const MAX_CRYPTO_ERRORS = 500; // Triggers session reset if exceeded rapidly
+
 const SESSION_TTL = 30 * 60; // Redis TTL is in seconds (30 mins)
 const STATUS_TTL = 24 * 60 * 60; // 24 hours
 
@@ -1254,6 +1259,16 @@ async function broadcastPickupAvailable(sock, orderId, order) {
 // 4. MAIN START FUNCTION
 // =============================
 
+// =============================
+// GLOBAL ERROR HANDLERS (prevent silent crashes)
+// =============================
+process.on('uncaughtException', (err) => {
+    console.error('[FATAL] Uncaught Exception:', err?.message || err);
+});
+process.on('unhandledRejection', (err) => {
+    console.error('[FATAL] Unhandled Rejection:', err?.message || err);
+});
+
 async function startBot() {
     console.log(`🚀 Starting ${OUTLET_NAME} WhatsApp Bot (${OUTLET})...`);
     const { state, saveCreds } = await useMultiFileAuthState('session_data_' + OUTLET);
@@ -1274,6 +1289,10 @@ async function startBot() {
     if (reportInterval) clearInterval(reportInterval);
     reportInterval = setInterval(async () => {
         cleanupSessions();
+        // Log crypto health summary (helpful to detect session degradation)
+        if (cryptoErrorCount > 0) {
+            console.log(`[CRYPTO] 📊 ${cryptoErrorCount} undecryptable messages since last connect (session ${cryptoErrorCount > 10 ? 'may need attention' : 'healthy'})`);
+        }
         updateData(`bot/${OUTLET}/status`, { lastSeen: Date.now(), status: 'Online', outlet: OUTLET }).catch(() => { });
 
         // Refresh admin JID cache every heartbeat cycle
@@ -1347,11 +1366,22 @@ async function startBot() {
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
         if (qr) qrcode.generate(qr, { small: true });
-        if (connection === 'open') console.log(`✅ ${OUTLET_NAME.toUpperCase()} BOT IS ONLINE`);
+        if (connection === 'open') {
+            console.log(`✅ ${OUTLET_NAME.toUpperCase()} BOT IS ONLINE`);
+            reconnectAttempts = 0;
+            cryptoErrorCount = 0;
+        }
         if (connection === 'close') {
             const code = lastDisconnect?.error?.output?.statusCode;
-            if (code !== DisconnectReason.loggedOut) setTimeout(startBot, 5000);
-            else console.log("❌ Logged out. Delete session folder and restart.");
+            if (code !== DisconnectReason.loggedOut) {
+                reconnectAttempts++;
+                // Exponential backoff: 5s, 15s, 45s, 120s max
+                const delay = Math.min(5000 * Math.pow(3, Math.min(reconnectAttempts - 1, 3)), 120000);
+                console.log(`🔌 Disconnected (attempt ${reconnectAttempts}). Reconnecting in ${(delay / 1000).toFixed(0)}s...`);
+                setTimeout(startBot, delay);
+            } else {
+                console.log("❌ Logged out. Delete session folder and restart.");
+            }
         }
     });
 
@@ -1362,7 +1392,21 @@ async function startBot() {
         try {
             if (m.type !== 'notify') return;
             const msg = m.messages[0];
-            if (!msg.message || msg.key.fromMe) return;
+            if (!msg.message) {
+                // Crypto/session decryption failure (Baileys internal - Bad MAC etc.)
+                cryptoErrorCount++;
+                // Log only every 100th failure, or if a minute passed since last log
+                const now = Date.now();
+                if (cryptoErrorCount % 100 === 1) {
+                    console.warn(`[CRYPTO] ⚠️ ${cryptoErrorCount} messages undecryptable so far. StubType: ${msg.messageStubType || 'N/A'}`);
+                }
+                // If crypto errors spike past threshold within 120s of startup, suggest session reset
+                if (cryptoErrorCount === MAX_CRYPTO_ERRORS) {
+                    console.error(`[CRYPTO] 🔴 ${MAX_CRYPTO_ERRORS}+ undecryptable messages. Session may be corrupt. Try deleting session_data_${OUTLET} folder and re-scanning QR.`);
+                }
+                return;
+            }
+            if (msg.key.fromMe) return;
 
             // Deduplication to prevent double responses
             const msgId = msg.key.id;
