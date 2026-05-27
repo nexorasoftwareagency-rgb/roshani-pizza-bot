@@ -3,3 +3,7 @@ service-account.json
 session_data/
 *.log
 .env
+
+users.json
+
+firebase database.json
