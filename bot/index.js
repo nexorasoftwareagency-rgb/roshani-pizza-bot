@@ -106,7 +106,6 @@ async function saveProcessedStatus(id, data) {
     try {
         if (data) {
             localStatusCache.set(id, data);
-            setTimeout(() => localStatusCache.delete(id), LOCAL_CACHE_TTL);
             if (redisReady) await redisClient.setEx(`status:${id}`, STATUS_TTL, JSON.stringify(data));
         }
     } catch (e) { }
@@ -605,8 +604,6 @@ async function sendCategories(sock, sender, user) {
 
     user.categoryList = Object.entries(categories).map(([id, val]) => ({ id, ...val }));
 
-    user.botSettings = botSettings || {};
-    user.storeSettings = storeSettings || {};
     const storeName = storeSettings.storeName || (outlet === 'pizza' ? "Roshani Pizza" : "Roshani Cake");
     const emoji = outlet === 'pizza' ? "🍕" : "🎂";
     const headerEmoji = outlet === 'pizza' ? "🔥" : "✨";
@@ -1283,6 +1280,13 @@ async function startBot() {
         cachedAdminJids = await getReportRecipients();
         cachedAdminJidsExpiry = Date.now() + ADMIN_CACHE_TTL;
 
+        // Clean stale entries from local status cache
+        const cutoff = Date.now() - LOCAL_CACHE_TTL;
+        for (const [k, v] of localStatusCache) {
+            const entryTime = v.ts || v.timestamp || 0;
+            if (entryTime > 0 && entryTime < cutoff) localStatusCache.delete(k);
+        }
+
         // Get Time in Asia/Kolkata accurately
         const ist = getISTDateInfo();
         const hour = ist.hour;
@@ -1461,8 +1465,6 @@ async function startBot() {
                         getData("settings/Store", OUTLET),
                         getData("settings/Bot", OUTLET)
                     ]);
-                    user.storeSettings = store || {};
-                    user.botSettings = bot || {};
 
                     // Check if shop is open before showing menu
                     if (store && !isShopOpen(store.shopOpenTime, store.shopCloseTime, store.shopStatus)) {
