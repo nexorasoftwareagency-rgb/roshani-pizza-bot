@@ -26,6 +26,11 @@ const pino = require('pino');
 const { getData, setData, updateData, db, pushData, getUserProfile, saveUserProfile } = require('./firebase');
 
 let redisClient;
+
+// Admin JIDs cache — refreshed every 5 minutes to avoid per-message Firebase calls
+let cachedAdminJids = null;
+let cachedAdminJidsExpiry = 0;
+const ADMIN_CACHE_TTL = 300000;
 const redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 
 if (redisUrl.includes('clustercfg')) {
@@ -47,7 +52,17 @@ if (redisUrl.includes('clustercfg')) {
 }
 
 redisClient.on('error', (err) => console.log('Redis Client Error', err));
-redisClient.connect().then(() => console.log('✅ Connected to Redis')).catch(console.error);
+
+// Track Redis health for degraded-mode fallbacks
+let redisReady = false;
+
+redisClient.on('ready', () => { redisReady = true; });
+redisClient.on('end', () => { redisReady = false; });
+
+redisClient.connect().then(() => {
+    redisReady = true;
+    console.log('✅ Connected to Redis');
+}).catch(console.error);
 
 // --- GLOBAL STATE (Migrating to Redis) ---
 // We keep local variables for temporary locks if needed, but primary state moves to Redis
@@ -59,6 +74,10 @@ const startupTime = Date.now();
 
 const SESSION_TTL = 30 * 60; // Redis TTL is in seconds (30 mins)
 const STATUS_TTL = 24 * 60 * 60; // 24 hours
+
+// In-memory dedup fallback used when Redis is offline
+const localStatusCache = new Map();
+const LOCAL_CACHE_TTL = 3600000; // 1 hour
 
 // --- REDIS HELPERS ---
 async function getSession(sender) {
@@ -76,13 +95,20 @@ async function saveSession(sender, data) {
 
 async function getProcessedStatus(id) {
     try {
-        const data = await redisClient.get(`status:${id}`);
-        return data ? JSON.parse(data) : null;
-    } catch (e) { return null; }
+        if (redisReady) {
+            const data = await redisClient.get(`status:${id}`);
+            if (data) return JSON.parse(data);
+        }
+    } catch (e) { }
+    return localStatusCache.get(id) || null;
 }
 async function saveProcessedStatus(id, data) {
     try {
-        if (data) await redisClient.setEx(`status:${id}`, STATUS_TTL, JSON.stringify(data));
+        if (data) {
+            localStatusCache.set(id, data);
+            setTimeout(() => localStatusCache.delete(id), LOCAL_CACHE_TTL);
+            if (redisReady) await redisClient.setEx(`status:${id}`, STATUS_TTL, JSON.stringify(data));
+        }
     } catch (e) { }
 }
 
@@ -186,6 +212,15 @@ async function getReportRecipients() {
     // Safety fallback
     if (recipients.size === 0) recipients.add(formatJid(DEVELOPER_NUMBER));
     return Array.from(recipients);
+}
+
+async function getCachedAdminJids() {
+    if (cachedAdminJids && Date.now() < cachedAdminJidsExpiry) {
+        return cachedAdminJids;
+    }
+    cachedAdminJids = await getReportRecipients();
+    cachedAdminJidsExpiry = Date.now() + ADMIN_CACHE_TTL;
+    return cachedAdminJids;
 }
 
 /**
@@ -561,13 +596,17 @@ async function sendInvalidInputHelp(sock, sender, user) {
 
 async function sendCategories(sock, sender, user) {
     const outlet = user.outlet || 'pizza';
-    const categories = await getData('categories', outlet);
+    const [categories, botSettings, storeSettings] = await Promise.all([
+        getData('categories', outlet),
+        getData("settings/Bot", outlet).catch(() => ({})),
+        getData("settings/Store", outlet).catch(() => ({}))
+    ]);
     if (!categories) return sock.sendMessage(sender, { text: "❌ No categories available right now." });
 
     user.categoryList = Object.entries(categories).map(([id, val]) => ({ id, ...val }));
 
-    const botSettings = await getData("settings/Bot", outlet) || {};
-    const storeSettings = await getData("settings/Store", outlet) || {};
+    user.botSettings = botSettings || {};
+    user.storeSettings = storeSettings || {};
     const storeName = storeSettings.storeName || (outlet === 'pizza' ? "Roshani Pizza" : "Roshani Cake");
     const emoji = outlet === 'pizza' ? "🍕" : "🎂";
     const headerEmoji = outlet === 'pizza' ? "🔥" : "✨";
@@ -612,7 +651,7 @@ async function sendCartView(sock, sender, user, isAdded = false) {
 async function notifyAdmin(sock, orderId, order, type = 'NEW') {
     try {
         const outlet = order.outlet || 'pizza';
-        const jids = await getReportRecipients();
+        const jids = await getCachedAdminJids();
         if (!jids || jids.length === 0) return;
 
         let msg = "";
@@ -880,7 +919,7 @@ async function sendDailyReport(sock, targetDate = null) {
             totalRevenue += outletRevenue;
         }
 
-        const jids = await getReportRecipients();
+        const jids = await getCachedAdminJids();
         const displayDate = new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
         const nowIST = getISTDateInfo().istObject;
 
@@ -937,7 +976,7 @@ async function sendMonthlyReport(sock) {
             totalRevenue += outletRevenue;
         }
 
-        const jids = await getReportRecipients();
+        const jids = await getCachedAdminJids();
 
         const msg = `📈 *${OUTLET_NAME.toUpperCase()} — MONTHLY SALES REPORT* ${OUTLET_EMOJI}\n\n` +
             `📅 Month: ${now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}\n\n` +
@@ -993,7 +1032,7 @@ async function sendWeeklyReport(sock) {
             totalRevenue += outletRevenue;
         }
 
-        const jids = await getReportRecipients();
+        const jids = await getCachedAdminJids();
 
         const msg = `📊 *${OUTLET_NAME.toUpperCase()} — WEEKLY SALES REPORT* ${OUTLET_EMOJI}\n\n` +
             `📅 Week: ${startOfWeek.toLocaleDateString('en-IN')} - ${now.toLocaleDateString('en-IN')}\n\n` +
@@ -1240,6 +1279,10 @@ async function startBot() {
         cleanupSessions();
         updateData(`bot/${OUTLET}/status`, { lastSeen: Date.now(), status: 'Online', outlet: OUTLET }).catch(() => { });
 
+        // Refresh admin JID cache every heartbeat cycle
+        cachedAdminJids = await getReportRecipients();
+        cachedAdminJidsExpiry = Date.now() + ADMIN_CACHE_TTL;
+
         // Get Time in Asia/Kolkata accurately
         const ist = getISTDateInfo();
         const hour = ist.hour;
@@ -1369,7 +1412,7 @@ async function startBot() {
 
                 // --- ADMIN COMMANDS ---
                 const DEVELOPER_NUMBER = "9724649971";
-                const adminNumbers = await getReportRecipients(); // Gets both dev and configured admins
+                const adminNumbers = await getCachedAdminJids();
                 const isAuthorized = adminNumbers.includes(sender) || sender.startsWith(DEVELOPER_NUMBER);
 
                 if (isAuthorized && text.startsWith('!')) {
@@ -1414,8 +1457,12 @@ async function startBot() {
                 // STATE MACHINE
                 if (user.step === "START") {
                     user.outlet = OUTLET; // Hardcoded — no outlet selection needed
-                    const store = await getData("settings/Store", OUTLET);
-                    const bot = await getData("settings/Bot", OUTLET);
+                    const [store, bot] = await Promise.all([
+                        getData("settings/Store", OUTLET),
+                        getData("settings/Bot", OUTLET)
+                    ]);
+                    user.storeSettings = store || {};
+                    user.botSettings = bot || {};
 
                     // Check if shop is open before showing menu
                     if (store && !isShopOpen(store.shopOpenTime, store.shopCloseTime, store.shopStatus)) {

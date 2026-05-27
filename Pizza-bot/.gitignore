@@ -1,5 +1,0 @@
-node_modules/
-service-account.json
-session_data/
-*.log
-.env
