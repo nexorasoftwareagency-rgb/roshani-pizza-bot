@@ -149,6 +149,11 @@ window.completeSiteRefresh = async () => {
 window.reachedOutlet = async (id, outlet) => {
     if (!id || !outlet) return;
     window.haptic([50, 30, 50]);
+
+    if (!window.riderLocation) return window.showToast("GPS Error. Ensure location is ON.", "error");
+    const dist = window.getDistance(window.riderLocation.lat, window.riderLocation.lng, window.outletCoords[outlet]?.lat || 25.887944, window.outletCoords[outlet]?.lng || 85.026194);
+    if (dist > window.PICKUP_RADIUS_KM) return window.showToast(`Must be within ${window.PICKUP_RADIUS_KM * 1000}m of outlet to mark arrival! (You are ${dist.toFixed(1)}km away)`, "error");
+
     try {
         await update(ref(db, `${outlet}/orders/${id}`), {
             status: "Arrived at Restaurant",
@@ -250,6 +255,7 @@ window.activeOrderOutlet = null;
 window.ignoredPings = new Set();
 window.orderCache = { pizza: {}, cake: {} };
 window.outletCoords = { pizza: { lat: 25.887944, lng: 85.026194 }, cake: { lat: 25.887472, lng: 85.026861 } };
+window.PICKUP_RADIUS_KM = 0.5; // 500m — rider must be within this distance to accept/pickup
 
 // Load outlet coordinates from Firebase on init
 async function loadOutletCoords() {
@@ -515,6 +521,10 @@ window.confirmPickup = async () => {
     const outletId = window.activeOrderOutlet || 'pizza';
     const orderPath = `${outletId}/orders/${id}`;
 
+    if (!window.riderLocation) return window.showToast("GPS Error. Ensure location is ON.", "error");
+    const dist = window.getDistance(window.riderLocation.lat, window.riderLocation.lng, window.outletCoords[outletId]?.lat || 25.887944, window.outletCoords[outletId]?.lng || 85.026194);
+    if (dist > window.PICKUP_RADIUS_KM) return window.showToast(`Must be within ${window.PICKUP_RADIUS_KM * 1000}m of outlet to confirm pickup! (You are ${dist.toFixed(1)}km away)`, "error");
+
     try {
         await update(ref(db, orderPath), { status: "Picked Up", pickedUpAt: serverTimestamp() });
         window.showToast("Order Picked Up! Drive safe. 🛵", "success");
@@ -719,9 +729,8 @@ window.acceptOrder = async (id, outletId) => {
     if (!window.currentUser) return window.showToast("Authentication error. Please login again.", "error");
     if (!window.riderLocation) return window.showToast("GPS Error. Ensure location is ON.", "error");
 
-    // Proximity policy removed as per user request
-    // const distFromRest = window.getDistance(window.riderLocation.lat, window.riderLocation.lng, outletCoords.lat, outletCoords.lng);
-    // if (distFromRest > 0.5) return window.showToast(`Must be within 500m of outlet! (You are ${distFromRest.toFixed(1)}km away)`, "error");
+    const distFromRest = window.getDistance(window.riderLocation.lat, window.riderLocation.lng, window.outletCoords[outletId || 'pizza'].lat, window.outletCoords[outletId || 'pizza'].lng);
+    if (distFromRest > window.PICKUP_RADIUS_KM) return window.showToast(`Must be within ${window.PICKUP_RADIUS_KM * 1000}m of outlet! (You are ${distFromRest.toFixed(1)}km away)`, "error");
 
     try {
         const orderPath = `${outletId}/orders/${id}`;
