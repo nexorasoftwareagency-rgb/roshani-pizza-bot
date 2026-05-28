@@ -213,10 +213,10 @@ export function showNativeNotification(title, body) {
 
     if (navigator.serviceWorker && navigator.serviceWorker.controller) {
         navigator.serviceWorker.ready.then(reg => {
-            reg.showNotification(brandPrefix + title, options);
+            reg.showNotification(title, options);
         });
     } else {
-        new Notification(brandPrefix + title, options);
+        new Notification(title, options);
     }
 }
 
