@@ -11,7 +11,9 @@
         "**/.*",
         "!.well-known/**",
         "**/node_modules/**",
-        "scratch/**"
+        "scratch/**",
+        "graphify-out/**",
+        "rider_old/**"
       ],
       "headers": [
         {
@@ -86,7 +88,9 @@
         "firebase.json",
         "**/.*",
         "!.well-known/**",
-        "**/node_modules/**"
+        "**/node_modules/**",
+        "graphify-out/**",
+        "rider_old/**"
       ],
       "headers": [
         {

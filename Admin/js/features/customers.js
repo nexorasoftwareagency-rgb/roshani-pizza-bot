@@ -1,7 +1,8 @@
 import { state } from '../state.js';
-import { Outlet } from '../firebase.js';
+import { Outlet, get, query, orderByChild, startAt, endAt, remove } from '../firebase.js';
+import { showBulkDeleteConfirm } from '../ui-utils.js';
 import { ui } from '../ui.js';
-import { logAudit, escapeHtml, formatDate, haptic, getISTDateString, initPagination } from '../utils.js';
+import { showToast, logAudit, escapeHtml, formatDate, haptic, getISTDateString, initPagination, getSkeletonRows } from '../utils.js';
 const CUSTOMERS_PAGE_SIZE = 25;
 let _customersData = [];
 function renderCustomersPage(page) {
@@ -57,38 +58,40 @@ function renderCustomersPage(page) {
 /**
  * Loads and renders the customer table with LTV and order count.
  */
-export function loadCustomers() {
+export async function loadCustomers() {
     const table = document.getElementById("customersTableBody") || document.getElementById("customersTable");
     if (!table) return;
 
-    Promise.all([
-        Outlet.ref("customers").once("value"),
-        Outlet.ref("orders").once("value")
-    ]).then(([custSnap, orderSnap]) => {
-        const orders = [];
-        orderSnap.forEach(o => { orders.push(o.val()); });
+    // Show skeleton while data loads
+    table.innerHTML = getSkeletonRows(5, 5);
 
-        _customersData = [];
-        custSnap.forEach(child => {
-            const c = child.val();
-            const phone = child.key;
-            const myOrders = orders.filter(o => o.phone === phone);
-            const orderCount = myOrders.length;
-            const ltv = myOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
-            _customersData.push({
-                name: c.name || 'Anonymous',
-                joined: c.registeredAt ? new Date(c.registeredAt).toLocaleDateString() : 'N/A',
-                displayPhone: phone,
-                phoneClean: phone.replace(/\D/g, "").slice(-10),
-                address: c.address ? (c.address.length > 30 ? c.address.substring(0, 30) + "..." : c.address) : "Counter Sale / Guest",
-                addressFull: c.address || '',
-                locationLink: c.locationLink || '',
-                orderCount, ltv
-            });
+    const [custSnap, orderSnap] = await Promise.all([
+        get(Outlet.ref("customers")),
+        get(Outlet.ref("orders"))
+    ]);
+    const orders = [];
+    orderSnap.forEach(o => { orders.push(o.val()); });
+
+    _customersData = [];
+    custSnap.forEach(child => {
+        const c = child.val();
+        const phone = child.key;
+        const myOrders = orders.filter(o => o.phone === phone);
+        const orderCount = myOrders.length;
+        const ltv = myOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+        _customersData.push({
+            name: c.name || 'Anonymous',
+            joined: c.registeredAt ? new Date(c.registeredAt).toLocaleDateString() : 'N/A',
+            displayPhone: phone,
+            phoneClean: phone.replace(/\D/g, "").slice(-10),
+            address: c.address ? (c.address.length > 30 ? c.address.substring(0, 30) + "..." : c.address) : "Counter Sale / Guest",
+            addressFull: c.address || '',
+            locationLink: c.locationLink || '',
+            orderCount, ltv
         });
-        renderCustomersPage(1);
-        initPagination('customersPagination', _customersData.length, CUSTOMERS_PAGE_SIZE, renderCustomersPage);
     });
+    renderCustomersPage(1);
+    initPagination('customersPagination', _customersData.length, CUSTOMERS_PAGE_SIZE, renderCustomersPage);
 }
 
 // --- REPORTS & ANALYTICS ---
@@ -138,7 +141,7 @@ export async function generateCustomReport() {
         return;
     }
 
-    tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px;'>🔔 Collecting sales data...</td></tr>";
+    tableBody.innerHTML = getSkeletonRows(5, 5);
 
     const ordersRef = Outlet.ref("orders");
     console.log(`[Reports] Generating report from path: ${ordersRef.toString()}`);
@@ -154,8 +157,8 @@ export async function generateCustomReport() {
         const qEnd = `${dTo.toISOString().split('T')[0]}T23:59:59.999Z`;
 
         const [customersSnap, ordersSnap] = await Promise.all([
-            Outlet.ref("customers").once("value"),
-            Outlet.ref("orders").orderByChild("createdAt").startAt(qStart).endAt(qEnd).once("value")
+            get(Outlet.ref("customers")),
+            get(query(Outlet.ref("orders"), orderByChild("createdAt"), startAt(qStart), endAt(qEnd)))
         ]);
 
         const customers = customersSnap.val() || {};
@@ -254,9 +257,8 @@ export function renderRevenueChart(data) {
 
     if (revenueChart) revenueChart.destroy();
 
-    const isDarkMode = document.body.classList.contains('dark-mode');
-    const tickColor = isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)';
-    const gridColor = isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+    const tickColor = 'rgba(0,0,0,0.5)';
+    const gridColor = 'rgba(0,0,0,0.05)';
 
     // Chart.js is assumed to be globally available via script tag
     if (typeof Chart !== 'undefined') {
@@ -400,10 +402,13 @@ export async function loadLostSales() {
     const revenueBadge = document.querySelector('#lostSalesTotalRevenue span');
     if (!tbody) return;
 
+    // Show skeleton while data loads
+    tbody.innerHTML = getSkeletonRows(5, 5);
+
     try {
         const lostRef = Outlet.ref('logs/lostSales');
         console.log(`[Lost Sales] Fetching from path: ${lostRef.toString()}`);
-        const snap = await lostRef.once('value');
+        const snap = await get(lostRef);
         const data = snap.val();
 
         tbody.innerHTML = '';
@@ -477,17 +482,17 @@ export async function loadLostSales() {
  * Clears all lost sales logs.
  */
 export async function clearLostSales() {
-    if (!(await ui.showConfirm("Are you sure you want to permanently delete all Lost Sales logs? This cannot be undone.", "Clear Lost Sales"))) return;
+    if (!(await showBulkDeleteConfirm("Lost Sales"))) return;
 
     haptic(20);
     try {
-        await Outlet.ref('logs/lostSales').remove();
+        await remove(Outlet.ref('logs/lostSales'));
         logAudit("Maintenance", "Cleared All Lost Sales Logs", "Global");
-        ui.showToast("Logs cleared successfully", "success");
+        showToast("Logs cleared successfully", "success");
         loadLostSales();
     } catch (e) {
         console.error("Clear Logs Error:", e);
-        ui.showToast("Failed to clear logs", "error");
+        showToast("Failed to clear logs", "error");
     }
 }
 

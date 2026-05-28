@@ -1,92 +1,38 @@
-/**
- * ROSHANI ERP | FIREBASE SERVICE
- * Handles Firebase initialization, database references, and outlet scoping.
- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, get, onValue, onChildAdded, onChildChanged, set, update, remove, push, runTransaction, query, orderByChild, orderByKey, equalTo, limitToLast, startAt, endAt, endBefore, serverTimestamp, child, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, EmailAuthProvider, sendPasswordResetEmail, createUserWithEmailAndPassword, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 
 import { showToast } from './ui-utils.js';
 
-// Helper to safely access global firebase (compat mode)
-const getFirebase = () => {
-    if (typeof firebase !== 'undefined') return firebase;
-    if (typeof window.firebase !== 'undefined') return window.firebase;
-    return null;
-};
-
-export const fb = getFirebase();
-
-if (!fb) {
-    console.error("[Firebase] SDK not found! Ensure compat scripts are loaded in index.html.");
-    throw new Error("Firebase SDK missing");
+const firebaseConfig = window.firebaseConfig;
+if (!firebaseConfig) {
+    throw new Error("Firebase configuration (window.firebaseConfig) is missing. Check firebase-config.js.");
 }
 
-// Initialize Firebase if not already done
-if (!fb.apps.length) {
-    if (window.firebaseConfig) {
-        fb.initializeApp(window.firebaseConfig);
-        console.log("[Firebase] Manual App Init Success");
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
 
-        // Initialize App Check immediately after app init
-        if (fb.appCheck && window.reCaptchaSiteKey) {
-            try {
-                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                if (isLocal) {
-                    const debugToken = window.firebaseConfig.appCheckDebugToken || true;
-                    console.log(`[App Check] 🛠️ Localhost detected, enabling Debug Token: ${debugToken}`);
-                    self.FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
-                }
-                const appCheck = fb.appCheck();
-                appCheck.activate(
-                    new fb.appCheck.ReCaptchaV3Provider(window.reCaptchaSiteKey),
-                    true
-                );
-                console.log("[App Check] ✅ Activated Successfully");
-
-                // Catch late activation errors (like 403 Forbidden)
-                appCheck.getToken().catch(err => {
-                    if (err.message.includes('403') || err.code?.includes('permission-denied')) {
-                        console.error("[App Check] ⛔ ACCESS DENIED: Localhost is not authorized.");
-                        showToast("App Check Blocked: Add debug token to Firebase Console", "error");
-                        const token = self.FIREBASE_APPCHECK_DEBUG_TOKEN === true ? "Check Browser Console" : self.FIREBASE_APPCHECK_DEBUG_TOKEN;
-                        console.info(`%c[ACTION REQUIRED] Add this token to Firebase Console -> App Check -> Manage Debug Tokens:\n${token}`, "background: #f00; color: #fff; font-size: 14px; padding: 10px;");
-                    }
-                });
-            } catch (e) {
-                console.warn("[App Check] ⚠️ Activation failed (Expected on localhost if token not registered):", e.message);
-                console.info("[App Check Hint] If you see 403 errors, copy the debug token from the console and add it to App Check -> Manage Debug Tokens in Firebase Console.");
-            }
+if (window.reCaptchaSiteKey) {
+    try {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocal) {
+            const debugToken = window.firebaseConfig?.appCheckDebugToken || true;
+            self.FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
         }
-    } else {
-        console.error("[Firebase] Configuration missing! Firing fatal error.");
-        throw new Error("Firebase configuration (window.firebaseConfig) is missing. Check firebase-config.js.");
+        initializeAppCheck(app, {
+            provider: new ReCaptchaV3Provider(window.reCaptchaSiteKey),
+            isTokenAutoRefreshEnabled: true
+        });
+    } catch (e) {
+        console.warn("[App Check] Activation failed:", e.message);
     }
 }
 
-export const db = fb.database();
-export const auth = fb.auth();
-export const ServerValue = fb.database.ServerValue;
-export const EmailAuthProvider = fb.auth.EmailAuthProvider;
-
-// Enable offline persistence so cached data works when offline
-try {
-    db.enablePersistence().catch(err => {
-        if (err.code === 'failed-precondition') {
-            console.warn('[Firebase] Persistence failed: multiple tabs open (expected)');
-        } else if (err.code === 'unimplemented') {
-            console.warn('[Firebase] Persistence not supported by this browser');
-        } else {
-            console.warn('[Firebase] Persistence error:', err);
-        }
-    });
-} catch (e) {
-    // Silently ignore if called after database is already in use
-}
-
-// Monitor Connection State
-const connectedRef = db.ref('.info/connected');
-connectedRef.on('value', (snap) => {
+const connectedRef = ref(db, '.info/connected');
+onValue(connectedRef, (snap) => {
     const connected = snap.val() === true;
-    console.log(`[Firebase] Connection status: ${connected ? '🟢 Connected' : '🔴 Disconnected'}`);
-
     const indicator = document.getElementById('syncStatus');
     if (indicator) {
         if (connected) {
@@ -99,11 +45,9 @@ connectedRef.on('value', (snap) => {
             indicator.title = "Firebase: Disconnected - Check Network";
         }
     }
-
     if (typeof updateConnectionIndicator === 'function') {
         updateConnectionIndicator(connected);
     }
-
     if (!connected) {
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         console.warn('[Firebase] Lost connection - data may not sync. Retrying...');
@@ -111,102 +55,69 @@ connectedRef.on('value', (snap) => {
             console.info("[Firebase Hint] On localhost, ensure your App Check Debug Token is registered in the Firebase Console if App Check is enforced.");
             console.info("[Firebase Hint] Check if your Firewall or Adblocker is blocking WebSockets (wss://).");
         }
-        // Reconnection handled by Firebase SDK - no manual timeout
     } else {
         console.log('[Firebase] Connection restored.');
     }
 });
 
-// Proactive Connection Heartbeat removed - Firebase SDK handles reconnection automatically
-
-// Database connectivity test removed to reduce initial load lag (SDK handles connection automatically)
-
-// Diagnostic function for debugging data loading issues
-window.diagnoseDatabase = async () => {
-    console.log("🔍 DATABASE DIAGNOSTIC START");
-    console.log("1. Firebase initialized:", !!fb);
-    console.log("2. Database reference:", !!db);
-    console.log("3. Current user:", auth.currentUser?.email || "Not logged in");
-    console.log("4. Current outlet:", window.currentOutlet || "Not set");
-    console.log("5. Outlet resolved path:", Outlet.ref("orders").toString());
-
-    // Test basic connectivity
-    try {
-        const testRef = db.ref('.info/connected');
-        const connected = (await testRef.once('value')).val();
-        console.log("6. Connection status:", connected ? "🟢 Connected" : "🔴 Disconnected");
-    } catch (e) {
-        console.error("6. Connection test failed:", e);
-    }
-
-    // Test admin access
-    if (auth.currentUser) {
-        try {
-            const adminSnap = await Outlet.ref(`admins/${auth.currentUser.uid}`).once('value');
-            console.log("7. Admin data exists:", adminSnap.exists());
-            console.log("8. Admin data:", adminSnap.val());
-        } catch (e) {
-            console.error("7. Admin data fetch failed:", e);
-        }
-    }
-
-    // Test orders access
-    try {
-        const ordersRef = Outlet.ref("orders");
-        const ordersSnap = await ordersRef.limitToLast(1).once('value');
-        console.log("9. Orders path:", ordersRef.path.toString());
-        console.log("10. Orders accessible:", ordersSnap.exists());
-        console.log("11. Sample order count:", ordersSnap.numChildren());
-        if (ordersSnap.exists()) {
-            console.log("12. Sample order data:", Object.keys(ordersSnap.val())[0]);
-        }
-    } catch (e) {
-        console.error("9. Orders fetch failed:", e);
-    }
-
-    console.log("🔍 DATABASE DIAGNOSTIC COMPLETE");
-    console.log("💡 If issues found, check Firebase Console and database rules");
-};
-
-/**
- * OUTLET SEPARATION HELPER
- * Handles path resolution for multi-outlet data isolation.
- */
 export const Outlet = {
     get current() {
-        // Fallback chain: Window -> SessionStorage -> Default
         let outlet = window.currentOutlet || sessionStorage.getItem('adminSelectedOutlet') || 'pizza';
         outlet = outlet.toLowerCase().trim();
         if (!outlet) outlet = 'pizza';
         return outlet;
     },
     ref(path) {
-        if (!path) return db.ref();
-
-        // Shared paths that stay at root level
+        if (!path) return ref(db);
         const globalPaths = ['admins', 'riders', 'logs', 'bot', 'migrationStatus', 'admins_list'];
-
-        // Normalize path and get first segment
         const cleanPath = path.startsWith('/') ? path.slice(1) : path;
         const firstSegment = cleanPath.split('/')[0];
-        
         let finalPath;
-
-        // If path is global, do not prefix
         if (globalPaths.includes(firstSegment)) {
             finalPath = cleanPath;
-            console.log(`[Outlet] Global Path: "${path}" -> "${finalPath}"`);
         } else {
-            // All other paths are outlet-specific
             finalPath = `${this.current}/${cleanPath}`;
-            console.log(`[Outlet] Scoped Path: "${path}" -> "${finalPath}" (Outlet: ${this.current})`);
         }
-
-        return db.ref(finalPath);
+        return ref(db, finalPath);
     }
 };
 
-// Emergency debugging tool
+window.diagnoseDatabase = async () => {
+    console.log("DATABASE DIAGNOSTIC START");
+    console.log("1. App initialized:", !!app);
+    console.log("2. Database reference:", !!db);
+    console.log("3. Current user:", auth.currentUser?.email || "Not logged in");
+    console.log("4. Current outlet:", window.currentOutlet || "Not set");
+    console.log("5. Outlet resolved path:", Outlet.ref("orders").toString());
+    try {
+        const connectedSnap = await get(ref(db, '.info/connected'));
+        console.log("6. Connection status:", connectedSnap.val() ? "Connected" : "Disconnected");
+    } catch (e) {
+        console.error("6. Connection test failed:", e);
+    }
+    if (auth.currentUser) {
+        try {
+            const adminSnap = await get(Outlet.ref(`admins/${auth.currentUser.uid}`));
+            console.log("7. Admin data exists:", adminSnap.exists());
+            console.log("8. Admin data:", adminSnap.val());
+        } catch (e) {
+            console.error("7. Admin data fetch failed:", e);
+        }
+    }
+    try {
+        const ordersRef = Outlet.ref("orders");
+        const ordersSnap = await get(query(ordersRef, limitToLast(1)));
+        console.log("9. Orders path:", ordersRef.toString());
+        console.log("10. Orders accessible:", ordersSnap.exists());
+        if (ordersSnap.exists()) {
+            console.log("11. Sample order:", Object.keys(ordersSnap.val())[0]);
+        }
+    } catch (e) {
+        console.error("9. Orders fetch failed:", e);
+    }
+    console.log("DATABASE DIAGNOSTIC COMPLETE");
+};
+
 window.forceOutlet = (name) => {
     console.warn(`[Outlet] EMERGENCY OVERRIDE: ${name}`);
     window.currentOutlet = name;
@@ -214,14 +125,8 @@ window.forceOutlet = (name) => {
     if (window.diagnoseDatabase) window.diagnoseDatabase();
 };
 
-/**
- * FILE UPLOAD UTILITY (Base64)
- * Converts images to compressed Base64 for database storage.
- */
 export async function uploadImage(fileOrBlob, path) {
     if (!fileOrBlob) return null;
-    console.log(`[Database Store] Converting ${path || 'image'} to text-based Base64...`);
-
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(fileOrBlob);
@@ -233,24 +138,20 @@ export async function uploadImage(fileOrBlob, path) {
                 const MAX_WIDTH = 600;
                 let width = img.width;
                 let height = img.height;
-
                 if (width > MAX_WIDTH) {
                     height = (MAX_WIDTH / width) * height;
                     width = MAX_WIDTH;
                 }
-
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-                console.log(`[Database Store] Image converted. Size: ${(dataUrl.length / 1024).toFixed(1)} KB`);
                 resolve(dataUrl);
             };
-            img.onerror = (err) => reject(new Error("Image processing failed"));
+            img.onerror = () => reject(new Error("Image processing failed"));
         };
-        reader.onerror = (err) => reject(new Error("File reading failed"));
+        reader.onerror = () => reject(new Error("File reading failed"));
     });
 }
 
@@ -261,30 +162,16 @@ export async function deleteImage(url) {
     }
 }
 
-/**
- * SECONDARY AUTH FOR RIDER CREATION
- * Prevents admin logout while creating rider accounts.
- */
 export let secondaryAuth;
 export let secondaryAuthAvailable = false;
-
 export function initSecondaryAuth() {
     try {
         if (!window.firebaseConfig) {
             secondaryAuthAvailable = false;
             return;
         }
-
-        if (fb.apps.some(app => app.name === "secondary_auth")) {
-            secondaryAuth = fb.app("secondary_auth").auth();
-        } else {
-            const secondaryApp = fb.initializeApp(window.firebaseConfig, "secondary_auth");
-            secondaryAuth = secondaryApp.auth();
-        }
-
-        if (fb.auth) {
-            secondaryAuth.setPersistence(fb.auth.Auth.Persistence.NONE);
-        }
+        const secondaryApp = initializeApp(window.firebaseConfig, "secondary_auth");
+        secondaryAuth = getAuth(secondaryApp);
         secondaryAuthAvailable = true;
         console.log("Secondary Auth initialized successfully.");
     } catch (e) {
@@ -293,5 +180,16 @@ export function initSecondaryAuth() {
     }
 }
 
-// Initialize secondary auth immediately
 initSecondaryAuth();
+
+export {
+    db, auth, app,
+    ref, get, onValue, onChildAdded, onChildChanged,
+    set, update, remove, push, runTransaction,
+    query, orderByChild, orderByKey, equalTo, limitToLast, startAt, endAt, endBefore,
+    serverTimestamp, child, onDisconnect,
+    signInWithEmailAndPassword, signOut,
+    onAuthStateChanged, EmailAuthProvider,
+    sendPasswordResetEmail, createUserWithEmailAndPassword,
+    reauthenticateWithCredential
+};

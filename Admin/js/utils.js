@@ -1,4 +1,4 @@
-import { Outlet, auth, ServerValue } from './firebase.js';
+import { Outlet, auth, serverTimestamp, ref, db, get, set, push, update, runTransaction } from './firebase.js';
 
 export const haptic = (val = 10) => {
     if (window.navigator && window.navigator.vibrate) {
@@ -25,16 +25,7 @@ export const getISTDateString = (dateInput = new Date()) => {
 };
 
 
-export const escapeHtml = (str) => {
-    if (str === null || str === undefined) return '';
-    if (typeof str !== 'string') str = String(str);
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-};
+export { escapeHtml } from './utils/escape.js';
 
 export const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371; // km
@@ -108,7 +99,7 @@ export const generateNextOrderId = async () => {
     const dateStr = `${y}${m}${d}`;
 
     const seqRef = Outlet.ref(`metadata/orderSequence/${dateStr}`);
-    const result = await seqRef.transaction((current) => (current || 0) + 1);
+    const result = await runTransaction(seqRef, (current) => (current || 0) + 1);
     const seqNum = result.snapshot.val() || 1;
     return `${dateStr}-${seqNum.toString().padStart(4, '0')}`;
 };
@@ -168,9 +159,9 @@ export const standardizeOrderData = (o) => {
 export const logAudit = async (action, details = {}) => {
     try {
         const user = auth.currentUser;
-        const auditRef = Outlet.ref('logs/audit').push();
-        await auditRef.set({
-            timestamp: ServerValue.TIMESTAMP,
+        const auditRef = push(Outlet.ref('logs/audit'));
+        await set(auditRef, {
+            timestamp: serverTimestamp(),
             adminEmail: user ? user.email : 'system',
             uid: user ? user.uid : 'system',
             action,
@@ -190,13 +181,13 @@ export const logAudit = async (action, details = {}) => {
 export const addRiderNotification = async (uid, title, sub, type = 'info') => {
     if (!uid) return;
     try {
-        const notifRef = db.ref(`riders/${uid}/notifications`).push();
-        await notifRef.set({
+        const notifRef = push(ref(db, `riders/${uid}/notifications`));
+        await set(notifRef, {
             id: notifRef.key,
             title,
             body: sub || 'New update available',
             type,
-            timestamp: ServerValue.TIMESTAMP,
+            timestamp: serverTimestamp(),
             read: false,
             icon: type === 'new' ? 'package' : 'bell'
         });
@@ -276,3 +267,15 @@ export const enhanceTablesForMobile = (root = document) => {
         });
     });
 };
+
+/**
+ * Generates skeleton table rows for loading states.
+ * @param {number} count - Number of skeleton rows to generate (default 5)
+ * @param {number} colspan - Colspan for the single cell in each row (default 7)
+ * @returns {string} HTML string of skeleton rows
+ */
+export function getSkeletonRows(count = 5, colspan = 7) {
+    return Array.from({ length: count }, () =>
+        `<tr class="skeleton-row"><td colspan="${colspan}"><div class="skeleton" style="height:44px;width:100%;border-radius:6px;margin:3px 0"></div></td></tr>`
+    ).join('');
+}

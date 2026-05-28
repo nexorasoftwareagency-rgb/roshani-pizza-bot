@@ -1,26 +1,10 @@
-/**
- * ROSHANI ERP | MULTI-TENANT BRANDING ENGINE
- * Handles dynamic CSS theming, PWA Manifest swapping, and Favicons.
- */
-
 (function () {
-    // 1. Determine Current Brand
-    const savedOutlet = sessionStorage.getItem('adminSelectedOutlet') || 'pizza';
-    const brand = savedOutlet.toLowerCase().includes('cake') ? 'cake' : 'pizza';
-
-    const isPizza = brand === 'pizza';
-    const primaryColor = isPizza ? '#f36b21' : '#ec4899'; // Premium Roshani Orange vs Modern Pink
-    const secondaryColor = isPizza ? '#fff5ed' : '#fff0f5';
-
-    // 2. Apply Dynamic CSS Variables to Root
+    const primaryColor = '#f36b21';
     const root = document.documentElement;
     root.style.setProperty('--primary', primaryColor);
-    root.style.setProperty('--primary-rgb', isPizza ? '243, 107, 33' : '236, 72, 153');
-    root.style.setProperty('--bg-secondary', secondaryColor);
+    root.style.setProperty('--primary-rgb', '243, 107, 33');
 
-    // 3. Update Browser UI Elements (Mobile Friendly)
     const updateHeadElements = () => {
-        // Update Theme Color (Address Bar color on Mobile)
         let themeMeta = document.querySelector('meta[name="theme-color"]');
         if (!themeMeta) {
             themeMeta = document.createElement('meta');
@@ -29,55 +13,47 @@
         }
         themeMeta.setAttribute('content', primaryColor);
 
-        // Update Favicon
         let favicon = document.querySelector('link[rel="icon"]');
         if (!favicon) {
             favicon = document.createElement('link');
             favicon.rel = 'icon';
             document.head.appendChild(favicon);
         }
-        favicon.href = isPizza ? 'icon-pizza.webp' : 'icon-cake.webp';
+        favicon.href = 'icon-erp.webp';
 
-        // Update Apple Touch Icon (PWA)
         let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
         if (!appleIcon) {
             appleIcon = document.createElement('link');
             appleIcon.rel = 'apple-touch-icon';
             document.head.appendChild(appleIcon);
         }
-        appleIcon.href = isPizza ? 'icon-pizza.webp' : 'icon-cake.webp';
+        appleIcon.href = 'icon-erp.webp';
 
-        // 4. CRITICAL: SWAP PWA MANIFEST
-        // This ensures that when you "Add to Home Screen", you get the right app name/icon
         let manifest = document.querySelector('link[rel="manifest"]');
-        const manifestFile = isPizza ? 'manifest-pizza.json' : 'manifest-cake.json';
-
         if (manifest) {
-            manifest.setAttribute('href', manifestFile);
+            manifest.setAttribute('href', 'manifest.json');
         } else {
             const newManifest = document.createElement('link');
             newManifest.rel = 'manifest';
-            newManifest.href = manifestFile;
+            newManifest.href = 'manifest.json';
             document.head.appendChild(newManifest);
         }
     };
 
-    // Run immediately
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', updateHeadElements);
     } else {
         updateHeadElements();
     }
 
-    // 5. Global Branding Helper for App.js
     window.getBrandDetails = () => {
         return {
-            type: brand,
+            type: 'erp',
             primary: primaryColor,
-            name: isPizza ? 'Roshani Pizza' : 'Roshani Cakes',
-            tagline: isPizza ? 'The Taste of Happiness' : 'Sweetness in Every Bite'
+            name: 'Roshani ERP',
+            tagline: 'Enterprise Management System'
         };
     };
 
-    console.log(`[Branding Engine] Active Theme: ${brand.toUpperCase()}`);
+    console.log('[Branding Engine] Unified theme applied');
 })();

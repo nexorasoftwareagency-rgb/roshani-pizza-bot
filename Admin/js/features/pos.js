@@ -4,7 +4,7 @@
  */
 
 import { state } from '../state.js';
-import { db, auth, Outlet, ServerValue } from '../firebase.js';
+import { db, auth, Outlet, serverTimestamp, get, set, runTransaction, ref } from '../firebase.js';
 import { standardizeOrderData, haptic, escapeHtml, playSuccessSound, logAudit } from '../utils.js';
 import { autoDeductStock } from './inventory.js';
 import { ui } from '../ui.js';
@@ -19,8 +19,8 @@ export async function loadWalkinMenu() {
 
     try {
         grid.innerHTML = '<div class="pos-loader">Loading Menu...</div>';
-        const snap = await Outlet.ref("dishes").once("value");
-        console.log(`[POS] Fetched ${snap.numChildren()} dishes from ${snap.ref.toString()}`);
+        const snap = await get(Outlet.ref("dishes"));
+        console.log(`[POS] Fetched ${Object.keys(snap.val() || {}).length} dishes from ${snap.ref.toString()}`);
         state.allWalkinDishes = [];
 
         snap.forEach(child => {
@@ -32,7 +32,7 @@ export async function loadWalkinMenu() {
 
         // Load categories if not already loaded to render tabs
         if (state.categories.length === 0) {
-            const catSnap = await Outlet.ref("categories").once("value");
+            const catSnap = await get(Outlet.ref("categories"));
             state.categories = [];
             catSnap.forEach(c => {
                 state.categories.push({ id: c.key, ...c.val() });
@@ -175,7 +175,7 @@ export async function openPOSSelectionModal(dishId) {
         card.setAttribute('data-name', name);
         card.setAttribute('data-price', price);
         card.innerHTML = `
-            <span class="size-name">${name}</span>
+            <span class="size-name">${escapeHtml(name)}</span>
             <span class="size-price">₹${Number(price).toLocaleString()}</span>
         `;
         sizeGrid.appendChild(card);
@@ -197,7 +197,7 @@ export async function openPOSSelectionModal(dishId) {
             item.innerHTML = `
                 <div class="flex-row flex-center flex-gap-10">
                     <div class="custom-checkbox"></div>
-                    <span class="addon-name">${name}</span>
+                    <span class="addon-name">${escapeHtml(name)}</span>
                 </div>
                 <span class="addon-price">+₹${Number(price).toLocaleString()}</span>
             `;
@@ -375,7 +375,7 @@ export function renderWalkinCart() {
     list.innerHTML = items.map(([key, item]) => {
         const itemTotal = item.price * item.qty;
         subtotal += itemTotal;
-        const addonText = item.addons && item.addons.length > 0 ? `<div class="cart-item-addons-v4 mt-4">${item.addons.map(a => `<span class="addon-tag">+ ${a.name}</span>`).join('')}</div>` : '';
+        const addonText = item.addons && item.addons.length > 0 ? `<div class="cart-item-addons-v4 mt-4">${item.addons.map(a => `<span class="addon-tag">+ ${escapeHtml(a.name)}</span>`).join('')}</div>` : '';
         
         return `
             <div class="premium-row-v4 p-12 mb-8 br-16 bg-white shadow-sm border-ghost">
@@ -499,7 +499,7 @@ export async function checkWalkinCustomer() {
     if (phone.length < 10) return;
 
     try {
-        const snap = await Outlet.ref(`customers/${phone}`).once("value");
+        const snap = await get(Outlet.ref(`customers/${phone}`));
         const nameInput = document.getElementById("walkinCustName");
         
         if (snap.exists()) {
@@ -554,8 +554,8 @@ export async function submitWalkinSale() {
     try {
         // --- PHASE 3.22: PRICE VALIDATION ---
         const [dishesSnap, categoriesSnap] = await Promise.all([
-            Outlet.ref("dishes").once("value"),
-            Outlet.ref("categories").once("value")
+            get(Outlet.ref("dishes")),
+            get(Outlet.ref("categories"))
         ]);
         
         const freshDishes = dishesSnap.val() || {};
@@ -610,7 +610,7 @@ export async function submitWalkinSale() {
         const dateStr = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
         
         // Get sequence from database
-        const seqSnap = await db.ref(`pizza/metadata/orderSequence/${dateStr}`).transaction((current) => (current || 0) + 1);
+        const seqSnap = await runTransaction(ref(db, `pizza/metadata/orderSequence/${dateStr}`), (current) => (current || 0) + 1);
         const seqNum = seqSnap.snapshot.val() || 1;
         const orderId = `${dateStr}-${seqNum.toString().padStart(4, '0')}`;
 
@@ -627,7 +627,7 @@ export async function submitWalkinSale() {
             tableNo: tableNo,
             status: "Confirmed",
             type: "Dine-in",
-            timestamp: ServerValue.TIMESTAMP,
+            timestamp: serverTimestamp(),
             createdAt: new Date().toISOString(),
             outlet: Outlet.current,
             assignedRider: "", 
@@ -635,7 +635,7 @@ export async function submitWalkinSale() {
         };
 
         // 1. Save Order
-        await Outlet.ref(`orders/${orderId}`).set(orderData);
+        await set(Outlet.ref(`orders/${orderId}`), orderData);
 
         // 2. Auto-deduct inventory
         await autoDeductStock(items);
@@ -643,7 +643,7 @@ export async function submitWalkinSale() {
         // 3. Update Customer LTV if phone provided
         if (phone && phone.length >= 10) {
             const custRef = Outlet.ref(`customers/${phone}`);
-            await custRef.transaction(c => {
+            await runTransaction(custRef, c => {
                 if (!c) return { name, phone, orderCount: 1, totalSpent: total, lastSeen: Date.now(), lastAddress: 'Walk-in' };
                 return {
                     ...c,
@@ -687,7 +687,7 @@ export async function openCartAddonPicker(cartKey) {
     if (!item) return;
 
     // Fetch full dish data for addons
-    const snap = await Outlet.ref(`dishes/${item.id}`).once('value');
+    const snap = await get(Outlet.ref(`dishes/${item.id}`));
     const dish = snap.val();
     if (!dish) return;
 
@@ -724,7 +724,7 @@ export async function openCartAddonPicker(cartKey) {
             item.innerHTML = `
                 <div class="flex-row flex-center flex-gap-10">
                     <div class="custom-checkbox ${isChecked ? 'checked' : ''}"></div>
-                    <span class="addon-name">${name}</span>
+                    <span class="addon-name">${escapeHtml(name)}</span>
                 </div>
                 <span class="addon-price">+₹${Number(price).toLocaleString()}</span>
             `;

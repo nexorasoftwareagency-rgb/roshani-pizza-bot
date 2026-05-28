@@ -13,3 +13,17 @@ capacitor-admin/android/
 capacitor-rider/android/
 capacitor-admin/node_modules/
 capacitor-rider/node_modules/
+
+# Generated directories
+graphify-out/
+.kilo/
+rider_old/
+
+# Firebase hosting cache
+.firebase/
+
+# OpenCode config
+.opencode/
+
+# Audit report
+roshani_pizza_admin_ui_audit.html

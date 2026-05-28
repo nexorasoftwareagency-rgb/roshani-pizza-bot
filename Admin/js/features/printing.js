@@ -1,4 +1,4 @@
-import { Outlet } from '../firebase.js';
+import { Outlet, get, query, orderByChild, equalTo, limitToLast } from '../firebase.js';
 import { updateStatus } from './orders.js';
 import { standardizeOrderData, showToast } from '../utils.js';
 
@@ -10,6 +10,9 @@ let settingsCache = {
 };
 const CACHE_DURATION = 300000; // 5 minutes
 
+// Receipt preview state
+let _previewHtml = null;
+
 /**
  * Main function to print an order receipt
  * @param {Object} rawOrder - The raw order data from Firebase
@@ -20,21 +23,10 @@ export async function printOrderReceipt(rawOrder, isReprint = false) {
     const o = standardizeOrderData(rawOrder);
     if (!o) return;
 
-    // If it's the original print and we have saved HTML, use it
+    // If it's the original print and we have saved HTML, use iframe (avoids popup blockers on mobile)
     if (!isReprint && rawOrder.receiptHtml) {
-        const printWindow = window.open('', '_blank', 'width=450,height=800');
-        if (printWindow) {
-            printWindow.document.write(rawOrder.receiptHtml);
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => {
-                try {
-                    printWindow.print();
-                    printWindow.close();
-                } catch (e) { console.error("Print error:", e); }
-            }, 400);
-            return;
-        }
+        printWithIframe(rawOrder.receiptHtml);
+        return;
     }
 
     let store = {
@@ -61,8 +53,8 @@ export async function printOrderReceipt(rawOrder, isReprint = false) {
         const now = Date.now();
         if (!settingsCache.store || (now - settingsCache.lastFetched > CACHE_DURATION)) {
             const [storeSnap, dispSnap] = await Promise.all([
-                Outlet.ref("settings/Store").once("value"),
-                Outlet.ref("settings/Display").once("value")
+                get(Outlet.ref("settings/Store")),
+                get(Outlet.ref("settings/Display"))
             ]);
             
             settingsCache.store = storeSnap.exists() ? storeSnap.val() : {};
@@ -118,7 +110,12 @@ export async function printOrderReceipt(rawOrder, isReprint = false) {
         rawOrder.receiptHtml = html;
     }
 
-    printWithIframe(html);
+    // Show preview for user-initiated reprints; print directly for auto-prints
+    if (isReprint) {
+        showReceiptPreview(html);
+    } else {
+        printWithIframe(html);
+    }
     console.timeEnd('[Print] Receipt Generation');
 }
 
@@ -148,18 +145,82 @@ function printWithIframe(html) {
 }
 
 /**
+ * RECEIPT PREVIEW MODAL
+ * Shows the rendered receipt in a modal for review before printing.
+ */
+function showReceiptPreview(html) {
+    _previewHtml = html;
+    const modal = document.getElementById('receiptPreviewModal');
+    const frame = document.getElementById('receiptPreviewFrame');
+    if (!modal || !frame) {
+        printWithIframe(html);
+        return;
+    }
+
+    // Write receipt HTML into the iframe
+    frame.src = 'about:blank';
+    frame.onload = function scaleAndShow() {
+        const doc = frame.contentDocument;
+        doc.open();
+        doc.write(html);
+        doc.close();
+
+        // On narrow screens, scale the 80mm receipt to fit
+        if (window.innerWidth < 420) {
+            frame.style.width = '125%';
+            frame.style.height = '125%';
+            frame.style.transform = 'scale(0.8)';
+            frame.style.transformOrigin = 'top left';
+        }
+    };
+    // If iframe already loaded 'about:blank', onload won't fire again
+    if (frame.contentDocument && frame.contentDocument.readyState === 'complete') {
+        const doc = frame.contentDocument;
+        doc.open();
+        doc.write(html);
+        doc.close();
+        if (window.innerWidth < 420) {
+            frame.style.width = '125%';
+            frame.style.height = '125%';
+            frame.style.transform = 'scale(0.8)';
+            frame.style.transformOrigin = 'top left';
+        }
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('active', 'flex');
+}
+
+export function closeReceiptPreview() {
+    _previewHtml = null;
+    const modal = document.getElementById('receiptPreviewModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('active', 'flex');
+    }
+}
+
+export function printReceiptFromPreview() {
+    const html = _previewHtml;
+    closeReceiptPreview();
+    if (html) {
+        printWithIframe(html);
+    }
+}
+
+/**
  * Fetch an order by ID and print it
  * @param {String} orderId - The order ID to print
  */
 export async function printReceiptById(orderId) {
     try {
-        const snap = await Outlet.ref("orders").orderByChild("orderId").equalTo(orderId).once("value");
+        const snap = await get(query(Outlet.ref("orders"), orderByChild("orderId"), equalTo(orderId)));
         let order;
 
         if (snap.exists()) {
             snap.forEach(s => order = s.val());
         } else {
-            const snap2 = await Outlet.ref(`orders/${orderId}`).once("value");
+            const snap2 = await get(Outlet.ref(`orders/${orderId}`));
             order = snap2.val();
         }
 
@@ -186,11 +247,7 @@ export async function printReceiptById(orderId) {
  */
 export async function reprintLastPosReceipt() {
     try {
-        const snap = await Outlet.ref("orders")
-            .orderByChild("type")
-            .equalTo("Walk-in")
-            .limitToLast(1)
-            .once("value");
+        const snap = await get(query(Outlet.ref("orders"), orderByChild("type"), equalTo("Walk-in"), limitToLast(1)));
 
         let lastOrder = null;
         snap.forEach(child => {

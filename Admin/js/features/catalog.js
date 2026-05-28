@@ -1,18 +1,20 @@
-import { Outlet, uploadImage, deleteImage } from '../firebase.js';
-import { showToast, escapeHtml, logAudit } from '../utils.js';
+import { Outlet, uploadImage, deleteImage, ref, get, set, update, remove, push, onValue, child } from '../firebase.js';
+import { showToast, escapeHtml, logAudit, getSkeletonRows } from '../utils.js';
 import { state } from '../state.js';
 import { requireAdminReauth } from '../auth.js';
-import { showConfirm } from '../ui-utils.js';
+import { showConfirm, showDeleteConfirm } from '../ui-utils.js';
 
-/**
- * CATEGORIES
- */
+let _categoriesUnsub = null;
+let _dishesUnsub = null;
 
 export function loadCategories() {
     cleanupCatalog();
+    // Show skeleton while data loads
+    const catContainer = document.getElementById('categoryList');
+    if (catContainer) catContainer.innerHTML = getSkeletonRows(5, 1);
     console.log("[Catalog] Loading categories...");
-    Outlet.ref('categories').on('value', snap => {
-        console.log(`[Catalog] Received ${snap.numChildren()} categories`);
+    _categoriesUnsub = onValue(Outlet.ref('categories'), snap => {
+        console.log(`[Catalog] Received ${Object.keys(snap.val() || {}).length} categories`);
         state.categories = [];
         const container = document.getElementById('categoryList');
         if (!container) return;
@@ -23,7 +25,6 @@ export function loadCategories() {
             cats.push({ id: child.key, ...child.val() });
         });
 
-        // Sort by order field
         cats.sort((a, b) => (a.order || 0) - (b.order || 0));
         state.categories = cats;
 
@@ -87,7 +88,7 @@ export async function addCategory() {
         const orderInput = document.getElementById('newCatOrder');
         const order = parseInt(orderInput?.value) || 0;
 
-        await Outlet.ref('categories').push({
+        await push(Outlet.ref('categories'), {
             name: name,
             image: imageUrl,
             order: order,
@@ -119,48 +120,45 @@ export async function addCategory() {
 
 export async function deleteCategory(id) {
     requireAdminReauth(async () => {
-        if (await showConfirm("Delete this category and ALL associated dishes? This cannot be undone.", "Delete Category")) {
-            try {
-                const catSnap = await Outlet.ref('categories/' + id).once('value');
-                const category = catSnap.val();
-                if (!category) return showToast("Category not found", "error");
+        const catSnap = await get(Outlet.ref('categories/' + id));
+        const category = catSnap.val();
+        if (!category) return showToast("Category not found", "error");
 
-                const catName = category.name;
-                const catImage = category.image;
+        const catName = category.name;
+        if (!(await showDeleteConfirm(`${catName} and ALL associated dishes`, "Delete this category and ALL associated dishes? This cannot be undone."))) return;
 
-                // 1. Get all dishes to find those in this category
-                const dishesSnap = await Outlet.ref('dishes').once('value');
-                const dishes = dishesSnap.val() || {};
+        try {
+            const catImage = category.image;
 
-                const updates = {};
-                updates[`categories/${id}`] = null;
+            const dishesSnap = await get(Outlet.ref('dishes'));
+            const dishes = dishesSnap.val() || {};
 
-                const imagesToDelete = [];
-                if (catImage) imagesToDelete.push(catImage);
+            const updates = {};
+            updates[`categories/${id}`] = null;
 
-                Object.keys(dishes).forEach(dishId => {
-                    if (dishes[dishId].category === catName) {
-                        updates[`dishes/${dishId}`] = null;
-                        if (dishes[dishId].image) {
-                            imagesToDelete.push(dishes[dishId].image);
-                        }
+            const imagesToDelete = [];
+            if (catImage) imagesToDelete.push(catImage);
+
+            Object.keys(dishes).forEach(dishId => {
+                if (dishes[dishId].category === catName) {
+                    updates[`dishes/${dishId}`] = null;
+                    if (dishes[dishId].image) {
+                        imagesToDelete.push(dishes[dishId].image);
                     }
-                });
+                }
+            });
 
-                // 2. Perform atomic database cleanup
-                await Outlet.ref('').update(updates);
+            await update(Outlet.ref(''), updates);
 
-                // 3. Cleanup storage (Background)
-                imagesToDelete.forEach(img => {
-                    deleteImage(img).catch(err => console.warn("[Catalog] Image deletion failed:", img, err));
-                });
+            imagesToDelete.forEach(img => {
+                deleteImage(img).catch(err => console.warn("[Catalog] Image deletion failed:", img, err));
+            });
 
-                logAudit("Catalog", `Deleted Category and associated dishes: ${catName}`, id);
-                showToast(`Category "${catName}" and all its items deleted.`, 'success');
-            } catch (err) {
-                console.error("[Catalog] Delete failed:", err);
-                showToast("Operation failed: " + err.message, "error");
-            }
+            logAudit("Catalog", `Deleted Category and associated dishes: ${catName}`, id);
+            showToast(`Category "${catName}" and all its items deleted.`, 'success');
+        } catch (err) {
+            console.error("[Catalog] Delete failed:", err);
+            showToast("Operation failed: " + err.message, "error");
         }
     });
 }
@@ -175,8 +173,12 @@ export function loadMenu() {
     if (!grid) return;
 
     cleanupCatalog();
+    // Show skeleton while data loads
+    grid.innerHTML = Array.from({ length: 6 }, () =>
+        '<div class="skeleton-dish-card" style="animation: skeleton-pulse 1.2s ease-in-out infinite alternate;"></div>'
+    ).join('');
     console.log("[Catalog] Loading menu...");
-    Outlet.ref(`dishes`).on("value", snap => {
+    _dishesUnsub = onValue(Outlet.ref(`dishes`), snap => {
         grid.innerHTML = "";
         const dishes = [];
         snap.forEach(child => {
@@ -254,7 +256,7 @@ export function loadMenu() {
             grid.appendChild(card);
         });
 
-        if (snap.numChildren() === 0) {
+        if (Object.keys(snap.val() || {}).length === 0) {
             grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted);">No dishes yet. Click + Add Dish to get started.</div>';
         }
     });
@@ -289,7 +291,7 @@ export async function saveDish() {
             if (statusLabel) statusLabel.classList.remove('hidden');
             let oldImageUrl = null;
             if (state.editingDishId) {
-                const snap = await Outlet.ref(`dishes/${state.editingDishId}`).once('value');
+                const snap = await get(Outlet.ref(`dishes/${state.editingDishId}`));
                 oldImageUrl = snap.val()?.image;
             }
             image = await uploadImage(file, `dishes/${Date.now()}_${file.name}`);
@@ -328,12 +330,12 @@ export async function saveDish() {
             addons: Object.keys(addons).length > 0 ? addons : null
         };
 
-        const ref = Outlet.ref('dishes');
+        const dishesRef = Outlet.ref('dishes');
         if (state.editingDishId) {
-            await ref.child(state.editingDishId).update(data);
+            await update(child(dishesRef, state.editingDishId), data);
             logAudit("Catalog", `Updated Dish: ${name}`, state.editingDishId);
         } else {
-            const newRef = await ref.push(data);
+            const newRef = await push(dishesRef, data);
             logAudit("Catalog", `Added New Dish: ${name}`, newRef.key);
         }
 
@@ -351,53 +353,23 @@ export async function saveDish() {
     }
 }
 
-export function deleteDish(dishId) {
-    requireAdminReauth(() => {
-        const existing = document.getElementById('deleteConfirmOverlay');
-        if (existing) existing.remove();
+export async function deleteDish(dishId) {
+    requireAdminReauth(async () => {
+        const snap = await get(Outlet.ref(`dishes/${dishId}`));
+        const d = snap.val();
+        const dishName = d?.name || "Unknown";
 
-        const overlay = document.createElement('div');
-        overlay.id = 'deleteConfirmOverlay';
-        overlay.style.cssText = `
-            position: fixed; inset: 0; z-index: 99999;
-            background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center;
-        `;
+        if (!(await showDeleteConfirm(dishName))) return;
 
-        overlay.innerHTML = `
-        <div style="background:#1c1c1c; border:1px solid #ef4444; border-radius:20px;
-                    padding:32px 36px; max-width:360px; width:90%; text-align:center;
-                    box-shadow:0 20px 60px rgba(239,68,68,0.25);">
-        <div style="font-size:40px; margin-bottom:12px;">🗑️</div>
-            <h3 style="color:#fff; margin:0 0 8px; font-size:18px; font-weight:700;">Delete Dish?</h3>
-            <p style="color:#aaa; font-size:14px; margin:0 0 24px;">This action cannot be undone.</p>
-            <div style="display:flex; gap:12px; justify-content:center;">
-                <button id="confirmDeleteNo" style="flex:1; padding:12px; border-radius:12px; border:1px solid #333; background:transparent; color:#aaa; cursor:pointer; font-size:14px; font-weight:600;">Cancel</button>
-                <button id="confirmDeleteYes" style="flex:1; padding:12px; border-radius:12px; border:none; background:#ef4444; color:#fff; cursor:pointer; font-size:14px; font-weight:700;">Delete</button>
-            </div>
-        </div>`;
-
-        document.body.appendChild(overlay);
-
-        const cleanup = () => overlay.remove();
-        overlay.querySelector('#confirmDeleteNo').onclick = cleanup;
-        overlay.onclick = (e) => { if (e.target === overlay) cleanup(); };
-
-        overlay.querySelector('#confirmDeleteYes').onclick = async () => {
-            cleanup();
-            try {
-                const snap = await Outlet.ref(`dishes/${dishId}`).once('value');
-                const d = snap.val();
-                const dishName = d?.name || "Unknown";
-                const img = d?.image;
-                if (img) await deleteImage(img);
-                await Outlet.ref(`dishes/${dishId}`).remove();
-                logAudit("Catalog", `Deleted Dish: ${dishName}`, dishId);
-                showToast('Dish deleted', 'success');
-            } catch (e) {
-                showToast('Delete failed: ' + e.message, 'error');
-            }
-        };
+        try {
+            const img = d?.image;
+            if (img) await deleteImage(img);
+            await remove(Outlet.ref(`dishes/${dishId}`));
+            logAudit("Catalog", `Deleted Dish: ${dishName}`, dishId);
+            showToast('Dish deleted', 'success');
+        } catch (e) {
+            showToast('Delete failed: ' + e.message, 'error');
+        }
     });
 }
 
@@ -417,7 +389,7 @@ export async function showDishModal(dishId = null) {
     if (state.categories.length === 0) loadCategories();
     else updateActiveDishModalCategories();
 
-    const titleEl = document.getElementById('modalTitle');
+    const titleEl = document.getElementById('dishModalTitle');
     if (titleEl) titleEl.innerText = dishId ? 'Edit Dish' : 'Add New Dish';
 
     const statusLabel = document.getElementById('uploadStatus');
@@ -433,7 +405,7 @@ export async function showDishModal(dishId = null) {
         document.getElementById('sizesContainer').innerHTML = '';
         document.getElementById('addonsContainer').innerHTML = '';
     } else {
-        const snap = await Outlet.ref(`dishes/${dishId}`).once('value');
+        const snap = await get(Outlet.ref(`dishes/${dishId}`));
         const d = snap.val();
         if (d) {
             document.getElementById('dishName').value = d.name || '';
@@ -501,8 +473,8 @@ export function addSizeField(name = "", price = "") {
     const div = document.createElement('div');
     div.className = "size-row flex-row flex-gap-10 mb-8";
     div.innerHTML = `
-        <input placeholder="Size (e.g. Small)" value="${name}" class="form-input mb-0" style="flex:2">
-        <input type="number" placeholder="Price" value="${price}" class="form-input mb-0" style="flex:1">
+        <input placeholder="Size (e.g. Small)" value="${escapeHtml(name)}" class="form-input mb-0" style="flex:2">
+        <input type="number" placeholder="Price" value="${escapeHtml(String(price))}" class="form-input mb-0" style="flex:1">
         <button data-action="removeParent" class="btn-text-danger" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:18px;">&times;</button>
     `;
     container.appendChild(div);
@@ -514,8 +486,8 @@ export function addDishAddonField(name = "", price = "") {
     const div = document.createElement('div');
     div.className = "addon-row flex-row flex-gap-10 mb-8";
     div.innerHTML = `
-        <input placeholder="Addon (e.g. Extra Cheese)" value="${name}" class="form-input mb-0" style="flex:2">
-        <input type="number" placeholder="Price" value="${price}" class="form-input mb-0" style="flex:1">
+        <input placeholder="Addon (e.g. Extra Cheese)" value="${escapeHtml(name)}" class="form-input mb-0" style="flex:2">
+        <input type="number" placeholder="Price" value="${escapeHtml(String(price))}" class="form-input mb-0" style="flex:1">
         <button data-action="removeParent" class="btn-text-danger" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:18px;">&times;</button>
     `;
     container.appendChild(div);
@@ -527,8 +499,8 @@ export function addCategoryAddonField(name = "", price = "") {
     const div = document.createElement('div');
     div.className = "addon-row-small flex-row flex-gap-10 mb-8";
     div.innerHTML = `
-        <input placeholder="Addon Name" value="${name}" class="form-input mb-0" style="flex:2">
-        <input type="number" placeholder="Price" value="${price}" class="form-input mb-0" style="flex:1">
+        <input placeholder="Addon Name" value="${escapeHtml(name)}" class="form-input mb-0" style="flex:2">
+        <input type="number" placeholder="Price" value="${escapeHtml(String(price))}" class="form-input mb-0" style="flex:1">
         <button data-action="removeParent" class="btn-text-danger">&times;</button>
     `;
     container.appendChild(div);
@@ -539,12 +511,12 @@ export function addCategoryAddonField(name = "", price = "") {
  */
 export function cleanupCatalog() {
     console.log("[Catalog] Detaching listeners...");
-    Outlet.ref('categories').off();
-    Outlet.ref('dishes').off();
+    if (_categoriesUnsub) { _categoriesUnsub(); _categoriesUnsub = null; }
+    if (_dishesUnsub) { _dishesUnsub(); _dishesUnsub = null; }
 }
 
-export const toggleStock = (id, current) => Outlet.ref(`dishes/${id}`).update({ stock: !current });
-export const toggleDishAvailable = (id, available) => Outlet.ref(`dishes/${id}`).update({ stock: available });
+export const toggleStock = (id, current) => update(Outlet.ref(`dishes/${id}`), { stock: !current });
+export const toggleDishAvailable = (id, available) => update(Outlet.ref(`dishes/${id}`), { stock: available });
 export const editDish = (id) => showDishModal(id);
 export const editCategory = (id) => showToast("Category editing coming soon!", "info");
 
@@ -584,8 +556,8 @@ export async function migrateAddonsToCategories() {
         if (!(await showConfirm("CRITICAL: This will move all dish-level addons to their parent categories. Proceed?", "Migration Confirmation"))) return;
         try {
             console.log("Starting add-on migration...");
-            const dishesSnap = await Outlet.ref(`dishes`).once('value');
-            const categoriesSnap = await Outlet.ref('categories').once('value');
+            const dishesSnap = await get(Outlet.ref(`dishes`));
+            const categoriesSnap = await get(Outlet.ref('categories'));
 
             const dishes = dishesSnap.val() || {};
             const categoriesData = categoriesSnap.val() || {};
@@ -612,7 +584,7 @@ export async function migrateAddonsToCategories() {
             });
 
             if (Object.keys(updates).length > 0) {
-                await Outlet.ref('').update(updates);
+                await update(Outlet.ref(''), updates);
                 logAudit("Maintenance", "Migrated Dish Add-ons to Categories", "Global");
                 showToast("Success: Add-ons migrated to categories!", "success");
             } else {
@@ -644,7 +616,7 @@ export async function runImageMigration() {
                 }
             }
 
-            const dishesSnap = await Outlet.ref('dishes').once('value');
+            const dishesSnap = await get(Outlet.ref('dishes'));
             const dishesData = dishesSnap.val();
             if (dishesData) {
                 for (const id in dishesData) {
@@ -656,7 +628,7 @@ export async function runImageMigration() {
                 }
             }
 
-            const catsSnap = await Outlet.ref('categories').once('value');
+            const catsSnap = await get(Outlet.ref('categories'));
             const catsData = catsSnap.val();
             if (catsData) {
                 for (const id in catsData) {
@@ -669,7 +641,7 @@ export async function runImageMigration() {
             }
 
             if (Object.keys(updates).length > 0) {
-                await Outlet.ref('').update(updates);
+                await update(Outlet.ref(''), updates);
                 logAudit("Maintenance", "Converted legacy images to DataURIs", "Global");
                 showToast("Success: All images migrated!", "success");
                 location.reload();

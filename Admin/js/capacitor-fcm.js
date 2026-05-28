@@ -1,3 +1,5 @@
+import { db, ref, update } from './firebase.js';
+
 export async function setupCapacitorFCM(userId) {
   if (typeof Capacitor === 'undefined') return;
 
@@ -12,8 +14,7 @@ export async function setupCapacitorFCM(userId) {
     const token = result?.value;
     if (!token) return;
 
-    const db = firebase.database();
-    await db.ref(`admins/${userId}`).update({ fcmToken: token });
+    await update(ref(db, `admins/${userId}`), { fcmToken: token });
 
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
       const title = notification.title || 'New Alert';

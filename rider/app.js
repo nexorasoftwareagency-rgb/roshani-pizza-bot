@@ -446,6 +446,31 @@ window.showToast = (msg, type = "info") => {
     setTimeout(() => toast.remove(), 3000);
 };
 
+window.showConfirm = (msg, title = "Confirm") => {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;`;
+        overlay.innerHTML = `
+            <div style="background: #1c1c1c; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 32px; max-width: 360px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+                <h3 style="color: #fff; margin: 0 0 12px; font-size: 18px; font-weight: 700;">${title}</h3>
+                <p style="color: #aaa; font-size: 14px; margin: 0 0 24px;">${msg}</p>
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                    <button class="confirm-no" style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #333; background: transparent; color: #aaa; cursor: pointer; font-size: 14px; font-weight: 600;">Cancel</button>
+                    <button class="confirm-yes" style="flex: 1; padding: 12px; border-radius: 12px; border: none; background: #10B981; color: #fff; cursor: pointer; font-size: 14px; font-weight: 700;">Confirm</button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+        const cleanup = (val) => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.2s';
+            setTimeout(() => { overlay.remove(); resolve(val); }, 200);
+        };
+        overlay.querySelector('.confirm-yes').onclick = () => cleanup(true);
+        overlay.querySelector('.confirm-no').onclick = () => cleanup(false);
+        overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
+    });
+};
+
 // LOGIN & AUTH
 window.login = async () => {
     const identifier = document.getElementById('email').value.trim();
@@ -495,7 +520,7 @@ window.addEventListener('touchcancel', () => {
 
 
 window.logout = async () => {
-    if (confirm("End your shift and logout?")) {
+    if (await window.showConfirm("End your shift and logout?", "Confirm Logout")) {
         window.clearAllListeners();
         localStorage.removeItem('rider_authenticated');
         await signOut(auth);
@@ -700,7 +725,7 @@ window.markNotifRead = async (id) => {
 
 window.clearAllNotifications = async () => {
     if (!window.currentUser?.profile?.id) return;
-    if (!confirm("Clear all notifications?")) return;
+    if (!(await window.showConfirm("Clear all notifications?", "Confirm Clear"))) return;
     try {
         const riderId = window.currentUser.profile.id;
         await remove(ref(db, `riders/${riderId}/notifications`));
@@ -943,7 +968,7 @@ window.closeSuccessOverlay = () => {
 
 window.emergencyOverride = async () => {
     if (!currentUser || !currentUser.profile || !currentUser.profile.isAdmin) return window.showToast("Unauthorized access.", "error");
-    if (confirm("FORCE COMPLETE: Bypass customer OTP?")) {
+    if (await window.showConfirm("FORCE COMPLETE: Bypass customer OTP?", "Emergency Override")) {
         window.haptic([50, 50, 50]);
         const orderPath = `${window._currentOrderOutlet || 'pizza'}/orders/${currentOrderId}`;
         const snap = await get(ref(db, orderPath));
@@ -1664,8 +1689,8 @@ window._doRenderAllOrders = () => {
                             <div class="checklist-title">Verify Items</div>
                             ${(o.normalizedItems || o.items || []).map(i => `
                                 <div class="check-item">
-                                    <input type="checkbox" id="check-${i.item || i.name}">
-                                    <label for="check-${i.item || i.name}">${i.name || i.item} (${i.size}) x${i.qty || i.quantity}</label>
+                                    <input type="checkbox" id="check-${escapeHtml(i.item || i.name)}">
+                                    <label for="check-${escapeHtml(i.item || i.name)}">${escapeHtml(i.name || i.item)} (${escapeHtml(i.size)}) x${escapeHtml(i.qty || i.quantity)}</label>
                                 </div>
                             `).join('')}
                         </div>
@@ -2179,7 +2204,7 @@ window.openSettlementHistory = async () => {
                 </div>
                 <div class="address-line">
                     <i data-lucide="user-check"></i>
-                    <span class="text-muted-small">Admin: ${s.settledByAdmin}</span>
+                    <span class="text-muted-small">Admin: ${escapeHtml(s.settledByAdmin)}</span>
                 </div>
                 <div class="address-line">
                     <i data-lucide="package-check"></i>

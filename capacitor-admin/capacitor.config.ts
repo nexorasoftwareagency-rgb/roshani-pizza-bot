@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.roshani.pizza.admin',
-  appName: 'Roshani ERP Admin',
+  appName: 'Roshani ERP',
   webDir: '../Admin',
   loggingBehavior: 'debug',
   backgroundColor: '#ffffff',
@@ -11,7 +11,9 @@ const config: CapacitorConfig = {
     webContentsDebuggingEnabled: true
   },
   server: {
-    cleartext: true
+    url: 'https://roshani-sudha-admin.web.app',
+    cleartext: true,
+    androidScheme: 'https'
   },
   plugins: {
     SplashScreen: {

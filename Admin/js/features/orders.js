@@ -3,9 +3,9 @@
  * Handles real-time order synchronization, rendering, and status updates.
  */
 
-import { db, Outlet, ServerValue } from '../firebase.js';
+import { db, Outlet, serverTimestamp, ref, get, set, update, query, orderByChild, orderByKey, equalTo, limitToLast, startAt, endAt, endBefore, onValue, onChildAdded, onChildChanged } from '../firebase.js';
 import { state } from '../state.js';
-import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit, calculateDistance, getFeeFromSlabs, addRiderNotification, getISTDateString } from '../utils.js';
+import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit, calculateDistance, getFeeFromSlabs, addRiderNotification, getISTDateString, getSkeletonRows } from '../utils.js';
 import { showAlert, addNotification, highlightOrder } from './notifications.js';
 import { showPaymentPicker } from '../ui-utils.js';
 import { autoDeductStock } from './inventory.js';
@@ -35,50 +35,34 @@ export const STATUS_MAPPING = {
 };
 
 // Order callback storage for safe detachment
-let _ordersRef = null;
-let _ordersValueCb = null;
-let _ordersChildCb = null;
-let _ordersChangedCb = null;
-let _liveOrdersRef = null;
-let _liveOrdersValueCb = null;
+let _ordersUnsub = null;
+let _ordersChildUnsub = null;
+let _ordersChangedUnsub = null;
+let _liveOrdersUnsub = null;
 
-/**
- * INITIALIZE REAL-TIME LISTENERS
- * Syncs orders across outlets and triggers alerts for new ones.
- */
 export function initRealtimeListeners() {
-    // Detach any previous listeners (using the current outlet as a safety, but we'll try both for good measure)
-    ['pizza', 'cake'].forEach(o => {
-        const r = db.ref(`${o}/orders`);
-        if (_ordersChildCb) r.off("child_added", _ordersChildCb);
-        if (_ordersChangedCb) r.off("child_changed", _ordersChangedCb);
+    if (_ordersUnsub) { _ordersUnsub(); _ordersUnsub = null; }
+    if (_ordersChildUnsub) { _ordersChildUnsub(); _ordersChildUnsub = null; }
+    if (_ordersChangedUnsub) { _ordersChangedUnsub(); _ordersChangedUnsub = null; }
+    if (_liveOrdersUnsub) { _liveOrdersUnsub(); _liveOrdersUnsub = null; }
+
+    // Show skeleton while data loads
+    ['ordersTable','ordersTableFull','liveOrdersTable','paymentsTable'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = getSkeletonRows(5, el.closest('table').querySelectorAll('thead th').length || 7);
     });
-
-    if (_ordersValueCb && _ordersRef) {
-        _ordersRef.off("value", _ordersValueCb);
-        _ordersRef = null;
-        _ordersValueCb = null;
-    }
-
-    if (_liveOrdersValueCb && _liveOrdersRef) {
-        _liveOrdersRef.off("value", _liveOrdersValueCb);
-        _liveOrdersRef = null;
-        _liveOrdersValueCb = null;
-    }
 
     let firstLoad = true;
     const loadTime = Date.now();
     const currentOrdersRef = Outlet.ref("orders");
 
-    // 1. New Orders Listener (Alerts)
-    _ordersChildCb = snap => {
+    _ordersChildUnsub = onChildAdded(currentOrdersRef, snap => {
         if (!firstLoad) {
             const order = snap.val();
             if (!order) return;
             const orderTime = typeof order.createdAt === 'number' ? order.createdAt : new Date(order.createdAt).getTime();
             const isRecent = orderTime && (Date.now() - orderTime) < 120000;
             const isPostLoad = orderTime && orderTime > loadTime - 5000;
-
             if (order.status === "Placed" && isRecent && isPostLoad) {
                 showAlert(order);
                 playNotificationSound();
@@ -86,113 +70,200 @@ export function initRealtimeListeners() {
                 setTimeout(() => { highlightOrder(snap.key); }, 1000);
             }
         }
-    };
+    });
 
-    currentOrdersRef.on("child_added", _ordersChildCb);
-
-    // 2. Status Transitions
-    _ordersChangedCb = snap => {
+    _ordersChangedUnsub = onChildChanged(currentOrdersRef, snap => {
         const order = snap.val();
         if (order && order.status === "Delivered") {
             addNotification(`Order Delivered (#${snap.key.slice(-5)})`, `Customer: ${order.customerName || 'Walk-in'} • ₹${order.total}`, 'delivered', state.currentOutlet);
         }
-    };
+    });
 
-    currentOrdersRef.on("child_changed", _ordersChangedCb);
-
-    // 3. Main Value Sync (Rendering) with Pagination
     const fromDate = document.getElementById("orderFrom")?.value;
     const toDate = document.getElementById("orderTo")?.value;
 
+    let ordersRef;
     try {
-        _ordersRef = Outlet.ref("orders");
-        if (!_ordersRef) throw new Error("Could not resolve orders reference");
+        ordersRef = Outlet.ref("orders");
+        if (!ordersRef) throw new Error("Could not resolve orders reference");
     } catch (err) {
         console.error("[Orders] Fatal: Failed to initialize orders reference:", err);
         return;
     }
 
-    console.log(`[Orders] Initializing listeners for: ${_ordersRef.toString()} (Filter: ${fromDate || 'ALL'} to ${toDate || 'ALL'})`);
-    const limit = state.orderLimit || 50;
-    
-    _ordersValueCb = snap => {
+    console.log(`[Orders] Initializing listeners for: ${ordersRef} (Filter: ${fromDate || 'ALL'} to ${toDate || 'ALL'})`);
+
+    _ordersUnsub = onValue(buildOrdersQuery(ordersRef, fromDate, toDate, 50), snap => {
         firstLoad = false;
-        console.log(`[Orders] Received snapshot: ${snap.numChildren()} orders at ${_ordersRef.toString()}`);
+        console.log(`[Orders] Received snapshot: ${Object.keys(snap.val() || {}).length} orders at ${ordersRef}`);
         state.lastOrdersSnap = snap;
-        
-        // Debounce heavy desktop renders (prevents lag from rapid snapshots)
         if (window._renderDebounce) clearTimeout(window._renderDebounce);
         window._renderDebounce = setTimeout(() => {
             renderOrders(snap);
         }, 120);
-    };
-
-    let query = _ordersRef.orderByChild("createdAt");
-    
-    // Validate date inputs if provided
-    if (fromDate && toDate) {
-        const d1 = new Date(fromDate);
-        const d2 = new Date(toDate);
-        if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
-            console.error("[Orders] Invalid date range provided, falling back to recent orders.");
-            query = query.limitToLast(limit);
-        } else {
-            // Broaden range by 1 day to catch IST/UTC drift
-            const qStart = new Date(d1); qStart.setDate(qStart.getDate() - 1);
-            const qEnd = new Date(d2); qEnd.setDate(qEnd.getDate() + 1);
-            
-            query = query.startAt(`${qStart.toISOString().split('T')[0]}T00:00:00.000Z`).endAt(`${qEnd.toISOString().split('T')[0]}T23:59:59.999Z`);
-        }
-    } else {
-        // Fallback to recent 100 orders
-        query = query.limitToLast(limit);
-    }
-
-    _ordersRef = query;
-    _ordersRef.on("value", _ordersValueCb, err => {
+    }, err => {
         console.error("[Orders] Firebase Read Error:", err);
         showToast("Error loading orders: " + err.message, "error");
     });
 
-    // 4. PERSISTENT LIVE-OPS SYNC (Always active for recent data)
-    // Use a fresh reference to avoid combining multiple orderBy calls from _ordersRef
-    _liveOrdersRef = Outlet.ref("orders").orderByChild("createdAt").limitToLast(100);
-    _liveOrdersValueCb = snap => {
+    const liveOrdersRef = Outlet.ref("orders");
+    _liveOrdersUnsub = onValue(query(liveOrdersRef, orderByChild("createdAt"), limitToLast(100)), snap => {
         state.liveOrdersMap.clear();
         snap.forEach(child => {
             state.liveOrdersMap.set(child.key, child.val());
         });
-        // If we are currently on the live tab, re-render immediately
         if (state.currentActiveTab === 'live') {
-            renderOrders(state.lastOrdersSnap); 
+            renderOrders(state.lastOrdersSnap);
         }
-    };
-    _liveOrdersRef.on("value", _liveOrdersValueCb);
+    });
+}
+
+function buildOrdersQuery(ordersRef, fromDate, toDate, limit) {
+    if (fromDate && toDate) {
+        const d1 = new Date(fromDate);
+        const d2 = new Date(toDate);
+        if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
+            return query(ordersRef, orderByChild("createdAt"), limitToLast(limit));
+        }
+        const qStart = new Date(d1); qStart.setDate(qStart.getDate() - 1);
+        const qEnd = new Date(d2); qEnd.setDate(qEnd.getDate() + 1);
+        return query(ordersRef, orderByChild("createdAt"),
+            startAt(`${qStart.toISOString().split('T')[0]}T00:00:00.000Z`),
+            endAt(`${qEnd.toISOString().split('T')[0]}T23:59:59.999Z`),
+            limitToLast(limit));
+    }
+    return query(ordersRef, orderByChild("createdAt"), limitToLast(limit));
 }
 
 export function cleanupOrders() {
     console.log("[Orders] Detaching listeners...");
-    ['pizza', 'cake'].forEach(o => {
-        const r = db.ref(`${o}/orders`);
-        r.off();
-    });
-    if (_ordersRef) _ordersRef.off();
-    if (_liveOrdersRef) _liveOrdersRef.off();
-    _ordersRef = null;
-    _liveOrdersRef = null;
-    _ordersValueCb = null;
-    _ordersChildCb = null;
-    _ordersChangedCb = null;
-    _liveOrdersValueCb = null;
+    if (_ordersUnsub) { _ordersUnsub(); _ordersUnsub = null; }
+    if (_ordersChildUnsub) { _ordersChildUnsub(); _ordersChildUnsub = null; }
+    if (_ordersChangedUnsub) { _ordersChangedUnsub(); _ordersChangedUnsub = null; }
+    if (_liveOrdersUnsub) { _liveOrdersUnsub(); _liveOrdersUnsub = null; }
 }
 
 /**
- * LOAD MORE ORDERS
- * Increases the limit and re-initializes listeners.
+ * LOAD MORE ORDERS (Cursor-Based Pagination)
+ * Fetches the next page of older orders using endBefore cursor.
  */
 export function loadMoreOrders() {
-    state.orderLimit = (state.orderLimit || 50) + 50;
-    initRealtimeListeners();
+    if (state.ordersPageLoading || !state.hasMoreOrders) return;
+    loadOrdersPage(false);
+}
+
+const PAGE_SIZE = 50;
+
+/**
+ * Load a page of orders for the Orders tab using cursor-based pagination.
+ * @param {boolean} reset - If true, clears pagination state and loads the first page.
+ */
+export function loadOrdersPage(reset = false) {
+    if (state.ordersPageLoading && !reset) return;
+    state.ordersPageLoading = true;
+
+    if (reset) {
+        state.ordersPageData = [];
+        state.ordersPageCursor = null;
+        state.ordersLoadedKeys = new Set();
+        state.hasMoreOrders = true;
+    }
+
+    const fromDate = document.getElementById("orderFrom")?.value;
+    const toDate = document.getElementById("orderTo")?.value;
+    const ordersRef = Outlet.ref("orders");
+
+    const DATERANGE_LIMIT = 200;
+
+    let queryRef;
+    if (fromDate && toDate) {
+        // Date-filtered: use createdAt ordering with a limit for safety
+        const d1 = new Date(fromDate);
+        const d2 = new Date(toDate);
+        if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+            const qStart = new Date(d1); qStart.setDate(qStart.getDate() - 1);
+            const qEnd = new Date(d2); qEnd.setDate(qEnd.getDate() + 1);
+            queryRef = query(ordersRef, orderByChild("createdAt"),
+                startAt(`${qStart.toISOString().split('T')[0]}T00:00:00.000Z`),
+                endAt(`${qEnd.toISOString().split('T')[0]}T23:59:59.999Z`),
+                limitToLast(DATERANGE_LIMIT));
+        } else {
+            queryRef = query(ordersRef, orderByKey(), limitToLast(PAGE_SIZE));
+        }
+    } else {
+        // No date filter: cursor-based pagination via push keys
+        if (reset) {
+            queryRef = query(ordersRef, orderByKey(), limitToLast(PAGE_SIZE));
+        } else if (state.ordersPageCursor) {
+            queryRef = query(ordersRef, orderByKey(), endBefore(state.ordersPageCursor), limitToLast(PAGE_SIZE));
+        } else {
+            queryRef = query(ordersRef, orderByKey(), limitToLast(PAGE_SIZE));
+        }
+    }
+
+    const loadLabel = reset ? 'Initial' : 'Next';
+    console.log(`[Orders] ${loadLabel} page load (cursor: ${state.ordersPageCursor || 'none'})`);
+
+    get(queryRef).then(snap => {
+        if (!snap.exists() || !snap.val()) {
+            state.hasMoreOrders = false;
+            state.ordersPageLoading = false;
+            renderOrders(null);
+            return;
+        }
+
+        const entries = [];
+        snap.forEach(child => {
+            const key = child.key;
+            if (!state.ordersLoadedKeys.has(key)) {
+                state.ordersLoadedKeys.add(key);
+                entries.push({ id: key, ...child.val() });
+            }
+        });
+
+        if (entries.length === 0 && !reset) {
+            state.hasMoreOrders = false;
+            state.ordersPageLoading = false;
+            renderOrders(null);
+            return;
+        }
+
+        // For date-filtered queries, store all results (capped at DATERANGE_LIMIT)
+        if (fromDate && toDate) {
+            const seen = new Map();
+            // Keep existing entries first
+            state.ordersPageData.forEach(o => seen.set(o.id, o));
+            // Merge new entries (newer ones overwrite on conflict)
+            entries.forEach(o => seen.set(o.id, o));
+            state.ordersPageData = Array.from(seen.values());
+            // No more server-side pages — all data loaded within the range+limit
+            state.ordersPageCursor = null;
+            state.hasMoreOrders = false;
+        } else {
+            // Cursor-based: update cursor to the earliest (first) key in this batch
+            // Firebase returns entries in ascending key order with limitToLast,
+            // so the first entry is the oldest in this batch
+            const keys = entries.map(e => e.id);
+            state.ordersPageCursor = keys[0]; // oldest key = cursor for next page
+
+            // Append to existing data (newest entries are appended at end after sort)
+            state.ordersPageData = [...state.ordersPageData, ...entries];
+
+            // If fewer than PAGE_SIZE results, no more on server
+            if (entries.length < PAGE_SIZE) {
+                state.hasMoreOrders = false;
+            } else {
+                state.hasMoreOrders = true;
+            }
+        }
+
+        state.ordersPageLoading = false;
+        renderOrders(null);
+    }).catch(err => {
+        console.error("[Orders] Page load error:", err);
+        state.ordersPageLoading = false;
+        showToast("Error loading more orders: " + err.message, "error");
+    });
 }
 
 /**
@@ -265,7 +336,10 @@ export function renderOrders(snap) {
 
     // Decide which data source to use
     let ordersToProcess = [];
-    if (activeTab === 'live') {
+    if (activeTab === 'orders') {
+        // Use paginated data for orders tab
+        ordersToProcess = state.ordersPageData;
+    } else if (activeTab === 'live') {
         // Use live map if available, fallback to main map
         const sourceMap = state.liveOrdersMap.size > 0 ? state.liveOrdersMap : state.ordersMap;
         ordersToProcess = Array.from(sourceMap.entries()).map(([id, o]) => ({ id, ...o }));
@@ -295,11 +369,13 @@ export function renderOrders(snap) {
     console.log(`[Orders] Processed ${allOrders.length} total orders from snapshot.`);
     console.log(`[Orders] Filtered ${sortedOrders.length} orders for current tab: ${activeTab}`);
 
-    // Update Dashboard Elements regardless of current tab
-    updateDashboardStats(allOrders);
-    renderPriorityOrders(allOrders);
-    renderTopItems(allOrders);
-    renderTopCustomers(allOrders);
+    // Update Dashboard Elements using snapshot data (not paginated).
+    // Use ordersMap which is populated from the latest onValue snapshot.
+    const snapshotOrders = Array.from(state.ordersMap.entries()).map(([id, o]) => ({ id, ...o }));
+    updateDashboardStats(snapshotOrders);
+    renderPriorityOrders(snapshotOrders);
+    renderTopItems(snapshotOrders);
+    renderTopCustomers(snapshotOrders);
     // Clear active containers
     Object.values(containers).forEach(c => { if (c) c.innerHTML = ""; });
 
@@ -319,6 +395,26 @@ export function renderOrders(snap) {
         'live': document.createDocumentFragment(),
         'payments': document.createDocumentFragment()
     };
+
+    // For orders tab with no paginated data yet, show loading/empty state
+    if (activeTab === 'orders' && state.ordersPageData.length === 0 && containers['orders']) {
+        if (state.ordersPageLoading) {
+            containers['orders'].innerHTML = '<tr><td colspan="7"><div class="flex-center p-20"><div class="spinner"></div><span class="text-muted ml-10">Loading orders...</span></div></td></tr>';
+        } else {
+            containers['orders'].innerHTML = '<tr><td colspan="7" class="empty-state-cell"><div class="empty-state"><i data-lucide="inbox"></i><p>No orders yet</p><span>New orders will appear here in real-time</span></div></td></tr>';
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+    
+    // Empty state for live tab
+    if (activeTab === 'live' && sortedOrders.filter(o => {
+        const status = (o.status || "Unknown").trim();
+        const liveStatuses = ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Pending", "New", "Dispatched", "In Kitchen"];
+        return liveStatuses.some(s => s.toLowerCase() === status.toLowerCase());
+    }).length === 0 && containers['live']) {
+        containers['live'].innerHTML = '<tr><td colspan="7" class="empty-state-cell"><div class="empty-state"><i data-lucide="activity"></i><p>No live orders</p><span>Active orders will appear here</span></div></td></tr>';
+        if (window.lucide) window.lucide.createIcons();
+    }
 
     let liveCount = 0;
     sortedOrders.forEach(o => {
@@ -384,7 +480,7 @@ export function renderOrders(snap) {
                         </div>
                         <div class="identity-info-v4">
                             <span class="name">#${safeOrderId}</span>
-                            <span class="sub">${o.type || 'Online'}</span>
+                            <span class="sub">${escapeHtml(o.type || 'Online')}</span>
                         </div>
                     </div>
                 </td>
@@ -397,7 +493,7 @@ export function renderOrders(snap) {
                 <td data-label="Details">
                     <div class="flex-col">
                         <span class="font-600 fs-13">${itemSummary}</span>
-                        <span class="text-muted-small">${truncatedAddress}</span>
+                        <span class="text-muted-small">${escapeHtml(truncatedAddress)}</span>
                     </div>
                 </td>
                 <td data-label="Total">
@@ -443,12 +539,12 @@ export function renderOrders(snap) {
 
                 <td data-label="Order">
                     <div class="identity-chip-v4">
-                        <div class="kpi-icon-box ${o.outlet === 'pizza' ? 'orange' : 'pink'}" style="width:32px; height:32px; font-size:14px;">
+                        <div class="kpi-icon-box" style="width:32px; height:32px; font-size:14px;">
                             <i data-lucide="zap"></i>
                         </div>
                         <div class="identity-info-v4">
                             <span class="name">#${safeOrderId}</span>
-                            <span class="sub">${o.outlet.toUpperCase()}</span>
+                            <span class="sub">${escapeHtml(o.outlet.toUpperCase())}</span>
                         </div>
                     </div>
                 </td>
@@ -461,7 +557,7 @@ export function renderOrders(snap) {
                 <td data-label="Kitchen">
                     <div class="flex-col">
                         <span class="font-600 fs-13">${itemSummary}</span>
-                        <span class="text-muted-small">${o.type}</span>
+                        <span class="text-muted-small">${escapeHtml(o.type)}</span>
                     </div>
                 </td>
                 <td data-label="Total">
@@ -509,7 +605,7 @@ export function renderOrders(snap) {
                 </td>
                 <td data-label="Method">
                     <div class="flex-row flex-center flex-gap-8">
-                        <span class="badge-payment-v4">${method}</span>
+                        <span class="badge-payment-v4">${escapeHtml(method)}</span>
                     </div>
                 </td>
                 <td data-label="Status">
@@ -524,7 +620,7 @@ export function renderOrders(snap) {
 
                 <td data-label="Order">
                     <div class="identity-chip-v4">
-                        <div class="kpi-icon-box ${o.outlet === 'pizza' ? 'blue' : 'pink'}" style="width:32px; height:32px; font-size:14px;">
+                        <div class="kpi-icon-box" style="width:32px; height:32px; font-size:14px;">
                             <i data-lucide="package"></i>
                         </div>
                         <div class="identity-info-v4">
@@ -586,22 +682,35 @@ export function renderOrders(snap) {
         }
     });
 
-    // Add Load More Button if on 'orders' tab
-    if (activeTab === 'orders' && snap && snap.numChildren() >= (state.orderLimit || 50)) {
-        const fullTable = containers['orders'];
-        if (fullTable) {
-            const existingBtn = document.getElementById('loadMoreOrdersBtn');
-            if (!existingBtn) {
-                const footer = document.createElement('div');
+    // Add Load More Button for cursor-based pagination
+    if (activeTab === 'orders') {
+        if (state.hasMoreOrders) {
+            const fullTable = containers['orders'];
+            let footer = document.getElementById('loadMoreContainer');
+            if (!footer && fullTable) {
+                footer = document.createElement('div');
                 footer.id = 'loadMoreContainer';
                 footer.className = 'flex-center p-20';
-                footer.innerHTML = `<button id="loadMoreOrdersBtn" class="btn-secondary" data-action="loadMoreOrders">Load More Orders</button>`;
+                footer.innerHTML = `<button id="loadMoreOrdersBtn" class="btn-secondary" data-action="loadMoreOrders">Load more orders <span id="loadMoreCount">(${state.ordersPageData.length} loaded)</span></button>`;
                 fullTable.parentNode.appendChild(footer);
             }
+            const countEl = document.getElementById('loadMoreCount');
+            if (countEl) countEl.textContent = `${state.ordersPageData.length} loaded`;
+        } else {
+            const existingContainer = document.getElementById('loadMoreContainer');
+            if (existingContainer) existingContainer.remove();
+            if (state.ordersPageData.length > 0) {
+                // Show "all loaded" hint once at the bottom
+                const fullTable = containers['orders'];
+                if (fullTable && !document.getElementById('allOrdersLoadedHint')) {
+                    const hint = document.createElement('div');
+                    hint.id = 'allOrdersLoadedHint';
+                    hint.className = 'flex-center p-10';
+                    hint.innerHTML = `<span class="text-muted-small">All ${state.ordersPageData.length} orders loaded</span>`;
+                    fullTable.parentNode.appendChild(hint);
+                }
+            }
         }
-    } else if (activeTab === 'orders' || !snap) {
-        const existingContainer = document.getElementById('loadMoreContainer');
-        if (existingContainer) existingContainer.remove();
     }
 
     const liveBadge = document.getElementById('badge-live');
@@ -714,8 +823,8 @@ function renderPriorityOrders(orders) {
                 </div>
                 <div class="items-summary">${escapeHtml(itemsSummary)}</div>
                 <div class="footer">
-                    <span class="status-badge-v4 status-${safeStatusClass}">${status}</span>
-                    <span class="font-bold color-primary">₹${o.total}</span>
+                    <span class="status-badge-v4 status-${safeStatusClass}">${escapeHtml(status)}</span>
+                    <span class="font-bold color-primary">₹${escapeHtml(o.total)}</span>
                 </div>
             </div>
         `;
@@ -884,7 +993,7 @@ export async function updateStatus(id, status) {
         if ((!lat || !lng) && order.phone && order.phone.length >= 10) {
             try {
                 let cleanPhone = String(order.phone).replace(/\D/g, '').slice(-10);
-                const custSnap = await Outlet.ref(`customers/${cleanPhone}`).once('value');
+                const custSnap = await get(Outlet.ref(`customers/${cleanPhone}`));
                 const c = custSnap.val();
                 if (c && c.location && c.location.lat && c.location.lng) {
                     lat = c.location.lat;
@@ -903,8 +1012,8 @@ export async function updateStatus(id, status) {
         if (lat && lng) {
             try {
                 const outletKey = (order.outlet || 'pizza').toLowerCase();
-                const delSnap = await db.ref(`${outletKey}/settings/Delivery`).once('value');
-                const storeSnap = await db.ref(`${outletKey}/settings/Store`).once('value');
+                const delSnap = await get(ref(db, `${outletKey}/settings/Delivery`));
+                const storeSnap = await get(ref(db, `${outletKey}/settings/Store`));
                 const delSettings = delSnap.val() || {};
                 const storeSettings = storeSnap.val() || {};
 
@@ -936,7 +1045,7 @@ export async function updateStatus(id, status) {
     }
 
     try {
-        await Outlet.ref(`orders/${id}`).update(updates);
+        await update(Outlet.ref(`orders/${id}`), updates);
         logAudit("Orders", `Updated Status: #${id.slice(-5)} -> ${status}`, id);
         showToast(`Order status updated to ${status}`, "success");
     } catch (e) {
@@ -948,7 +1057,7 @@ export async function updateStatus(id, status) {
 export async function assignRider(id, riderId) {
     if (!id || !riderId) return;
     try {
-        const riderSnap = await db.ref(`riders/${riderId}`).once('value');
+        const riderSnap = await get(ref(db, `riders/${riderId}`));
         const rider = riderSnap.val();
         if (!rider) throw new Error("Rider not found");
 
@@ -963,7 +1072,7 @@ export async function assignRider(id, riderId) {
             assignedRider: rider.email.toLowerCase(),
             riderName: rider.name,
             riderPhone: rider.phone,
-            assignedAt: ServerValue.TIMESTAMP
+            assignedAt: serverTimestamp()
         };
 
         // Automate status transition on assignment
@@ -984,7 +1093,7 @@ export async function assignRider(id, riderId) {
         // Manual assignment only - Rider will handle status advancement via "PICKUP"
         showToast(`Rider ${rider.name} assigned. Status updated if needed.`, "success");
 
-        await Outlet.ref(`orders/${id}`).update(updateData);
+        await update(Outlet.ref(`orders/${id}`), updateData);
         
         // Notify Rider
         await addRiderNotification(riderId, "New Order Assigned!", `Order #${id.slice(-5)} for ₹${order.total} assigned to you.`, 'new');
@@ -998,7 +1107,7 @@ export async function assignRider(id, riderId) {
 
 export async function markAsPaid(id) {
     try {
-        await Outlet.ref(`orders/${id}`).update({ paymentStatus: "Paid" });
+        await update(Outlet.ref(`orders/${id}`), { paymentStatus: "Paid" });
         logAudit("Payments", `Marked Order Paid: #${id.slice(-5)}`, id);
         showToast("Order marked as PAID", "success");
     } catch (e) {
@@ -1008,10 +1117,10 @@ export async function markAsPaid(id) {
 
 export async function saveDeliveredOrder(id, data) {
     try {
-        await Outlet.ref(`orders/${id}`).update({
+        await update(Outlet.ref(`orders/${id}`), {
             ...data,
             status: "Delivered",
-            deliveredAt: ServerValue.TIMESTAMP
+            deliveredAt: serverTimestamp()
         });
         logAudit("Orders", `Order Delivered: #${id.slice(-5)}`, id);
         showToast("Order finalized and delivered!", "success");
@@ -1036,7 +1145,7 @@ export async function openOrderDrawer(id) {
     // Render items using normalized array
     const items = order.normalizedItems || [];
     const itemsHtml = items.map(item => `
-        <div class="premium-row-v4 p-12 mb-8 br-12" style="background: rgba(0,0,0,0.02);">
+        <div class="premium-row-v4 p-12 mb-8 br-12" style="background: #f8fafc; border: 1px solid #e2e8f0;">
             <div class="flex-between flex-center">
                 <div class="identity-info-v4">
                     <span class="name font-600 color-primary" style="font-size:14px;">${escapeHtml(item.name || "Item")}</span>
@@ -1073,7 +1182,7 @@ export async function openOrderDrawer(id) {
         <div class="drawer-scroll-body p-20" style="max-height: calc(85vh - 180px); overflow-y: auto;">
             <div class="drawer-section mb-24">
                 <div class="section-label-v4 mb-12">Customer Details</div>
-                <div class="identity-chip-v4 p-15 br-16 bg-ghost" style="background: rgba(249, 115, 22, 0.04);">
+                <div class="identity-chip-v4 p-15 br-16 bg-ghost" style="background: #fef2f2;">
                     <div class="kpi-icon-box glass" style="width:40px; height:40px;">
                         <i data-lucide="user"></i>
                     </div>
@@ -1099,7 +1208,7 @@ export async function openOrderDrawer(id) {
                 <div class="drawer-items-list">${itemsHtml}</div>
             </div>
 
-            <div class="drawer-section mb-24 p-20 br-16" style="background: var(--dark); color: white;">
+            <div class="drawer-section mb-24 p-20 br-16" style="background: #0f172a; color: #f1f5f9;">
                 <div class="flex-between mb-8"><span class="text-white-50 fs-13">Subtotal</span><span class="fs-13">₹${order.subtotal || 0}</span></div>
                 <div class="flex-between mb-8"><span class="text-white-50 fs-13">Discount</span><span class="text-success fs-13">-₹${order.discount || 0}</span></div>
                 <div class="flex-between mb-12"><span class="text-white-50 fs-13">Delivery Fee</span><span class="fs-13">₹${order.deliveryFee || 0}</span></div>

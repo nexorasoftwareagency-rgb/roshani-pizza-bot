@@ -1,6 +1,7 @@
-import { db, Outlet, ServerValue } from '../firebase.js';
+import { db, Outlet, serverTimestamp, get, set, update, remove, push, onValue, runTransaction } from '../firebase.js';
 import { state } from '../state.js';
-import { logAudit, showToast, confirmAction, initPagination } from '../utils.js';
+import { showDeleteConfirm } from '../ui-utils.js';
+import { logAudit, showToast, initPagination, escapeHtml, getSkeletonRows } from '../utils.js';
 
 let inventoryListener = null;
 const INV_PAGE_SIZE = 30;
@@ -37,9 +38,13 @@ export function initInventory() {
 export function loadInventory() {
     if (!state.currentOutlet) return;
     cleanupInventory();
+
+    // Show skeleton while data loads
+    const tbody = document.getElementById('inventoryTableBody');
+    if (tbody) tbody.innerHTML = getSkeletonRows(5, 4);
     
     const invRef = Outlet.ref('inventory');
-    inventoryListener = invRef.on('value', (snapshot) => {
+    inventoryListener = onValue(invRef, (snapshot) => {
         const data = snapshot.val();
         renderInventoryTable(data);
         updateInventoryKPIs(data);
@@ -51,8 +56,7 @@ export function loadInventory() {
 
 export function cleanupInventory() {
     if (inventoryListener) {
-        const invRef = Outlet.ref('inventory');
-        invRef.off('value', inventoryListener);
+        inventoryListener();
         inventoryListener = null;
     }
 }
@@ -75,15 +79,15 @@ function renderInventoryTable(data) {
             <tr class="${isLow ? 'row-alert' : ''}">
                 <td class="p-l-25">
                     <div class="flex-column">
-                        <span class="font-800 fs-15">${item.name}</span>
+                        <span class="font-800 fs-15">${escapeHtml(item.name)}</span>
                         ${isLow ? '<span class="stock-status-badge low">Low Stock</span>' : ''}
                     </div>
                 </td>
                 <td class="text-center">
                     <div class="stock-control-group">
-                        <button class="stock-adjust-btn minus" onclick="adjustStock('${id}', -1)">-</button>
+                        <button class="stock-adjust-btn minus" onclick="adjustStock('${escapeHtml(id)}', -1)">-</button>
                         <div class="stock-val-display">${item.stock}</div>
-                        <button class="stock-adjust-btn plus" onclick="adjustStock('${id}', 1)">+</button>
+                        <button class="stock-adjust-btn plus" onclick="adjustStock('${escapeHtml(id)}', 1)">+</button>
                     </div>
                 </td>
                 <td>
@@ -91,10 +95,10 @@ function renderInventoryTable(data) {
                 </td>
                 <td class="p-r-25 text-right">
                     <div class="flex-row flex-end flex-gap-8">
-                        <button class="btn-icon-v4" onclick="window.editInventoryItem('${id}')" title="Edit Item">
+                        <button class="btn-icon-v4" onclick="window.editInventoryItem('${escapeHtml(id)}')" title="Edit Item">
                             <i data-lucide="edit-2"></i>
                         </button>
-                        <button class="btn-icon-v4 danger" onclick="window.deleteInventoryItem('${id}')" title="Delete">
+                        <button class="btn-icon-v4 danger" onclick="window.deleteInventoryItem('${escapeHtml(id)}')" title="Delete">
                             <i data-lucide="trash-2"></i>
                         </button>
                     </div>
@@ -119,9 +123,9 @@ export async function adjustStock(id, delta) {
     const itemRef = Outlet.ref(`inventory/${id}/stock`);
     
     try {
-        await itemRef.transaction((currentStock) => {
+        await runTransaction(itemRef, (currentStock) => {
             const newStock = (currentStock || 0) + delta;
-            return newStock < 0 ? 0 : newStock; // Prevent negative stock
+            return newStock < 0 ? 0 : newStock;
         });
         
         // Minor visual feedback could be added here if needed
@@ -139,7 +143,7 @@ export async function autoDeductStock(items) {
     if (!state.currentOutlet || !items || items.length === 0) return;
 
     try {
-        const snapshot = await Outlet.ref("inventory").once("value");
+        const snapshot = await get(Outlet.ref("inventory"));
         const inventory = snapshot.val() || {};
 
         for (const item of items) {
@@ -180,15 +184,15 @@ async function saveInventoryItem() {
             name,
             stock,
             threshold,
-            updatedAt: ServerValue.TIMESTAMP
+            updatedAt: serverTimestamp()
         };
 
         if (id) {
-            await Outlet.ref(`inventory/${id}`).update(itemData);
+            await update(Outlet.ref(`inventory/${id}`), itemData);
             showToast("Item Updated");
         } else {
-            const newRef = Outlet.ref('inventory').push();
-            await newRef.set(itemData);
+            const newRef = push(Outlet.ref('inventory'));
+            await set(newRef, itemData);
             showToast("Item Added");
         }
 
@@ -207,27 +211,25 @@ function resetInvModal() {
     delete document.getElementById('inventoryModal').dataset.editId;
 }
 
-window.editInventoryItem = (id) => {
+window.editInventoryItem = async (id) => {
     const invRef = Outlet.ref(`inventory/${id}`);
-    invRef.once('value').then((snapshot) => {
-        const item = snapshot.val();
-        if (!item) return;
+    const snapshot = await get(invRef);
+    const item = snapshot.val();
+    if (!item) return;
 
-        document.getElementById('invModalTitle').innerText = "Edit Product Tracking";
-        document.getElementById('invItemName').value = item.name;
-        document.getElementById('invItemStock').value = item.stock;
-        document.getElementById('invItemThreshold').value = item.threshold;
-        document.getElementById('inventoryModal').dataset.editId = id;
-        document.getElementById('inventoryModal').classList.add('active');
-    });
+    document.getElementById('invModalTitle').innerText = "Edit Product Tracking";
+    document.getElementById('invItemName').value = item.name;
+    document.getElementById('invItemStock').value = item.stock;
+    document.getElementById('invItemThreshold').value = item.threshold;
+    document.getElementById('inventoryModal').dataset.editId = id;
+    document.getElementById('inventoryModal').classList.add('active');
 };
 
 window.deleteInventoryItem = async (id) => {
-    const confirmed = await confirmAction("Stop Tracking?", "This item will be removed from the inventory list.");
-    if (!confirmed) return;
+    if (!(await showDeleteConfirm("this inventory item", "This item will be removed from the inventory list."))) return;
 
     try {
-        await Outlet.ref(`inventory/${id}`).remove();
+        await remove(Outlet.ref(`inventory/${id}`));
         showToast("Tracking stopped");
     } catch (error) {
         showToast("Failed to remove", "error");

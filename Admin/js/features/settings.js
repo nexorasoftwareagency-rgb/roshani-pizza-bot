@@ -1,7 +1,6 @@
 import { state } from '../state.js';
-import { Outlet } from '../firebase.js';
-import { logAudit, showToast } from '../utils.js';
-import { ui } from '../ui.js';
+import { db, Outlet, ref, get, update, set } from '../firebase.js';
+import { logAudit, showToast, getSkeletonRows } from '../utils.js';
 
 // --- STATE & UTILS ---
 const SETTINGS_PATHS = {
@@ -66,12 +65,17 @@ function validateBackupCode(code) {
 
 export async function loadStoreSettings() {
     console.log("[Settings] Loading all store settings...");
+
+    // Show skeleton while data loads
+    const feeSlabsTbody = document.getElementById('feeSlabsTable');
+    if (feeSlabsTbody) feeSlabsTbody.innerHTML = getSkeletonRows(3, 4);
+
     try {
         const [storeSnap, delSnap, botSnap, dispSnap] = await Promise.all([
-            Outlet.ref(SETTINGS_PATHS.STORE).once("value"),
-            Outlet.ref(SETTINGS_PATHS.DELIVERY).once("value"),
-            Outlet.ref(SETTINGS_PATHS.BOT).once("value"),
-            Outlet.ref(SETTINGS_PATHS.DISPLAY).once("value")
+            get(Outlet.ref(SETTINGS_PATHS.STORE)),
+            get(Outlet.ref(SETTINGS_PATHS.DELIVERY)),
+            get(Outlet.ref(SETTINGS_PATHS.BOT)),
+            get(Outlet.ref(SETTINGS_PATHS.DISPLAY))
         ]);
 
         const store = storeSnap.val();
@@ -206,7 +210,9 @@ export async function saveStoreSettings() {
         if (v.value) input.value = v.value; // Auto-prefix 91
     }
 
-    if (ui.setLoading) ui.setLoading('btnSaveSettings', true);
+    const saveBtn = document.getElementById('btnSaveSettings');
+    saveBtn.disabled = true;
+    saveBtn.textContent = '⏳ Saving...';
 
     try {
         // 2. Collect Data
@@ -267,13 +273,13 @@ export async function saveStoreSettings() {
             if (el) displayData[id] = el.checked;
         });
 
-        // 3. Batch Update
-        await Promise.all([
-            Outlet.ref(SETTINGS_PATHS.STORE).update(storeData),
-            Outlet.ref(SETTINGS_PATHS.DELIVERY).update(deliveryData),
-            Outlet.ref(SETTINGS_PATHS.BOT).update(botData),
-            Outlet.ref(SETTINGS_PATHS.DISPLAY).set(displayData)
-        ]);
+        // 3. Atomic multi-path update
+        const updates = {};
+        updates[`${Outlet.current}/settings/Store`] = storeData;
+        updates[`${Outlet.current}/settings/Delivery`] = deliveryData;
+        updates[`${Outlet.current}/settings/Bot`] = botData;
+        updates[`${Outlet.current}/settings/Display`] = displayData;
+        await update(ref(db), updates);
 
         showToast("Settings saved successfully!", "success");
         state.settingsDirty = false;
@@ -285,7 +291,8 @@ export async function saveStoreSettings() {
         console.error("[Settings] Save Error:", e);
         showToast("Critical failure while saving settings", "error");
     } finally {
-        if (ui.setLoading) ui.setLoading('btnSaveSettings', false);
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 Save Settings';
     }
 }
 
@@ -377,7 +384,7 @@ export function quickUpdateOutletStatus() {
     if (!statusEl) return;
     const newStatus = statusEl.value;
 
-    Outlet.ref(SETTINGS_PATHS.STORE).update({ shopStatus: newStatus })
+    update(Outlet.ref(SETTINGS_PATHS.STORE), { shopStatus: newStatus })
         .then(() => {
             logAudit("Settings", `Quick Status Update: ${newStatus}`, "Global");
             if (window.updateOutletStatusIndicator) window.updateOutletStatusIndicator(newStatus);

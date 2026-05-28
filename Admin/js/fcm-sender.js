@@ -1,4 +1,4 @@
-import { db } from './firebase.js';
+import { db, ref, get } from './firebase.js';
 
 const FCM_SERVER_KEY = window.firebaseConfig?.fcmServerKey || '';
 
@@ -28,7 +28,7 @@ export async function sendFCM(token, title, body, data = {}) {
 
 export async function sendToRider(riderId, title, body, data = {}) {
     try {
-        const snap = await db.ref(`riders/${riderId}`).once('value');
+        const snap = await get(ref(db, `riders/${riderId}`));
         const rider = snap.val();
         const token = rider?.fcmToken;
         if (token) {

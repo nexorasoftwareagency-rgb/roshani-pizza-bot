@@ -11,7 +11,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
     <meta name="msapplication-TileColor" content="#f36b21">
-    <title>Roshani Pizza | Admin Dashboard</title>
+    <title>Roshani ERP | Admin Dashboard</title>
 
     <script>
         // Seamless Loading Engine
@@ -66,19 +66,15 @@
 
     <link rel="stylesheet" href="style.css?v=4.8.0">
     <link rel="stylesheet" href="mobile-overrides.css?v=4.8.0">
-    <link rel="manifest" href="manifest-pizza.json?v=2">
-    <link rel="icon" type="image/png" href="icon-512.png">
-    <link rel="apple-touch-icon" href="icon-512.png">
+    <link rel="manifest" href="manifest.json?v=2">
+    <link rel="icon" type="image/webp" href="icon-erp.webp">
+    <link rel="apple-touch-icon" href="icon-erp.webp">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="preload" href="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" as="script" crossorigin="anonymous">
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js" crossorigin="anonymous"></script>
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js" crossorigin="anonymous"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js" crossorigin="anonymous"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js" crossorigin="anonymous"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js" crossorigin="anonymous"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-check-compat.js" crossorigin="anonymous"></script>
+    <!-- Firebase moduler SDK is imported via js/firebase.js as ES modules -->
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
@@ -91,6 +87,10 @@
 
 <body>
     <div id="alertContainer"></div>
+    <div id="connectionBanner" class="connection-banner hidden" role="alert" aria-live="polite">
+        <i data-lucide="wifi-off" class="icon-16"></i>
+        <span>No internet connection — changes may not save</span>
+    </div>
     
     <!-- Initial Loader (Premium v4) -->
     <div id="initial-loader" title="Loading Admin Dashboard...">
@@ -171,7 +171,12 @@
         <nav class="sidebar" id="sidebarNav" role="navigation" aria-label="Main Navigation">
             <div class="sidebar-header">
                 <div class="logo-box">
-                    <img src="https://placehold.co/40x40?text=R" alt="Roshani Logo">
+                    <div class="brand-logo-svg" aria-label="Roshani ERP">
+                        <svg width="40" height="40" viewBox="0 0 40 40">
+                            <rect width="40" height="40" rx="12" fill="var(--primary)"/>
+                            <text x="20" y="26" text-anchor="middle" font-size="18" font-weight="800" fill="white" font-family="Inter,sans-serif">R</text>
+                        </svg>
+                    </div>
                     <div>
                         <h1 class="logo-text">ROSHANI ERP</h1>
                         <div class="version-badge">Premium v4.2</div>
@@ -182,6 +187,7 @@
                 </button>
             </div>
             <ul class="nav-list">
+                <li class="nav-group-label">Operations</li>
                 <li id="menu-dashboard" class="active" title="View Main Dashboard Snapshot">
                     <button data-action="switchTab" data-tab="dashboard" class="nav-btn">
                         <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
@@ -194,8 +200,8 @@
                 </li>
                 <li id="menu-live" title="Monitor Live Store Operations">
                     <button data-action="switchTab" data-tab="live" class="nav-btn">
-                        <i data-lucide="activity"></i> <span>Live Ops</span> <span id="badge-live"
-                            class="counter-badge hidden">0</span>
+                        <i data-lucide="activity"></i> <span>Live Ops</span>
+                        <span id="badge-live" class="nav-badge count hidden">0</span>
                     </button>
                 </li>
                 <li id="menu-walkin" title="Open Point of Sale (POS) Interface">
@@ -203,6 +209,8 @@
                         <i data-lucide="monitor"></i> <span>POS Control</span>
                     </button>
                 </li>
+
+                <li class="nav-group-label">Catalogue</li>
                 <li id="menu-menu" title="Manage Product Menu and Items">
                     <button data-action="switchTab" data-tab="menu" class="nav-btn">
                         <i data-lucide="utensils"></i> <span>Menu</span>
@@ -213,6 +221,13 @@
                         <i data-lucide="folder-tree"></i> <span>Categories</span>
                     </button>
                 </li>
+                <li id="menu-inventory" title="Manage Stock Levels and Supplies">
+                    <button data-action="switchTab" data-tab="inventory" class="nav-btn">
+                        <i data-lucide="package"></i> <span>Inventory</span>
+                    </button>
+                </li>
+
+                <li class="nav-group-label">People</li>
                 <li id="menu-riders" title="Manage Delivery Staff and Status">
                     <button data-action="switchTab" data-tab="riders" class="nav-btn">
                         <i data-lucide="bike"></i> <span>Riders</span>
@@ -223,6 +238,8 @@
                         <i data-lucide="users"></i> <span>Customers</span>
                     </button>
                 </li>
+
+                <li class="nav-group-label">Insights</li>
                 <li id="menu-lostSales" title="View Orders Abandoned at Checkout">
                     <button data-action="switchTab" data-tab="lostSales" class="nav-btn">
                         <i data-lucide="shopping-bag"></i> <span>Lost Sales</span>
@@ -245,21 +262,18 @@
                 </li>
                 <li id="menu-liveTracker" title="Track Live Deliveries on Map">
                     <button data-action="switchTab" data-tab="liveTracker" class="nav-btn">
-                        <i data-lucide="map-pin"></i> <span>Live Tracking</span> 
-                        <span class="badge-new badge-live-tracking-pill">LIVE</span>
+                        <i data-lucide="map-pin"></i> <span>Live Tracking</span>
+                        <span class="nav-badge live" aria-label="Live"></span>
                     </button>
                 </li>
                 <li id="menu-notifications" title="View Recent System Alerts">
                     <button data-action="switchTab" data-tab="notifications" class="nav-btn">
-                        <i data-lucide="bell"></i> <span>Notifications</span> 
-                        <span id="sidebar-notif-count" class="badge-new badge-sidebar-notif-pill">0</span>
+                        <i data-lucide="bell"></i> <span>Notifications</span>
+                        <span id="sidebar-notif-count" class="nav-badge count hidden">0</span>
                     </button>
                 </li>
-                <li id="menu-inventory" title="Manage Stock Levels and Supplies">
-                    <button data-action="switchTab" data-tab="inventory" class="nav-btn">
-                        <i data-lucide="package"></i> <span>Inventory</span>
-                    </button>
-                </li>
+
+                <li class="nav-group-label">System</li>
                 <li id="menu-install" title="Download Portal as App">
                     <button id="menu-download" data-action="installPWA" class="nav-btn">
                         <i data-lucide="download-cloud"></i> <span>Download App</span>
@@ -275,11 +289,6 @@
                         <i data-lucide="refresh-cw"></i> <span>Nuclear Refresh</span>
                     </button>
                 </li>
-                <li id="menu-theme" title="Switch Between Light and Dark Mode">
-                    <button data-action="toggleTheme" class="nav-btn">
-                        <i data-lucide="moon"></i> <span>Theme</span>
-                    </button>
-                </li>
                 <li id="menu-logout" class="logout-item" title="Sign Out of Dashboard">
                     <button data-action="userLogout" class="nav-btn">
                         <i data-lucide="log-out"></i> <span>Logout</span>
@@ -288,7 +297,9 @@
             </ul>
             <div class="sidebar-footer">
                 <div class="user-profile-mini" data-action="switchTab" data-tab="settings" title="Open Store Settings">
-                    <img src="https://ui-avatars.com/api/?name=Admin&background=f36b21&color=fff" alt="Admin">
+                    <div class="avatar-local" id="sidebarAvatar" aria-label="Admin user">
+                        <span id="sidebarAvatarInitials">A</span>
+                    </div>
                     <div class="user-info">
                         <span class="user-name">Store Admin</span>
                         <span class="user-role">Superuser</span>
@@ -355,8 +366,7 @@
                         title="Exit Admin System">Logout</button>
                 </div>
             </div>
-            <div id="connectionBanner" class="connection-banner hidden">Connection lost. Reconnecting...</div>
-
+            
             <!-- DASHBOARD TAB -->
             <div id="tab-dashboard" class="tab-content">
                 <div class="kpi-row mb-24">
@@ -364,7 +374,7 @@
                         <div class="icon-wrap success"><i data-lucide="package"></i></div>
                         <div class="info-wrap">
                             <span class="val" id="statOrders">0</span>
-                            <span class="lbl">New Orders</span>
+                            <span class="lbl">Active Orders</span>
                         </div>
                         <div class="trend-badge trend-up"><i data-lucide="trending-up"></i> Today</div>
                     </div>
@@ -374,6 +384,7 @@
                             <span class="val" id="statPending">0</span>
                             <span class="lbl">In Progress</span>
                         </div>
+                        <div class="trend-badge" id="badgePending">--</div>
                     </div>
                     <div class="kpi-card-v4 info">
                         <div class="icon-wrap info"><i data-lucide="indian-rupee"></i></div>
@@ -381,6 +392,7 @@
                             <span class="val" id="statRevenue">₹0</span>
                             <span class="lbl">Total Revenue</span>
                         </div>
+                        <div class="trend-badge" id="badgeRevenue">Today</div>
                     </div>
                     <div class="kpi-card-v4 success">
                         <div class="icon-wrap success"><i data-lucide="bike"></i></div>
@@ -388,6 +400,7 @@
                             <span class="val" id="statRidersActive">0</span>
                             <span class="lbl">Riders Online</span>
                         </div>
+                        <div class="trend-badge" id="badgeRiders">Online</div>
                     </div>
                 </div>
 
@@ -402,9 +415,9 @@
                                     All</button>
                             </div>
                             <div id="priorityOrderList" class="priority-order-list">
-                                <div class="loading-placeholder mobile-only">Scanning for pending orders...</div>
-                                <div class="skeleton-rider-card mobile-only"><div class="skeleton skeleton-circle"></div><div class="skeleton-text-group"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div></div>
-                                <div class="skeleton-rider-card mobile-only"><div class="skeleton skeleton-circle"></div><div class="skeleton-text-group"><div class="skeleton skeleton-text" style="width:55%"></div><div class="skeleton skeleton-text" style="width:35%"></div></div></div>
+                                <div class="loading-placeholder">Scanning for pending orders...</div>
+                                <div class="skeleton-rider-card"><div class="skeleton skeleton-circle"></div><div class="skeleton-text-group"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-text" style="width:40%"></div></div></div>
+                                <div class="skeleton-rider-card"><div class="skeleton skeleton-circle"></div><div class="skeleton-text-group"><div class="skeleton skeleton-text" style="width:55%"></div><div class="skeleton skeleton-text" style="width:35%"></div></div></div>
                             </div>
                         </div>
 
@@ -418,18 +431,15 @@
                                             <tr>
                                                 <th>Order ID</th>
                                                 <th>Customer</th>
-                                                <th>Items</th>
                                                 <th>Total</th>
-                                                <th>Payment</th>
                                                 <th>Status</th>
-                                                <th>Assign Rider</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="ordersTable">
-                                            <tr class="mobile-only"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
-                                            <tr class="mobile-only"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
-                                            <tr class="mobile-only"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -441,39 +451,46 @@
                     <div class="dashboard-sidebar">
                         <div class="panel">
                             <div class="panel-header">
-                                <h3 class="panel-title">⭐ Top Spenders</h3>
+                                <h3 class="panel-title"><i data-lucide="crown" class="icon-16"></i> Top Spenders</h3>
                             </div>
                             <div id="topCustomersList">
-                                <p class="text-muted-small mobile-only">Calculating customer data...</p>
-                                <div class="mobile-only" style="display:flex;align-items:center;gap:12px;padding:10px 0"><div class="skeleton" style="width:36px;height:36px;border-radius:50%;flex-shrink:0"></div><div style="flex:1"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-text" style="width:30%"></div></div></div>
-                                <div class="mobile-only" style="display:flex;align-items:center;gap:12px;padding:10px 0"><div class="skeleton" style="width:36px;height:36px;border-radius:50%;flex-shrink:0"></div><div style="flex:1"><div class="skeleton skeleton-text" style="width:50%"></div><div class="skeleton skeleton-text" style="width:25%"></div></div></div>
+                                <p class="text-muted-small">Calculating customer data...</p>
+                                <div class="skeleton-row-flex" style="display:flex;align-items:center;gap:12px;padding:10px 0"><div class="skeleton" style="width:36px;height:36px;border-radius:50%;flex-shrink:0"></div><div style="flex:1"><div class="skeleton skeleton-text" style="width:60%"></div><div class="skeleton skeleton-text" style="width:30%"></div></div></div>
+                                <div class="skeleton-row-flex" style="display:flex;align-items:center;gap:12px;padding:10px 0"><div class="skeleton" style="width:36px;height:36px;border-radius:50%;flex-shrink:0"></div><div style="flex:1"><div class="skeleton skeleton-text" style="width:50%"></div><div class="skeleton skeleton-text" style="width:25%"></div></div></div>
                             </div>
                         </div>
 
                         <div class="panel">
                             <div class="panel-header">
-                                <h3 class="panel-title">🍕 Top Selling Items</h3>
+                                <h3 class="panel-title"><i data-lucide="trending-up" class="icon-16"></i> Top Selling Items</h3>
                             </div>
                             <div id="topItemsList">
-                                <p class="text-muted-small mobile-only">Processing sales data...</p>
-                                <div class="mobile-only" style="display:flex;align-items:center;gap:12px;padding:10px 0"><div class="skeleton" style="width:36px;height:36px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton skeleton-text" style="width:55%"></div><div class="skeleton skeleton-text" style="width:20%"></div></div></div>
-                                <div class="mobile-only" style="display:flex;align-items:center;gap:12px;padding:10px 0"><div class="skeleton" style="width:36px;height:36px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton skeleton-text" style="width:45%"></div><div class="skeleton skeleton-text" style="width:25%"></div></div></div>
+                                <p class="text-muted-small">Processing sales data...</p>
+                                <div class="skeleton-row-flex" style="display:flex;align-items:center;gap:12px;padding:10px 0"><div class="skeleton" style="width:36px;height:36px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton skeleton-text" style="width:55%"></div><div class="skeleton skeleton-text" style="width:20%"></div></div></div>
+                                <div class="skeleton-row-flex" style="display:flex;align-items:center;gap:12px;padding:10px 0"><div class="skeleton" style="width:36px;height:36px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton skeleton-text" style="width:45%"></div><div class="skeleton skeleton-text" style="width:25%"></div></div></div>
                             </div>
                         </div>
 
                         <div class="panel">
                             <div class="panel-header flex-row flex-between flex-center">
-                                <h3 class="panel-title">🚚 Rider Status</h3>
-                                <button data-tab="riders" data-action="switchTab" class="btn-text-primary-sm"
-                                    title="Manage Delivery Staff and Status">
-                                    Manage <i data-lucide="chevron-right"></i>
-                                </button>
+                                <h3 class="panel-title"><i data-lucide="bike" class="icon-16"></i> Rider Status</h3>
+                                <div class="flex-row flex-center flex-gap-8">
+                                    <label class="rider-toggle-label" title="Toggle show all riders">
+                                        <span id="riderToggleText" class="text-muted" style="font-size:11px">Online</span>
+                                        <input type="checkbox" id="showAllRidersToggle" hidden>
+                                        <div class="toggle-switch-sm"></div>
+                                    </label>
+                                    <button data-tab="riders" data-action="switchTab" class="btn-text-primary-sm"
+                                        title="Manage Delivery Staff and Status">
+                                        Manage <i data-lucide="chevron-right"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="mb-10"><span id="onlineRiderCount" class="badge badge-ready">0 ON</span></div>
                             <div id="riderStatusList" class="scroll-y max-h-300">
-                                <div class="skeleton-rider-card mobile-only"><div class="skeleton skeleton-circle"></div><div class="skeleton-text-group"><div class="skeleton skeleton-text" style="width:50%"></div><div class="skeleton skeleton-text" style="width:30%"></div></div><div class="skeleton" style="width:60px;height:24px;border-radius:12px"></div></div>
-                                <div class="skeleton-rider-card mobile-only"><div class="skeleton skeleton-circle"></div><div class="skeleton-text-group"><div class="skeleton skeleton-text" style="width:45%"></div><div class="skeleton skeleton-text" style="width:25%"></div></div><div class="skeleton" style="width:60px;height:24px;border-radius:12px"></div></div>
-                                <div class="skeleton-rider-card mobile-only"><div class="skeleton skeleton-circle"></div><div class="skeleton-text-group"><div class="skeleton skeleton-text" style="width:55%"></div><div class="skeleton skeleton-text" style="width:35%"></div></div><div class="skeleton" style="width:60px;height:24px;border-radius:12px"></div></div>
+                                <div class="skeleton-rider-card"><div class="skeleton skeleton-circle"></div><div class="skeleton-text-group"><div class="skeleton skeleton-text" style="width:50%"></div><div class="skeleton skeleton-text" style="width:30%"></div></div><div class="skeleton" style="width:60px;height:24px;border-radius:12px"></div></div>
+                                <div class="skeleton-rider-card"><div class="skeleton skeleton-circle"></div><div class="skeleton-text-group"><div class="skeleton skeleton-text" style="width:45%"></div><div class="skeleton skeleton-text" style="width:25%"></div></div><div class="skeleton" style="width:60px;height:24px;border-radius:12px"></div></div>
+                                <div class="skeleton-rider-card"><div class="skeleton skeleton-circle"></div><div class="skeleton-text-group"><div class="skeleton skeleton-text" style="width:55%"></div><div class="skeleton skeleton-text" style="width:35%"></div></div><div class="skeleton" style="width:60px;height:24px;border-radius:12px"></div></div>
                             </div>
                         </div>
                     </div>
@@ -488,8 +505,11 @@
                         <div class="flex-row flex-center flex-gap-10 flex-wrap-mobile">
                             <input type="date" id="orderFrom" class="search-input-group w-130" title="Filter orders from date">
                             <input type="date" id="orderTo" class="search-input-group w-130" title="Filter orders to date">
-                            <input type="text" id="orderSearch" placeholder="Search ID or Name..."
-                                class="search-input-group flex-1" title="Search orders by ID or customer name">
+                            <div class="input-icon-wrap flex-1">
+                                <i data-lucide="search" class="input-icon"></i>
+                                <input type="text" id="orderSearch" placeholder="Search ID or name"
+                                    class="form-input input-with-icon" title="Search orders by ID or customer name">
+                            </div>
                         </div>
                     </div>
                     <div class="scroll-x">
@@ -507,9 +527,9 @@
                                 </tr>
                             </thead>
                             <tbody id="ordersTableFull">
-                                <tr class="mobile-only"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
-                                <tr class="mobile-only"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
-                                <tr class="mobile-only"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -519,8 +539,16 @@
             <!-- LIVE ORDERS TAB -->
             <div id="tab-live" class="tab-content hidden">
                 <div class="panel">
-                    <h3 class="desktop-only">🔥 Live Operations</h3>
-                    <p class="panel-subtitle">Tracking active kitchen and delivery work</p>
+                    <div class="section-header-row flex-row justify-between flex-center">
+                        <div>
+                            <h3 class="panel-title"><i data-lucide="activity" class="icon-18"></i> Live Operations</h3>
+                            <p class="panel-subtitle">Real-time kitchen & delivery tracking</p>
+                        </div>
+                        <div class="live-indicator">
+                            <span class="live-dot"></span>
+                            <span class="live-text">LIVE</span>
+                        </div>
+                    </div>
                     <div class="scroll-x">
                         <table class="premium-table-v4">
                             <thead>
@@ -536,9 +564,9 @@
                                 </tr>
                             </thead>
                             <tbody id="liveOrdersTable">
-                                <tr class="mobile-only"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
-                                <tr class="mobile-only"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
-                                <tr class="mobile-only"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -550,22 +578,18 @@
                 <div class="panel">
                     <div class="panel-header">
                         <h3 class="desktop-only">Menu Management</h3>
-                        <div class="flex-row flex-center flex-gap-10 mobile-only">
-                            <input type="text" id="menuSearchMobile" placeholder="Search menu..." class="search-input-group">
-                            <button class="btn-primary btn-small btn-show-dish-modal" title="Add a new dish">+</button>
-                        </div>
-                        <div class="desktop-only">
-                            <input type="text" id="menuSearch" placeholder="Search dishes..." class="search-input-group">
-                            <button class="btn-primary btn-small btn-show-dish-modal" title="Add a new dish to the menu">+ Add Dish</button>
+                        <div class="flex-row flex-center flex-gap-10">
+                            <input type="text" id="menuSearch" placeholder="Search dishes..." class="search-input-group" title="Search menu items">
+                            <button class="btn-primary btn-small btn-show-dish-modal" title="Add a new dish to the menu" aria-label="Add new dish"><i data-lucide="plus" class="icon-16"></i> Add Dish</button>
                         </div>
                     </div>
                     <div id="menuGrid" class="menu-grid">
-                        <div class="skeleton-dish-card mobile-only"></div>
-                        <div class="skeleton-dish-card mobile-only"></div>
-                        <div class="skeleton-dish-card mobile-only"></div>
-                        <div class="skeleton-dish-card mobile-only"></div>
-                        <div class="skeleton-dish-card mobile-only"></div>
-                        <div class="skeleton-dish-card mobile-only"></div>
+                        <div class="skeleton-dish-card"></div>
+                        <div class="skeleton-dish-card"></div>
+                        <div class="skeleton-dish-card"></div>
+                        <div class="skeleton-dish-card"></div>
+                        <div class="skeleton-dish-card"></div>
+                        <div class="skeleton-dish-card"></div>
                     </div>
                 </div>
             </div>
@@ -629,9 +653,9 @@
                             <div class="glass-card p-20">
                                 <h4 class="mb-14">📂 Active Categories</h4>
                                 <div id="categoryList" class="category-grid">
-                                    <div class="mobile-only" style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1px solid var(--glass-border);margin-bottom:10px"><div class="skeleton" style="width:48px;height:48px;border-radius:12px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div class="skeleton skeleton-text" style="width:50%;margin:0"></div><div class="skeleton skeleton-text" style="width:30%;margin:0"></div></div></div>
-                                    <div class="mobile-only" style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1px solid var(--glass-border);margin-bottom:10px"><div class="skeleton" style="width:48px;height:48px;border-radius:12px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div class="skeleton skeleton-text" style="width:40%;margin:0"></div><div class="skeleton skeleton-text" style="width:25%;margin:0"></div></div></div>
-                                    <div class="mobile-only" style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1px solid var(--glass-border);margin-bottom:10px"><div class="skeleton" style="width:48px;height:48px;border-radius:12px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div class="skeleton skeleton-text" style="width:55%;margin:0"></div><div class="skeleton skeleton-text" style="width:20%;margin:0"></div></div></div>
+                                    <div class="skeleton-row-flex" style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1px solid var(--glass-border);margin-bottom:10px"><div class="skeleton" style="width:48px;height:48px;border-radius:12px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div class="skeleton skeleton-text" style="width:50%;margin:0"></div><div class="skeleton skeleton-text" style="width:30%;margin:0"></div></div></div>
+                                    <div class="skeleton-row-flex" style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1px solid var(--glass-border);margin-bottom:10px"><div class="skeleton" style="width:48px;height:48px;border-radius:12px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div class="skeleton skeleton-text" style="width:40%;margin:0"></div><div class="skeleton skeleton-text" style="width:25%;margin:0"></div></div></div>
+                                    <div class="skeleton-row-flex" style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1px solid var(--glass-border);margin-bottom:10px"><div class="skeleton" style="width:48px;height:48px;border-radius:12px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div class="skeleton skeleton-text" style="width:55%;margin:0"></div><div class="skeleton skeleton-text" style="width:20%;margin:0"></div></div></div>
                                 </div>
                             </div>
                         </div>
@@ -707,9 +731,9 @@
                                 </tr>
                             </thead>
                             <tbody id="ridersTable">
-                                <tr class="mobile-only"><td colspan="6"><div class="skeleton" style="height:48px;width:100%"></div></td></tr>
-                                <tr class="mobile-only"><td colspan="6"><div class="skeleton" style="height:48px;width:100%"></div></td></tr>
-                                <tr class="mobile-only"><td colspan="6"><div class="skeleton" style="height:48px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="6"><div class="skeleton" style="height:48px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="6"><div class="skeleton" style="height:48px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="6"><div class="skeleton" style="height:48px;width:100%"></div></td></tr>
                             </tbody>
                         </table>
                         <div id="ridersPagination" class="pagination-controls"></div>
@@ -798,8 +822,8 @@
             <div id="tab-settings" class="tab-content hidden">
                 <div class="panel">
                     <div class="panel-header">
-                        <h3>⚙️ Delivery & Store Settings</h3>
-                        <button id="btnSaveSettings" class="btn-primary">💾 Save Settings</button>
+                        <h3><i data-lucide="settings" class="icon-16"></i> Delivery & Store Settings</h3>
+                        <button id="btnSaveSettings" class="btn-primary"><i data-lucide="save" class="icon-16"></i> Save Settings</button>
                     </div>
 
                     <div class="settings-grid">
@@ -807,7 +831,7 @@
                         <div class="glass-card p-20 grid-full">
                             <div class="flex-between flex-center mb-14">
                                 <div>
-                                    <h4 class="mb-4">📄 Receipt & Store Information</h4>
+                                    <h4 class="mb-4"><i data-lucide="file-text" class="icon-16"></i> Receipt & Store Information</h4>
                                     <p class="text-muted-small">Legal details and branding for your professional bills
                                     </p>
                                 </div>
@@ -815,79 +839,69 @@
 
                             <div class="flex-row flex-gap-24">
                                 <div class="flex-2">
-                                    <div class="flex-row flex-gap-12 mb-14">
-                                        <div class="flex-1">
-                                            <label class="form-label-small">Legal Entity Name</label>
-                                            <input type="text" id="settingEntityName" class="form-input"
-                                                placeholder="e.g. Avipriya Enterprises">
+                                    <div class="settings-section-card">
+                                        <h5 class="section-card-heading"><i data-lucide="building" class="icon-14"></i> Business Details</h5>
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Legal Entity Name</label>
+                                                <input type="text" id="settingEntityName" class="form-input"
+                                                    placeholder="e.g. Avipriya Enterprises">
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Store Name (Display)</label>
+                                                <input type="text" id="settingStoreName" class="form-input"
+                                                    placeholder="e.g. One Bite Chapra">
+                                            </div>
                                         </div>
-                                        <div class="flex-1">
-                                            <label class="form-label-small">Store Name (Display)</label>
-                                            <input type="text" id="settingStoreName" class="form-input"
-                                                placeholder="e.g. One Bite Chapra">
-                                        </div>
-                                    </div>
 
-                                    <label class="form-label-small">Store Address</label>
-                                    <textarea id="settingStoreAddress" class="form-input mb-14 h-60 p-10"
-                                        placeholder="Full address for the bill header..."></textarea>
+                                        <label class="form-label-small">Store Address</label>
+                                        <textarea id="settingStoreAddress" class="form-input mb-14 h-60 p-10"
+                                            placeholder="Full address for the bill header..."></textarea>
 
-                                    <div class="flex-row flex-gap-12 mb-14">
-                                        <div class="flex-1">
-                                            <label class="form-label-small">GSTIN Number</label>
-                                            <input type="text" id="settingGSTIN" class="form-input"
-                                                placeholder="e.g. 10DYTPS7666L1ZG">
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">GSTIN Number</label>
+                                                <input type="text" id="settingGSTIN" class="form-input"
+                                                    placeholder="e.g. 10DYTPS7666L1ZG">
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">FSSAI Number</label>
+                                                <input type="text" id="settingFSSAI" class="form-input"
+                                                    placeholder="e.g. 10422250000150">
+                                            </div>
                                         </div>
-                                        <div class="flex-1">
-                                            <label class="form-label-small">FSSAI Number</label>
-                                            <input type="text" id="settingFSSAI" class="form-input"
-                                                placeholder="e.g. 10422250000150">
-                                        </div>
-                                    </div>
 
-                                    <div class="flex-row flex-gap-12 mb-14">
-                                        <div class="flex-1">
-                                            <label class="form-label-small">Header Tagline</label>
-                                            <input type="text" id="settingTagline" class="form-input"
-                                                placeholder="e.g. JAI HIND">
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Header Tagline</label>
+                                                <input type="text" id="settingTagline" class="form-input"
+                                                    placeholder="e.g. JAI HIND">
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Shop Opening Time</label>
+                                                <input type="time" id="settingOpenTime" class="form-input" value="10:00"
+                                                    title="Opening Time">
+                                            </div>
                                         </div>
-                                        <div class="flex-1">
-                                            <label class="form-label-small">Powered By Tagline</label>
-                                            <input type="text" id="settingPoweredBy" class="form-input"
-                                                placeholder="Powered by Roshani ERP">
-                                        </div>
-                                    </div>
 
-                                    <div class="flex-row flex-gap-12 mb-14">
-                                        <div class="flex-1">
-                                            <label class="form-label-small">Developer Support (WhatsApp Number)</label>
-                                            <input type="text" id="settingDevPhone" class="form-input"
-                                                placeholder="e.g. 919876543210">
-                                        </div>
-                                        <div class="flex-1">
-                                            <label class="form-label-small">Daily Report Mobile Number (Admin)</label>
-                                            <input type="text" id="settingReportPhone" class="form-input"
-                                                placeholder="e.g. 918887776660">
-                                        </div>
-                                    </div>
-
-                                    <div class="flex-row flex-gap-12 mb-14">
-                                        <div class="flex-1">
-                                            <label class="form-label-small">Shop Opening Time</label>
-                                            <input type="time" id="settingOpenTime" class="form-input" value="10:00"
-                                                title="Opening Time">
-                                        </div>
-                                        <div class="flex-1">
-                                            <label class="form-label-small">Shop Closing Time (Report Time)</label>
-                                            <input type="time" id="settingCloseTime" class="form-input" value="23:00"
-                                                title="Closing Time">
+                                        <div class="flex-row flex-gap-12">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Shop Closing Time (Report Time)</label>
+                                                <input type="time" id="settingCloseTime" class="form-input" value="23:00"
+                                                    title="Closing Time">
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Daily Report Mobile Number (Admin)</label>
+                                                <input type="text" id="settingReportPhone" class="form-input"
+                                                    placeholder="e.g. 918887776660">
+                                            </div>
                                         </div>
                                     </div>
 
                                     <div class="outlet-status-control glass-card p-16 mb-14">
                                         <div class="flex-between flex-center mb-10">
                                             <div class="flex-row flex-center flex-gap-10">
-                                                <label class="form-label-small mb-0 fw-700">🔌 Outlet
+                                                <label class="form-label-small mb-0 fw-700"><i data-lucide="power" class="icon-14"></i> Outlet
                                                     Status</label>
                                                 <span id="outletStatusPill" class="outlet-status-pill status-auto"
                                                     title="Current outlet status">AUTO</span>
@@ -895,78 +909,97 @@
                                             <button type="button" id="btnQuickToggleOutlet"
                                                 class="btn-primary btn-small flex-center flex-gap-6 p-6-14"
                                                 title="Instantly apply this status to Firebase">
-                                                <i data-lucide="zap" class="icon-fixed-sm"></i> Apply Now
+                                                <i data-lucide="power" class="icon-fixed-sm"></i> Apply Status
                                             </button>
                                         </div>
                                         <select id="settingShopStatus" class="form-input" title="Shop Status Override">
-                                            <option value="AUTO">⏰ Auto (Time Based)</option>
-                                            <option value="FORCE_OPEN">✅ Force Open — Accept Orders</option>
-                                            <option value="FORCE_CLOSED">🌙 Force Closed — Reject Orders</option>
+                                            <option value="AUTO"><i data-lucide="clock"></i> Auto (Time Based)</option>
+                                            <option value="FORCE_OPEN"><i data-lucide="check-circle"></i> Force Open — Accept Orders</option>
+                                            <option value="FORCE_CLOSED"><i data-lucide="moon"></i> Force Closed — Reject Orders</option>
                                         </select>
                                         <p class="text-secondary-small mt-6" id="outletStatusHint">Status will follow
                                             your opening/closing hours.</p>
                                     </div>
 
-                                    <h5 class="mb-12 text-muted-small text-upper ls-sm">Marketing & Connectivity</h5>
+                                    <div class="settings-section-card">
+                                        <h5 class="section-card-heading"><i data-lucide="wifi" class="icon-14"></i> Marketing & Connectivity</h5>
 
-                                    <form onsubmit="return false;">
-                                        <div class="flex-row flex-gap-12 mb-14">
-                                            <div class="flex-1">
-                                                <label class="form-label-small">WiFi Name (SSID)</label>
-                                                <input type="text" id="settingWifiName" class="form-input"
-                                                    placeholder="e.g. ROSHANI_GUEST_WIFI" title="WiFi SSID" autocomplete="off">
-                                            </div>
-                                            <div class="flex-1">
-                                                <label class="form-label-small">WiFi Password</label>
-                                                <div class="flex-row flex-gap-10">
-                                                    <input type="password" id="settingWifiPass" class="form-input flex-1"
-                                                        autocomplete="new-password" placeholder="WiFi Password"
-                                                        title="WiFi Password">
-                                                    <button type="button" id="btnToggleWifiPass"
-                                                        class="btn-secondary flex-center p-0-10"
-                                                        title="Toggle Visibility">👁️</button>
+                                        <form onsubmit="return false;">
+                                            <div class="flex-row flex-gap-12 mb-14">
+                                                <div class="flex-1">
+                                                    <label class="form-label-small">WiFi Name (SSID)</label>
+                                                    <input type="text" id="settingWifiName" class="form-input"
+                                                        placeholder="e.g. ROSHANI_GUEST_WIFI" title="WiFi SSID" autocomplete="off">
                                                 </div>
-                                                <div class="notif-sub-premium mt-6 font-weight-500 color-primary">
-                                                    ⚠️ Note: This password will be printed on customer receipts for their
+                                                <div class="flex-1">
+                                                    <label class="form-label-small">WiFi Password</label>
+                                                    <div class="flex-row flex-gap-10">
+                                                        <input type="password" id="settingWifiPass" class="form-input flex-1"
+                                                            autocomplete="new-password" placeholder="WiFi Password"
+                                                            title="WiFi Password">
+                                                        <button type="button" id="btnToggleWifiPass"
+                                                                class="btn-secondary flex-center p-0-10"
+                                                                title="Toggle password visibility" aria-label="Show password" aria-pressed="false"><i data-lucide="eye" id="wifiPassIcon" class="icon-16"></i></button>
+                                                    </div>
+<div class="notif-sub-premium mt-6 font-weight-500 color-primary">
+                                                    <i data-lucide="alert-triangle" class="icon-14"></i> Note: This password will be printed on customer receipts for their
                                                     convenience.
                                                 </div>
+                                                </div>
+                                            </div>
+                                        </form>
+
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Instagram Handle</label>
+                                                <input type="text" id="settingInstagram" class="form-input"
+                                                    placeholder="e.g. @roshani_pizza">
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Facebook Page URL</label>
+                                                <input type="text" id="settingFacebook" class="form-input"
+                                                    placeholder="Facebook Profile Link">
                                             </div>
                                         </div>
-                                    </form>
 
-                                    <div class="flex-row flex-gap-12 mb-14">
-                                        <div class="flex-1">
-                                            <label class="form-label-small">Instagram Handle</label>
-                                            <input type="text" id="settingInstagram" class="form-input"
-                                                placeholder="e.g. @roshani_pizza">
-                                        </div>
-                                        <div class="flex-1">
-                                            <label class="form-label-small">Facebook Page URL</label>
-                                            <input type="text" id="settingFacebook" class="form-input"
-                                                placeholder="Facebook Profile Link">
+                                        <div class="flex-row flex-gap-12">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Receipt Feedback URL (Base)</label>
+                                                <input type="text" id="settingReviewUrl" class="form-input"
+                                                    placeholder="https://yourwebsite.com/feedback">
+                                                <small class="fs-10 text-muted">This URL will be used for the Receipt QR.
+                                                    Order details will be appended automatically.</small>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="flex-row flex-gap-12 mb-14">
-                                        <div class="flex-1">
-                                            <label class="form-label-small">Receipt Feedback URL (Base)</label>
-                                            <input type="text" id="settingReviewUrl" class="form-input"
-                                                placeholder="https://yourwebsite.com/feedback">
-                                            <small class="fs-10 text-muted">This URL will be used for the Receipt QR.
-                                                Order details will be appended automatically.</small>
+                                    <div class="settings-section-card">
+                                        <h5 class="section-card-heading"><i data-lucide="message-square" class="icon-14"></i> Feedback Bot Options (Post-Delivery)</h5>
+                                        <div class="flex-col flex-gap-10">
+                                            <input type="text" id="settingFeedbackReason1" class="form-input"
+                                                placeholder="Reason 1 (e.g. Delicious Taste)" title="Feedback Reason 1">
+                                            <input type="text" id="settingFeedbackReason2" class="form-input"
+                                                placeholder="Reason 2 (e.g. Lightning Fast Delivery)"
+                                                title="Feedback Reason 2">
+                                            <input type="text" id="settingFeedbackReason3" class="form-input"
+                                                placeholder="Reason 3 (e.g. Premium Packaging)" title="Feedback Reason 3">
                                         </div>
                                     </div>
 
-                                    <h5 class="mb-12 text-muted-small text-upper ls-sm">Feedback Bot Options
-                                        (Post-Delivery)</h5>
-                                    <div class="flex-col flex-gap-10 mb-14">
-                                        <input type="text" id="settingFeedbackReason1" class="form-input"
-                                            placeholder="Reason 1 (e.g. Delicious Taste)" title="Feedback Reason 1">
-                                        <input type="text" id="settingFeedbackReason2" class="form-input"
-                                            placeholder="Reason 2 (e.g. Lightning Fast Delivery)"
-                                            title="Feedback Reason 2">
-                                        <input type="text" id="settingFeedbackReason3" class="form-input"
-                                            placeholder="Reason 3 (e.g. Premium Packaging)" title="Feedback Reason 3">
+                                    <div class="settings-section-card system-section">
+                                        <h5 class="section-card-heading"><i data-lucide="settings" class="icon-14"></i> Developer Settings <span class="text-muted-small fw-400">(optional)</span></h5>
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Powered By Tagline</label>
+                                                <input type="text" id="settingPoweredBy" class="form-input"
+                                                    placeholder="Powered by Roshani ERP">
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Developer Support (WhatsApp Number)</label>
+                                                <input type="text" id="settingDevPhone" class="form-input"
+                                                    placeholder="e.g. 919876543210">
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1030,7 +1063,7 @@
                                         <input type="hidden" id="settingQRUrl">
                                     </div>
 
-                                    <h5 class="mb-12 mt-24 text-muted-small text-upper ls-sm">📲 WhatsApp Marketing Images</h5>
+                                    <h5 class="mb-12 mt-24 text-muted-small text-upper ls-sm"><i data-lucide="image" class="icon-14"></i> WhatsApp Marketing Images</h5>
                                     <div class="glass-card p-15 bg-ghost br-15 border-dashed">
                                         <div class="flex-col flex-gap-10">
                                             <div>
@@ -1272,8 +1305,8 @@
                                         </tr>
                                     </thead>
                                     <tbody id="feeSlabsTable">
-                                        <tr class="mobile-only"><td colspan="4"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
-                                        <tr class="mobile-only"><td colspan="4"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                        <tr class="skeleton-row"><td colspan="4"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                        <tr class="skeleton-row"><td colspan="4"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -1302,9 +1335,9 @@
                                 </tr>
                             </thead>
                             <tbody id="customersTableBody">
-                                <tr class="mobile-only"><td colspan="5"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
-                                <tr class="mobile-only"><td colspan="5"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
-                                <tr class="mobile-only"><td colspan="5"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
                             </tbody>
                         </table>
                         <div id="customersPagination" class="pagination-controls"></div>
@@ -1315,7 +1348,7 @@
             <!-- REPORTS TAB -->
             <div id="tab-reports" class="tab-content hidden">
                 <div class="flex-row justify-between flex-center mb-20 p-0-10">
-                    <h2 class="section-title fs-24 m-0">📊 Sales Analytics & Reports</h2>
+                    <h2 class="section-title fs-24 m-0 flex-row flex-center flex-gap-10"><i data-lucide="bar-chart-3" class="icon-24"></i> Sales Analytics & Reports</h2>
                     <div class="flex-row flex-gap-10 flex-center glass-card p-10-20 rounded-12 flex-wrap-mobile">
                         <input type="date" id="reportFrom" class="form-input report-date-input" title="From Date">
                         <span class="text-muted-small">to</span>
@@ -1387,9 +1420,9 @@
                                             </tr>
                                         </thead>
                                         <tbody id="reportTableBody">
-                                            <tr class="mobile-only"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
-                                            <tr class="mobile-only"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
-                                            <tr class="mobile-only"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -1401,7 +1434,7 @@
                             <div class="glass-card mb-20 p-24">
                                 <h4 class="panel-title mb-15">Revenue Trends</h4>
                                 <div class="w-full h-300" style="position:relative">
-                                    <div class="skeleton-chart mobile-only" style="position:absolute;top:0;left:0;z-index:1"></div>
+                                    <div class="skeleton-chart" style="position:absolute;top:0;left:0;z-index:1"></div>
                                     <canvas id="revenueChart" style="position:relative;z-index:2"></canvas>
                                 </div>
                             </div>
@@ -1415,7 +1448,7 @@
             <!-- SECTION: RIDER ANALYTICS -->
             <div id="tab-riderAnalytics" class="tab-content hidden">
                 <div class="flex-row justify-between flex-center mb-20 p-0-10">
-                    <h2 class="section-title fs-24 m-0">🚴 Rider Intelligence</h2>
+                    <h2 class="section-title fs-24 m-0 flex-row flex-center flex-gap-10"><i data-lucide="bike" class="icon-24"></i> Rider Intelligence</h2>
                     <div class="flex-row flex-gap-10 flex-center glass-card p-10-20 rounded-12 flex-wrap-mobile">
                         <select id="riderSelectAnalytics" class="form-input report-date-input" title="Select Rider">
                             <option value="">Select a Rider...</option>
@@ -1489,9 +1522,9 @@
                                         </tr>
                                     </thead>
                                     <tbody id="riderAnalyticsTableBody">
-                                        <tr class="mobile-only"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
-                                        <tr class="mobile-only"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
-                                        <tr class="mobile-only"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                        <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                        <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                        <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -1501,15 +1534,15 @@
                         <div class="glass-card p-24">
                             <h4 class="panel-title mb-15">Earnings Trend</h4>
                             <div class="w-full h-250" style="position:relative">
-                                <div class="skeleton-chart mobile-only" style="position:absolute;top:0;left:0;z-index:1"></div>
+                                <div class="skeleton-chart" style="position:absolute;top:0;left:0;z-index:1"></div>
                                 <canvas id="riderEarningsChart" style="position:relative;z-index:2"></canvas>
                             </div>
                         </div>
                         <div class="glass-card p-24 mt-20">
                             <h4 class="panel-title mb-15">Rider Status Summary</h4>
                             <div id="riderStatusSummary">
-                                <p class="text-muted-small mobile-only">No rider selected for analysis.</p>
-                                <div class="skeleton-rider-card mobile-only"><div class="skeleton skeleton-circle"></div><div class="skeleton-text-group"><div class="skeleton skeleton-text" style="width:55%"></div><div class="skeleton skeleton-text" style="width:30%"></div></div></div>
+                                <p class="text-muted-small">No rider selected for analysis.</p>
+                                <div class="skeleton-rider-card"><div class="skeleton skeleton-circle"></div><div class="skeleton-text-group"><div class="skeleton skeleton-text" style="width:55%"></div><div class="skeleton skeleton-text" style="width:30%"></div></div></div>
                             </div>
                         </div>
                     </div>
@@ -1572,36 +1605,6 @@
                     </div>
                 </div>
 
-                <!-- ADD/EDIT INVENTORY MODAL (Nested logic) -->
-                <div id="inventoryModal" class="modal">
-                    <div class="modal-content glass-card w-400">
-                        <div class="modal-header">
-                            <h2 id="invModalTitle">Track New Product</h2>
-                            <button class="close-btn" data-action="hideInventoryModal">&times;</button>
-                        </div>
-                        <div class="p-20">
-                            <label class="form-label-small">Product Name</label>
-                            <input type="text" id="invItemName" class="form-input" placeholder="e.g. Coca Cola 500ml">
-                            
-                            <div class="flex-row flex-gap-10">
-                                <div class="flex-1">
-                                    <label class="form-label-small">Opening Stock</label>
-                                    <input type="number" id="invItemStock" class="form-input" placeholder="0">
-                                </div>
-                                <div class="flex-1">
-                                    <label class="form-label-small">Low Stock Alert at</label>
-                                    <input type="number" id="invItemThreshold" class="form-input" placeholder="5">
-                                </div>
-                            </div>
-
-                            <p class="text-muted-small fs-10 mt-10 mb-20">We'll alert you when this item falls below the threshold.</p>
-
-                            <button id="btnSaveInventory" class="btn-primary w-full p-15 br-12">
-                                <i data-lucide="check-circle" class="icon-18"></i> Start Tracking
-                            </button>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- PAYMENTS TAB -->
@@ -1621,8 +1624,8 @@
                                 </tr>
                             </thead>
                             <tbody id="paymentsTable">
-                                <tr class="mobile-only"><td colspan="6"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
-                                <tr class="mobile-only"><td colspan="6"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="6"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="6"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1648,9 +1651,9 @@
                                 </tr>
                             </thead>
                             <tbody id="feedbackTableBody">
-                                <tr class="mobile-only"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
-                                <tr class="mobile-only"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
-                                <tr class="mobile-only"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
                             </tbody>
                         </table>
                         <div id="feedbackPagination" class="pagination-controls"></div>
@@ -1781,16 +1784,18 @@
     <div id="dishModal" class="modal">
         <div class="modal-content glass-card">
             <div class="modal-header">
-                <h2 id="modalTitle" class="modal-title">Add New Dish</h2>
-                <button class="close-btn btn-hide-dish-modal">&times;</button>
+                <h2 id="dishModalTitle" class="modal-title">Add New Dish</h2>
+                <button class="close-btn btn-hide-dish-modal" aria-label="Close dialog" title="Close"><i data-lucide="x" class="icon-18"></i></button>
             </div>
 
             <div class="modal-grid-2col">
                 <!-- Left: Media -->
                 <div>
-                    <div class="modal-media-upload">
-                        <img id="dishPreview" src="https://placehold.co/150x150?text=Pizza" class="modal-img-preview"
-                            alt="Dish Preview">
+                    <div class="modal-media-upload img-placeholder" id="dishPreviewWrap">
+                            <i data-lucide="image" class="icon-32"></i>
+                            <span>No image</span>
+                            <img id="dishPreview" class="modal-img-preview hidden"
+                                alt="Dish Preview">
                         <div class="modal-img-overlay">
                             <input type="file" id="dishFile" accept="image/*" class="hidden" title="Upload dish photo">
                             <button id="btnUpdateDishPhoto" class="btn-secondary update-photo-btn">Update Photo</button>
@@ -1803,7 +1808,7 @@
                 <!-- Right: Details -->
                 <div class="modal-details-scroll">
                     <div class="step-box">
-                        <label class="form-label step-label">STEP 1: SELECT CATEGORY</label>
+                        <label class="form-label required-label">Category <span class="required-star" aria-hidden="true">*</span></label>
                         <select id="dishCategory" class="form-input category-select" title="Choose Category">
                             <option value="">Choose Category...</option>
                         </select>
@@ -1842,8 +1847,7 @@
             </div>
 
             <div class="modal-footer">
-                <button id="saveDishBtn" class="btn-primary save-dish-btn" title="Save Product Data">💾 Save Dish
-                    Information</button>
+                <button id="saveDishBtn" class="btn-primary save-dish-btn" title="Save Product Data"><i data-lucide="save" class="icon-16"></i> Save Dish</button>
                 <button class="btn-secondary cancel-dish-btn btn-hide-modal"
                     title="Discard Changes">Cancel</button>
             </div>
@@ -1856,18 +1860,19 @@
             <div class="modal-header">
                 <div>
                     <h2 id="riderModalTitle" class="modal-title">Rider Profile</h2>
-                    <p class="panel-subtitle">Manage credentials and PII data</p>
+                    <p class="panel-subtitle">Profile, login access & ID documents</p>
                 </div>
-                <button class="close-btn btn-hide-rider-modal">&times;</button>
+                <button class="close-btn btn-hide-rider-modal" aria-label="Close dialog" title="Close"><i data-lucide="x" class="icon-18"></i></button>
             </div>
 
             <div class="modal-body">
                 <div class="modal-grid-2col">
                     <!-- Left: Profile & Photos -->
                     <div class="modal-media-section">
-                        <div class="profile-upload-container">
-                            <img id="riderProfilePreview" src="https://placehold.co/150x150?text=Rider"
-                                class="rider-preview-sm" alt="Rider Profile">
+                        <div class="profile-upload-container img-placeholder" style="width:150px;height:150px">
+                            <i data-lucide="user" class="icon-32"></i>
+                            <span>No photo</span>
+                            <img id="riderProfilePreview" class="rider-preview-sm hidden" alt="Rider Profile">
                             <input type="file" id="riderPhotoInput" accept="image/*" class="hidden"
                                 title="Select Rider Profile Photo">
                             <button id="btnUploadRiderPhoto" class="btn-secondary btn-small mt-10">Upload Photo</button>
@@ -1876,8 +1881,11 @@
 
                         <div class="aadhar-upload-container mt-20">
                             <label class="form-label-small">AADHAR CARD COPY</label>
-                            <img id="aadharPreview" src="https://placehold.co/300x200?text=Aadhar"
-                                class="aadhar-preview-sm" alt="Aadhar Card">
+                            <div class="img-placeholder" style="width:200px;height:120px">
+                                <i data-lucide="credit-card" class="icon-24"></i>
+                                <span>No document</span>
+                                <img id="aadharPreview" class="aadhar-preview-sm hidden" alt="Aadhar Card">
+                            </div>
                             <input type="file" id="aadharPhotoInput" accept="image/*" class="hidden"
                                 title="Select Aadhar Card Image">
                             <button id="btnUploadAadhar" class="btn-secondary btn-small mt-10">Upload Aadhar</button>
@@ -1911,7 +1919,7 @@
                                             placeholder="••••••••" class="form-input flex-1"
                                             title="New password for rider portal">
                                         <button type="button" id="btnToggleRiderPass"
-                                            class="btn-secondary flex-center p-0-10" title="Toggle Visibility">👁️</button>
+                                            class="btn-secondary flex-center p-0-10" title="Toggle password visibility" aria-label="Show password" aria-pressed="false"><i data-lucide="eye" id="riderPassIcon" class="icon-16"></i></button>
                                     </div>
                                     <small id="riderPassHint" class="hidden text-muted-small">Leave blank to keep current
                                         password</small>
@@ -1948,7 +1956,7 @@
 
                             <label class="form-label">Current Address</label>
                             <textarea id="riderAddress" placeholder="Full residential address..."
-                                class="form-input w-full h-80" title="Full permanent/current address"></textarea>
+                                class="form-input w-full" style="height:100px;resize:vertical;min-height:80px;max-height:200px;" title="Full permanent/current address"></textarea>
                         </div>
                     </form>
                 </div>
@@ -2024,7 +2032,7 @@
     <div id="orderDrawerOverlay" class="drawer-overlay"></div>
     <div id="orderDrawer" class="drawer-content">
         <div class="drawer-handle"></div>
-        <button class="drawer-close-btn" data-action="closeOrderDrawer" title="Close Drawer">&times;</button>
+        <button class="drawer-close-btn" data-action="closeOrderDrawer" title="Close Drawer" aria-label="Close drawer"><i data-lucide="x" class="icon-18"></i></button>
         <div id="orderDrawerBody">
             <!-- Populated via JS -->
             <div class="shimmer skeleton-title"></div>
@@ -2043,7 +2051,7 @@
                     <h2 id="posModalDishName" class="modal-title">Select Options</h2>
                     <p id="posModalDishCategory" class="text-muted-small mt-4"></p>
                 </div>
-                <button class="close-btn" data-action="hidePOSSelectionModal" title="Close selection modal">&times;</button>
+                <button class="close-btn" data-action="hidePOSSelectionModal" title="Close selection modal" aria-label="Close dialog"><i data-lucide="x" class="icon-18"></i></button>
             </div>
 
             <div class="modal-body p-20">
@@ -2105,7 +2113,7 @@
                             class="icon-18"></i></div>
                     <h3 class="modal-title">Security Confirmation</h3>
                 </div>
-                <button class="close-btn">&times;</button>
+                <button class="close-btn" aria-label="Close dialog" title="Close"><i data-lucide="x" class="icon-18"></i></button>
             </div>
             <form id="reauthForm">
                 <div class="modal-body p-20">
@@ -2131,7 +2139,7 @@
     <div id="premiumModalOverlay" class="premium-modal-overlay hidden">
         <div class="premium-modal">
             <div class="modal-header">
-                <h3 id="modalTitle">Title</h3>
+                <h3 id="premiumModalTitle">Title</h3>
                 <button class="modal-close" onclick="window.closePremiumModal()" aria-label="Close modal" title="Close">
                     <i data-lucide="x"></i>
                 </button>
@@ -2142,6 +2150,58 @@
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="window.closePremiumModal()">Cancel</button>
                 <button class="btn-primary" id="modalSaveBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD/EDIT INVENTORY MODAL -->
+    <div id="inventoryModal" class="modal">
+        <div class="modal-content glass-card w-400">
+            <div class="modal-header">
+                <h2 id="invModalTitle">Track New Product</h2>
+                <button class="close-btn" data-action="hideInventoryModal" aria-label="Close dialog" title="Close"><i data-lucide="x" class="icon-18"></i></button>
+            </div>
+            <div class="p-20">
+                <label class="form-label-small">Product Name</label>
+                <input type="text" id="invItemName" class="form-input" placeholder="e.g. Coca Cola 500ml">
+                
+                <div class="flex-row flex-gap-10">
+                    <div class="flex-1">
+                        <label class="form-label-small">Opening Stock</label>
+                        <input type="number" id="invItemStock" class="form-input" placeholder="0">
+                    </div>
+                    <div class="flex-1">
+                        <label class="form-label-small">Low Stock Alert at</label>
+                        <input type="number" id="invItemThreshold" class="form-input" placeholder="5">
+                    </div>
+                </div>
+
+                <p class="text-muted-small fs-10 mt-10 mb-20">We'll alert you when this item falls below the threshold.</p>
+
+                <button id="btnSaveInventory" class="btn-primary w-full p-15 br-12">
+                    <i data-lucide="check-circle" class="icon-18"></i> Start Tracking
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Preview Modal -->
+    <div id="receiptPreviewModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 520px; width: 95%;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="receipt" style="width:18px;height:18px;"></i> Receipt Preview</h3>
+                <button class="close-btn" data-action="closeReceiptPreview" aria-label="Close dialog" title="Close"><i data-lucide="x" class="icon-18"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 0; height: 65vh; overflow: hidden;">
+                <iframe id="receiptPreviewFrame"
+                    style="width: 100%; height: 100%; border: none; background: #fff;"
+                    title="Receipt Preview"></iframe>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-action="closeReceiptPreview">Close</button>
+                <button class="btn-primary" data-action="printReceiptFromPreview">
+                    <i data-lucide="printer" style="width: 14px; height: 14px;"></i> Print
+                </button>
             </div>
         </div>
     </div>

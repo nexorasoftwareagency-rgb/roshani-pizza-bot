@@ -18,6 +18,14 @@ export const state = {
     lastDishesSnap: null,
     ordersMap: new Map(),
     liveOrdersMap: new Map(), // Dedicated map for ongoing/recent orders
+
+    // Orders tab pagination
+    ordersPageData: [],
+    ordersPageCursor: null,
+    ordersLoadedKeys: new Set(),
+    hasMoreOrders: true,
+    ordersPageLoading: false,
+
     notifications: [],
     isNotificationPending: false,
     deferredPrompt: null,
@@ -36,4 +44,5 @@ export const state = {
     editingCartKey: null,
 
     settingsDirty: false,      // Tracks unsaved changes in settings form
+    showAllRiders: false,      // Toggle: show all riders in sidebar (including offline)
 };

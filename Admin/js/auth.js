@@ -1,4 +1,4 @@
-import { auth, db, Outlet, ServerValue, EmailAuthProvider } from './firebase.js';
+import { auth, db, Outlet, EmailAuthProvider, ref, get, onAuthStateChanged, signInWithEmailAndPassword, signOut, onChildAdded, reauthenticateWithCredential, serverTimestamp, set, push } from './firebase.js';
 import { state } from './state.js';
 import { showToast, logAudit } from './utils.js';
 import * as ui from './ui.js';
@@ -69,7 +69,7 @@ export function initAuth() {
         loginCard.appendChild(diagBtn);
     }
 
-    auth.onAuthStateChanged(async (user) => {
+    onAuthStateChanged(auth, async (user) => {
         console.log("[Auth] State change detected:", user ? `Logged in as ${user.email}` : "Logged out");
         if (!user) {
             console.log("[Auth] State: Logged Out");
@@ -100,7 +100,7 @@ export function initAuth() {
 
             // Ensure global paths are used for system-wide nodes
             const adminSnap = await Promise.race([
-                db.ref(`admins/${user.uid}`).once("value"),
+                get(ref(db, `admins/${user.uid}`)),
                 new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000))
             ]);
             console.log("[Auth] Admin snapshot exists:", adminSnap.exists());
@@ -183,7 +183,7 @@ export function initAuth() {
                 overlay.appendChild(modal);
             }
             
-            setTimeout(() => auth.signOut(), 3000);
+            setTimeout(() => signOut(auth), 3000);
             return;
         }
 
@@ -277,7 +277,7 @@ export async function reauthenticateAdmin(password) {
     const user = auth.currentUser;
     if (!user) throw new Error("No user logged in.");
     const credential = EmailAuthProvider.credential(user.email, password);
-    return user.reauthenticateWithCredential(credential);
+    return reauthenticateWithCredential(user, credential);
 }
 
 export function requireAdminReauth(onSuccess) {
@@ -322,7 +322,7 @@ export function userLogout() {
     logAudit('LOGOUT', { email: auth.currentUser?.email });
     removeActivityListeners();
     clearTimeout(idleTimer);
-    auth.signOut();
+    signOut(auth);
 }
 
 // Track last notified order ID to avoid duplicate browser notifications
@@ -334,9 +334,9 @@ function initNewOrderNotifications() {
         Notification.requestPermission();
     }
     const outlet = window.currentOutlet || 'pizza';
-    const ref = db.ref(`${outlet}/orders`);
+    const r = ref(db, `${outlet}/orders`);
     let initial = true;
-    ref.on('child_added', (snap) => {
+    onChildAdded(r, (snap) => {
         if (initial) { initial = false; return; }
         const order = snap.val();
         if (!order || order.orderId === _lastNewOrder) return;
@@ -344,7 +344,7 @@ function initNewOrderNotifications() {
         if (status !== 'placed') return;
         _lastNewOrder = order.orderId;
         if (Notification.permission === 'granted') {
-            const n = new Notification('🆕 New Order Received!', {
+            const n = new Notification('\uD83D\uDD04 New Order Received!', {
                 body: `#${order.orderId?.slice(-5) || snap.key?.slice(-5)} — ${order.customerName || 'Customer'} — ₹${order.total || 0}`,
                 icon: '/logo.png',
                 tag: `order-${snap.key}`
@@ -370,7 +370,7 @@ export async function doLogin(email, pass) {
         if (errEl) errEl.classList.add('hidden');
         
         sessionStorage.setItem('PENDING_LOGIN_AUDIT', 'true');
-        await auth.signInWithEmailAndPassword(email, pass);
+        await signInWithEmailAndPassword(auth, email, pass);
     } catch (error) {
         console.error("Login Error:", error);
         if (errEl && errMsg) {

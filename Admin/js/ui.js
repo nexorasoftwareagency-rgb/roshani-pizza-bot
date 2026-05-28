@@ -1,16 +1,13 @@
 import { haptic } from './utils.js';
 import { showToast, showConfirm } from './ui-utils.js';
 import { state } from './state.js';
-import { loadCategories, loadMenu, cleanupCatalog } from './features/catalog.js';
-import { loadRiders, cleanupRiders } from './features/riders.js';
-import { loadFeedbacks, cleanupFeedbacks } from './features/feedback.js';
-import { initLiveRiderTracker, cleanupLiveRiderTracker } from './features/tracker.js';
-import { loadWalkinMenu } from './features/pos.js';
-import { loadStoreSettings } from './features/settings.js';
-import { loadCustomers, loadReports, loadLostSales } from './features/customers.js';
 import { toggleNotificationSheet, updateNotificationUI, updateNotificationSettingsUI } from './features/notifications.js';
-import { renderOrders } from './features/orders.js';
-import { loadInventory, cleanupInventory } from './features/inventory.js';
+
+const _modCache = {};
+function mod(name) {
+    if (!_modCache[name]) _modCache[name] = import(`./features/${name}.js`);
+    return _modCache[name];
+}
 
 
 
@@ -163,54 +160,82 @@ export const switchTab = async (tabId, skipHistory = false) => {
 
         // --- PHASE 3.25: PERFORMANCE ORCHESTRATION ---
         // 1. Cleanup all persistent background listeners (except Orders which stays active for alerts)
-        if (tabId !== 'catalog' && tabId !== 'categories') cleanupCatalog();
-        if (tabId !== 'riders' && tabId !== 'dashboard' && tabId !== 'live') cleanupRiders();
-        if (tabId !== 'feedback') cleanupFeedbacks();
-        if (tabId !== 'liveTracker') cleanupLiveRiderTracker();
-        if (tabId !== 'inventory') cleanupInventory();
+        if (tabId !== 'catalog' && tabId !== 'categories') (await mod('catalog')).cleanupCatalog();
+        if (tabId !== 'riders' && tabId !== 'dashboard' && tabId !== 'live') (await mod('riders')).cleanupRiders();
+        if (tabId !== 'feedback') (await mod('feedback')).cleanupFeedbacks();
+        if (tabId !== 'liveTracker') {
+            (await mod('tracker')).stopRiderLocationListener();
+            (await mod('tracker')).cleanupLiveRiderTracker();
+        }
+        if (tabId !== 'inventory') (await mod('inventory')).cleanupInventory();
 
         // --- PHASE 3.25: DATA REFRESH ---
         // Refresh appropriate data based on the tab
         switch (tabId) {
             case 'dashboard':
             case 'orders':
-            case 'live':
-                loadRiders(); // Need riders for live assignment
+            case 'live': {
+                const [{ loadRiders: lr }, { renderOrders, loadOrdersPage }] = await Promise.all([
+                    mod('riders'), mod('orders')
+                ]);
+                lr();
                 renderOrders(state.lastOrdersSnap);
+                if (tabId === 'orders') loadOrdersPage(true);
                 break;
-            case 'liveTracker':
-                setTimeout(() => initLiveRiderTracker(), 100);
+            }
+            case 'liveTracker': {
+                const { initLiveRiderTracker } = await mod('tracker');
+                initLiveRiderTracker();
                 break;
+            }
             case 'catalog':
             case 'categories':
-            case 'menu':
+            case 'menu': {
+                const { loadCategories, loadMenu } = await mod('catalog');
                 loadCategories();
                 loadMenu();
                 break;
-            case 'riders':
+            }
+            case 'riders': {
+                const { loadRiders } = await mod('riders');
                 loadRiders();
                 break;
-            case 'feedback':
+            }
+            case 'feedback': {
+                const { loadFeedbacks } = await mod('feedback');
                 loadFeedbacks();
                 break;
-            case 'walkin':
+            }
+            case 'walkin': {
+                const { loadWalkinMenu } = await mod('pos');
                 loadWalkinMenu();
                 break;
-            case 'settings':
+            }
+            case 'settings': {
+                const { loadStoreSettings } = await mod('settings');
                 loadStoreSettings();
                 break;
-            case 'customers':
+            }
+            case 'customers': {
+                const { loadCustomers } = await mod('customers');
                 loadCustomers();
                 break;
-            case 'reports':
+            }
+            case 'reports': {
+                const { loadReports } = await mod('customers');
                 loadReports();
                 break;
-            case 'lostSales':
+            }
+            case 'lostSales': {
+                const { loadLostSales } = await mod('customers');
                 loadLostSales();
                 break;
-            case 'inventory':
+            }
+            case 'inventory': {
+                const { loadInventory } = await mod('inventory');
                 loadInventory();
                 break;
+            }
         }
 
         // --- PHASE 3.5: ICON SYNCHRONIZATION ---
@@ -256,47 +281,6 @@ export const ui = {
     toggleMobileCart
 };
 
-/**
- * THEME MANAGEMENT
- */
-export class ThemeManager {
-    constructor() {
-        this.currentTheme = localStorage.getItem('erp-theme') || 'light';
-        this.init();
-    }
-
-    init() {
-        this.applyTheme(this.currentTheme);
-        
-        // Listen for system changes if set to auto (future)
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-            if (this.currentTheme === 'auto') {
-                this.applyTheme(e.matches ? 'dark' : 'light');
-            }
-        });
-    }
-
-    applyTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('erp-theme', theme);
-        this.currentTheme = theme;
-        
-        // Update Icons
-        const themeBtn = document.querySelector('[data-action="toggleTheme"] i');
-        if (themeBtn) {
-            if (window.lucide) window.lucide.createIcons({ root: themeBtn.parentElement });
-        }
-    }
-
-    toggleTheme() {
-        haptic(10);
-        const next = this.currentTheme === 'dark' ? 'light' : 'dark';
-        this.applyTheme(next);
-        showToast(`Switched to ${next} mode`, 'info');
-    }
-}
-
-export const themeManager = new ThemeManager();
 
 // --- INITIAL DATA-LABEL APPLICATION ---
 if (document.readyState === 'loading') {

@@ -3,44 +3,63 @@
  * Handles Leaflet map initialization and live rider location tracking.
  */
 
-import { db, Outlet } from '../firebase.js';
+import { db, Outlet, ref, onValue } from '../firebase.js';
 import { escapeHtml } from '../utils.js';
 
 let adminTrackerMap = null;
-let riderMarkersMap = new Map(); // Store markers by rider ID
-let riderLocationCb = null; // Track callback for cleanup
+let riderMarkersMap = new Map();
+let riderLocationUnsub = null;
+let mapInitTimeout = null;
 
 /**
  * INITIALIZE LIVE MAP
  */
 export function initLiveRiderTracker() {
-    const mapDiv = document.getElementById('adminLiveMap');
-    if (!mapDiv) return;
+    if (mapInitTimeout) clearTimeout(mapInitTimeout);
+    mapInitTimeout = setTimeout(() => {
+        mapInitTimeout = null;
+        const mapDiv = document.getElementById('adminLiveMap');
+        if (!mapDiv) return;
 
-    // Clean up existing map if it exists
-    if (adminTrackerMap) {
-        try {
-            adminTrackerMap.remove();
-        } catch (e) {
-            console.warn("Map removal error:", e);
+        // Clean up existing map if it exists
+        if (adminTrackerMap) {
+            try {
+                adminTrackerMap.remove();
+            } catch (e) {
+                console.warn("Map removal error:", e);
+            }
+            adminTrackerMap = null;
         }
-        adminTrackerMap = null;
+
+        // Initialize Map at a default center (India)
+        // Note: Leaflet (L) is assumed to be loaded globally via script tag in index.html
+        if (typeof L === 'undefined') {
+            console.error("Leaflet library not found. Map cannot be initialized.");
+            mapDiv.innerHTML = '<div class="p-20 text-center">Leaflet Map Library Missing</div>';
+            return;
+        }
+
+        adminTrackerMap = L.map('adminLiveMap').setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(adminTrackerMap);
+
+        startRiderLocationListener();
+    }, 100);
+}
+
+/**
+ * STOP REAL-TIME LOCATION LISTENER ONLY
+ */
+export function stopRiderLocationListener() {
+    if (mapInitTimeout) {
+        clearTimeout(mapInitTimeout);
+        mapInitTimeout = null;
     }
-
-    // Initialize Map at a default center (India)
-    // Note: Leaflet (L) is assumed to be loaded globally via script tag in index.html
-    if (typeof L === 'undefined') {
-        console.error("Leaflet library not found. Map cannot be initialized.");
-        mapDiv.innerHTML = '<div class="p-20 text-center">Leaflet Map Library Missing</div>';
-        return;
+    if (riderLocationUnsub) {
+        riderLocationUnsub();
+        riderLocationUnsub = null;
     }
-
-    adminTrackerMap = L.map('adminLiveMap').setView([20.5937, 78.9629], 5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap'
-    }).addTo(adminTrackerMap);
-
-    startRiderLocationListener();
 }
 
 /**
@@ -48,10 +67,7 @@ export function initLiveRiderTracker() {
  */
 export function cleanupLiveRiderTracker() {
     console.log("[Performance] Cleaning up Live Rider Tracker...");
-    if (riderLocationCb) {
-        db.ref('riders').off('value', riderLocationCb);
-        riderLocationCb = null;
-    }
+    stopRiderLocationListener();
     if (adminTrackerMap) {
         try {
             adminTrackerMap.remove();
@@ -67,11 +83,13 @@ export function cleanupLiveRiderTracker() {
  * START REAL-TIME LOCATION LISTENER
  */
 function startRiderLocationListener() {
-    if (riderLocationCb) {
-        db.ref('riders').off('value', riderLocationCb);
+    if (riderLocationUnsub) {
+        riderLocationUnsub();
+        riderLocationUnsub = null;
     }
 
-    riderLocationCb = snap => {
+    const ridersRef = ref(db, 'riders');
+    riderLocationUnsub = onValue(ridersRef, snap => {
         let onlineCount = 0;
         let bounds = [];
 
@@ -123,9 +141,7 @@ function startRiderLocationListener() {
             const currentBounds = L.latLngBounds(bounds);
             adminTrackerMap.fitBounds(currentBounds, { padding: [50, 50], maxZoom: 15 });
         }
-    };
-
-    db.ref('riders').on('value', riderLocationCb);
+    });
 }
 
 /**
@@ -136,7 +152,7 @@ function generateRiderPopup(r) {
         new Date(r.location.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 
         'Recently';
     
-    const profileImg = r.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(r.name || 'R') + "&background=random";
+    const profileImg = r.photoUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='20' fill='%23f36b21'/%3E%3Ctext x='20' y='26' font-size='18' fill='white' text-anchor='middle' font-family='sans-serif'%3E" + encodeURIComponent((r.name || 'R').charAt(0).toUpperCase()) + "%3C/text%3E%3C/svg%3E";
     const displayStatus = (r.status === "Online" && r.currentOrder) ? "On Delivery" : "Online";
     const statusClass = displayStatus.toLowerCase().replace(/\s+/g, '-');
 

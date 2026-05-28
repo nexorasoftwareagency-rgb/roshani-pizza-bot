@@ -1,12 +1,12 @@
 {
   "name": "Roshani ERP Admin",
   "short_name": "Roshani ERP",
-  "description": "Central Management System for Roshani Pizza & Cakes",
+  "description": "Enterprise Management System for Roshani Pizza & Cakes",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
-  "theme_color": "#FF5200",
+  "theme_color": "#f36b21",
   "scope": "./",
   "dir": "ltr",
   "lang": "en-US",
@@ -17,19 +17,7 @@
   ],
   "icons": [
     {
-      "src": "icon-pizza.webp",
-      "sizes": "192x192",
-      "type": "image/webp",
-      "purpose": "maskable"
-    },
-    {
-      "src": "icon-pizza.webp",
-      "sizes": "512x512",
-      "type": "image/webp",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-512.png",
+      "src": "icon-erp.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -37,21 +25,21 @@
   ],
   "shortcuts": [
     {
-      "name": "Pizza Dashboard",
-      "url": "./index.html?brand=pizza",
+      "name": "Dashboard",
+      "url": "./index.html#dashboard",
       "icons": [
         {
-          "src": "icon-pizza.webp",
+          "src": "icon-erp.png",
           "sizes": "192x192"
         }
       ]
     },
     {
-      "name": "Cake Dashboard",
-      "url": "./index.html?brand=cake",
+      "name": "Orders",
+      "url": "./index.html#orders",
       "icons": [
         {
-          "src": "icon-cake.webp",
+          "src": "icon-erp.png",
           "sizes": "192x192"
         }
       ]

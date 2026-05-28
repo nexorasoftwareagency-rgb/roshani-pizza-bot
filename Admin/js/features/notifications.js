@@ -202,13 +202,10 @@ function renderNotifItem(n, isFull = false) {
 export function showNativeNotification(title, body) {
     if (Notification.permission !== "granted") return;
 
-    const brandPrefix = state.currentOutlet === 'cake' ? '🎂 CAKE: ' : '🍕 PIZZA: ';
-    const icon = state.currentOutlet === 'cake' ? 'icon-cake.webp' : 'icon-pizza.webp';
-
     const options = {
         body,
-        icon,
-        badge: icon,
+        icon: 'icon-erp.webp',
+        badge: 'icon-erp.webp',
         vibrate: [200, 100, 200],
         tag: `order-${Date.now()}`,
         requireInteraction: true

@@ -1,42 +1,38 @@
-let messaging = null;
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+import { app, auth, db, ref, update } from './firebase.js';
 
-function getMessaging() {
+let messaging = null;
+let fcmInitDone = false;
+
+function getMessagingInstance() {
   if (typeof Capacitor !== 'undefined') return null;
-  if (!messaging && typeof firebase !== 'undefined') {
-    messaging = firebase.messaging();
+  if (!messaging) {
+    try {
+      messaging = getMessaging(app);
+    } catch (e) {
+      console.warn('[FCM] Messaging init failed:', e);
+    }
   }
   return messaging;
 }
 
-function getDb() {
-  return typeof firebase !== 'undefined' ? firebase.database() : null;
-}
-
 async function storeToken(userId, token) {
   try {
-    const db = getDb();
-    if (db && userId) {
-      await db.ref(`admins/${userId}`).update({ fcmToken: token });
+    if (userId) {
+      await update(ref(db, `admins/${userId}`), { fcmToken: token });
     }
   } catch (e) {
     console.error('[FCM] Failed to store token:', e);
   }
 }
 
-const msg = getMessaging();
-if (msg) {
-  msg.onTokenRefresh(async () => {
-    const user = firebase.auth()?.currentUser;
-    if (!user) return;
-    try {
-      const t = await msg.getToken();
-      if (t) await storeToken(user.uid, t);
-    } catch (e) {
-      console.error('[FCM] Token refresh error:', e);
-    }
-  });
+function initFCM() {
+  if (fcmInitDone) return;
+  const msg = getMessagingInstance();
+  if (!msg) return;
+  fcmInitDone = true;
 
-  msg.onMessage((payload) => {
+  onMessage(msg, (payload) => {
     const title = payload.notification?.title || 'New Alert';
     const body = payload.notification?.body || '';
     if (window.showToast) {
@@ -45,16 +41,18 @@ if (msg) {
   });
 }
 
+initFCM();
+
 export async function setupAdminFCM(userId) {
   if (!('Notification' in window) || !userId) return;
 
   try {
-    const m = getMessaging();
+    const m = getMessagingInstance();
     if (!m) return;
 
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      const token = await m.getToken();
+      const token = await getToken(m);
       if (token) await storeToken(userId, token);
     }
   } catch (e) {
@@ -64,9 +62,9 @@ export async function setupAdminFCM(userId) {
 
 export async function refreshFCMToken(userId) {
   try {
-    const m = getMessaging();
+    const m = getMessagingInstance();
     if (!m || !userId) return;
-    const token = await m.getToken();
+    const token = await getToken(m);
     if (token) await storeToken(userId, token);
   } catch (e) {
     console.error('[FCM] Refresh error:', e);

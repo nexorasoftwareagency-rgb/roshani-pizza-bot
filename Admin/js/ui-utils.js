@@ -56,6 +56,107 @@ export const showConfirm = (message, title = "Confirm Action") => {
     });
 };
 
+export const showDeleteConfirm = (itemName, message = "This action cannot be undone.") => {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed; inset: 0; z-index: 99999;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+        `;
+
+        overlay.innerHTML = `
+            <div style="background:#1c1c1c; border:1px solid #ef4444; border-radius:20px;
+                        padding:32px 36px; max-width:360px; width:90%; text-align:center;
+                        box-shadow:0 20px 60px rgba(239,68,68,0.25);">
+                <div style="font-size:40px; margin-bottom:12px;">🗑️</div>
+                <h3 style="color:#fff; margin:0 0 8px; font-size:18px; font-weight:700;">Delete <span class="delete-item-name"></span>?</h3>
+                <p style="color:#aaa; font-size:14px; margin:0 0 24px;"></p>
+                <div style="display:flex; gap:12px; justify-content:center;">
+                    <button class="confirm-no" style="flex:1; padding:12px; border-radius:12px; border:1px solid #333; background:transparent; color:#aaa; cursor:pointer; font-size:14px; font-weight:600;">Cancel</button>
+                    <button class="confirm-yes" style="flex:1; padding:12px; border-radius:12px; border:none; background:#ef4444; color:#fff; cursor:pointer; font-size:14px; font-weight:700;">Delete</button>
+                </div>
+            </div>`;
+
+        document.body.appendChild(overlay);
+        overlay.querySelector('.delete-item-name').innerText = itemName;
+        overlay.querySelector('p').innerText = message;
+
+        const cleanup = (val) => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                resolve(val);
+            }, 200);
+        };
+
+        overlay.querySelector('.confirm-yes').onclick = () => cleanup(true);
+        overlay.querySelector('.confirm-no').onclick = () => cleanup(false);
+        overlay.querySelector('.confirm-no').focus();
+        overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
+    });
+};
+
+export const showBulkDeleteConfirm = (bulkLabel) => {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed; inset: 0; z-index: 99999;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+        `;
+
+        overlay.innerHTML = `
+            <div style="background:#1c1c1c; border:1px solid #ef4444; border-radius:20px;
+                        padding:32px 36px; max-width:400px; width:90%; text-align:center;
+                        box-shadow:0 20px 60px rgba(239,68,68,0.25);">
+                <div style="font-size:40px; margin-bottom:12px;">⚠️</div>
+                <h3 style="color:#fff; margin:0 0 8px; font-size:18px; font-weight:700;">Clear all <span class="bulk-label"></span>?</h3>
+                <p style="color:#aaa; font-size:14px; margin:0 0 8px;">This will permanently delete all records.</p>
+                <p style="color:#ef4444; font-size:13px; margin:0 0 20px; font-weight:600;">Type <strong>CONFIRM</strong> to proceed.</p>
+                <input type="text" class="confirm-input" placeholder="Type CONFIRM" style="width:100%; padding:12px; border-radius:12px; border:1px solid #333; background:#262626; color:#fff; font-size:14px; text-align:center; outline:none; box-sizing:border-box; margin-bottom:20px;">
+                <div style="display:flex; gap:12px; justify-content:center;">
+                    <button class="confirm-no" style="flex:1; padding:12px; border-radius:12px; border:1px solid #333; background:transparent; color:#aaa; cursor:pointer; font-size:14px; font-weight:600;">Cancel</button>
+                    <button class="confirm-yes" style="flex:1; padding:12px; border-radius:12px; border:none; background:#ef4444; color:#fff; cursor:pointer; font-size:14px; font-weight:700; opacity:0.4;" disabled>Delete</button>
+                </div>
+            </div>`;
+
+        document.body.appendChild(overlay);
+        overlay.querySelector('.bulk-label').innerText = bulkLabel;
+
+        const input = overlay.querySelector('.confirm-input');
+        const deleteBtn = overlay.querySelector('.confirm-yes');
+        input.focus();
+
+        input.addEventListener('input', () => {
+            const match = input.value.trim().toUpperCase() === 'CONFIRM';
+            deleteBtn.disabled = !match;
+            deleteBtn.style.opacity = match ? '1' : '0.4';
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !deleteBtn.disabled) {
+                cleanup(true);
+            }
+            if (e.key === 'Escape') {
+                cleanup(false);
+            }
+        });
+
+        const cleanup = (val) => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                resolve(val);
+            }, 200);
+        };
+
+        deleteBtn.onclick = () => cleanup(true);
+        overlay.querySelector('.confirm-no').onclick = () => cleanup(false);
+        overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
+    });
+};
+
 export const showPaymentPicker = (total) => {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');

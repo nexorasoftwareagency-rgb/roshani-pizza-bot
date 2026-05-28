@@ -39,8 +39,7 @@ const ASSETS_TO_CACHE = [
   './firebase-config.js',
   './receipt-templates.js',
   './js/init-appcheck.js',
-  './manifest-pizza.json',
-  './manifest-cake.json',
+  './manifest.json',
   './js/main.js',
   './js/auth.js',
   './js/firebase.js',
@@ -155,8 +154,8 @@ self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : { title: 'New Alert', body: 'Check your dashboard.' };
   const options = {
     body: data.body,
-    icon: './icon-pizza.webp',
-    badge: './icon-pizza.webp',
+    icon: './icon-erp.webp',
+    badge: './icon-erp.webp',
     vibrate: [100, 50, 100],
     data: { url: './index.html' },
     actions: [

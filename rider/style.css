@@ -535,7 +535,7 @@ body {
 /* -------------------------------------------------------------------------- */
 .main-content {
     padding-top: calc(var(--header-height) + 20px);
-    padding-bottom: calc(var(--bottom-nav-height) + 30px);
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 30px);
     padding-left: 1rem;
     padding-right: 1rem;
 }
@@ -1852,7 +1852,7 @@ body {
 
     .main-content {
         padding-top: calc(var(--header-height) + 15px);
-        padding-bottom: calc(var(--bottom-nav-height) + 30px);
+        padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 30px);
         padding-left: 15px;
         padding-right: 15px;
     }

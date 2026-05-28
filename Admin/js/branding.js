@@ -8,11 +8,8 @@ import { cleanupLiveRiderTracker } from './features/tracker.js';
 import { cleanupRiderAnalytics } from './features/rider-analytics.js';
 import * as ui from './ui.js';
 
-
 export function clearStateForOutletSwitch() {
     console.log("[State] Clearing state for outlet isolation...");
-    
-    // 1. Detach all listeners first
     cleanupCatalog();
     cleanupRiders();
     cleanupInventory();
@@ -20,8 +17,7 @@ export function clearStateForOutletSwitch() {
     cleanupFeedbacks();
     cleanupLiveRiderTracker();
     cleanupRiderAnalytics();
-    
-    // 2. Clear relevant state arrays/objects
+
     state.categories = [];
     state.allWalkinDishes = [];
     state.ordersMap.clear();
@@ -30,8 +26,7 @@ export function clearStateForOutletSwitch() {
     state.lastDishesSnap = null;
     state.ridersList = [];
     state.riderStatsData = {};
-    
-    // 3. Clear UI containers (optional but recommended to prevent flash of old data)
+
     const containers = [
         'categoryList', 'menuGrid', 'walkinDishGrid', 'walkinCategoryTabs',
         'ordersTable', 'ordersTableFull', 'liveOrdersTable', 'ridersTable'
@@ -42,62 +37,34 @@ export function clearStateForOutletSwitch() {
     });
 }
 
-
 export function updateBranding() {
     const badge = document.getElementById('outletBadge');
     const mobBadge = document.getElementById('mobileOutletBadge');
     const sidebarBrand = document.getElementById('sidebarBrandText');
-    const brand = state.currentOutlet === 'cake' ? 'cake' : 'pizza';
-    const isPizza = brand === 'pizza';
 
-    const label = isPizza ? 'PIZZA OUTLET' : 'CAKES OUTLET';
-    const primary = isPizza ? 'var(--primary-pizza)' : 'var(--primary-cake)';
-    const primaryDark = isPizza ? 'var(--primary-dark-pizza)' : 'var(--primary-dark-cake)';
+    const label = state.currentOutlet === 'cake' ? 'CAKES' : 'PIZZA';
+    if (badge) badge.innerText = label;
+    if (mobBadge) mobBadge.innerText = label;
+    if (sidebarBrand) sidebarBrand.innerText = 'ROSHANI ERP';
 
-    // Apply color variables via data-outlet
-    document.documentElement.setAttribute('data-outlet', brand);
-    
-    // Compatibility for any remaining hardcoded var usage
-    const root = document.documentElement;
-    root.style.setProperty('--primary-orange', primary);
+    document.title = 'Roshani ERP | Admin Dashboard';
 
-
-    if (badge) {
-        badge.innerText = label;
-        badge.classList.remove('brand-pizza-bg', 'brand-cake-bg');
-        badge.classList.add(isPizza ? 'brand-pizza-bg' : 'brand-cake-bg');
-    }
-
-    if (mobBadge) {
-        mobBadge.innerText = label;
-        mobBadge.classList.remove('brand-pizza-bg', 'brand-cake-bg');
-        mobBadge.classList.add(isPizza ? 'brand-pizza-bg' : 'brand-cake-bg');
-    }
-
-    if (sidebarBrand) {
-        sidebarBrand.innerText = isPizza ? 'ROSHANI PIZZA' : 'ROSHANI CAKES';
-    }
-
-    document.title = (isPizza ? 'Roshani Pizza' : 'Roshani Cakes') + ' | Admin Dashboard';
-
+    const isPizza = state.currentOutlet !== 'cake';
     const ridersMenu = document.getElementById("menu-riders");
     if (ridersMenu) {
-        // Only show riders for Pizza or Super Admins
         const isSuper = state.adminData && state.adminData.isSuper;
         ridersMenu.classList.toggle('hidden', !(isPizza || isSuper));
     }
 }
 
 export function switchOutlet(val) {
-    // 100% Compatibility & Security Check
     const isAdmin = state.adminData;
     const canSwitch = isAdmin && (isAdmin.isSuper || isAdmin.isSupreme);
 
     if (!canSwitch && isAdmin && isAdmin.outlet !== val) {
         console.error("[Security] Unauthorized switch attempt blocked:", val);
         import('./utils.js').then(u => u.showToast("Unauthorized: Access restricted to your assigned outlet", "error"));
-        
-        // Revert UI if needed
+
         const desktopSwitcher = document.getElementById('outletSwitcher');
         const mobileSwitcher = document.getElementById('outletSwitcherMobile');
         if (desktopSwitcher) desktopSwitcher.value = state.currentOutlet;
@@ -110,20 +77,17 @@ export function switchOutlet(val) {
     state.currentOutlet = val;
     window.currentOutlet = val;
 
-    // Sync switchers
     const desktopSwitcher = document.getElementById('outletSwitcher');
     const mobileSwitcher = document.getElementById('outletSwitcherMobile');
     if (desktopSwitcher && desktopSwitcher.value !== val) desktopSwitcher.value = val;
     if (mobileSwitcher && mobileSwitcher.value !== val) mobileSwitcher.value = val;
 
-
     updateBranding();
     initRealtimeListeners();
 
-    // Refresh active tab
     const activeTabId = document.querySelector('.nav-links li.active')?.id.replace('menu-', '') || 'dashboard';
     ui.switchTab(activeTabId);
-    
+
     console.log("[Branding] Admin switched outlet to:", val);
 }
 

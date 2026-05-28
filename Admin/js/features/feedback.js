@@ -3,11 +3,12 @@
  * Handles customer feedback retrieval and rendering.
  */
 
-import { Outlet } from '../firebase.js';
-import { escapeHtml, initPagination } from '../utils.js';
+import { Outlet, onValue } from '../firebase.js';
+import { escapeHtml, initPagination, getSkeletonRows } from '../utils.js';
 
 const FB_PAGE_SIZE = 30;
 let _fbPage = 1;
+let _feedbackUnsub = null;
 
 /**
  * INITIALIZE FEEDBACK LISTENERS
@@ -16,11 +17,14 @@ export function loadFeedbacks() {
     const tableBody = document.getElementById("feedbackTableBody");
     if (!tableBody) return;
 
+    // Show skeleton while data loads
+    tableBody.innerHTML = getSkeletonRows(5, 5);
+
     // Detach previous to prevent duplicates
     cleanupFeedbacks();
 
     // Listen for new feedback
-    Outlet.ref("feedbacks").on("value", snap => {
+    _feedbackUnsub = onValue(Outlet.ref("feedbacks"), snap => {
         tableBody.innerHTML = "";
         const feedbacks = [];
         snap.forEach(child => {
@@ -94,5 +98,8 @@ export function loadFeedbacks() {
  */
 export function cleanupFeedbacks() {
     console.log("[Performance] Cleaning up Feedback listeners...");
-    Outlet.ref("feedbacks").off();
+    if (_feedbackUnsub) {
+        _feedbackUnsub();
+        _feedbackUnsub = null;
+    }
 }

@@ -3,9 +3,9 @@
  * Analytics and performance monitoring for delivery personnel.
  */
 
-import { db, Outlet } from '../firebase.js';
+import { Outlet, get, query, orderByChild, startAt, endAt } from '../firebase.js';
 import { state } from '../state.js';
-import { escapeHtml, showToast, formatDate, getISTDateString } from '../utils.js';
+import { escapeHtml, showToast, formatDate, getISTDateString, getSkeletonRows } from '../utils.js';
 import { settleRiderWallet } from './riders.js';
 
 let riderEarningsChart = null;
@@ -119,7 +119,11 @@ export async function generateRiderPerformanceReport() {
         const fromStr = `${dFrom.toISOString().split('T')[0]}T00:00:00.000Z`;
         const toStr = `${dTo.toISOString().split('T')[0]}T23:59:59.999Z`;
 
-        const ordersSnap = await Outlet.ref("orders").orderByChild("createdAt").startAt(fromStr).endAt(toStr).once('value');
+        // Show skeleton while data loads
+        const raTbody = document.getElementById('riderAnalyticsTableBody');
+        if (raTbody) raTbody.innerHTML = getSkeletonRows(5, 5);
+
+        const ordersSnap = await get(query(Outlet.ref("orders"), orderByChild("createdAt"), startAt(fromStr), endAt(toStr)));
         
         const allOrders = [];
         ordersSnap.forEach(child => {

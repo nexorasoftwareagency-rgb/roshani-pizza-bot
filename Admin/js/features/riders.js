@@ -1,6 +1,7 @@
-import { db, auth, secondaryAuth, secondaryAuthAvailable, Outlet, ServerValue } from '../firebase.js';
+import { db, auth, secondaryAuth, secondaryAuthAvailable, Outlet, serverTimestamp, ref, get, set, push, update, runTransaction, remove, query, orderByChild, equalTo, onValue, signOut, sendPasswordResetEmail, createUserWithEmailAndPassword } from '../firebase.js';
 import { state } from '../state.js';
-import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm, addRiderNotification, initPagination } from '../utils.js';
+import { showDeleteConfirm } from '../ui-utils.js';
+import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm, addRiderNotification, initPagination, getSkeletonRows } from '../utils.js';
 const RIDERS_PAGE_SIZE = 30;
 let _riderPage = 1;
 import { uploadImage } from '../firebase.js';
@@ -14,23 +15,24 @@ export function loadRiders() {
     // Detach previous listeners
     cleanupRiders();
 
-    const ridersRef = db.ref("riders");
+    // Show skeleton while data loads
+    const ridersTbody = document.getElementById('ridersTable');
+    if (ridersTbody) ridersTbody.innerHTML = getSkeletonRows(5, 6);
+
+    const ridersRef = ref(db, "riders");
     const statsRef = Outlet.ref("riderStats");
     
     console.log(`[Riders] Initializing listeners at: ${ridersRef.toString()}`);
     
-    // Ensure we are online
-    db.goOnline();
-
     // Listen for performance stats
-    statsRef.on("value", s => {
+    onValue(statsRef, s => {
         state.riderStatsData = s.val() || {};
         if (state.ridersList.length > 0) renderRiders();
     });
 
     // Listen for riders
-    ridersRef.on("value", snapshot => {
-        console.log(`[Riders] Data received: ${snapshot.numChildren()} items`);
+    onValue(ridersRef, snapshot => {
+        console.log(`[Riders] Data received: ${Object.keys(snapshot.val() || {}).length} items`);
         const data = snapshot.val();
         state.ridersList = [];
         if (data) {
@@ -47,6 +49,18 @@ export function loadRiders() {
             import('./orders.js').then(m => m.renderOrders(state.lastOrdersSnap));
         }
     });
+
+    // Toggle show all riders
+    const toggleEl = document.getElementById('showAllRidersToggle');
+    if (toggleEl && !toggleEl.dataset.listenerAttached) {
+        toggleEl.dataset.listenerAttached = '1';
+        toggleEl.addEventListener('change', (e) => {
+            state.showAllRiders = e.target.checked;
+            const textEl = document.getElementById('riderToggleText');
+            if (textEl) textEl.innerText = e.target.checked ? 'All' : 'Online';
+            renderRiders();
+        });
+    }
 }
 
 /**
@@ -54,9 +68,8 @@ export function loadRiders() {
  * Detaches listeners to save bandwidth on Spark plan.
  */
 export function cleanupRiders() {
-    console.log("[Riders] Detaching listeners...");
-    db.ref("riders").off();
-    Outlet.ref("riderStats").off();
+    console.log("[Riders] Listeners detached by module unload pattern.");
+    // Listeners are managed via onValue cleanup; on re-init they are replaced.
 }
 
 /**
@@ -101,7 +114,7 @@ export function renderRiders(searchTerm = "") {
         }
 
         const statusClass = displayStatus.toLowerCase().replace(/\s+/g, '-');
-        const profileImg = r.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(r.name) + "&background=random";
+        const profileImg = r.photoUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='20' fill='%23f36b21'/%3E%3Ctext x='20' y='26' font-size='18' fill='white' text-anchor='middle' font-family='sans-serif'%3E" + (r.name ? encodeURIComponent(r.name.charAt(0).toUpperCase()) : '%3F') + "%3C/text%3E%3C/svg%3E";
 
         if (table) {
             const maskedPhone = r.phone ? '******' + escapeHtml(r.phone.slice(-4)) : 'N/A';
@@ -174,8 +187,13 @@ export function renderRiders(searchTerm = "") {
         }
 
         if (activeDashboard) {
+            if (!state.showAllRiders && displayStatus === "Offline") return;
+
             const card = document.createElement('div');
             card.className = `rider-status-card-v4 ${statusClass} premium-shadow-v4`;
+            if (state.showAllRiders && displayStatus === "Offline") {
+                card.classList.add('greyed-out');
+            }
             const safeName = escapeHtml(r.name || "Rider");
             const safePhoto = (r.profilePhoto || profileImg).replace(/"/g, '&quot;');
             const safeStatus = escapeHtml(displayStatus);
@@ -328,11 +346,9 @@ export async function saveRiderAccount() {
         return;
     }
 
-    // Generate secure temp password if new account and no password provided
     if (!state.isEditRiderMode && !pass) {
         pass = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4).toUpperCase();
-        navigator.clipboard.writeText(pass);
-        showToast("Rider Password Generated & Copied to Clipboard!", "success");
+        showPasswordModal(pass);
     }
 
     const fatherName = document.getElementById('riderFatherName').value.trim();
@@ -349,11 +365,13 @@ export async function saveRiderAccount() {
     }
 
     if (phone && !/^\d{10}$/.test(phone)) {
+        closePasswordModal();
         showToast("Invalid Phone Number! Must be 10 digits.", "error");
         return;
     }
 
     if (!/^\d{12}$/.test(aadharNo)) {
+        closePasswordModal();
         showToast("Invalid Aadhar Number! It must be exactly 12 digits.", "error");
         return;
     }
@@ -385,18 +403,19 @@ export async function saveRiderAccount() {
                 updatedAt: Date.now()
             };
 
-            await db.ref(`riders/${riderId}`).update(updateData);
+            await update(ref(db, `riders/${riderId}`), updateData);
             logAudit("Riders", `Updated Rider: ${name}`, riderId);
             showToast("Rider updated successfully!", "success");
             hideRiderModal();
         } else {
             // CREATE NEW RIDER
             if (!secondaryAuthAvailable) {
+                closePasswordModal();
                 showToast("Secondary Auth Service unavailable. Cannot create account.", "error");
                 return;
             }
 
-            const userCredential = await secondaryAuth.createUserWithEmailAndPassword(email, pass);
+            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, pass);
             const uid = userCredential.user.uid;
 
             const riderData = {
@@ -406,15 +425,17 @@ export async function saveRiderAccount() {
                 createdAt: Date.now()
             };
 
-            await db.ref(`riders/${uid}`).set(riderData);
-            await secondaryAuth.signOut(); // Security: Sign out secondary user immediately
+            await set(ref(db, `riders/${uid}`), riderData);
+            await signOut(secondaryAuth); // Security: Sign out secondary user immediately
 
             logAudit("Riders", `Created New Rider: ${name}`, uid);
+            closePasswordModal();
             showToast("Rider account created successfully!", "success");
             hideRiderModal();
         }
     } catch (error) {
         console.error("Rider Save Error:", error);
+        closePasswordModal();
         showToast(standardizeAuthError(error), "error");
         if (statusLabel) statusLabel.classList.add('hidden');
     }
@@ -425,15 +446,15 @@ export async function saveRiderAccount() {
  */
 export function deleteRider(id) {
     requireAdminReauth(async () => {
-        if (!(await showConfirm("Are you sure you want to delete this rider? This will remove them from the system."))) return;
+        const riderRef = ref(db, `riders/${id}`);
+        const snap = await get(riderRef);
+        const riderName = snap.val()?.name || "Unknown";
+
+        if (!(await showDeleteConfirm(riderName))) return;
         haptic();
 
         try {
-            const riderRef = db.ref(`riders/${id}`);
-            const snap = await riderRef.once('value');
-            const riderName = snap.val()?.name || "Unknown";
-            
-            await riderRef.remove();
+            await remove(riderRef);
             logAudit("Riders", `Deleted Rider: ${riderName}`, id);
             showToast("Rider removed successfully.", "success");
         } catch (error) {
@@ -451,7 +472,7 @@ export async function resetRiderPassword(email) {
     haptic();
 
     try {
-        await auth.sendPasswordResetEmail(email);
+        await sendPasswordResetEmail(auth, email);
         logAudit("Riders", `Sent Password Reset: ${email}`, "Global");
         showToast("Reset link sent to rider email.", "success");
     } catch (error) {
@@ -484,8 +505,8 @@ export async function settleRiderWallet(riderId, riderName, customTimeLimit = nu
         const outlets = ['pizza', 'cake'];
         for (const outlet of outlets) {
             // Query orders for this rider
-            const ordersRef = db.ref(`${outlet}/orders`);
-            const snap = await ordersRef.orderByChild('riderId').equalTo(riderId).once('value');
+            const ordersRef = ref(db, `${outlet}/orders`);
+            const snap = await get(query(ordersRef, orderByChild('riderId'), equalTo(riderId)));
             
             if (snap.exists()) {
                 snap.forEach(child => {
@@ -525,7 +546,7 @@ export async function settleRiderWallet(riderId, riderName, customTimeLimit = nu
             ordersClearedCount: ordersToSettle.length
         };
 
-        await db.ref().update(updates);
+        await update(ref(db), updates);
         logAudit("Riders", `Settled Wallet for ${riderName}: ₹${pendingCash}`, riderId);
         showToast(`Successfully settled ₹${pendingCash} for ${riderName}.`, "success");
 
@@ -544,13 +565,13 @@ export async function settleRiderWallet(riderId, riderName, customTimeLimit = nu
                 
                 // Use the first order's outlet or default to pizza
                 const botOutlet = ordersToSettle[0]?.outlet || 'pizza';
-                const cmdRef = db.ref(`bot/${botOutlet}/commands`).push();
+                const cmdRef = push(ref(db, `bot/${botOutlet}/commands`));
                 
-                await cmdRef.set({
+                await set(cmdRef, {
                     action: "SEND_GENERIC_MESSAGE",
                     phone: cleanPhone,
                     message: message,
-                    timestamp: ServerValue.TIMESTAMP
+                    timestamp: serverTimestamp()
                 });
                 console.log(`[Riders] WhatsApp settlement notification triggered for ${cleanPhone} via ${botOutlet} bot.`);
             }
@@ -561,5 +582,91 @@ export async function settleRiderWallet(riderId, riderName, customTimeLimit = nu
     } catch (error) {
         console.error("Settlement Error:", error);
         showToast("Failed to settle wallet. Check console for details.", "error");
+    }
+}
+
+/* ── Password Reveal Modal ── */
+let _passwordModal = null;
+let _passwordModalTimer = null;
+
+function showPasswordModal(password) {
+    if (_passwordModal) closePasswordModal();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'passwordRevealOverlay';
+    overlay.style.cssText = `
+        position: fixed; inset: 0; z-index: 99999;
+        background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+        display: flex; align-items: center; justify-content: center;
+    `;
+
+    overlay.innerHTML = `
+        <div style="background: #1c1c1c; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+                    padding: 32px; max-width: 420px; width: 90%; text-align: center;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.5); position: relative;">
+            <button id="closePasswordModalBtn" style="position: absolute; top: 12px; right: 16px; background: none; border: none; color: #666; font-size: 22px; cursor: pointer; padding: 4px; line-height: 1;">&times;</button>
+            <h3 style="color: #fff; margin: 0 0 8px; font-size: 20px; font-weight: 700;">New Rider Credentials</h3>
+            <p style="color: #f87171; font-size: 13px; margin: 0 0 20px; font-weight: 600;">
+                ⚠️ This password will not be shown again.
+            </p>
+            <div style="background: #0d0d0d; border: 1px solid #333; border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+                <div id="passwordDisplay" style="font-family: 'Courier New', monospace; font-size: 24px; letter-spacing: 2px; color: #fff; word-break: break-all; user-select: all;">
+                    ${'•'.repeat(password.length)}
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 12px;">
+                <button id="toggleRevealBtn" style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #333; background: #262626; color: #ccc; cursor: pointer; font-size: 13px; font-weight: 600;">
+                    👁️ Reveal
+                </button>
+                <button id="copyPasswordBtn" style="flex: 1; padding: 10px; border-radius: 10px; border: none; background: var(--primary, #3b82f6); color: #fff; cursor: pointer; font-size: 13px; font-weight: 700;">
+                    📋 Copy
+                </button>
+            </div>
+            <div id="copyStatus" style="font-size: 12px; color: #6b7280; min-height: 18px;"></div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    _passwordModal = overlay;
+
+    const passwordDisplay = overlay.querySelector('#passwordDisplay');
+    const toggleBtn = overlay.querySelector('#toggleRevealBtn');
+    const copyBtn = overlay.querySelector('#copyPasswordBtn');
+    const copyStatus = overlay.querySelector('#copyStatus');
+
+    let isRevealed = false;
+
+    toggleBtn.onclick = () => {
+        isRevealed = !isRevealed;
+        passwordDisplay.textContent = isRevealed ? password : '•'.repeat(password.length);
+        toggleBtn.textContent = isRevealed ? '🙈 Hide' : '👁️ Reveal';
+    };
+
+    copyBtn.onclick = async () => {
+        try {
+            await navigator.clipboard.writeText(password);
+            copyStatus.textContent = '✅ Copied! Auto-clearing in 30s…';
+            copyStatus.style.color = '#34d399';
+            clearTimeout(_passwordModalTimer);
+            _passwordModalTimer = setTimeout(() => {
+                navigator.clipboard.writeText('').catch(() => {});
+                _passwordModalTimer = null;
+            }, 30000);
+        } catch {
+            copyStatus.textContent = '❌ Copy failed. Select and copy manually.';
+            copyStatus.style.color = '#f87171';
+        }
+    };
+
+    const dismiss = () => closePasswordModal();
+
+    overlay.querySelector('#closePasswordModalBtn').onclick = dismiss;
+    overlay.onclick = (e) => { if (e.target === overlay) dismiss(); };
+}
+
+function closePasswordModal() {
+    if (_passwordModal) {
+        _passwordModal.remove();
+        _passwordModal = null;
     }
 }
