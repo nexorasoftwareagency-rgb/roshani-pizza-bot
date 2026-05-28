@@ -31,15 +31,14 @@ fcmMessaging.onBackgroundMessage((payload) => {
 
 const CACHE_NAME = 'roshani-erp-v4.9.0';
 const ASSETS_TO_CACHE = [
-  './',
   './index.html',
   './style.css',
   './mobile-overrides.css',
   './branding.js',
   './firebase-config.js',
   './receipt-templates.js',
-  './js/init-appcheck.js',
   './manifest.json',
+  './icon-erp.webp',
   './js/main.js',
   './js/auth.js',
   './js/firebase.js',
