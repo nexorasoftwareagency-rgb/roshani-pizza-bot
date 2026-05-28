@@ -1133,6 +1133,7 @@ export async function saveDeliveredOrder(id, data) {
  * ORDER DRAWER (DETAILS)
  */
 export async function openOrderDrawer(id) {
+    window.openOrderDrawer = openOrderDrawer;
     const order = state.ordersMap.get(id);
     if (!order) return;
 
