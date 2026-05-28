@@ -66,6 +66,21 @@ export const auth = fb.auth();
 export const ServerValue = fb.database.ServerValue;
 export const EmailAuthProvider = fb.auth.EmailAuthProvider;
 
+// Enable offline persistence so cached data works when offline
+try {
+    db.enablePersistence().catch(err => {
+        if (err.code === 'failed-precondition') {
+            console.warn('[Firebase] Persistence failed: multiple tabs open (expected)');
+        } else if (err.code === 'unimplemented') {
+            console.warn('[Firebase] Persistence not supported by this browser');
+        } else {
+            console.warn('[Firebase] Persistence error:', err);
+        }
+    });
+} catch (e) {
+    // Silently ignore if called after database is already in use
+}
+
 // Monitor Connection State
 const connectedRef = db.ref('.info/connected');
 connectedRef.on('value', (snap) => {

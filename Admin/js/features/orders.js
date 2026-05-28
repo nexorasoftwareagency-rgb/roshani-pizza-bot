@@ -9,6 +9,7 @@ import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit, ca
 import { showAlert, addNotification, highlightOrder } from './notifications.js';
 import { showPaymentPicker } from '../ui-utils.js';
 import { autoDeductStock } from './inventory.js';
+import { sendToRider } from '../fcm-sender.js';
 
 
 /**
@@ -987,6 +988,7 @@ export async function assignRider(id, riderId) {
         
         // Notify Rider
         await addRiderNotification(riderId, "New Order Assigned!", `Order #${id.slice(-5)} for ₹${order.total} assigned to you.`, 'new');
+        sendToRider(riderId, "🚚 New Order Assigned!", `Order #${id.slice(-5)} for ₹${order.total} — Please check the app.`, { orderId: id });
 
         logAudit("Orders", `Assigned Rider: ${rider.name} to #${id.slice(-5)}`, id);
     } catch (e) {

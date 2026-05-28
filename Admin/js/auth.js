@@ -5,6 +5,8 @@ import * as ui from './ui.js';
 import { initRealtimeListeners } from './features/orders.js';
 import { loadRiders } from './features/riders.js';
 import { updateBranding } from './branding.js';
+import { setupAdminFCM } from './fcm-init.js';
+import { setupCapacitorFCM } from './capacitor-fcm.js';
 
 let idleTimer;
 const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
@@ -82,7 +84,7 @@ export function initAuth() {
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = '<span>Access Dashboard</span> <div class="btn-stitch-v4"></div>';
             }
-            localStorage.removeItem('adminIsLoggedIn');
+            sessionStorage.removeItem('adminIsLoggedIn');
             window.hideLoader?.();
             return;
         }
@@ -187,7 +189,7 @@ export function initAuth() {
 
         // Initialize Session
         state.adminData = adminData;
-        localStorage.setItem('adminIsLoggedIn', 'true');
+        sessionStorage.setItem('adminIsLoggedIn', 'true');
         logAudit('LOGIN_SUCCESS', { email: user.email });
         if (sessionStorage.getItem('PENDING_LOGIN_AUDIT') === 'true') {
             logAudit('LOGIN_ATTEMPT_SUCCESS', { email: user.email });
@@ -260,6 +262,9 @@ export function initAuth() {
         updateBranding();
         loadRiders();
         initRealtimeListeners();
+        setupCapacitorFCM(user.uid);
+        setupAdminFCM(user.uid);
+        initNewOrderNotifications();
         
         // Initial Tab Navigation (Respect Hash or Default to Dashboard)
         const initialTab = window.location.hash.replace('#', '') || 'dashboard';
@@ -318,6 +323,35 @@ export function userLogout() {
     removeActivityListeners();
     clearTimeout(idleTimer);
     auth.signOut();
+}
+
+// Track last notified order ID to avoid duplicate browser notifications
+let _lastNewOrder = '';
+
+function initNewOrderNotifications() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+    const outlet = window.currentOutlet || 'pizza';
+    const ref = db.ref(`${outlet}/orders`);
+    let initial = true;
+    ref.on('child_added', (snap) => {
+        if (initial) { initial = false; return; }
+        const order = snap.val();
+        if (!order || order.orderId === _lastNewOrder) return;
+        const status = (order.status || '').toLowerCase();
+        if (status !== 'placed') return;
+        _lastNewOrder = order.orderId;
+        if (Notification.permission === 'granted') {
+            const n = new Notification('🆕 New Order Received!', {
+                body: `#${order.orderId?.slice(-5) || snap.key?.slice(-5)} — ${order.customerName || 'Customer'} — ₹${order.total || 0}`,
+                icon: '/logo.png',
+                tag: `order-${snap.key}`
+            });
+            n.onclick = () => { window.focus(); ui.switchTab('orders'); n.close(); };
+        }
+    });
 }
 
 /**

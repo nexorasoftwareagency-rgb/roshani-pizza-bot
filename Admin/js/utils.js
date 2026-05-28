@@ -59,6 +59,37 @@ export const getFeeFromSlabs = (dist, slabs) => {
 import { showToast, showConfirm } from './ui-utils.js';
 export { showToast, showConfirm, showConfirm as confirmAction };
 
+export function initPagination(containerId, totalItems, pageSize, onPageChange) {
+    const container = document.getElementById(containerId);
+    if (!container) return { currentPage: 1, goToPage: () => {} };
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    let currentPage = 1;
+    container.innerHTML = '';
+    container.style.display = totalPages <= 1 ? 'none' : 'flex';
+    if (totalPages <= 1) return { currentPage: 1, goToPage: () => {} };
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'btn-pagination';
+    prevBtn.innerHTML = '← Prev';
+    prevBtn.disabled = true;
+    const info = document.createElement('span');
+    info.className = 'pagination-info';
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'btn-pagination';
+    nextBtn.innerHTML = 'Next →';
+    function update() {
+        info.textContent = `Page ${currentPage} of ${totalPages}`;
+        prevBtn.disabled = currentPage <= 1;
+        nextBtn.disabled = currentPage >= totalPages;
+    }
+    prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; update(); onPageChange(currentPage); } };
+    nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; update(); onPageChange(currentPage); } };
+    container.appendChild(prevBtn);
+    container.appendChild(info);
+    container.appendChild(nextBtn);
+    update();
+    return { currentPage: () => currentPage, goToPage: (p) => { currentPage = Math.max(1, Math.min(p, totalPages)); update(); onPageChange(currentPage); } };
+}
+
 export const playNotificationSound = () => {
     const audio = new Audio('assets/sounds/alert.mp3');
     audio.play().catch(e => console.warn('Audio playback failed:', e));

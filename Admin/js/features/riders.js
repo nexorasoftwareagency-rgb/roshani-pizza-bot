@@ -1,6 +1,8 @@
 import { db, auth, secondaryAuth, secondaryAuthAvailable, Outlet, ServerValue } from '../firebase.js';
 import { state } from '../state.js';
-import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm, addRiderNotification } from '../utils.js';
+import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm, addRiderNotification, initPagination } from '../utils.js';
+const RIDERS_PAGE_SIZE = 30;
+let _riderPage = 1;
 import { uploadImage } from '../firebase.js';
 import { requireAdminReauth } from '../auth.js';
 import { populateRiderSelect } from './rider-analytics.js';
@@ -64,7 +66,6 @@ export function renderRiders(searchTerm = "") {
     const table = document.getElementById("ridersTable");
     const activeDashboard = document.getElementById("riderStatusList");
 
-    // Summary Elements
     const statOnline = document.getElementById("rider-stat-online");
     const statBusy = document.getElementById("rider-stat-busy");
     const statOffline = document.getElementById("rider-stat-offline");
@@ -79,12 +80,12 @@ export function renderRiders(searchTerm = "") {
     let totalEarnings = 0;
 
     const query = (searchTerm || "").toLowerCase();
+    const allRows = [];
 
     state.ridersList.forEach(r => {
         const stats = state.riderStatsData[r.id] || { totalOrders: 0, avgDeliveryTime: 0, totalEarnings: 0 };
         totalEarnings += (stats.totalEarnings || 0);
 
-        // Determine precise status
         let displayStatus = r.status || "Offline";
         if (displayStatus === "Online" && r.currentOrder) displayStatus = "On Delivery";
 
@@ -92,7 +93,6 @@ export function renderRiders(searchTerm = "") {
         else if (displayStatus === "On Delivery") busyCount++;
         else offlineCount++;
 
-        // Filter Logic
         if (query) {
             const matches = (r.name || "").toLowerCase().includes(query) ||
                 (r.email || "").toLowerCase().includes(query) ||
@@ -103,19 +103,13 @@ export function renderRiders(searchTerm = "") {
         const statusClass = displayStatus.toLowerCase().replace(/\s+/g, '-');
         const profileImg = r.photoUrl || "https://ui-avatars.com/api/?name=" + encodeURIComponent(r.name) + "&background=random";
 
-        // 1. Populate Management Table
         if (table) {
-            const tr = document.createElement('tr');
-            tr.className = "premium-row-v4";
-            
-            // Mask phone for privacy in general list
             const maskedPhone = r.phone ? '******' + escapeHtml(r.phone.slice(-4)) : 'N/A';
             const safeEmail = escapeHtml(r.email || "");
             const safeName = escapeHtml(r.name || "Unnamed Rider");
             const safePhoto = (r.profilePhoto || profileImg).replace(/"/g, '&quot;');
             const safeId = escapeHtml(r.id);
-
-            tr.innerHTML = `
+            allRows.push(`<tr class="premium-row-v4">
                 <td data-label="Rider">
                     <div class="identity-chip-v4">
                         <img src="${safePhoto}" class="identity-avatar-v4" alt="${safeName}">
@@ -176,11 +170,9 @@ export function renderRiders(searchTerm = "") {
                         </button>
                     </div>
                 </td>
-            `;
-            table.appendChild(tr);
+            </tr>`);
         }
 
-        // 2. Populate Active Dashboard (If exists)
         if (activeDashboard) {
             const card = document.createElement('div');
             card.className = `rider-status-card-v4 ${statusClass} premium-shadow-v4`;
@@ -216,14 +208,22 @@ export function renderRiders(searchTerm = "") {
         }
     });
 
-    // Update Summary
+    if (table) {
+        const start = (_riderPage - 1) * RIDERS_PAGE_SIZE;
+        table.innerHTML = allRows.slice(start, start + RIDERS_PAGE_SIZE).join('');
+        initPagination('ridersPagination', allRows.length, RIDERS_PAGE_SIZE, (p) => {
+            _riderPage = p;
+            const s = (p - 1) * RIDERS_PAGE_SIZE;
+            table.innerHTML = allRows.slice(s, s + RIDERS_PAGE_SIZE).join('');
+            if (window.lucide) window.lucide.createIcons({ root: table });
+        });
+    }
+
     if (statOnline) statOnline.innerText = onlineCount;
     if (statBusy) statBusy.innerText = busyCount;
     if (statOffline) statOffline.innerText = offlineCount;
     if (statEarnings) statEarnings.innerText = "₹" + totalEarnings.toLocaleString();
 
-    // Re-init icons if Lucide is available
-    // Re-init icons only in management container
     const manageTab = document.getElementById('management-tab-container');
     if (window.lucide) {
         if (manageTab) window.lucide.createIcons({ root: manageTab });
@@ -490,7 +490,8 @@ export async function settleRiderWallet(riderId, riderName, customTimeLimit = nu
             if (snap.exists()) {
                 snap.forEach(child => {
                     const o = child.val();
-                    const orderTime = o.createdAt || o.timestamp || o.assignedAt || 0;
+                    const rawTime = o.createdAt || o.timestamp || o.assignedAt || 0;
+                    const orderTime = typeof rawTime === 'string' ? new Date(rawTime).getTime() : rawTime;
                     const isCash = (o.paymentMethod || "").toUpperCase() === "CASH";
                     const status = (o.status || "").toLowerCase();
                     

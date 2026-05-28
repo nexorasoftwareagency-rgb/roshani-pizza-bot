@@ -4,7 +4,10 @@
  */
 
 import { Outlet } from '../firebase.js';
-import { escapeHtml } from '../utils.js';
+import { escapeHtml, initPagination } from '../utils.js';
+
+const FB_PAGE_SIZE = 30;
+let _fbPage = 1;
 
 /**
  * INITIALIZE FEEDBACK LISTENERS
@@ -36,7 +39,7 @@ export function loadFeedbacks() {
             return;
         }
 
-        const feedbackHTML = feedbacks.map(f => {
+        const allRows = feedbacks.map(f => {
             const stars = "⭐".repeat(f.rating || 0);
             const dateStr = f.timestamp ? new Date(f.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : "N/A";
 
@@ -76,9 +79,13 @@ export function loadFeedbacks() {
                     </td>
                 </tr>
             `;
-        }).join('');
-        tableBody.innerHTML = feedbackHTML;
+        });
+
+        const start = (_fbPage - 1) * FB_PAGE_SIZE;
+        const pageRows = allRows.slice(start, start + FB_PAGE_SIZE);
+        tableBody.innerHTML = pageRows.join('');
         if (window.lucide) window.lucide.createIcons({ root: tableBody });
+        initPagination('feedbackPagination', allRows.length, FB_PAGE_SIZE, (p) => { _fbPage = p; loadFeedbacks(); });
     });
 }
 

@@ -24,3 +24,11 @@ messaging.onBackgroundMessage((payload) => {
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || './index.html';
+  event.waitUntil(
+    clients.openWindow(targetUrl)
+  );
+});

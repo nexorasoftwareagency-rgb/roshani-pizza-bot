@@ -5,7 +5,8 @@ window.firebaseConfig = {
   projectId: "prashant-pizza-e86e4",
   messagingSenderId: "857471482885",
   appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c",
-  appCheckDebugToken: "42630bec-e9f0-486a-8d25-fa198bd527dc"
+  appCheckDebugToken: "42630bec-e9f0-486a-8d25-fa198bd527dc",
+  fcmServerKey: "WNNE2EvGxudhzyAd1kcXUu1YgX3O5xrd0DkL35pxRF0"
 };
 
 window.reCaptchaSiteKey = "6LeAlcwsAAAAAH4F3p5aCNvyPlhC3BRHOXTdDEGK";

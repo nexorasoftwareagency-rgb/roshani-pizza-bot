@@ -23,6 +23,7 @@ const {
 
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
+const admin = require('firebase-admin');
 const { getData, setData, updateData, db, pushData, getUserProfile, saveUserProfile } = require('./firebase');
 
 let redisClient;
@@ -648,6 +649,30 @@ async function sendCartView(sock, sender, user, isAdded = false) {
     msg += `_Reply with 1, 2, 3 or 0_`;
     user.step = "CART_VIEW";
     return sock.sendMessage(sender, { text: await appendContactInfo(msg, user.outlet) });
+}
+
+async function sendFCMToAdmins(orderId, order) {
+    try {
+        const outlet = order.outlet || 'pizza';
+        const snap = await db.ref('admins').once('value');
+        const admins = snap.val();
+        if (!admins) return;
+        const tokens = Object.values(admins).map(a => a.fcmToken).filter(Boolean);
+        if (tokens.length === 0) return;
+        const unique = [...new Set(tokens)];
+        const payload = {
+            notification: {
+                title: `🆕 New Order #${orderId.slice(-5)}`,
+                body: `${order.customerName || 'Customer'} · ₹${order.total || 0} · ${outlet.toUpperCase()}`
+            },
+            data: { orderId, outlet, type: 'new_order' }
+        };
+        const results = await admin.messaging().sendEachForMulticast({ tokens: unique, ...payload });
+        const failed = results.responses.filter(r => !r.success).length;
+        if (failed > 0) console.warn(`[FCM] ${failed}/${unique.length} admin notifications failed`);
+    } catch (e) {
+        console.error('[FCM] sendFCMToAdmins error:', e.message);
+    }
 }
 
 async function notifyAdmin(sock, orderId, order, type = 'NEW') {
@@ -1837,6 +1862,7 @@ async function startBot() {
 
                         await setData(`orders/${orderId}`, finalOrder, user.outlet);
                         await notifyAdmin(sock, orderId, finalOrder, 'NEW');
+                        sendFCMToAdmins(orderId, finalOrder);
 
                         // Save user profile for next time
                         await saveUserProfile(sender, {

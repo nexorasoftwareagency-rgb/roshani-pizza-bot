@@ -216,8 +216,34 @@ export const switchTab = async (tabId, skipHistory = false) => {
         // --- PHASE 3.5: ICON SYNCHRONIZATION ---
         // Ensure all dynamic icons in the target tab are properly rendered
         if (window.lucide) window.lucide.createIcons({ root: target });
+
+        // --- PHASE 3.6: MOBILE TABLE LABELS ---
+        applyDataLabels();
     }
 };
+
+export const applyDataLabels = () => {
+    const isMobile = window.innerWidth <= 768;
+    document.querySelectorAll('table.premium-table-v4, table.mobile-card-table').forEach(table => {
+        const headers = [];
+        table.querySelectorAll('thead th').forEach(th => {
+            headers.push(th.textContent.trim());
+        });
+        if (headers.length === 0) return;
+        table.querySelectorAll('tbody tr').forEach(row => {
+            row.querySelectorAll('td').forEach((td, index) => {
+                if (index < headers.length) {
+                    td.setAttribute('data-label', headers[index]);
+                }
+            });
+        });
+        table.classList.toggle('mobile-card-table', isMobile);
+    });
+};
+
+const tableObserver = new MutationObserver(() => applyDataLabels());
+const observerTarget = document.getElementById('main-content') || document.body;
+tableObserver.observe(observerTarget, { childList: true, subtree: true });
 
 export const toggleMobileCart = (state) => import('./features/pos.js').then(m => m.toggleMobileCart(state));
 
@@ -271,6 +297,15 @@ export class ThemeManager {
 }
 
 export const themeManager = new ThemeManager();
+
+// --- INITIAL DATA-LABEL APPLICATION ---
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyDataLabels);
+} else {
+    applyDataLabels();
+}
+
+window.addEventListener('resize', applyDataLabels);
 
 // --- BROWSER HISTORY ORCHESTRATION ---
 window.addEventListener('popstate', (event) => {

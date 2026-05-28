@@ -1,8 +1,10 @@
 import { db, Outlet, ServerValue } from '../firebase.js';
 import { state } from '../state.js';
-import { logAudit, showToast, confirmAction } from '../utils.js';
+import { logAudit, showToast, confirmAction, initPagination } from '../utils.js';
 
 let inventoryListener = null;
+const INV_PAGE_SIZE = 30;
+let _invPage = 1;
 
 export function initInventory() {
     console.log("[Inventory] Initializing Simplified Module...");
@@ -64,14 +66,12 @@ function renderInventoryTable(data) {
         return;
     }
 
-    let html = '';
-    // Sort items by name
     const sorted = Object.entries(data).sort((a, b) => a[1].name.localeCompare(b[1].name));
+    const allItems = [];
 
     sorted.forEach(([id, item]) => {
         const isLow = item.stock <= (item.threshold || 0);
-        
-        html += `
+        allItems.push(`
             <tr class="${isLow ? 'row-alert' : ''}">
                 <td class="p-l-25">
                     <div class="flex-column">
@@ -100,10 +100,12 @@ function renderInventoryTable(data) {
                     </div>
                 </td>
             </tr>
-        `;
+        `);
     });
 
-    tableBody.innerHTML = html;
+    const start = (_invPage - 1) * INV_PAGE_SIZE;
+    tableBody.innerHTML = allItems.slice(start, start + INV_PAGE_SIZE).join('');
+    initPagination('inventoryPagination', allItems.length, INV_PAGE_SIZE, (p) => { _invPage = p; renderInventoryTable(); });
     if (window.lucide) window.lucide.createIcons();
 }
 

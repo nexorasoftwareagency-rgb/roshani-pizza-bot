@@ -3,7 +3,34 @@ if (self.location.protocol !== 'https:' && self.location.hostname !== 'localhost
   throw new Error('Service Worker requires HTTPS');
 }
 
-const CACHE_NAME = 'roshani-rider-v7.0';
+// Firebase Messaging for background FCM handling
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSyDcx-SN5eak8PAs-8NtTGelJ_sICr5yb7Y",
+  authDomain: "prashant-pizza-e86e4.firebaseapp.com",
+  databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
+  projectId: "prashant-pizza-e86e4",
+  messagingSenderId: "857471482885",
+  appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c"
+});
+
+const fcmMessaging = firebase.messaging();
+
+fcmMessaging.onBackgroundMessage((payload) => {
+  const notificationTitle = payload.notification?.title || 'New Order';
+  const notificationOptions = {
+    body: payload.notification?.body || 'Check your rider portal.',
+    icon: './icon-512.png',
+    badge: './icon-512.png',
+    vibrate: [100, 50, 100],
+    data: { url: payload.notification?.data?.url || './index.html' }
+  };
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+const CACHE_NAME = 'roshani-rider-v7.1';
 const ASSETS = [
   './',
   './login.html',

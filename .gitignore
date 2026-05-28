@@ -7,3 +7,9 @@ session_data/
 users.json
 
 firebase database.json
+
+# Capacitor native projects (auto-generated)
+capacitor-admin/android/
+capacitor-rider/android/
+capacitor-admin/node_modules/
+capacitor-rider/node_modules/
