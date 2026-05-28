@@ -4902,6 +4902,49 @@ body {
 .text-white-50 { color: rgba(255, 255, 255, 0.5); }
 
 /* Order Drawer */
+.drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 5999;
+    display: none;
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+}
+.drawer-overlay.active {
+    display: block;
+}
+.drawer-content {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    color: #1e293b;
+    z-index: 6000;
+    border-radius: 24px 24px 0 0;
+    padding: 20px;
+    padding-bottom: calc(20px + var(--safe-bottom, 0px));
+    box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.2);
+    transition: bottom 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    max-height: 85vh;
+    overflow-y: auto;
+}
+.drawer-content:not(.active) {
+    bottom: -100%;
+    pointer-events: none;
+}
+.drawer-content.active {
+    bottom: 0;
+    pointer-events: auto;
+}
+#orderDrawerBody {
+    color: #1e293b;
+}
+#orderDrawerBody .text-muted,
+#orderDrawerBody .text-muted-small {
+    color: #64748b !important;
+}
 .drawer-close-btn {
     position: absolute;
     top: 16px;

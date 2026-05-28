@@ -1149,12 +1149,12 @@ export async function openOrderDrawer(id) {
         <div class="premium-row-v4 p-12 mb-8 br-12" style="background: #f8fafc; border: 1px solid #e2e8f0;">
             <div class="flex-between flex-center">
                 <div class="identity-info-v4">
-                    <span class="name font-600 color-primary" style="font-size:14px;">${escapeHtml(item.name || "Item")}</span>
-                    <span class="sub" style="font-size:11px;">${escapeHtml(item.size || 'N/A')}</span>
+                    <span class="name font-600" style="font-size:14px; color:#1e293b;">${escapeHtml(item.name || "Item")}</span>
+                    <span class="sub" style="font-size:11px; color:#64748b;">${escapeHtml(item.size || 'N/A')}</span>
                 </div>
                 <div class="identity-info-v4 text-right">
-                    <span class="name font-700" style="font-size:14px;">₹${item.price || item.total || 0}</span>
-                    <span class="sub" style="font-size:10px;">Qty: ${item.qty || 1}</span>
+                    <span class="name font-700" style="font-size:14px; color:#0f172a;">₹${item.price || item.total || 0}</span>
+                    <span class="sub" style="font-size:10px; color:#64748b;">Qty: ${item.qty || 1}</span>
                 </div>
             </div>
             ${(item.addon && item.addon !== 'None') || (item.addons && item.addons.length > 0) ? `
@@ -1173,8 +1173,8 @@ export async function openOrderDrawer(id) {
         <div class="drawer-header-v4 p-20 border-b-ghost">
             <div class="flex-between flex-center mb-10">
                 <div class="identity-info-v4">
-                    <span class="name fs-20 font-800 color-primary">Order #${escapeHtml(order.orderId || id.slice(-5))}</span>
-                    <span class="sub">${new Date(order.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                    <span class="name fs-20 font-800" style="color:#f36b21;">Order #${escapeHtml(order.orderId || id.slice(-5))}</span>
+                    <span class="sub" style="color:#64748b;">${new Date(order.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
                 </div>
                 <span class="status-badge-v4 ${order.status.toLowerCase().replace(/\s+/g, '')}" style="font-size:11px; padding:6px 12px;">${order.status}</span>
             </div>
@@ -1188,14 +1188,14 @@ export async function openOrderDrawer(id) {
                         <i data-lucide="user"></i>
                     </div>
                     <div class="identity-info-v4">
-                        <span class="name font-700 fs-16">${escapeHtml(order.customerName || 'Guest')}</span>
-                        <span class="sub fs-13">${escapeHtml(order.phone || 'No Phone')}</span>
+                        <span class="name font-700 fs-16" style="color:#1e293b;">${escapeHtml(order.customerName || 'Guest')}</span>
+                        <span class="sub fs-13" style="color:#64748b;">${escapeHtml(order.phone || 'No Phone')}</span>
                     </div>
                 </div>
                 <div class="mt-12 p-12 br-12 border-ghost flex-row flex-gap-10">
-                    <i data-lucide="map-pin" class="text-muted" style="width:16px;"></i>
+                    <i data-lucide="map-pin" style="width:16px; color:#64748b;"></i>
                     <div class="flex-1">
-                        <p class="fs-13 m-0 line-height-14">${escapeHtml(order.address || 'Counter Sale / Walk-in')}</p>
+                        <p class="fs-13 m-0 line-height-14" style="color:#334155;">${escapeHtml(order.address || 'Counter Sale / Walk-in')}</p>
                         ${(order.locationLink || (order.lat && order.lng)) ? 
                             `<a href="${escapeHtml(order.locationLink || `https://www.google.com/maps?q=${order.lat},${order.lng}`)}" target="_blank" rel="noopener noreferrer" class="link-premium fs-11 font-700 mt-8 d-inline-block">📍 TRACK ON LIVE MAP</a>` 
                             : ""
