@@ -18,7 +18,7 @@
         }
         
         // Version Enforcement
-        const APP_VERSION = '4.7.1';
+        const APP_VERSION = '4.8.0';
         if (localStorage.getItem('rider_app_version') !== APP_VERSION) {
             localStorage.setItem('rider_app_version', APP_VERSION);
             // Optionally clear specific caches
@@ -30,7 +30,7 @@
 
     <script>
         // Force cleanup of old service workers and caches if stuck on old versions
-        const CURRENT_VERSION = '4.7.1';
+        const CURRENT_VERSION = '4.8.0';
         if (localStorage.getItem('app_version') !== CURRENT_VERSION) {
             console.log(`Stale version detected. Cleaning up (${CURRENT_VERSION})...`);
             if ('serviceWorker' in navigator) {
@@ -52,7 +52,7 @@
             }
         });
     </script>
-    <link rel="stylesheet" href="style.css?v=4.7.1">
+    <link rel="stylesheet" href="style.css?v=4.8.0">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="icon-512.png">
     <link rel="apple-touch-icon" href="icon-512.png">
@@ -474,7 +474,7 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=4.7.1"></script>
+    <script type="module" src="app.js?v=4.8.0"></script>
     <div id="successOverlay" class="modal-overlay">
         <div class="modal-card text-center success-card">
             <div class="success-icon-wrapper">

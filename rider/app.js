@@ -205,7 +205,7 @@ window.reachedDropLocation = async (id, outlet) => {
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         // Use cache-busting for SW registration itself
-        navigator.serviceWorker.register('sw.js?v=4.5.5').catch(err => console.error('SW failed', err));
+        navigator.serviceWorker.register('sw.js?v=4.8.0').catch(err => console.error('SW failed', err));
     });
 }
 

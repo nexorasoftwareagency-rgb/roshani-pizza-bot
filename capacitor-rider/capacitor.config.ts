@@ -5,18 +5,20 @@ const config: CapacitorConfig = {
   appName: 'Roshani Rider',
   webDir: '../rider',
   loggingBehavior: 'debug',
-  backgroundColor: '#F4F6F8',
+  backgroundColor: '#ffffff',
   android: {
     allowMixedContent: true,
     webContentsDebuggingEnabled: true
   },
   server: {
-    cleartext: true
+    url: 'https://roshani-sudha-rider.web.app',
+    cleartext: true,
+    androidScheme: 'https'
   },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
-      backgroundColor: '#FF5200',
+      backgroundColor: '#f36b21',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false
     }
