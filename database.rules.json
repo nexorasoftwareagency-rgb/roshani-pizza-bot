@@ -119,7 +119,7 @@
       },
       "feedbacks": {
         ".read": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('isSuper').val() == true || root.child('admins').child(auth.uid).child('isSupreme').val() == true || root.child('admins').child(auth.uid).child('outlet').val() == $outletId)",
-        ".write": "true"
+        ".write": "auth != null"
       },
       "settings": {
         ".read": "auth != null",

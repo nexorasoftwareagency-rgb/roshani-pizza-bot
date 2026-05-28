@@ -5,6 +5,7 @@ session_data/
 .env
 
 users.json
+inst_user_settings.tmp
 
 firebase database.json
 

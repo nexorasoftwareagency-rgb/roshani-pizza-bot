@@ -25,7 +25,7 @@ fcmMessaging.onBackgroundMessage((payload) => {
     icon: './icon-512.png',
     badge: './icon-512.png',
     vibrate: [100, 50, 100],
-    data: { url: payload.notification?.data?.url || './index.html' }
+    data: { url: (payload.data && payload.data.url) || './index.html' }
   };
   self.registration.showNotification(notificationTitle, notificationOptions);
 });

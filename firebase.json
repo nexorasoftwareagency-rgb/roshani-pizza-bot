@@ -15,6 +15,9 @@
         "graphify-out/**",
         "rider_old/**"
       ],
+      "rewrites": [
+        {"source": "**", "destination": "/index.html"}
+      ],
       "headers": [
         {
           "source": "**/*.@(js|html|css)",
@@ -92,6 +95,9 @@
         "graphify-out/**",
         "rider_old/**"
       ],
+      "rewrites": [
+        {"source": "**", "destination": "/index.html"}
+      ],
       "headers": [
         {
           "source": "sw.js",
@@ -107,10 +113,6 @@
             {
               "key": "Expires",
               "value": "0"
-            },
-            {
-              "key": "Service-Worker-Allowed",
-              "value": "/"
             },
             {
               "key": "Content-Security-Policy",

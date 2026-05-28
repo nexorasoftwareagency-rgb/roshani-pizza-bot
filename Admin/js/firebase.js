@@ -18,7 +18,7 @@ if (window.reCaptchaSiteKey) {
     try {
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         if (isLocal) {
-            const debugToken = window.firebaseConfig?.appCheckDebugToken || true;
+            const debugToken = window.firebaseConfig?.appCheckDebugToken;
             self.FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
         }
         initializeAppCheck(app, {

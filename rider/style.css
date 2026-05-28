@@ -217,10 +217,6 @@ body {
     margin-top: 15px;
 }
 
-.mt-20 {
-    margin-top: 20px;
-}
-
 .pb-10 {
     padding-bottom: 10px;
 }
@@ -229,32 +225,16 @@ body {
     color: var(--primary);
 }
 
-.text-muted {
-    color: var(--text-muted);
-}
-
-.text-danger {
-    color: var(--danger);
-}
-
 .text-pink {
     color: #EC4899;
-}
-
-.text-small {
-    font-size: 0.85rem;
 }
 
 .text-xtra-small {
     font-size: 0.75rem;
 }
 
-.text-center {
-    text-align: center;
-}
-
 .font-bold {
-    font-weight: 700;
+    font-weight: 800;
 }
 
 .uppercase {
@@ -282,7 +262,7 @@ body {
 }
 
 /* Shimmer Effect */
-@keyframes shimmer {
+@keyframes shimmer-bg {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
 }
@@ -290,7 +270,7 @@ body {
 .premium-btn-shimmer {
     background: linear-gradient(90deg, var(--primary) 0%, #FF8A00 50%, var(--primary) 100%);
     background-size: 200% 100%;
-    animation: shimmer 3s infinite linear;
+    animation: shimmer-bg 3s infinite linear;
 }
 
 .empty-state-glass {
@@ -549,17 +529,6 @@ body {
     display: block !important;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
 
 .view-header {
     display: flex;
@@ -961,20 +930,7 @@ body {
     border: 1px solid rgba(0,0,0,0.05);
 }
 
-.otp-input {
-    width: 100%;
-    font-size: 42px;
-    font-weight: 900;
-    text-align: center;
-    letter-spacing: 12px;
-    border: 2px solid #F1F5F9;
-    border-radius: 16px;
-    padding: 18px;
-    margin-bottom: 25px;
-    background: #F8FAFC;
-    color: var(--primary);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+
 
 .otp-input:focus {
     outline: none;
@@ -1786,9 +1742,8 @@ body {
 /* Payment Selection UI */
 .payment-options-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
-    margin-top: 15px;
     margin-bottom: 20px;
 }
 
@@ -1969,26 +1924,7 @@ body {
     transition: transform 0.1s ease;
 }
 
-.sync-status {
-    position: fixed;
-    bottom: 90px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #333;
-    color: white;
-    padding: 8px 16px;
-    border-radius: var(--radius-premium);
-    font-size: 12px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    z-index: 9999;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-}
+
 
 .sync-status.active { opacity: 1; }
 
@@ -2324,9 +2260,6 @@ body {
     height: 18px;
     accent-color: var(--primary);
 }
-
-.mb-15 { margin-bottom: 15px; }
-.full-width { width: 100%; }
 
 .action-grid {
     display: flex;
@@ -2865,12 +2798,7 @@ body {
 }
 
 /* Payment Panel Enhancements */
-.payment-options-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
-}
+
 
 .payment-btn {
     display: flex;
@@ -2977,14 +2905,6 @@ body {
     height: 14px;
 }
 
-.animate-spin {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
 /* -------------------------------------------------------------------------- */
 /* PREMIUM ACTIVE DELIVERY TASK UI                                            */
 /* -------------------------------------------------------------------------- */
@@ -3106,9 +3026,6 @@ body {
     margin-right: 8px;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
 /* -------------------------------------------------------------------------- */
 /* SETTLEMENT HISTORY & PREMIUM MODALS                                        */
 /* -------------------------------------------------------------------------- */

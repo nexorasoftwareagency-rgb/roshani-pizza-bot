@@ -368,7 +368,16 @@ async function setupPushNotifications(userId) {
 }
 
 if (typeof Capacitor === 'undefined' && messaging) {
-    // onNewToken not available in CDN v10.7.1 — getToken called in setupPushNotifications
+    // onNewToken not available in CDN v10.7.1 — periodic refresh instead
+    async function refreshFcmToken() {
+        try {
+            if (!auth?.currentUser) return;
+            const reg = await navigator.serviceWorker.ready;
+            const token = await getToken(messaging, { serviceWorkerRegistration: reg });
+            if (token) await update(ref(db, `riders/${auth.currentUser.uid}`), { fcmToken: token });
+        } catch (e) { logError("refreshFcmToken", e); }
+    }
+    setInterval(refreshFcmToken, 43200000); // every 12 hours
     onMessage(messaging, (payload) => {
         if (payload.notification) {
             window.showToast(`${payload.notification.title}: ${payload.notification.body}`, "info");
@@ -491,27 +500,6 @@ window.login = async () => {
         window.showToast(msg, "error");
     }
 };
-
-// PULL TO REFRESH (MOBILE)
-let touchStart = -1;
-window.addEventListener('touchstart', (e) => {
-    if ((window.scrollY || document.documentElement.scrollTop || 0) === 0) touchStart = e.touches[0].pageY;
-    else touchStart = -1;
-}, { passive: true });
-
-window.addEventListener('touchend', (e) => {
-    if (touchStart === -1) return;
-    const touchEnd = e.changedTouches[0].pageY;
-    if (window.scrollY === 0 && touchEnd - touchStart > 180) {
-        window.completeSiteRefresh();
-    }
-    touchStart = -1;
-}, { passive: true });
-
-window.addEventListener('touchcancel', () => {
-    touchStart = -1;
-});
-
 
 window.logout = async () => {
     if (await window.showConfirm("End your shift and logout?", "Confirm Logout")) {
@@ -1995,36 +1983,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Pull to Refresh Logic
     let touchStart = 0;
-    const ptr = document.getElementById('ptrIndicator');
     
     window.addEventListener('touchstart', e => {
         if (window.scrollY === 0) touchStart = e.touches[0].pageY;
-    }, { passive: true });
-
-    window.addEventListener('touchmove', e => {
-        if (touchStart === 0) return;
-        const touch = e.touches[0].pageY;
-        const diff = touch - touchStart;
-        if (diff > 0 && window.scrollY === 0) {
-            ptr.classList.add('active');
-            const rotation = Math.min(diff * 2, 360);
-            ptr.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
-            if (diff > 80) {
-                ptr.classList.add('refreshing');
-                if (!ptr._haptic) { window.haptic(30); ptr._haptic = true; }
-            }
-        }
     }, { passive: true });
 
     window.addEventListener('touchend', e => {
         const touchEnd = e.changedTouches[0].pageY;
         if (touchEnd - touchStart > 80 && window.scrollY === 0) {
             console.log("[UI] Gesture Refresh Triggered");
+            window.haptic(30);
             window.completeSiteRefresh();
-        } else {
-            ptr.classList.remove('active', 'refreshing');
-            ptr.style.transform = '';
-            ptr._haptic = false;
         }
         touchStart = 0;
     });
