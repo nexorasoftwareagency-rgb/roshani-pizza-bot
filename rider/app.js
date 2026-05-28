@@ -1144,7 +1144,7 @@ window.clearAllListeners = () => {
     window.orderCache = { pizza: {}, cake: {} };
 };
 
-function initRealtimeListeners() {
+window.initRealtimeListeners = function initRealtimeListeners() {
     if (!currentUser || !currentUser.email) {
         console.warn("[Sync] Cannot init listeners: No user email available.");
         return;
