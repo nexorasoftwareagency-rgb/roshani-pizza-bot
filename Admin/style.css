@@ -319,6 +319,23 @@ html, body {
     animation: fadeIn 0.3s ease-out;
 }
 
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 24px;
+    align-items: start;
+}
+
+.dashboard-main {
+    min-width: 0;
+}
+
+.dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
