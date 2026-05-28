@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, onValue, get, set, update, runTransaction, query, orderByChild, equalTo, off, serverTimestamp, remove, limitToLast, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { getMessaging, getToken, onMessage, onNewToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 // Utility for haptic feedback
 window.haptic = (pattern) => {
@@ -368,13 +368,7 @@ async function setupPushNotifications(userId) {
 }
 
 if (typeof Capacitor === 'undefined' && messaging) {
-    onNewToken(messaging, async (token) => {
-        const user = auth?.currentUser;
-        if (token && user) {
-            try { await update(ref(db, `riders/${user.uid}`), { fcmToken: token }); } catch (e) { logError("onNewToken", e); }
-        }
-    });
-
+    // onNewToken not available in CDN v10.7.1 — getToken called in setupPushNotifications
     onMessage(messaging, (payload) => {
         if (payload.notification) {
             window.showToast(`${payload.notification.title}: ${payload.notification.body}`, "info");
