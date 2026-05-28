@@ -29,7 +29,7 @@ fcmMessaging.onBackgroundMessage((payload) => {
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-const CACHE_NAME = 'roshani-erp-v4.8.0';
+const CACHE_NAME = 'roshani-erp-v4.9.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
