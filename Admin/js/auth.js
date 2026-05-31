@@ -346,7 +346,7 @@ function initNewOrderNotifications() {
         if (Notification.permission === 'granted') {
             const n = new Notification('\uD83D\uDD04 New Order Received!', {
                 body: `#${order.orderId?.slice(-5) || snap.key?.slice(-5)} — ${order.customerName || 'Customer'} — ₹${order.total || 0}`,
-                icon: '/icon-erp.webp',
+                icon: '/icon-erp-logo.jpeg',
                 tag: `order-${snap.key}`
             });
             n.onclick = () => { window.focus(); ui.switchTab('orders'); n.close(); };

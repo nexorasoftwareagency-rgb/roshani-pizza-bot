@@ -5,7 +5,7 @@
 
 import { db, Outlet, serverTimestamp, ref, get, set, update, query, orderByChild, orderByKey, equalTo, limitToLast, startAt, endAt, endBefore, onValue, onChildAdded, onChildChanged } from '../firebase.js';
 import { state } from '../state.js';
-import { escapeHtml, showToast, playNotificationSound, validateUrl, logAudit, calculateDistance, getFeeFromSlabs, addRiderNotification, getISTDateString, getSkeletonRows } from '../utils.js';
+import { escapeHtml, showToast, playNotificationSound, startContinuousSound, stopContinuousSound, validateUrl, logAudit, calculateDistance, getFeeFromSlabs, addRiderNotification, getISTDateString, getSkeletonRows } from '../utils.js';
 import { showAlert, addNotification, highlightOrder } from './notifications.js';
 import { showPaymentPicker } from '../ui-utils.js';
 import { autoDeductStock } from './inventory.js';
@@ -65,8 +65,9 @@ export function initRealtimeListeners() {
             const isPostLoad = orderTime && orderTime > loadTime - 5000;
             if (order.status === "Placed" && isRecent && isPostLoad) {
                 showAlert(order);
-                playNotificationSound();
                 addNotification(`New Order #${snap.key.slice(-5)}`, `Order for ₹${order.total} is placed.`, 'new', state.currentOutlet);
+                state.unacknowledgedOrders.add(snap.key);
+                startContinuousSound();
                 setTimeout(() => { highlightOrder(snap.key); }, 1000);
             }
         }
@@ -74,8 +75,17 @@ export function initRealtimeListeners() {
 
     _ordersChangedUnsub = onChildChanged(currentOrdersRef, snap => {
         const order = snap.val();
-        if (order && order.status === "Delivered") {
-            addNotification(`Order Delivered (#${snap.key.slice(-5)})`, `Customer: ${order.customerName || 'Walk-in'} • ₹${order.total}`, 'delivered', state.currentOutlet);
+        if (order) {
+            // Stop continuous sound when order is no longer "Placed"
+            if (order.status !== "Placed") {
+                state.unacknowledgedOrders.delete(snap.key);
+                if (state.unacknowledgedOrders.size === 0) {
+                    stopContinuousSound();
+                }
+            }
+            if (order.status === "Delivered") {
+                addNotification(`Order Delivered (#${snap.key.slice(-5)})`, `Customer: ${order.customerName || 'Walk-in'} • ₹${order.total}`, 'delivered', state.currentOutlet);
+            }
         }
     });
 

@@ -1,4 +1,5 @@
 import { Outlet, auth, serverTimestamp, ref, db, get, set, push, update, runTransaction } from './firebase.js';
+import { state } from './state.js';
 
 export const haptic = (val = 10) => {
     if (window.navigator && window.navigator.vibrate) {
@@ -86,8 +87,41 @@ export const playNotificationSound = () => {
     audio.play().catch(e => console.warn('Audio playback failed:', e));
 };
 
+let _continuousAudio = null;
+
+export function startContinuousSound() {
+    if (state.continuousSoundInterval) return;
+
+    _continuousAudio = new Audio('assets/sounds/alert.mp3');
+    _continuousAudio.play().catch(e => console.warn('Audio failed:', e));
+
+    state.continuousSoundInterval = setInterval(() => {
+        if (state.unacknowledgedOrders.size === 0) {
+            stopContinuousSound();
+            return;
+        }
+        _continuousAudio = new Audio('assets/sounds/alert.mp3');
+        _continuousAudio.play().catch(e => console.warn('Audio failed:', e));
+    }, 2000);
+}
+
+export function stopContinuousSound() {
+    if (state.continuousSoundInterval) {
+        clearInterval(state.continuousSoundInterval);
+        state.continuousSoundInterval = null;
+    }
+    if (_continuousAudio) {
+        _continuousAudio.pause();
+        _continuousAudio = null;
+    }
+}
+
+window.addEventListener('beforeunload', () => {
+    stopContinuousSound();
+});
+
 export const playSuccessSound = () => {
-    const audio = new Audio('assets/sounds/success.mp3');
+    const audio = new Audio('assets/sounds/alert.mp3');
     audio.play().catch(e => console.warn('Audio playback failed:', e));
 };
 

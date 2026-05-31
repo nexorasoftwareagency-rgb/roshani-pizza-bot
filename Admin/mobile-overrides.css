@@ -135,7 +135,8 @@
     }
 
     body {
-        height: 100% !important;
+        height: auto !important;
+        min-height: 100dvh !important;
         width: 100% !important;
         position: relative !important;
         overflow-x: hidden !important;
@@ -211,14 +212,14 @@
     }
 
     .main {
+        flex: none !important;
         touch-action: auto !important;
         pointer-events: auto !important;
         position: relative !important;
         z-index: 10 !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        overscroll-behavior: contain !important;
-        height: 100dvh !important;
+        overflow: visible !important;
+        height: auto !important;
+        min-height: 0 !important;
         width: 100% !important;
         padding-top: calc(var(--mobile-header-height) + 10px) !important; /* Mobile Header height + buffer */
         padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 35px) !important; /* Space for bottom nav */

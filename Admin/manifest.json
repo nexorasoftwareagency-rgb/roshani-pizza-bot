@@ -18,15 +18,9 @@
   ],
   "icons": [
     {
-      "src": "icon-erp.webp",
+      "src": "icon-erp-logo.jpeg",
       "sizes": "512x512",
-      "type": "image/webp",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-erp.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     }
   ],
@@ -36,7 +30,7 @@
       "url": "./index.html#dashboard",
       "icons": [
         {
-          "src": "icon-erp.png",
+          "src": "icon-erp-logo.jpeg",
           "sizes": "192x192"
         }
       ]
@@ -46,7 +40,7 @@
       "url": "./index.html#orders",
       "icons": [
         {
-          "src": "icon-erp.png",
+          "src": "icon-erp-logo.jpeg",
           "sizes": "192x192"
         }
       ]

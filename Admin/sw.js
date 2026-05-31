@@ -14,7 +14,7 @@ const ASSETS_TO_CACHE = [
   './firebase-config.js',
   './receipt-templates.js',
   './manifest.json',
-  './icon-erp.webp',
+  './icon-erp-logo.jpeg',
   './js/main.js',
   './js/auth.js',
   './js/firebase.js',

@@ -533,29 +533,29 @@ export const editCategory = (id) => showToast("Category editing coming soon!", "
 
 export function filterMenu(searchTerm) {
     const term = (searchTerm || '').toLowerCase().trim();
-    const rows = document.querySelectorAll('#dishesList tr');
+    const cards = document.querySelectorAll('#menuGrid .menu-card');
     
-    rows.forEach(row => {
+    cards.forEach(card => {
         if (!term) {
-            row.style.display = '';
+            card.style.display = '';
             return;
         }
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(term) ? '' : 'none';
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(term) ? '' : 'none';
     });
 }
 
 export function filterCategories(searchTerm) {
     const term = (searchTerm || '').toLowerCase().trim();
-    const rows = document.querySelectorAll('#categoryList tr');
+    const items = document.querySelectorAll('#categoryList > div');
     
-    rows.forEach(row => {
+    items.forEach(item => {
         if (!term) {
-            row.style.display = '';
+            item.style.display = '';
             return;
         }
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(term) ? '' : 'none';
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(term) ? '' : 'none';
     });
 }
 

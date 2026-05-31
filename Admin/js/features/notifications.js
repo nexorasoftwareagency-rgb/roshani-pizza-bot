@@ -166,7 +166,7 @@ export function toggleNotificationSheet(show) {
     } else {
         sheet.classList.add('active');
         overlay.classList.add('active');
-        state.isNotificationPending = false;
+        // Don't auto-clear pending — sound continues until order is confirmed
         updateNotificationUI();
         
         // Push state so back button closes the sheet
@@ -204,8 +204,8 @@ export function showNativeNotification(title, body) {
 
     const options = {
         body,
-        icon: 'icon-erp.webp',
-        badge: 'icon-erp.webp',
+        icon: 'icon-erp-logo.jpeg',
+        badge: 'icon-erp-logo.jpeg',
         vibrate: [200, 100, 200],
         tag: `order-${Date.now()}`,
         requireInteraction: true

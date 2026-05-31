@@ -19,7 +19,7 @@
             favicon.rel = 'icon';
             document.head.appendChild(favicon);
         }
-        favicon.href = 'icon-erp.webp';
+        favicon.href = 'icon-erp-logo.jpeg';
 
         let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
         if (!appleIcon) {
@@ -27,7 +27,7 @@
             appleIcon.rel = 'apple-touch-icon';
             document.head.appendChild(appleIcon);
         }
-        appleIcon.href = 'icon-erp.webp';
+        appleIcon.href = 'icon-erp-logo.jpeg';
 
         let manifest = document.querySelector('link[rel="manifest"]');
         if (manifest) {

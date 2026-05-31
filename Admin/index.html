@@ -73,8 +73,10 @@
     <link rel="stylesheet" href="style.css?v=4.9.0">
     <link rel="stylesheet" href="mobile-overrides.css?v=4.9.0">
     <link rel="manifest" href="manifest.json?v=2">
-    <link rel="icon" type="image/webp" href="icon-erp.webp">
-    <link rel="apple-touch-icon" href="icon-erp.webp">
+    <link rel="icon" type="image/jpeg" href="icon-erp-logo.jpeg">
+    <link rel="apple-touch-icon" href="icon-erp-logo.jpeg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="preload" href="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" as="script" crossorigin="anonymous">
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" crossorigin="anonymous"></script>
@@ -276,6 +278,11 @@
                     <button data-action="switchTab" data-tab="notifications" class="nav-btn">
                         <i data-lucide="bell"></i> <span>Notifications</span>
                         <span id="sidebar-notif-count" class="nav-badge count hidden">0</span>
+                    </button>
+                </li>
+                <li id="menu-payments" title="View Payment Transactions">
+                    <button data-action="switchTab" data-tab="payments" class="nav-btn">
+                        <i data-lucide="wallet"></i> <span>Payments</span>
                     </button>
                 </li>
 
@@ -514,7 +521,7 @@
                             <div class="input-icon-wrap flex-1">
                                 <i data-lucide="search" class="input-icon"></i>
                                 <input type="text" id="orderSearch" placeholder="Search ID or name"
-                                    class="form-input input-with-icon" title="Search orders by ID or customer name">
+                                    class="form-input input-with-icon" title="Search orders by ID or customer name" aria-label="Search orders">
                             </div>
                         </div>
                     </div>
@@ -585,7 +592,7 @@
                     <div class="panel-header">
                         <h3 class="desktop-only">Menu Management</h3>
                         <div class="flex-row flex-center flex-gap-10">
-                            <input type="text" id="menuSearch" placeholder="Search dishes..." class="search-input-group" title="Search menu items">
+                            <input type="text" id="menuSearch" placeholder="Search dishes..." class="search-input-group" title="Search menu items" aria-label="Search menu items">
                             <button class="btn-primary btn-small btn-show-dish-modal" title="Add a new dish to the menu" aria-label="Add new dish"><i data-lucide="plus" class="icon-16"></i> Add Dish</button>
                         </div>
                     </div>
@@ -606,7 +613,7 @@
                     <div class="panel-header flex-between-header">
                         <h3 class="desktop-only">Category Management</h3>
                         <div class="flex-row flex-center flex-gap-10 flex-wrap-mobile">
-                            <input type="text" id="categorySearch" placeholder="Search categories..." class="search-input-group flex-1">
+                            <input type="text" id="categorySearch" placeholder="Search categories..." class="search-input-group flex-1" aria-label="Search categories">
                             <button id="btnMigrateDishAddons" class="btn-secondary btn-secondary-xs"
                                 title="Force sync of dish-level add-ons to their respective categories">
                                 <i data-lucide="refresh-cw"></i> Migrate
@@ -1327,7 +1334,7 @@
                 <div class="panel">
                     <div class="panel-header">
                         <h3>Customer Database</h3>
-                        <input type="text" id="customerSearch" placeholder="Search..." class="search-input-group">
+                        <input type="text" id="customerSearch" placeholder="Search..." class="search-input-group" aria-label="Search customers">
                     </div>
                     <div class="scroll-x">
                         <table class="premium-table-v4" id="customersTable">
@@ -1730,7 +1737,7 @@
                                     <h3 class="panel-title">🍽️ Select Items</h3>
                                 </div>
                                 <input type="text" id="walkinDishSearch" placeholder="Search dishes..."
-                                    class="search-input-group flex-1">
+                                    class="search-input-group flex-1" aria-label="Search POS dishes">
                             </div>
                             <!-- Category Tabs -->
                             <div id="walkinCategoryTabs" class="category-tabs-container">
@@ -2261,7 +2268,7 @@
         </div>
     </div>
 
-    <script src="receipt-templates.js?v=4.7.3"></script>
+    <script src="receipt-templates.js?v=4.9.0"></script>
     <script type="module" src="js/main.js?v=4.9.0"></script>
 </body>
 

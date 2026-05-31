@@ -115,7 +115,7 @@ export function renderWalkinDishGrid(dishes) {
         return `
             <div class="pos-dish-btn-v4" data-action="openPOSSelectionModal" data-id="${d.id}">
                 <div class="dish-visual">
-                    <img src="${escapeHtml(d.image || 'assets/img/placeholder-dish.png')}" alt="${escapeHtml(d.name)}" loading="lazy">
+                    <img src="${escapeHtml(d.image || 'assets/images/placeholder-dish.png')}" alt="${escapeHtml(d.name)}" loading="lazy">
                     <div class="dish-overlay">
                         <span class="price-chip">₹${price}</span>
                     </div>

@@ -1,8 +1,8 @@
 // Firebase Messaging Service Worker
 // This file is required by Firebase SDK — it auto-registers from /firebase-messaging-sw.js
 
-importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
 firebase.initializeApp({
   apiKey: "AIzaSyDcx-SN5eak8PAs-8NtTGelJ_sICr5yb7Y",
@@ -19,8 +19,8 @@ fcmMessaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification?.title || 'New Order Alert';
   const notificationOptions = {
     body: payload.notification?.body || 'Open dashboard to view details.',
-    icon: './icon-512.png',
-    badge: './icon-512.png',
+    icon: './icon-erp-logo.jpeg',
+    badge: './icon-erp-logo.jpeg',
     data: { url: './index.html' }
   };
   self.registration.showNotification(notificationTitle, notificationOptions);

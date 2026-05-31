@@ -4,7 +4,7 @@ import { auth, db, serverTimestamp, ref, push, set } from './firebase.js';
 import { switchOutlet, openOutletInNewTab } from './branding.js';
 import { switchTab, toggleSidebar, toggleMobileCart } from './ui.js';
 import { initGestures } from './gestures.js';
-import { initAuth, doLogin as adminLogin, userLogout } from './auth.js';
+import { initAuth, userLogout } from './auth.js';
 import { installPWA, completeSiteRefresh } from './pwa.js';
 
 // Side-effect imports
@@ -79,14 +79,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         };
 
-        document.querySelectorAll('.close-btn, .cancel-dish-btn, .cancel-cat-btn, .btn-hide-modal').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.close-btn, .cancel-dish-btn, .cancel-cat-btn, .btn-hide-modal')) {
                 const modal = e.target.closest('.modal');
                 if (modal) {
                     modal.classList.remove('active', 'flex');
                     modal.classList.add('hidden');
                 }
-            });
+            }
         });
 
         const orderOverlay = document.getElementById('orderDrawerOverlay');
@@ -130,27 +130,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('btnClearAllNotif')?.addEventListener('click', async () => {
             (await useMod('notifications')).clearAllNotifications();
         });
+        document.getElementById('btnClearNotificationsBottom')?.addEventListener('click', async () => {
+            (await useMod('notifications')).clearAllNotifications();
+        });
         document.getElementById('btnClearLostSales')?.addEventListener('click', async () => {
             (await useMod('customers')).clearLostSales();
         });
         document.getElementById('btnEnableNotif')?.addEventListener('click', async () => {
             (await useMod('notifications')).requestNotificationPermission();
         });
+        document.getElementById('btnTestNotif')?.addEventListener('click', async () => {
+            (await useMod('notifications')).testNotification();
+        });
 
-        const loginForm = document.getElementById('loginForm');
-        if (loginForm) {
-            loginForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                console.log("[Auth] Login form submitted");
-                const email = document.getElementById("adminEmail")?.value.trim();
-                const pass = document.getElementById("adminPassword")?.value;
-                if (email && pass) {
-                    adminLogin(email, pass);
-                } else {
-                    showToast("Please enter email and password", "warning");
-                }
-            });
-        }
+        // Login is handled by auth.js initAuth()
 
         document.getElementById('btnSaveSettings')?.addEventListener('click', async () => {
             (await useMod('settings')).saveStoreSettings();
@@ -292,7 +285,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 case 'updateStatusFromDrawer': (await useMod('orders')).updateStatus(id, val); break;
                 case 'closeOrderDrawer': (await useMod('orders')).closeOrderDrawer(); break;
-                case 'chatOnWhatsapp': break; 
+                case 'chatOnWhatsapp': {
+                    const phone = el.getAttribute('data-phone');
+                    if (phone) window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}`, '_blank');
+                    break;
+                }
                 case 'printReceiptById': (await useMod('orders')).closeOrderDrawer(); (await useMod('printing')).printReceiptById(id); break;
                 case 'closeReceiptPreview': (await useMod('printing')).closeReceiptPreview(); break;
                 case 'printReceiptFromPreview': (await useMod('printing')).printReceiptFromPreview(); break;
@@ -330,7 +327,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'editCategory': (await useMod('catalog')).editCategory(id); break;
                 case 'showRiderModal':
                 case 'showAddRiderModal': (await useMod('riders')).showRiderModal(); break;
-                case 'closeModal': {
+                case 'closeModal':
+                case 'hideReauthModal':
+                case 'hideInventoryModal': {
                     const modal = el.closest('.modal');
                     if (modal) {
                         modal.classList.add('hidden');
