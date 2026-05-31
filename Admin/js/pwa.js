@@ -136,7 +136,16 @@ const isSecure = window.location.protocol === 'https:' || window.location.hostna
 
 if ('serviceWorker' in navigator && isSecure) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed', err));
+        navigator.serviceWorker.register('sw.js').then(reg => {
+            console.info('[PWA] SW registered, scope:', reg.scope);
+        }).catch(err => {
+            console.error('[PWA] SW registration failed:', err);
+            setTimeout(() => {
+                navigator.serviceWorker.register('sw.js').catch(e => 
+                    console.error('[PWA] SW retry failed:', e)
+                );
+            }, 2000);
+        });
 
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
         if (isStandalone) {

@@ -1,6 +1,7 @@
 {
   "name": "Roshani ERP Admin",
   "short_name": "Roshani ERP",
+  "id": "/Admin/index.html",
   "description": "Enterprise Management System for Roshani Pizza & Cakes",
   "start_url": "./index.html",
   "display": "standalone",
@@ -16,6 +17,12 @@
     "productivity"
   ],
   "icons": [
+    {
+      "src": "icon-erp.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    },
     {
       "src": "icon-erp.png",
       "sizes": "512x512",

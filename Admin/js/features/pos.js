@@ -25,7 +25,7 @@ export async function loadWalkinMenu() {
 
         snap.forEach(child => {
             const dish = child.val();
-            if (dish.available !== false) {
+            if (dish.stock !== false) {
                 state.allWalkinDishes.push({ id: child.key, ...dish });
             }
         });

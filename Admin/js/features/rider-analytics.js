@@ -3,7 +3,7 @@
  * Analytics and performance monitoring for delivery personnel.
  */
 
-import { Outlet, get, query, orderByChild, startAt, endAt } from '../firebase.js';
+import { Outlet, get, query, orderByChild, equalTo } from '../firebase.js';
 import { state } from '../state.js';
 import { escapeHtml, showToast, formatDate, getISTDateString, getSkeletonRows } from '../utils.js';
 import { settleRiderWallet } from './riders.js';
@@ -102,12 +102,23 @@ export async function generateRiderPerformanceReport() {
         return;
     }
 
-    const fromStr = `${fromDateStr}T00:00:00.000Z`;
-    const toStr = `${toDateStr}T23:59:59.999Z`;
+    if (!fromDateStr || !toDateStr) {
+        showToast("Please select both start and end dates", "warning");
+        return;
+    }
+
+    if (new Date(fromDateStr) > new Date(toDateStr)) {
+        showToast("Start date must be before end date", "warning");
+        return;
+    }
 
     const btn = document.getElementById('btnGenerateRiderReport');
     btn.disabled = true;
     btn.innerHTML = 'Analyzing...';
+
+    // Show skeleton immediately
+    const raTbody = document.getElementById('riderAnalyticsTableBody');
+    if (raTbody) raTbody.innerHTML = getSkeletonRows(5, 5);
 
     try {
         // Broaden range by 1 day to catch IST/UTC drift, then filter client-side
@@ -121,14 +132,13 @@ export async function generateRiderPerformanceReport() {
 
         // Show skeleton while data loads
         const raTbody = document.getElementById('riderAnalyticsTableBody');
-        if (raTbody) raTbody.innerHTML = getSkeletonRows(5, 5);
 
-        const ordersSnap = await get(query(Outlet.ref("orders"), orderByChild("createdAt"), startAt(fromStr), endAt(toStr)));
+        const ordersSnap = await get(query(Outlet.ref("orders"), orderByChild("riderId"), equalTo(riderId)));
         
         const allOrders = [];
         ordersSnap.forEach(child => {
             const o = child.val();
-            if (!o || o.riderId !== riderId) return;
+            if (!o) return;
 
             const dateStr = getISTDateString(o.createdAt);
             if (dateStr >= fromDateStr && dateStr <= toDateStr) {
@@ -191,8 +201,7 @@ function calculateRiderStats(orders) {
         totalEarnings,
         deliveredCount,
         pendingCash,
-        avgTime: deliveryTimeCount > 0 ? Math.round(totalDeliveryTime / deliveryTimeCount) : 0,
-        rating: deliveredCount > 0 ? (4.5 + (Math.random() * 0.4)) : 0 
+        avgTime: deliveryTimeCount > 0 ? Math.round(totalDeliveryTime / deliveryTimeCount) : 0
     };
 }
 
@@ -203,7 +212,7 @@ function updateRiderKPIs(stats) {
     document.getElementById('riderStatEarnings').innerText = `₹${stats.totalEarnings.toLocaleString()}`;
     document.getElementById('riderStatDeliveries').innerText = stats.deliveredCount;
     document.getElementById('riderStatAvgTime').innerText = `${stats.avgTime}m`;
-    document.getElementById('riderStatRating').innerText = stats.rating.toFixed(1);
+    document.getElementById('riderStatRating').innerText = 'N/A';
     const pendingCashEl = document.getElementById('riderStatPendingCash');
     if (pendingCashEl) {
         pendingCashEl.innerText = `₹${stats.pendingCash.toLocaleString()}`;
@@ -221,7 +230,10 @@ function renderRiderTable(orders) {
     // Sort by date desc
     orders.sort((a, b) => b.createdAt - a.createdAt);
 
-    tbody.innerHTML = orders.map(o => {
+    const displayOrders = orders.slice(0, 50);
+    const totalCount = orders.length;
+
+    tbody.innerHTML = displayOrders.map(o => {
         const timeTaken = (o.pickedUpAt && o.deliveredAt) ? Math.round((o.deliveredAt - o.pickedUpAt) / 60000) : '--';
         return `
             <tr class="premium-row-v4">
@@ -243,6 +255,10 @@ function renderRiderTable(orders) {
             </tr>
         `;
     }).join('') || '<tr><td colspan="5" class="text-center py-20 text-muted">No deliveries found for this period.</td></tr>';
+
+    if (totalCount > 50) {
+        tbody.innerHTML += `<tr><td colspan="5" class="text-center py-10 text-muted-small">Showing 50 of ${totalCount} deliveries</td></tr>`;
+    }
 }
 
 /**
@@ -265,6 +281,22 @@ function renderRiderEarningsChart(orders) {
     const values = labels.map(l => dailyEarnings[l]);
 
     if (riderEarningsChart) riderEarningsChart.destroy();
+
+    if (labels.length === 0) {
+        ctx.style.display = 'none';
+        const placeholder = ctx.parentElement.querySelector('.chart-empty-msg');
+        if (!placeholder) {
+            const msg = document.createElement('div');
+            msg.className = 'chart-empty-msg';
+            msg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:14px;font-weight:600;';
+            msg.textContent = 'No earnings data to chart';
+            ctx.parentElement.appendChild(msg);
+        }
+        return;
+    }
+    ctx.style.display = '';
+    const existingMsg = ctx.parentElement.querySelector('.chart-empty-msg');
+    if (existingMsg) existingMsg.remove();
 
     if (typeof Chart !== 'undefined') {
         riderEarningsChart = new Chart(ctx, {
@@ -308,12 +340,12 @@ function renderRiderSummary(riderId, stats) {
             <p class="text-muted-small mb-15">${rider.email}</p>
             
             <div class="flex-row flex-between w-full p-10-0 border-top-dashed">
-                <span class="text-muted-small">Completion Rate</span>
-                <span class="font-bold text-success">98%</span>
+                <span class="text-muted-small">Delivered Orders</span>
+                <span class="font-bold text-success">${stats.deliveredCount}</span>
             </div>
             <div class="flex-row flex-between w-full p-10-0 border-top-dashed">
-                <span class="text-muted-small">Level</span>
-                <span class="badge-payment">Gold Pro</span>
+                <span class="text-muted-small">Avg. Delivery Time</span>
+                <span class="badge-payment">${stats.avgTime}m</span>
             </div>
         </div>
     `;
@@ -329,7 +361,7 @@ export async function exportRiderReport(type) {
     const toDate = document.getElementById('riderReportTo').value;
 
     const tbody = document.getElementById('riderAnalyticsTableBody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => row.querySelectorAll('td').length >= 5);
 
     if (rows.length === 0 || rows[0].innerText.includes('No deliveries')) {
         showToast("No data to export", "warning");
@@ -360,8 +392,12 @@ export async function exportRiderReport(type) {
             showToast("Excel library not loaded", "error");
         }
     } else if (type === 'pdf') {
-        const { jsPDF } = window.jspdf;
-        if (jsPDF) {
+        try {
+            if (!window.jspdf) {
+                showToast("PDF library not loaded", "error");
+                return;
+            }
+            const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             doc.setFontSize(20);
             doc.setTextColor(243, 107, 33);
@@ -372,7 +408,7 @@ export async function exportRiderReport(type) {
             doc.text(`Rider: ${riderName}`, 14, 30);
             doc.text(`Period: ${fromDate} to ${toDate}`, 14, 35);
 
-            const tableRows = reportData.map(d => [d.Date, d.Order, d.Customer, d.Duration, `INR ${d.Earnings}`]);
+            const tableRows = reportData.map(d => [d.Date, d.Order, d.Customer, d.Duration, `₹${d.Earnings}`]);
             
             doc.autoTable({
                 head: [['Date', 'Order #', 'Customer', 'Duration', 'Earnings']],
@@ -384,8 +420,9 @@ export async function exportRiderReport(type) {
 
             doc.save(`Rider_Report_${riderName.replace(/\s+/g, '_')}.pdf`);
             showToast("PDF report downloaded", "success");
-        } else {
-            showToast("PDF library not loaded", "error");
+        } catch (e) {
+            console.error("[RiderAnalytics] PDF export error:", e);
+            showToast("PDF export failed: " + e.message, "error");
         }
     }
 }

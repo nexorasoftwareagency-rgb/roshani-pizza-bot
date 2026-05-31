@@ -381,6 +381,7 @@ async function sendImage(sock, to, image, text, outlet = 'pizza') {
 }
 
 async function deductInventoryStock(sock, items, outlet = 'pizza') {
+    if (!items || !Array.isArray(items) || items.length === 0) return;
     try {
         const inventoryRef = db.ref(`outlets/${outlet}/inventory`);
         const snapshot = await inventoryRef.once('value');
@@ -411,7 +412,7 @@ async function deductInventoryStock(sock, items, outlet = 'pizza') {
                         `_Please refill stock from Admin Panel immediately!_`;
 
                     const jid = formatJid(notifyPhone);
-                    if (jid) await sock.sendMessage(jid, { text: alertMsg });
+                    if (jid) sock.sendMessage(jid, { text: alertMsg }).catch(() => {});
                 }
             }
         }
@@ -1578,7 +1579,7 @@ async function startBot() {
 
                     const dishes = await getData(`dishes`, user.outlet) || {};
                     user.dishList = Object.entries(dishes)
-                        .filter(([id, d]) => d.category === cat.name && d.available !== false)
+                        .filter(([id, d]) => d.category === cat.name && d.stock !== false)
                         .map(([id, d]) => ({ id, ...d }));
 
                     if (user.dishList.length === 0) return sock.sendMessage(sender, { text: "❌ No items in this category." });
@@ -1857,7 +1858,8 @@ async function startBot() {
                             status: "Placed", paymentMethod: method, paymentStatus: "Pending",
                             createdAt: new Date().toISOString(),
                             assignedRider: "",
-                            items: user.cart
+                            items: user.cart,
+                            stockDeducted: true
                         };
 
                         await setData(`orders/${orderId}`, finalOrder, user.outlet);
@@ -1896,6 +1898,11 @@ async function startBot() {
                         successMsg += `Total: ₹${finalOrder.total}`;
 
                         await sock.sendMessage(sender, { text: await appendContactInfo(successMsg, user.outlet) });
+
+                        // Fire-and-forget: deduct stock AFTER user gets reply (non-blocking)
+                        deductInventoryStock(sock, finalOrder.items, user.outlet).catch(e =>
+                            console.error("[BOT] Stock deduction failed:", e)
+                        );
 
                         // Return null to signify session should be cleared
                         return null;

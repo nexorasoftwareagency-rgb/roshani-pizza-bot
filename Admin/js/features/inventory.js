@@ -33,6 +33,9 @@ export function initInventory() {
 
     // Exposure for global click handlers on buttons
     window.adjustStock = adjustStock;
+
+    // Initialize inventory feature toggles
+    initInventoryToggles();
 }
 
 export function loadInventory() {
@@ -251,4 +254,178 @@ function updateInventoryKPIs(data) {
 
     if (totalEl) totalEl.innerText = items.length;
     if (lowEl) lowEl.innerText = lowCount;
+}
+
+// ============================================================
+// INVENTORY FEATURE TOGGLES & DISH CARD CONTROLS
+// ============================================================
+
+export function initInventoryToggles() {
+    const toggleAvail = document.getElementById('toggleAvailability');
+    const toggleStock = document.getElementById('toggleStockTracking');
+    const availInfo = document.getElementById('availabilityInfo');
+    const stockInfo = document.getElementById('stockTrackingInfo');
+
+    if (!toggleAvail || !toggleStock) return;
+
+    toggleAvail.checked = localStorage.getItem('inv_availability') === 'true';
+    toggleStock.checked = localStorage.getItem('inv_stockTracking') === 'true';
+
+    updateInfoPanel(toggleAvail, availInfo);
+    updateInfoPanel(toggleStock, stockInfo);
+    updateMenuVisibility();
+
+    toggleAvail.addEventListener('change', () => {
+        localStorage.setItem('inv_availability', toggleAvail.checked);
+        updateInfoPanel(toggleAvail, availInfo);
+        updateMenuVisibility();
+    });
+
+    toggleStock.addEventListener('change', () => {
+        localStorage.setItem('inv_stockTracking', toggleStock.checked);
+        updateInfoPanel(toggleStock, stockInfo);
+        updateMenuVisibility();
+    });
+}
+
+function updateInfoPanel(toggle, infoPanel) {
+    if (!infoPanel) return;
+    infoPanel.style.display = toggle.checked ? 'none' : 'block';
+}
+
+function updateMenuVisibility() {
+    const menuSection = document.getElementById('inventoryMenuSection');
+    if (!menuSection) return;
+    const anyEnabled = document.getElementById('toggleAvailability')?.checked ||
+                       document.getElementById('toggleStockTracking')?.checked;
+    menuSection.style.display = anyEnabled ? 'block' : 'none';
+    if (anyEnabled) loadInventoryMenu();
+}
+
+export async function loadInventoryMenu() {
+    const container = document.getElementById('inventoryMenuGrid');
+    if (!container) return;
+
+    const showAvailability = document.getElementById('toggleAvailability')?.checked;
+    const showStock = document.getElementById('toggleStockTracking')?.checked;
+
+    container.innerHTML = '<div class="text-center p-20 text-muted">Loading menu...</div>';
+
+    try {
+        const [dishesSnap, inventorySnap] = await Promise.all([
+            get(Outlet.ref('dishes')),
+            get(Outlet.ref('inventory'))
+        ]);
+
+        const inventoryMap = {};
+        inventorySnap.forEach(child => {
+            const inv = child.val();
+            inventoryMap[(inv.name || '').toLowerCase()] = {
+                id: child.key,
+                stock: inv.stock || 0,
+                threshold: inv.threshold || 5
+            };
+        });
+
+        container.innerHTML = '';
+        let hasDishes = false;
+
+        dishesSnap.forEach(child => {
+            hasDishes = true;
+            const dish = child.val();
+            const dishId = child.key;
+            const inv = inventoryMap[(dish.name || '').toLowerCase()];
+
+            let controlsHtml = '';
+
+            if (showAvailability) {
+                controlsHtml += `
+                    <div class="inventory-avail-row">
+                        <span class="avail-label">Available</span>
+                        <label class="toggle-switch-sm">
+                            <input type="checkbox" ${dish.stock !== false ? 'checked' : ''}
+                                data-action="toggleDish" data-id="${dishId}">
+                            <span class="toggle-slider-sm"></span>
+                        </label>
+                    </div>`;
+            }
+
+            if (showStock) {
+                if (inv) {
+                    const isLow = inv.stock <= inv.threshold;
+                    controlsHtml += `
+                        <div class="inventory-stock-row">
+                            <span class="stock-label ${isLow ? 'text-danger' : ''}">Stock: ${inv.stock}</span>
+                            <div class="stock-control-group">
+                                <button class="stock-adjust-btn minus" data-inventory-id="${inv.id}" data-delta="-1">−</button>
+                                <span class="stock-val-display">${inv.stock}</span>
+                                <button class="stock-adjust-btn plus" data-inventory-id="${inv.id}" data-delta="1">+</button>
+                            </div>
+                        </div>`;
+                } else {
+                    controlsHtml += `
+                        <div class="inventory-stock-row">
+                            <span class="stock-label text-muted">Not tracked</span>
+                            <button class="btn-secondary btn-small track-dish-btn" data-dish-id="${dishId}" data-dish-name="${escapeHtml(dish.name)}">
+                                + Track Stock
+                            </button>
+                        </div>`;
+                }
+            }
+
+            const card = document.createElement('div');
+            card.className = 'dish-card inventory-dish-card';
+            card.innerHTML = `
+                <div class="dish-img-container">
+                    <img src="${dish.image || 'https://placehold.co/150'}" alt="${escapeHtml(dish.name)}" loading="lazy">
+                </div>
+                <div class="dish-info">
+                    <h4>${escapeHtml(dish.name)}</h4>
+                    <span class="dish-price-val">₹${dish.price || 0}</span>
+                    ${controlsHtml}
+                </div>`;
+
+            container.appendChild(card);
+        });
+
+        if (!hasDishes) {
+            container.innerHTML = '<div class="text-center p-40 text-muted">No dishes found. Add dishes in the Menu tab first.</div>';
+        }
+
+        if (window.lucide) window.lucide.createIcons({ root: container });
+        attachInventoryMenuListeners(container);
+    } catch (e) {
+        console.error("[Inventory] Menu load error:", e);
+        container.innerHTML = '<div class="text-center p-40 text-danger">Failed to load menu.</div>';
+    }
+}
+
+function attachInventoryMenuListeners(container) {
+    container.querySelectorAll('.stock-adjust-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const invId = btn.dataset.inventoryId;
+            const delta = parseInt(btn.dataset.delta, 10);
+            if (invId && delta) {
+                await adjustStock(invId, delta);
+                loadInventoryMenu();
+            }
+        });
+    });
+
+    container.querySelectorAll('.track-dish-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const dishName = btn.dataset.dishName;
+            const dishId = btn.dataset.dishId;
+            if (!dishName) return;
+            await push(Outlet.ref('inventory'), {
+                name: dishName,
+                dishId: dishId,
+                stock: 0,
+                threshold: 5,
+                updatedAt: serverTimestamp()
+            });
+            showToast(`Now tracking stock for ${dishName}`, "success");
+            loadInventoryMenu();
+        });
+    });
 }

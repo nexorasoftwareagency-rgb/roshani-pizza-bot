@@ -102,6 +102,10 @@ let salesData = []; // Module scoped for exports
  * Initializes the reports view with default date range.
  */
 export function loadReports() {
+    const now = Date.now();
+    if (state._lastReportFetch && (now - state._lastReportFetch) < 60000) return;
+    state._lastReportFetch = now;
+
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
@@ -130,7 +134,7 @@ export async function generateCustomReport() {
     // Validate date inputs
     if (!from || !to) {
         ui.showToast("Please select both start and end dates for filtering", "warning");
-        tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px; color:var(--text-muted);'>Please select a date range to view reports.</td></tr>";
+        tableBody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:30px; color:var(--text-muted);'>Please select a date range to view reports.</td></tr>";
         return;
     }
 
@@ -141,7 +145,12 @@ export async function generateCustomReport() {
         return;
     }
 
-    tableBody.innerHTML = getSkeletonRows(5, 5);
+    if (fromDateObj > toDateObj) {
+        ui.showToast("Start date must be before end date", "warning");
+        return;
+    }
+
+    tableBody.innerHTML = getSkeletonRows(5, 6);
 
     const ordersRef = Outlet.ref("orders");
     console.log(`[Reports] Generating report from path: ${ordersRef.toString()}`);
@@ -200,7 +209,15 @@ export async function generateCustomReport() {
         salesData.sort((a, b) => b.createdAt - a.createdAt);
 
         // Render Table
-        tableBody.innerHTML = salesData.map(o => `
+        tableBody.innerHTML = salesData.map(o => {
+            const orderType = escapeHtml(o.type || o.orderType || 'Online');
+            const paymentMethod = escapeHtml(o.paymentMethod || 'COD');
+            const rawItems = o.cart || o.items || [];
+            const itemsList = Array.isArray(rawItems) ? rawItems : Object.values(rawItems);
+            const finalItems = itemsList.length ? itemsList : (o.item ? [{name: o.item, qty: 1}] : []);
+            const displayStr = finalItems.length ? finalItems.map(i => `${escapeHtml(i.name || i.item || 'Item')} x${i.qty || i.quantity || 1}`).join(', ') : 'No items';
+
+            return `
             <tr class="premium-row-v4">
                 <td data-label="Date">
                     <div class="identity-info-v4">
@@ -214,30 +231,27 @@ export async function generateCustomReport() {
                         <span class="sub">${escapeHtml(o.phone || '')}</span>
                     </div>
                 </td>
+                <td data-label="Order Type">
+                    <span class="badge-type badge-${orderType.toLowerCase().replace(/[- ]/g, '')}">${orderType}</span>
+                </td>
+                <td data-label="Payment">
+                    <span class="badge-payment" data-method="${paymentMethod.toLowerCase()}">${paymentMethod}</span>
+                </td>
+                <td data-label="Items">
+                    <div class="text-muted-small text-truncate" style="max-width:200px;" title="${displayStr}">${displayStr}</div>
+                </td>
                 <td data-label="Total">
                     <span class="font-bold text-orange">₹${o.total || 0}</span>
                 </td>
-                <td data-label="Method">
-                    <span class="badge-payment">${escapeHtml(o.paymentMethod || 'COD')}</span>
-                </td>
-                 <td data-label="Items">
-                      ${(() => {
-                          const rawItems = o.cart || o.items || [];
-                          const itemsList = Array.isArray(rawItems) ? rawItems : Object.values(rawItems);
-                          const finalItems = itemsList.length ? itemsList : (o.item ? [{name: o.item, qty: 1}] : []);
-                          const displayStr = finalItems.length ? finalItems.map(i => `${escapeHtml(i.name || i.item || 'Item')} x${i.qty || i.quantity || 1}`).join(', ') : 'No items';
-                          return `<div class="text-muted-small text-truncate" style="max-width:250px;" title="${displayStr}">${displayStr}</div>`;
-                      })()}
-                 </td>
-            </tr>
-        `).join('') || "<tr><td colspan='5' class='report-cell text-center py-30 text-muted'>No orders found for this range</td></tr>";
+            </tr>`;
+        }).join('') || "<tr><td colspan='6' class='report-cell text-center py-30 text-muted'>No orders found for this range</td></tr>";
 
         // Render visual chart
         renderRevenueChart(salesData);
     } catch (e) {
         console.error("[Reports] Generation Error:", e);
         showToast("Error generating report", "error");
-        tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px; color:var(--danger);'>⚠️ Failed to load report data.</td></tr>";
+        tableBody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:30px; color:var(--danger);'>⚠️ Failed to load report data.</td></tr>";
     }
 }
 
@@ -256,6 +270,22 @@ export function renderRevenueChart(data) {
     const values = labels.map(l => dailyData[l]);
 
     if (revenueChart) revenueChart.destroy();
+
+    if (labels.length === 0) {
+        ctx.style.display = 'none';
+        const placeholder = ctx.parentElement.querySelector('.chart-empty-msg');
+        if (!placeholder) {
+            const msg = document.createElement('div');
+            msg.className = 'chart-empty-msg';
+            msg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:14px;font-weight:600;';
+            msg.textContent = 'No data to chart';
+            ctx.parentElement.appendChild(msg);
+        }
+        return;
+    }
+    ctx.style.display = '';
+    const existingMsg = ctx.parentElement.querySelector('.chart-empty-msg');
+    if (existingMsg) existingMsg.remove();
 
     const tickColor = 'rgba(0,0,0,0.5)';
     const gridColor = 'rgba(0,0,0,0.05)';
@@ -314,8 +344,9 @@ export function downloadExcel() {
         "Order ID": o.orderId || o.id,
         Customer: o.customerName || 'Guest',
         Phone: o.phone || '',
+        "Order Type": o.type || o.orderType || 'Online',
+        Payment: o.paymentMethod || 'COD',
         Total: o.total || 0,
-        Method: o.paymentMethod || 'COD',
         Status: o.status,
         Items: (() => {
             const rawItems = o.cart || (Array.isArray(o.items) ? o.items : Object.values(o.items || {}));
@@ -369,8 +400,9 @@ export function downloadPDF() {
     const tableData = salesData.map(o => [
         formatDate(o.createdAt),
         o.customerName || 'Guest',
-        `Rs. ${o.total}`,
+        o.type || o.orderType || 'Online',
         o.paymentMethod || 'COD',
+        `₹${o.total}`,
         (() => {
             const rawItems = o.cart || (Array.isArray(o.items) ? o.items : Object.values(o.items || {}));
             const items = rawItems.length ? rawItems : (o.item ? [{name: o.item, qty: 1}] : []);
@@ -380,12 +412,12 @@ export function downloadPDF() {
 
     doc.autoTable({
         startY: 45,
-        head: [['Date', 'Customer', 'Total', 'Method', 'Items']],
+        head: [['Date', 'Customer', 'Order Type', 'Payment', 'Total', 'Items']],
         body: tableData,
         theme: 'grid',
         headStyles: { fillColor: [6, 95, 70] },
         columnStyles: {
-            4: { cellWidth: 60 }
+            5: { cellWidth: 50 }
         }
     });
     doc.save(`Sales_Report_${from}_to_${to}.pdf`);

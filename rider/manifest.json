@@ -1,6 +1,7 @@
 {
   "name": "Roshani Rider Hub",
   "short_name": "Roshani Rider",
+  "id": "/rider/index.html",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#F4F6F8",

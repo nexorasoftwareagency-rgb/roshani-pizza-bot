@@ -19,28 +19,21 @@ export const showToast = (message, type = 'success') => {
 export const showConfirm = (message, title = "Confirm Action") => {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
-        overlay.id = 'confirmOverlay';
-        overlay.style.cssText = `
-            position: fixed; inset: 0; z-index: 99999;
-            background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center;
-        `;
+        overlay.className = 'dynamic-modal-overlay';
 
         overlay.innerHTML = `
-            <div class="confirm-box" style="background: #1c1c1c; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
-                        padding: 32px; max-width: 360px; width: 90%; text-align: center;
-                        box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
-                <h3 class="confirm-title" style="color: #fff; margin: 0 0 12px; font-size: 18px; font-weight: 700;"></h3>
-                <p class="confirm-message" style="color: #aaa; font-size: 14px; margin: 0 0 24px;"></p>
-                <div style="display: flex; gap: 12px; justify-content: center;">
-                    <button class="confirm-no" style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #333; background: transparent; color: #aaa; cursor: pointer; font-size: 14px; font-weight: 600;">Cancel</button>
-                    <button class="confirm-yes" style="flex: 1; padding: 12px; border-radius: 12px; border: none; background: var(--action-green); color: #fff; cursor: pointer; font-size: 14px; font-weight: 700;">Confirm</button>
+            <div class="dynamic-modal-box">
+                <h3 class="dynamic-modal-title"></h3>
+                <p class="dynamic-modal-text"></p>
+                <div class="dynamic-modal-actions">
+                    <button class="btn-cancel">Cancel</button>
+                    <button class="btn-confirm">Confirm</button>
                 </div>
             </div>`;
 
         document.body.appendChild(overlay);
-        overlay.querySelector('.confirm-title').innerText = title;
-        overlay.querySelector('.confirm-message').innerText = message;
+        overlay.querySelector('.dynamic-modal-title').innerText = title;
+        overlay.querySelector('.dynamic-modal-text').innerText = message;
 
         const cleanup = (val) => {
             overlay.style.opacity = '0';
@@ -50,8 +43,8 @@ export const showConfirm = (message, title = "Confirm Action") => {
             }, 200);
         };
 
-        overlay.querySelector('.confirm-yes').onclick = () => cleanup(true);
-        overlay.querySelector('.confirm-no').onclick = () => cleanup(false);
+        overlay.querySelector('.btn-confirm').onclick = () => cleanup(true);
+        overlay.querySelector('.btn-cancel').onclick = () => cleanup(false);
         overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
     });
 };
@@ -59,28 +52,22 @@ export const showConfirm = (message, title = "Confirm Action") => {
 export const showDeleteConfirm = (itemName, message = "This action cannot be undone.") => {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
-        overlay.style.cssText = `
-            position: fixed; inset: 0; z-index: 99999;
-            background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center;
-        `;
+        overlay.className = 'dynamic-modal-overlay';
 
         overlay.innerHTML = `
-            <div style="background:#1c1c1c; border:1px solid #ef4444; border-radius:20px;
-                        padding:32px 36px; max-width:360px; width:90%; text-align:center;
-                        box-shadow:0 20px 60px rgba(239,68,68,0.25);">
-                <div style="font-size:40px; margin-bottom:12px;">🗑️</div>
-                <h3 style="color:#fff; margin:0 0 8px; font-size:18px; font-weight:700;">Delete <span class="delete-item-name"></span>?</h3>
-                <p style="color:#aaa; font-size:14px; margin:0 0 24px;"></p>
-                <div style="display:flex; gap:12px; justify-content:center;">
-                    <button class="confirm-no" style="flex:1; padding:12px; border-radius:12px; border:1px solid #333; background:transparent; color:#aaa; cursor:pointer; font-size:14px; font-weight:600;">Cancel</button>
-                    <button class="confirm-yes" style="flex:1; padding:12px; border-radius:12px; border:none; background:#ef4444; color:#fff; cursor:pointer; font-size:14px; font-weight:700;">Delete</button>
+            <div class="dynamic-modal-box danger">
+                <div class="dynamic-modal-icon">🗑️</div>
+                <h3 class="dynamic-modal-title">Delete <span class="highlight-name"></span>?</h3>
+                <p class="dynamic-modal-text"></p>
+                <div class="dynamic-modal-actions">
+                    <button class="btn-cancel">Cancel</button>
+                    <button class="btn-confirm danger">Delete</button>
                 </div>
             </div>`;
 
         document.body.appendChild(overlay);
-        overlay.querySelector('.delete-item-name').innerText = itemName;
-        overlay.querySelector('p').innerText = message;
+        overlay.querySelector('.highlight-name').innerText = itemName;
+        overlay.querySelector('.dynamic-modal-text').innerText = message;
 
         const cleanup = (val) => {
             overlay.style.opacity = '0';
@@ -90,9 +77,9 @@ export const showDeleteConfirm = (itemName, message = "This action cannot be und
             }, 200);
         };
 
-        overlay.querySelector('.confirm-yes').onclick = () => cleanup(true);
-        overlay.querySelector('.confirm-no').onclick = () => cleanup(false);
-        overlay.querySelector('.confirm-no').focus();
+        overlay.querySelector('.btn-confirm').onclick = () => cleanup(true);
+        overlay.querySelector('.btn-cancel').onclick = () => cleanup(false);
+        overlay.querySelector('.btn-cancel').focus();
         overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
     });
 };
@@ -100,32 +87,26 @@ export const showDeleteConfirm = (itemName, message = "This action cannot be und
 export const showBulkDeleteConfirm = (bulkLabel) => {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
-        overlay.style.cssText = `
-            position: fixed; inset: 0; z-index: 99999;
-            background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center;
-        `;
+        overlay.className = 'dynamic-modal-overlay';
 
         overlay.innerHTML = `
-            <div style="background:#1c1c1c; border:1px solid #ef4444; border-radius:20px;
-                        padding:32px 36px; max-width:400px; width:90%; text-align:center;
-                        box-shadow:0 20px 60px rgba(239,68,68,0.25);">
-                <div style="font-size:40px; margin-bottom:12px;">⚠️</div>
-                <h3 style="color:#fff; margin:0 0 8px; font-size:18px; font-weight:700;">Clear all <span class="bulk-label"></span>?</h3>
-                <p style="color:#aaa; font-size:14px; margin:0 0 8px;">This will permanently delete all records.</p>
-                <p style="color:#ef4444; font-size:13px; margin:0 0 20px; font-weight:600;">Type <strong>CONFIRM</strong> to proceed.</p>
-                <input type="text" class="confirm-input" placeholder="Type CONFIRM" style="width:100%; padding:12px; border-radius:12px; border:1px solid #333; background:#262626; color:#fff; font-size:14px; text-align:center; outline:none; box-sizing:border-box; margin-bottom:20px;">
-                <div style="display:flex; gap:12px; justify-content:center;">
-                    <button class="confirm-no" style="flex:1; padding:12px; border-radius:12px; border:1px solid #333; background:transparent; color:#aaa; cursor:pointer; font-size:14px; font-weight:600;">Cancel</button>
-                    <button class="confirm-yes" style="flex:1; padding:12px; border-radius:12px; border:none; background:#ef4444; color:#fff; cursor:pointer; font-size:14px; font-weight:700; opacity:0.4;" disabled>Delete</button>
+            <div class="dynamic-modal-box danger wide">
+                <div class="dynamic-modal-icon">⚠️</div>
+                <h3 class="dynamic-modal-title">Clear all <span class="highlight-name"></span>?</h3>
+                <p class="dynamic-modal-text">This will permanently delete all records.</p>
+                <p class="dynamic-modal-text warning">Type <strong>CONFIRM</strong> to proceed.</p>
+                <input type="text" class="dynamic-modal-input" placeholder="Type CONFIRM">
+                <div class="dynamic-modal-actions">
+                    <button class="btn-cancel">Cancel</button>
+                    <button class="btn-confirm danger" disabled>Delete</button>
                 </div>
             </div>`;
 
         document.body.appendChild(overlay);
-        overlay.querySelector('.bulk-label').innerText = bulkLabel;
+        overlay.querySelector('.highlight-name').innerText = bulkLabel;
 
-        const input = overlay.querySelector('.confirm-input');
-        const deleteBtn = overlay.querySelector('.confirm-yes');
+        const input = overlay.querySelector('.dynamic-modal-input');
+        const deleteBtn = overlay.querySelector('.btn-confirm');
         input.focus();
 
         input.addEventListener('input', () => {
@@ -152,7 +133,7 @@ export const showBulkDeleteConfirm = (bulkLabel) => {
         };
 
         deleteBtn.onclick = () => cleanup(true);
-        overlay.querySelector('.confirm-no').onclick = () => cleanup(false);
+        overlay.querySelector('.btn-cancel').onclick = () => cleanup(false);
         overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
     });
 };
@@ -160,22 +141,16 @@ export const showBulkDeleteConfirm = (bulkLabel) => {
 export const showPaymentPicker = (total) => {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
-        overlay.style.cssText = `
-            position: fixed; inset: 0; z-index: 99999;
-            background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center;
-        `;
+        overlay.className = 'dynamic-modal-overlay';
 
         overlay.innerHTML = `
-            <div style="background: #1c1c1c; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
-                        padding: 32px; max-width: 400px; width: 95%; text-align: center;
-                        box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
-                <h3 style="color: #fff; margin: 0 0 12px; font-size: 20px; font-weight: 700;">Record Payment</h3>
-                <p style="color: #aaa; font-size: 14px; margin: 0 0 24px;">Confirm payment method for <b>₹${total}</b></p>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <button data-method="Cash" style="padding: 15px; border-radius: 12px; border: 1px solid #333; background: #262626; color: #fff; cursor: pointer; font-weight: 600;">💵 Cash</button>
-                    <button data-method="UPI" style="padding: 15px; border-radius: 12px; border: 1px solid #333; background: #262626; color: #fff; cursor: pointer; font-weight: 600;">📱 UPI</button>
-                    <button id="cancelPay" style="padding: 15px; border-radius: 12px; border: 1px solid #c53030; background: transparent; color: #c53030; cursor: pointer; font-weight: 600;">Cancel</button>
+            <div class="dynamic-modal-box wide">
+                <h3 class="dynamic-modal-title" style="font-size:20px;">Record Payment</h3>
+                <p class="dynamic-modal-text">Confirm payment method for <b>₹${total}</b></p>
+                <div class="dynamic-payment-grid">
+                    <button data-method="Cash" class="pay-btn">💵 Cash</button>
+                    <button data-method="UPI" class="pay-btn">📱 UPI</button>
+                    <button id="cancelPay" class="pay-btn pay-btn-cancel">Cancel</button>
                 </div>
             </div>`;
 

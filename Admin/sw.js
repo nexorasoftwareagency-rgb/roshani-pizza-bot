@@ -1,37 +1,13 @@
-// Fail-fast if not on HTTPS (security best practice for Phase 2.20)
+// Fail-fast if not on HTTPS
 if (self.location.protocol !== 'https:' && self.location.hostname !== 'localhost' && self.location.hostname !== '127.0.0.1') {
   throw new Error('Service Worker requires HTTPS');
 }
 
-// Firebase Messaging for background FCM handling
-importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js');
-
-firebase.initializeApp({
-  apiKey: "AIzaSyDcx-SN5eak8PAs-8NtTGelJ_sICr5yb7Y",
-  authDomain: "prashant-pizza-e86e4.firebaseapp.com",
-  databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
-  projectId: "prashant-pizza-e86e4",
-  messagingSenderId: "857471482885",
-  appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c"
-});
-
-const fcmMessaging = firebase.messaging();
-
-fcmMessaging.onBackgroundMessage((payload) => {
-  const notificationTitle = payload.notification?.title || 'New Order Alert';
-  const notificationOptions = {
-    body: payload.notification?.body || 'Open dashboard to view details.',
-    icon: './icon-512.png',
-    badge: './icon-512.png',
-    data: { url: './index.html' }
-  };
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
+// Firebase Messaging is handled by firebase-messaging-sw.js (auto-registered by Firebase SDK)
+// This SW handles caching, navigation, and offline support only.
 
 const CACHE_NAME = 'roshani-erp-v4.9.0';
 const ASSETS_TO_CACHE = [
-  './index.html',
   './style.css',
   './mobile-overrides.css',
   './branding.js',
@@ -68,18 +44,23 @@ const ASSETS_TO_CACHE = [
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.18/jspdf.plugin.autotable.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js',
   './assets/sounds/alert.mp3'
 ];
 
-// 1. Install Event: Cache UI Assets
+// 1. Install Event: Cache UI Assets (per-asset resilience)
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const url of ASSETS_TO_CACHE) {
+        try {
+          await cache.add(url);
+        } catch (e) {
+          console.warn('[SW] Failed to cache:', url);
+        }
+      }
+    }).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 // 2. Activate Event: Cleanup old caches
@@ -146,31 +127,4 @@ self.addEventListener('fetch', (event) => {
         });
       })
   );
-});
-
-// 4. Push Notification Event
-self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : { title: 'New Alert', body: 'Check your dashboard.' };
-  const options = {
-    body: data.body,
-    icon: './icon-erp.webp',
-    badge: './icon-erp.webp',
-    vibrate: [100, 50, 100],
-    data: { url: './index.html' },
-    actions: [
-      { action: 'open', title: 'Open' },
-      { action: 'dismiss', title: 'Dismiss' }
-    ]
-  };
-  event.waitUntil(self.registration.showNotification(data.title, options));
-});
-
-// 5. Notification Click Event
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  if (event.action === 'open' || !event.action) {
-    event.waitUntil(
-      clients.openWindow(event.notification.data?.url || './index.html')
-    );
-  }
 });

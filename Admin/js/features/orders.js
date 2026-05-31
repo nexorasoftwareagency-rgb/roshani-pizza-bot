@@ -371,13 +371,15 @@ export function renderOrders(snap) {
 
     // Update Dashboard Elements using snapshot data (not paginated).
     // Use ordersMap which is populated from the latest onValue snapshot.
-    const snapshotOrders = Array.from(state.ordersMap.entries()).map(([id, o]) => ({ id, ...o }));
-    updateDashboardStats(snapshotOrders);
-    renderPriorityOrders(snapshotOrders);
-    renderTopItems(snapshotOrders);
-    renderTopCustomers(snapshotOrders);
-    // Clear active containers
-    Object.values(containers).forEach(c => { if (c) c.innerHTML = ""; });
+    if (activeTab === 'dashboard') {
+        const snapshotOrders = Array.from(state.ordersMap.entries()).map(([id, o]) => ({ id, ...o }));
+        updateDashboardStats(snapshotOrders);
+        renderPriorityOrders(snapshotOrders);
+        renderTopItems(snapshotOrders);
+        renderTopCustomers(snapshotOrders);
+    }
+    // Clear active container only
+    if (containers[activeTab]) containers[activeTab].innerHTML = "";
 
     // Performance Optimization: Cleanup listeners once, not per item
     if (state._activeListeners) {
@@ -404,6 +406,12 @@ export function renderOrders(snap) {
             containers['orders'].innerHTML = '<tr><td colspan="7" class="empty-state-cell"><div class="empty-state"><i data-lucide="inbox"></i><p>No orders yet</p><span>New orders will appear here in real-time</span></div></td></tr>';
             if (window.lucide) window.lucide.createIcons();
         }
+    }
+
+    // Empty state for dashboard tab
+    if (activeTab === 'dashboard' && sortedOrders.length === 0 && containers['dashboard']) {
+        containers['dashboard'].innerHTML = '<tr><td colspan="8" class="empty-state-cell"><div class="empty-state"><i data-lucide="layout-dashboard"></i><p>No orders yet</p><span>Orders will appear here in real-time</span></div></td></tr>';
+        if (window.lucide) window.lucide.createIcons();
     }
     
     // Empty state for live tab
@@ -454,7 +462,7 @@ export function renderOrders(snap) {
         tr.id = `row-${id}`;
         tr.className = "premium-row-v4";
         tr.onclick = (e) => {
-            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'A') {
+            if (!e.target.closest('button, select, a, [data-action]')) {
                 openOrderDrawer(id);
             }
         };
@@ -737,13 +745,13 @@ export function renderOrders(snap) {
  */
 
 function updateDashboardStats(orders) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getISTDateString();
     
     const todayOrders = orders.filter(o => {
         if (!o.createdAt) return false;
         const d = new Date(o.createdAt);
         if (isNaN(d.getTime())) return false;
-        const date = d.toISOString().split('T')[0];
+        const date = getISTDateString(d);
         return date === today;
     });
 
@@ -751,11 +759,12 @@ function updateDashboardStats(orders) {
         .filter(o => o.status === "Delivered")
         .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
+    const activeToday = todayOrders.filter(o => !['Delivered', 'Cancelled'].includes(o.status)).length;
     const pending = orders.filter(o => ["Placed", "Confirmed", "Preparing"].includes(o.status)).length;
 
     // Update UI
     const els = {
-        'statOrders': todayOrders.length,
+        'statOrders': activeToday,
         'statPending': pending,
         'statRevenue': `₹${revenue.toLocaleString()}`,
         'statRidersActive': (state.ridersList || []).filter(r => r.status === "Online" || r.status === "On Delivery").length
@@ -803,11 +812,14 @@ function renderPriorityOrders(orders) {
         const status = o.status || "Placed";
         const type = o.type || 'Online';
         const safeStatusClass = status.toLowerCase().replace(/ /g, '');
-        const timeStr = o.createdAt ? new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently';
+        const timeStr = o.createdAt ? new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }) : 'Recently';
         
         // Extract items summary
-        const items = o.cart || o.items || (o.normalizedItems ? o.normalizedItems : []);
-        const itemsSummary = Array.isArray(items) ? items.map(i => `${i.qty}x ${i.name || i.item}`).join(', ') : "Items hidden";
+        let items = [];
+        if (Array.isArray(o.cart)) items = o.cart;
+        else if (o.items) items = Array.isArray(o.items) ? o.items : Object.values(o.items);
+        else if (o.item) items = [{ name: o.item, size: o.size || 'Regular', qty: 1, price: o.total || 0 }];
+        const itemsSummary = items.length > 0 ? items.map(i => `${i.qty}x ${i.name || i.item}`).join(', ') : "No items";
 
         return `
             <div class="priority-card-v4 status-${safeStatusClass}" data-order-id="${id}">
@@ -1115,13 +1127,22 @@ export async function markAsPaid(id) {
     }
 }
 
-export async function saveDeliveredOrder(id, data) {
+export async function saveDeliveredOrder(id) {
+    const order = state.ordersMap.get(id);
+    if (!order) {
+        showToast("Order not found!", "error");
+        return;
+    }
+    const method = await showPaymentPicker(order.total);
+    if (!method) return;
     try {
         await update(Outlet.ref(`orders/${id}`), {
-            ...data,
             status: "Delivered",
+            paymentMethod: method,
+            paymentStatus: "Paid",
             deliveredAt: serverTimestamp()
         });
+        closeOrderDrawer();
         logAudit("Orders", `Order Delivered: #${id.slice(-5)}`, id);
         showToast("Order finalized and delivered!", "success");
     } catch (e) {
@@ -1135,7 +1156,10 @@ export async function saveDeliveredOrder(id, data) {
 export async function openOrderDrawer(id) {
     window.openOrderDrawer = openOrderDrawer;
     const order = state.ordersMap.get(id);
-    if (!order) return;
+    if (!order) {
+        showToast("Order not found. It may have been removed.", "error");
+        return;
+    }
 
     const drawer = document.getElementById('orderDrawer');
     if (!drawer) return;
@@ -1143,115 +1167,168 @@ export async function openOrderDrawer(id) {
     const content = document.getElementById('orderDrawerBody');
     if (!content) return;
 
-    // Render items using normalized array
-    const items = order.normalizedItems || [];
-    const itemsHtml = items.map(item => `
-        <div class="premium-row-v4 p-12 mb-8 br-12" style="background: #f8fafc; border: 1px solid #e2e8f0;">
-            <div class="flex-between flex-center">
-                <div class="identity-info-v4">
-                    <span class="name font-600" style="font-size:14px; color:#1e293b;">${escapeHtml(item.name || "Item")}</span>
-                    <span class="sub" style="font-size:11px; color:#64748b;">${escapeHtml(item.size || 'N/A')}</span>
-                </div>
-                <div class="identity-info-v4 text-right">
-                    <span class="name font-700" style="font-size:14px; color:#0f172a;">₹${item.price || item.total || 0}</span>
-                    <span class="sub" style="font-size:10px; color:#64748b;">Qty: ${item.qty || 1}</span>
-                </div>
+    let items = [];
+    if (Array.isArray(order.cart)) {
+        items = order.cart;
+    } else if (order.items) {
+        items = Array.isArray(order.items) ? order.items : Object.values(order.items);
+    } else if (order.item) {
+        items = [{
+            name: order.item,
+            size: order.size || 'Regular',
+            addon: order.addon || 'None',
+            qty: 1,
+            price: order.total || 0
+        }];
+    }
+    const statusLower = (order.status || '').toLowerCase().replace(/\s+/g, '');
+    const orderType = order.type || 'Online';
+    const isDelivery = orderType === 'Online' || orderType === 'WhatsApp';
+    const createdAt = order.createdAt ? new Date(order.createdAt) : new Date();
+    const timeStr = createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateStr = createdAt.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+
+    const itemsHtml = items.map((item, idx) => {
+        const addonChips = [];
+        if (item.addon && item.addon !== 'None') addonChips.push(`<span class="item-addon-chip">${escapeHtml(item.addon)}</span>`);
+        if (item.addons && Array.isArray(item.addons)) {
+            item.addons.forEach(a => { if (a.name) addonChips.push(`<span class="item-addon-chip">${escapeHtml(a.name)}</span>`); });
+        }
+        return `
+        <div class="item-card">
+            <div class="item-qty-badge">${item.qty || 1}</div>
+            <div class="item-info">
+                <div class="item-name">${escapeHtml(item.name || 'Item')}</div>
+                <div class="item-size">${escapeHtml(item.size || 'Regular')}</div>
+                ${addonChips.length ? `<div class="item-addons">${addonChips.join('')}</div>` : ''}
             </div>
-            ${(item.addon && item.addon !== 'None') || (item.addons && item.addons.length > 0) ? `
-                <div class="mt-8 pt-8 border-t-ghost">
-                    <div class="text-muted-small ls-sm text-upper" style="font-size:8px; margin-bottom:4px;">Extras</div>
-                    <div class="flex-row flex-wrap flex-gap-4">
-                        ${item.addon && item.addon !== 'None' ? `<span class="status-badge-v4 info" style="font-size:9px; padding:2px 6px;">${escapeHtml(item.addon)}</span>` : ''}
-                        ${item.addons && Array.isArray(item.addons) ? item.addons.map(a => `<span class="status-badge-v4 success" style="font-size:9px; padding:2px 6px;">${escapeHtml(a.name || '')}</span>`).join('') : ''}
-                    </div>
-                </div>
-            ` : ''}
-        </div>
-    `).join('');
+            <div class="item-price">
+                <div class="price">₹${item.price || item.total || 0}</div>
+                ${item.qty > 1 ? `<div class="unit-price">₹${((item.price || item.total || 0) / (item.qty || 1)).toFixed(0)} each</div>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+
+    const riderOptions = (state.ridersList || [])
+        .filter(r => r.status === "Online" || r.status === "On Delivery")
+        .map(r => `<option value="${r.id}" ${order.riderId === r.id ? 'selected' : ''}>${escapeHtml(r.name)} (${r.status})</option>`)
+        .join('');
 
     content.innerHTML = `
-        <div class="drawer-header-v4 p-20 border-b-ghost">
-            <div class="flex-between flex-center mb-10">
-                <div class="identity-info-v4">
-                    <span class="name fs-20 font-800" style="color:#f36b21;">Order #${escapeHtml(order.orderId || id.slice(-5))}</span>
-                    <span class="sub" style="color:#64748b;">${new Date(order.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                </div>
-                <span class="status-badge-v4 ${order.status.toLowerCase().replace(/\s+/g, '')}" style="font-size:11px; padding:6px 12px;">${order.status}</span>
+        <!-- VIBRANT HEADER -->
+        <div class="drawer-header-v4">
+            <button class="drawer-close-btn" data-action="closeOrderDrawer" title="Close" aria-label="Close order detail" onkeydown="if(event.key==='Enter'||event.key===' ')event.preventDefault();">
+                <i data-lucide="x" style="width:18px;height:18px;"></i>
+            </button>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+                <span class="order-type-badge">
+                    <i data-lucide="${orderType === 'Online' ? 'globe' : orderType === 'WhatsApp' ? 'message-circle' : orderType === 'POS' ? 'monitor' : 'utensils'}" style="width:11px;height:11px;"></i>
+                    ${escapeHtml(orderType)}
+                </span>
+                <span class="order-status-pill status-${statusLower}">
+                    <i data-lucide="circle" style="width:7px;height:7px;fill:currentColor;"></i>
+                    ${escapeHtml(order.status || 'Unknown')}
+                </span>
             </div>
+            <div class="order-id-text">Order #${escapeHtml(order.orderId || id.slice(-5))}</div>
+            <div class="order-meta-text">${dateStr} at ${timeStr}</div>
         </div>
-        
-        <div class="drawer-scroll-body p-20" style="max-height: calc(85vh - 180px); overflow-y: auto;">
-            <div class="drawer-section mb-24">
-                <div class="section-label-v4 mb-12">Customer Details</div>
-                <div class="identity-chip-v4 p-15 br-16 bg-ghost" style="background: #fef2f2;">
-                    <div class="kpi-icon-box glass" style="width:40px; height:40px;">
-                        <i data-lucide="user"></i>
+
+        <!-- SCROLLABLE BODY -->
+        <div class="drawer-scroll-body">
+
+            <!-- Customer Info -->
+            <div class="drawer-section">
+                <div class="section-label-v4"><i data-lucide="user"></i> Customer</div>
+                <div class="drawer-customer-card">
+                    <div class="customer-avatar">
+                        <i data-lucide="user" style="width:20px;height:20px;"></i>
                     </div>
-                    <div class="identity-info-v4">
-                        <span class="name font-700 fs-16" style="color:#1e293b;">${escapeHtml(order.customerName || 'Guest')}</span>
-                        <span class="sub fs-13" style="color:#64748b;">${escapeHtml(order.phone || 'No Phone')}</span>
+                    <div>
+                        <div class="customer-name">${escapeHtml(order.customerName || 'Guest')}</div>
+                        <div class="customer-phone">${escapeHtml(order.phone || 'No phone')}</div>
                     </div>
                 </div>
-                <div class="mt-12 p-12 br-12 border-ghost flex-row flex-gap-10">
-                    <i data-lucide="map-pin" style="width:16px; color:#64748b;"></i>
-                    <div class="flex-1">
-                        <p class="fs-13 m-0 line-height-14" style="color:#334155;">${escapeHtml(order.address || 'Counter Sale / Walk-in')}</p>
-                        ${(order.locationLink || (order.lat && order.lng)) ? 
-                            `<a href="${escapeHtml(order.locationLink || `https://www.google.com/maps?q=${order.lat},${order.lng}`)}" target="_blank" rel="noopener noreferrer" class="link-premium fs-11 font-700 mt-8 d-inline-block">📍 TRACK ON LIVE MAP</a>` 
-                            : ""
-                        }
+                <div class="drawer-address-block">
+                    <i data-lucide="map-pin" style="width:16px;height:16px;color:#94a3b8;flex-shrink:0;margin-top:2px;"></i>
+                    <div>
+                        <div class="address-text">${escapeHtml(order.address || 'Counter Sale / Walk-in')}</div>
+                        ${(order.locationLink || (order.lat && order.lng)) ?
+                            `<a href="${escapeHtml(order.locationLink || `https://www.google.com/maps?q=${order.lat},${order.lng}`)}" target="_blank" rel="noopener noreferrer" class="map-link">
+                                <i data-lucide="external-link" style="width:10px;height:10px;"></i> Track on Live Map
+                            </a>` : ''}
                     </div>
                 </div>
             </div>
 
-            <div class="drawer-section mb-24">
-                <div class="section-label-v4 mb-12">Order Items (${items.length})</div>
-                <div class="drawer-items-list">${itemsHtml}</div>
+            <!-- Order Items -->
+            <div class="drawer-section">
+                <div class="section-label-v4"><i data-lucide="shopping-bag"></i> Items (${items.length})</div>
+                <div class="drawer-items-list">${itemsHtml || '<div class="empty-state"><i data-lucide="shopping-bag"></i><p>No items in this order</p><span>Items may have been removed or the order is empty</span></div>'}</div>
             </div>
 
-            <div class="drawer-section mb-24 p-20 br-16" style="background: #0f172a; color: #f1f5f9;">
-                <div class="flex-between mb-8"><span class="text-white-50 fs-13">Subtotal</span><span class="fs-13">₹${order.subtotal || 0}</span></div>
-                <div class="flex-between mb-8"><span class="text-white-50 fs-13">Discount</span><span class="text-success fs-13">-₹${order.discount || 0}</span></div>
-                <div class="flex-between mb-12"><span class="text-white-50 fs-13">Delivery Fee</span><span class="fs-13">₹${order.deliveryFee || 0}</span></div>
-                <div class="border-t-white-10 pt-12 flex-between flex-center">
-                    <span class="font-600 fs-14">Grand Total</span>
-                    <span class="fs-22 font-800 color-primary">₹${order.total || 0}</span>
+            <!-- Pricing Summary -->
+            <div class="drawer-summary-panel">
+                <div class="summary-row"><span class="label">Subtotal</span><span class="value">₹${order.subtotal || 0}</span></div>
+                ${(order.discount && Number(order.discount) > 0) ? `<div class="summary-row discount"><span class="label">Discount</span><span class="value">-₹${order.discount}</span></div>` : ''}
+                ${(order.deliveryFee && Number(order.deliveryFee) > 0) ? `<div class="summary-row"><span class="label">Delivery Fee</span><span class="value">₹${order.deliveryFee}</span></div>` : ''}
+                <div class="summary-total">
+                    <span class="label">Grand Total</span>
+                    <span class="value">₹${order.total || 0}</span>
                 </div>
             </div>
 
-            <div class="drawer-section mb-20">
-                <div class="section-label-v4 mb-12">Operational Controls</div>
-                <div class="panel-v4 p-15 br-16">
-                    <div class="form-group mb-15">
-                        <label class="form-label-small mb-8 d-block">ORDER STATUS</label>
-                        <select data-action="updateStatus" data-id="${id}" class="form-input-v4 w-100">
-                            ${getStatusOptions(order.status || "Placed", order.type || 'Online')}
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label-small mb-8 d-block">DELIVERY RIDER</label>
-                        <select data-action="assignRider" data-id="${id}" class="form-input-v4 w-100" ${order.type === 'Dine-in' ? 'disabled' : ''}>
-                            <option value="">${order.riderId ? 'Change Rider' : 'Select Rider'}</option>
-                            ${(state.ridersList || [])
-                                .filter(r => r.status === "Online" || r.status === "On Delivery")
-                                .map(r => `<option value="${r.id}" ${order.riderId === r.id ? 'selected' : ''}>${escapeHtml(r.name)}</option>`)
-                                .join('')}
-                        </select>
+            <!-- Operational Controls -->
+            <div class="drawer-section" style="margin-bottom:0;">
+                <div class="section-label-v4"><i data-lucide="settings"></i> Controls</div>
+                <div class="drawer-ctrl-panel" style="border:none;padding:0;margin:0;background:transparent;box-shadow:none;">
+                    <div class="ctrl-row">
+                        <div class="ctrl-group">
+                            <label class="form-label-small mb-6 d-block" style="color:#64748b;">STATUS</label>
+                            <select data-action="updateStatus" data-id="${id}" class="form-input-v4 w-100">
+                                ${getStatusOptions(order.status || "Placed", orderType)}
+                            </select>
+                        </div>
+                        <div class="ctrl-group">
+                            <label class="form-label-small mb-6 d-block" style="color:#64748b;">RIDER</label>
+                            <select data-action="assignRider" data-id="${id}" class="form-input-v4 w-100" ${!isDelivery ? 'disabled' : ''}>
+                                <option value="">${order.riderId ? 'Change Rider' : 'Assign Rider'}</option>
+                                ${riderOptions}
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
+
+        </div>
+
+        <!-- ACTION BAR -->
+        <div class="drawer-action-bar">
+            <button class="btn-drawer-action primary" data-action="printReceiptById" data-id="${id}">
+                <i data-lucide="printer" style="width:15px;height:15px;"></i> Print
+            </button>
+            ${order.phone ? `<a class="btn-drawer-action whatsapp" href="https://wa.me/${escapeHtml(order.phone.replace(/[^0-9]/g, ''))}" target="_blank" style="text-decoration:none;">
+                <i data-lucide="message-circle" style="width:15px;height:15px;"></i> WhatsApp
+            </a>` : ''}
+            ${isDelivery && order.status !== 'Delivered' ? `<button class="btn-drawer-action secondary" data-action="saveDeliveredOrder" data-id="${id}">
+                <i data-lucide="check-circle" style="width:15px;height:15px;"></i> Delivered
+            </button>` : ''}
         </div>
     `;
 
     if (window.lucide) window.lucide.createIcons({ root: content });
-    
+
     const overlay = document.getElementById('orderDrawerOverlay');
     if (drawer) drawer.classList.add('active');
     if (overlay) overlay.classList.add('active');
-    
-    // Push state so back button closes the drawer
+
     history.pushState({ action: 'closeDrawer', targetId: 'orderDrawer' }, "", window.location.hash);
+
+    if (window._drawerPopstateHandler) {
+        window.removeEventListener('popstate', window._drawerPopstateHandler);
+    }
+    window._drawerPopstateHandler = () => closeOrderDrawer();
+    window.addEventListener('popstate', window._drawerPopstateHandler);
 }
 
 export function closeOrderDrawer() {
@@ -1259,6 +1336,11 @@ export function closeOrderDrawer() {
     const overlay = document.getElementById('orderDrawerOverlay');
     if (drawer) drawer.classList.remove('active');
     if (overlay) overlay.classList.remove('active');
+
+    if (window._drawerPopstateHandler) {
+        window.removeEventListener('popstate', window._drawerPopstateHandler);
+        window._drawerPopstateHandler = null;
+    }
 }
 
 export function filterOrders(searchTerm) {

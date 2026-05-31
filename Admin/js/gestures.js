@@ -7,7 +7,6 @@ import { haptic } from './utils.js';
 
 export function initGestures() {
     initSwipeToClose('orderDrawer', () => {
-        // Logic to close the drawer
         const drawer = document.getElementById('orderDrawer');
         if (drawer) drawer.classList.remove('active');
     });
@@ -22,73 +21,84 @@ export function initGestures() {
 
 /**
  * INIT SWIPE TO CLOSE
- * Adds touch listeners to a bottom-sheet element.
+ * Adds touch listeners for swipe-to-close (horizontal for full-page drawers).
+ * Only activates from the left edge (40px) to avoid conflicting with vertical scroll
+ * and uses a diagonal threshold to distinguish swipe from scroll.
  */
 function initSwipeToClose(elementId, closeCallback) {
     const el = document.getElementById(elementId);
     if (!el) return;
 
+    let startX = 0;
     let startY = 0;
-    let currentY = 0;
+    let currentX = 0;
     let isSwiping = false;
+    const EDGE_THRESHOLD = 40;
+    const SWIPE_THRESHOLD = 100;
+    const DIAGONAL_THRESHOLD = 30;
 
     el.addEventListener('touchstart', (e) => {
-        // Only trigger if we are at the top of the scroll inside the drawer
-        if (el.scrollTop > 0) return;
-        
+        if (el.querySelector('.drawer-scroll-body')?.scrollTop > 0) return;
+        const touchX = e.touches[0].pageX;
+        const drawerRect = el.getBoundingClientRect();
+        if (touchX - drawerRect.left > EDGE_THRESHOLD) return;
+        startX = touchX;
         startY = e.touches[0].pageY;
-        currentY = startY; // Initialize currentY to avoid stale values
+        currentX = startX;
         isSwiping = true;
-        el.style.transition = 'none'; // Disable transitions during swipe
+        el.style.transition = 'none';
     }, { passive: true });
 
     el.addEventListener('touchmove', (e) => {
         if (!isSwiping) return;
-        
-        currentY = e.touches[0].pageY;
-        const diff = currentY - startY;
-        
-        if (diff > 0) {
-            // Dragging down - move the drawer
-            el.style.transform = `translateY(${diff}px)`;
-            
-            // Critical: Only prevent default if we are actually moving the drawer down
-            // to avoid blocking other gestures or system behaviors
+
+        currentX = e.touches[0].pageX;
+        const currentY = e.touches[0].pageY;
+        const diffX = currentX - startX;
+        const diffY = Math.abs(currentY - startY);
+
+        if (diffY > diffX && diffY > DIAGONAL_THRESHOLD) {
+            isSwiping = false;
+            el.style.transform = '';
+            return;
+        }
+
+        if (diffX > 0) {
+            el.style.transform = `translateX(${diffX}px)`;
             if (e.cancelable) e.preventDefault();
             e.stopPropagation();
         } else {
-            // Dragging up - reset transform and let native scroll take over
             el.style.transform = '';
-            isSwiping = false; 
+            isSwiping = false;
         }
     }, { passive: false });
 
     el.addEventListener('touchend', () => {
         if (!isSwiping) return;
         isSwiping = false;
-        
-        const diff = currentY - startY;
-        el.style.transition = ''; // Restore transitions
-        
-        if (diff > 120) {
-            // Threshold met, close it
+
+        const diff = currentX - startX;
+        el.style.transition = '';
+
+        if (diff > SWIPE_THRESHOLD) {
             haptic(10);
-            el.style.transform = ''; // Reset transform for CSS class to handle
+            el.style.transform = '';
             closeCallback();
         } else {
-            // Snap back
             el.style.transform = '';
         }
-        
+
+        startX = 0;
         startY = 0;
-        currentY = 0;
+        currentX = 0;
     });
 
     el.addEventListener('touchcancel', () => {
         isSwiping = false;
         el.style.transition = '';
         el.style.transform = '';
+        startX = 0;
         startY = 0;
-        currentY = 0;
+        currentX = 0;
     });
 }

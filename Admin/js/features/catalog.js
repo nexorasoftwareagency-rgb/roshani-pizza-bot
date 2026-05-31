@@ -274,6 +274,11 @@ export async function saveDish() {
     const basePrice = document.getElementById('dishPriceBase').value;
     let image = document.getElementById('dishImage').value;
 
+    document.querySelectorAll('#dishModal .form-input').forEach(el => el.classList.remove('error', 'valid'));
+    if (!name) document.getElementById('dishName').classList.add('error');
+    else document.getElementById('dishName').classList.add('valid');
+    if (!cat) document.getElementById('dishCategory').classList.add('error');
+    else document.getElementById('dishCategory').classList.add('valid');
     if (!name || !cat) return showToast("Please fill Name and Category", "warning");
 
     const file = document.getElementById('dishFile').files[0];
@@ -379,11 +384,12 @@ export async function deleteDish(dishId) {
  */
 
 export async function showDishModal(dishId = null) {
+    resetDishValidation();
     state.editingDishId = dishId;
     const modal = document.getElementById('dishModal');
     if (modal) {
         modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        modal.classList.add('active', 'flex');
     }
 
     if (state.categories.length === 0) loadCategories();
@@ -446,9 +452,14 @@ export async function showDishModal(dishId = null) {
 export function hideDishModal() {
     const modal = document.getElementById('dishModal');
     if (modal) {
-        modal.classList.remove('flex');
+        modal.classList.remove('active', 'flex');
         modal.classList.add('hidden');
     }
+    document.querySelectorAll('#dishModal .form-input').forEach(el => el.classList.remove('error', 'valid'));
+}
+
+export function resetDishValidation() {
+    document.querySelectorAll('#dishModal .form-input').forEach(el => el.classList.remove('error', 'valid'));
 }
 
 export function updateActiveDishModalCategories() {

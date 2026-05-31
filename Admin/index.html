@@ -24,17 +24,23 @@
         if (localStorage.getItem('admin_app_version') !== ADMIN_VERSION) {
             localStorage.setItem('admin_app_version', ADMIN_VERSION);
             // On version mismatch, purge stale SW caches so users get fresh assets
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(regs => {
-                    regs.forEach(r => r.unregister());
-                });
-            }
-            if ('caches' in window) {
-                caches.keys().then(keys => {
-                    keys.filter(k => k.includes('roshani-erp') || k.includes('pizza-erp'))
-                        .forEach(k => caches.delete(k));
-                });
-            }
+            (async () => {
+                try {
+                    if ('serviceWorker' in navigator) {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        await Promise.all(regs.map(r => r.unregister()));
+                    }
+                    if ('caches' in window) {
+                        const keys = await caches.keys();
+                        await Promise.all(
+                            keys.filter(k => k.includes('roshani-erp') || k.includes('pizza-erp'))
+                                .map(k => caches.delete(k))
+                        );
+                    }
+                } catch (e) {
+                    console.warn('[Version] Cleanup failed:', e);
+                }
+            })();
         }
 
         // Suppress debug console.log/info in production (keep error/warn)
@@ -437,9 +443,9 @@
                                             </tr>
                                         </thead>
                                         <tbody id="ordersTable">
-                                            <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
-                                            <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
-                                            <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -612,9 +618,9 @@
                         <!-- Left: Add Category Form -->
                         <div class="flex-col">
                             <div class="glass-card p-20">
-                                <h4 class="mb-14">✨ Create New Category</h4>
+                                <h4 class="mb-14"><i data-lucide="plus-circle" class="icon-16"></i> Create New Category</h4>
                                 <div class="flex-row flex-gap-10 flex-center mb-20 p-15 bg-ghost br-15">
-                                    <img id="catPreview" src="https://placehold.co/100/orange/white?text=Category"
+                                    <img id="catPreview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f36b21' width='100' height='100'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3ECategory%3C/text%3E%3C/svg%3E"
                                         class="category-preview-img" alt="Category Preview">
                                     <div class="flex-col flex-1">
                                         <input type="file" id="catFile" accept="image/*" class="hidden"
@@ -1053,7 +1059,7 @@
                                     <h5 class="mb-12 text-muted-small text-upper ls-sm">Payment QR</h5>
                                     <div
                                         class="qr-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
-                                        <img id="qrPreview" src="https://placehold.co/150x150?text=QR+Code"
+                                        <img id="qrPreview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect fill='%23f1f5f9' width='150' height='150'/%3E%3Ctext x='75' y='80' text-anchor='middle' fill='%2394a3b8' font-size='12' font-family='Inter,sans-serif'%3EQR Code%3C/text%3E%3C/svg%3E"
                                             alt="Payment QR Preview"
                                             class="br-8 mb-12 w-100 h-100 border-ghost-light bg-white">
                                         <input type="file" id="settingQRFile" accept="image/*" class="hidden"
@@ -1069,7 +1075,7 @@
                                             <div>
                                                 <label class="form-label-small" for="settingGreetingFile">Greeting (Branding) Image</label>
                                                 <div class="flex-row flex-center flex-gap-10">
-                                                    <img id="greetingImgPreview" src="https://placehold.co/100/orange/white?text=Branding" class="br-8 border-ghost w-60 h-60 bg-white" alt="Branding Preview">
+                                                    <img id="greetingImgPreview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f36b21' width='100' height='100'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='white' font-size='10' font-family='Inter,sans-serif'%3EBranding%3C/text%3E%3C/svg%3E" class="br-8 border-ghost w-60 h-60 bg-white" alt="Branding Preview">
                                                     <div class="flex-col flex-1">
                                                         <input type="file" id="settingGreetingFile" accept="image/*" class="hidden" title="Upload greeting image">
                                                         <button id="btnChangeGreetingImg" class="btn-secondary btn-small">Change Image</button>
@@ -1080,7 +1086,7 @@
                                             <div class="border-t-ghost pt-10 mt-5">
                                                 <label class="form-label-small" for="settingMenuFile">Menu (Category List) Image</label>
                                                 <div class="flex-row flex-center flex-gap-10">
-                                                    <img id="menuImgPreview" src="https://placehold.co/100/orange/white?text=Menu" class="br-8 border-ghost w-60 h-60 bg-white" alt="Menu Preview">
+                                                    <img id="menuImgPreview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f36b21' width='100' height='100'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='white' font-size='10' font-family='Inter,sans-serif'%3EMenu%3C/text%3E%3C/svg%3E" class="br-8 border-ghost w-60 h-60 bg-white" alt="Menu Preview">
                                                     <div class="flex-col flex-1">
                                                         <input type="file" id="settingMenuFile" accept="image/*" class="hidden" title="Upload menu image">
                                                         <button id="btnChangeMenuImg" class="btn-secondary btn-small">Change Image</button>
@@ -1171,7 +1177,7 @@
                                     class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">✅ Order Confirmed</label>
                                     <img id="botImgConfirmedPreview"
-                                        src="https://placehold.co/600x200/orange/white?text=Banner" alt="Confirmed"
+                                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Confirmed"
                                         class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
                                     <input type="file" id="botImgConfirmedFile" accept="image/*" class="hidden"
                                         title="Order Confirmed Status Image">
@@ -1182,7 +1188,7 @@
                                     class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">👨‍🍳 Preparing</label>
                                     <img id="botImgPreparingPreview"
-                                        src="https://placehold.co/600x200/orange/white?text=Banner" alt="Preparing"
+                                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Preparing"
                                         class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
                                     <input type="file" id="botImgPreparingFile" accept="image/*" class="hidden"
                                         title="Order Preparing Status Image">
@@ -1194,7 +1200,7 @@
                                     class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">🍕 Ready / Cooked</label>
                                     <img id="botImgCookedPreview"
-                                        src="https://placehold.co/600x200/orange/white?text=Banner" alt="Cooked"
+                                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Cooked"
                                         class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
                                     <input type="file" id="botImgCookedFile" accept="image/*" class="hidden"
                                         title="Order Ready Status Image">
@@ -1206,7 +1212,7 @@
                                     class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">🚚 Out for Delivery</label>
                                     <img id="botImgOutPreview"
-                                        src="https://placehold.co/600x200/orange/white?text=Banner"
+                                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E"
                                         alt="Out for Delivery"
                                         class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
                                     <input type="file" id="botImgOutFile" accept="image/*" class="hidden"
@@ -1219,7 +1225,7 @@
                                     class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">🌟 Delivered (Thank You)</label>
                                     <img id="botImgDeliveredPreview"
-                                        src="https://placehold.co/600x200/orange/white?text=Banner" alt="Delivered"
+                                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Delivered"
                                         class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
                                     <input type="file" id="botImgDeliveredFile" accept="image/*" class="hidden"
                                         aria-label="Upload Delivered Image">
@@ -1230,7 +1236,7 @@
                                     class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
                                     <label class="form-label-small mb-4">⭐ Feedback / Rating</label>
                                     <img id="botImgFeedbackPreview"
-                                        src="https://placehold.co/600x200/orange/white?text=Banner" alt="Feedback"
+                                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Feedback"
                                         class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
                                     <input type="file" id="botImgFeedbackFile" accept="image/*" class="hidden"
                                         aria-label="Upload Feedback Image">
@@ -1365,30 +1371,30 @@
                 <div class="reports-container-fluid w-full">
                     <!-- KPI TOP ROW -->
                     <div class="kpi-row mb-24">
-                        <div class="kpi-card-v4">
-                            <div class="icon-box green"><i data-lucide="indian-rupee"></i></div>
-                            <div class="info">
+                        <div class="kpi-card-v4 success">
+                            <div class="icon-wrap success"><i data-lucide="indian-rupee"></i></div>
+                            <div class="info-wrap">
                                 <span class="val" id="reportRevenue">₹0</span>
                                 <span class="lbl">Total Revenue</span>
                             </div>
                         </div>
-                        <div class="kpi-card-v4">
-                            <div class="icon-box blue"><i data-lucide="shopping-bag"></i></div>
-                            <div class="info">
+                        <div class="kpi-card-v4 info">
+                            <div class="icon-wrap info"><i data-lucide="shopping-bag"></i></div>
+                            <div class="info-wrap">
                                 <span class="val" id="reportOrders">0</span>
                                 <span class="lbl">Total Orders</span>
                             </div>
                         </div>
-                        <div class="kpi-card-v4">
-                            <div class="icon-box orange"><i data-lucide="trending-up"></i></div>
-                            <div class="info">
+                        <div class="kpi-card-v4 orange">
+                            <div class="icon-wrap orange"><i data-lucide="trending-up"></i></div>
+                            <div class="info-wrap">
                                 <span class="val" id="reportAvg">₹0</span>
                                 <span class="lbl">Avg. Ticket Size</span>
                             </div>
                         </div>
-                        <div class="kpi-card-v4">
-                            <div class="icon-box pink"><i data-lucide="calendar"></i></div>
-                            <div class="info">
+                        <div class="kpi-card-v4 warning">
+                            <div class="icon-wrap warning"><i data-lucide="calendar"></i></div>
+                            <div class="info-wrap">
                                 <span class="val" id="reportPeriod">Selected Period</span>
                                 <span class="lbl">Report Duration</span>
                             </div>
@@ -1413,16 +1419,17 @@
                                         <thead>
                                             <tr>
                                                 <th>Date & Time</th>
-                                                <th>Customer Detail</th>
-                                                <th>Method</th>
+                                                <th>Customer</th>
+                                                <th>Order Type</th>
+                                                <th>Payment</th>
                                                 <th>Items Summary</th>
                                                 <th class="text-right">Total (₹)</th>
                                             </tr>
                                         </thead>
                                         <tbody id="reportTableBody">
-                                            <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
-                                            <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
-                                            <tr class="skeleton-row"><td colspan="5"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="6"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="6"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="6"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -1561,6 +1568,54 @@
                                 <i data-lucide="plus-circle" class="icon-16"></i> Add Item
                             </button>
                         </div>
+                    </div>
+
+                    <!-- Inventory Feature Toggles -->
+                    <div class="glass-card mb-20 p-24">
+                        <h4 class="panel-title mb-16">Inventory Features</h4>
+
+                        <div class="inventory-toggle-row">
+                            <div class="toggle-info">
+                                <h5>Menu Availability</h5>
+                                <p>Mark dishes as Available or Out of Stock on the menu.</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggleAvailability">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div id="availabilityInfo" class="inventory-info-panel">
+                            <ul>
+                                <li>Control which dishes appear on your POS menu</li>
+                                <li>Out of stock items are hidden from customers</li>
+                                <li>Toggle per-item availability with a single click</li>
+                            </ul>
+                        </div>
+
+                        <div class="inventory-toggle-row">
+                            <div class="toggle-info">
+                                <h5>Stock Inventory Tracking</h5>
+                                <p>Track quantity in stock for each item. Auto-deducts on sales.</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggleStockTracking">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div id="stockTrackingInfo" class="inventory-info-panel">
+                            <ul>
+                                <li>Track exact quantity for each menu item</li>
+                                <li>Auto-deduct stock when orders are confirmed</li>
+                                <li>Low stock alerts via WhatsApp notification</li>
+                                <li>Manual +/- adjustment for stock entries</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Menu Inventory Grid (hidden until toggles ON) -->
+                    <div id="inventoryMenuSection" class="glass-card mb-20 p-20" style="display:none;">
+                        <h4 class="panel-title mb-16">Menu Items</h4>
+                        <div id="inventoryMenuGrid" class="inventory-dish-grid"></div>
                     </div>
 
                     <div id="inventoryStatsRow" class="kpi-row mb-24 mt-10">
@@ -1812,12 +1867,14 @@
                         <select id="dishCategory" class="form-input category-select" title="Choose Category">
                             <option value="">Choose Category...</option>
                         </select>
+                        <div class="field-error">Please select a category</div>
                     </div>
 
                     <div class="flex-row flex-gap-10 mb-20">
                         <div class="flex-3">
                             <label class="form-label">Dish Name</label>
                             <input id="dishName" placeholder="e.g. Farmhouse Pizza" class="form-input w-full">
+                            <div class="field-error">Dish name is required</div>
                         </div>
                         <div class="flex-1">
                             <label class="form-label">Serial</label>
@@ -2028,11 +2085,9 @@
         </div>
     </div>
 
-    <!-- PREMIUM ORDER DETAIL DRAWER (Bottom Sheet) -->
+    <!-- PREMIUM ORDER DETAIL (Full-Page View) -->
     <div id="orderDrawerOverlay" class="drawer-overlay"></div>
     <div id="orderDrawer" class="drawer-content">
-        <div class="drawer-handle"></div>
-        <button class="drawer-close-btn" data-action="closeOrderDrawer" title="Close Drawer" aria-label="Close drawer"><i data-lucide="x" class="icon-18"></i></button>
         <div id="orderDrawerBody">
             <!-- Populated via JS -->
             <div class="shimmer skeleton-title"></div>
@@ -2113,7 +2168,7 @@
                             class="icon-18"></i></div>
                     <h3 class="modal-title">Security Confirmation</h3>
                 </div>
-                <button class="close-btn" aria-label="Close dialog" title="Close"><i data-lucide="x" class="icon-18"></i></button>
+                <button class="close-btn" data-action="hideReauthModal" aria-label="Close dialog" title="Close"><i data-lucide="x" class="icon-18"></i></button>
             </div>
             <form id="reauthForm">
                 <div class="modal-body p-20">

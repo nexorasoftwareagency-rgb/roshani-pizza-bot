@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'updateStatusFromDrawer': (await useMod('orders')).updateStatus(id, val); break;
                 case 'closeOrderDrawer': (await useMod('orders')).closeOrderDrawer(); break;
                 case 'chatOnWhatsapp': break; 
-                case 'printReceiptById': (await useMod('printing')).printReceiptById(id); break;
+                case 'printReceiptById': (await useMod('orders')).closeOrderDrawer(); (await useMod('printing')).printReceiptById(id); break;
                 case 'closeReceiptPreview': (await useMod('printing')).closeReceiptPreview(); break;
                 case 'printReceiptFromPreview': (await useMod('printing')).printReceiptFromPreview(); break;
                 case 'updateStatus': (await useMod('orders')).updateStatus(id, val); break;

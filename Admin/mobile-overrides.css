@@ -120,13 +120,13 @@
     .modal-body, .modal-details-scroll, .drawer-content, .bottom-sheet .sheet-content,
     .walkin-cartItems, #walkinDishGrid, .scroll-x, [style*="overflow-y: auto"],
     [style*="overflow-y:scroll"], .rider-performance-table-wrap {
-        -webkit-overflow-scrolling: touch !important;
         overscroll-behavior: contain !important;
     }
 
     html {
         height: 100% !important;
-        overflow: hidden !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
         scroll-behavior: smooth;
     }
 
@@ -218,7 +218,6 @@
         overflow-y: auto !important;
         overflow-x: hidden !important;
         overscroll-behavior: contain !important;
-        -webkit-overflow-scrolling: touch !important;
         height: 100dvh !important;
         width: 100% !important;
         padding-top: calc(var(--mobile-header-height) + 10px) !important; /* Mobile Header height + buffer */
@@ -228,7 +227,6 @@
     .scroll-x {
         position: relative;
         overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
         margin: 0 -10px;
         padding: 0 10px;
         width: calc(100% + 20px) !important;
@@ -471,8 +469,7 @@
 
     /* Prevent mobile-only from forcing visibility on toggled elements */
     .bottom-sheet.mobile-only,
-    .notification-sheet.mobile-only,
-    .drawer-content.mobile-only {
+    .notification-sheet.mobile-only {
         display: none !important;
         position: fixed !important;
         bottom: 0 !important;
@@ -481,7 +478,7 @@
         background: rgba(255, 255, 255, 0.95) !important;
         -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
         backdrop-filter: blur(20px) saturate(180%) !important;
-        z-index: 5000 !important; /* Above bottom nav (3000) */
+        z-index: 5000 !important;
         flex-direction: column;
         border-top-left-radius: 28px !important;
         border-top-right-radius: 28px !important;
@@ -493,8 +490,7 @@
     }
 
     .bottom-sheet.mobile-only.active,
-    .notification-sheet.mobile-only.active,
-    .drawer-content.mobile-only.active {
+    .notification-sheet.mobile-only.active {
         display: flex !important;
         animation: slideSheetUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
@@ -565,8 +561,7 @@
     }
 
     body {
-        padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 20px);
-        font-size: 14px; /* Increased from 13px for better readability */
+        font-size: 14px;
         line-height: 1.5;
         background-color: #f8fafc;
         -webkit-font-smoothing: antialiased;
@@ -632,7 +627,7 @@
 
 
     .mobile-header-left {
-        z-index: 9999 !important; /* Ensure hamburger is always on top */
+        z-index: 4001 !important;
         cursor: pointer !important;
     }
 
@@ -1144,46 +1139,62 @@
         box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.1) !important;
     }
 
-    /* --- 8. PREMIUM BOTTOM SHEET (ORDER DRAWER) --- */
+    /* --- 8. FULL-PAGE ORDER DETAIL (MOBILE) --- */
     .drawer-content {
         position: fixed;
-        bottom: -100%;
-        left: 0;
-        right: 0;
-        background: #ffffff;
+        inset: 0;
+        height: 100dvh;
+        background: linear-gradient(180deg, #fef7f0 0%, #ffffff 12%);
         color: #1e293b;
         z-index: 6000;
-        border-radius: 24px 24px 0 0;
-        padding: 20px;
-        padding-bottom: calc(20px + var(--safe-bottom));
-        box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.2);
-        transition: bottom 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-        max-height: 85vh;
-        overflow-y: auto;
-        will-change: bottom;
-    }
-
-    #orderDrawerBody {
-        color: #1e293b;
-    }
-    #orderDrawerBody .text-muted,
-    #orderDrawerBody .text-muted-small {
-        color: #64748b !important;
-    }
-    #orderDrawerBody .text-white-50 {
-        color: rgba(255,255,255,0.7) !important;
+        display: flex;
+        flex-direction: column;
+        transform: translateX(100%);
+        transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: transform;
+        overflow: hidden;
     }
 
     .drawer-content.active {
-        bottom: 0;
+        transform: translateX(0);
     }
 
-    .drawer-handle {
-        width: 40px;
-        height: 5px;
-        background: #e2e8f0;
-        border-radius: 10px;
-        margin: 0 auto 15px;
+    .drawer-header-v4 {
+        padding: 16px 18px;
+        padding-top: calc(16px + var(--safe-top));
+    }
+    .drawer-header-v4 .order-id-text {
+        font-size: 18px;
+    }
+
+    .drawer-close-btn {
+        top: calc(12px + var(--safe-top));
+        right: 14px;
+        width: 36px;
+        height: 36px;
+    }
+
+    .drawer-scroll-body {
+        padding: 16px 16px 120px 16px;
+    }
+
+    .drawer-section {
+        padding: 14px;
+        border-radius: 14px;
+    }
+
+    .drawer-action-bar {
+        padding: 12px 16px;
+        padding-bottom: calc(12px + var(--safe-bottom));
+    }
+
+    .drawer-summary-panel .summary-total .value {
+        font-size: 20px;
+    }
+
+    .drawer-ctrl-panel .ctrl-row {
+        flex-direction: column;
+        gap: 12px;
     }
 
     /* --- 10. REPORT TABLES (PREMIUM CARD LIST) --- */
@@ -1268,8 +1279,18 @@
     /* --- 11. GRID OPTIMIZATIONS --- */
     .dashboard-grid {
         grid-template-columns: 1fr !important;
-        gap: 12px !important;
-        padding: 8px !important;
+        gap: clamp(8px, 2vw, 16px) !important;
+        padding: clamp(6px, 2vw, 12px) !important;
+    }
+
+    /* Recent Section - Adaptive Height */
+    #tab-dashboard .recent-section {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    #tab-dashboard .recent-section .glass-card {
+        max-height: 60vh !important;
+        overflow-y: auto !important;
     }
 
     .kpi-row {
@@ -1310,7 +1331,8 @@
         margin-bottom: 2px !important;
     }
 
-    .priority-card {
+    .priority-card,
+    .priority-card-v4 {
         padding: 10px !important;
         border-radius: 14px !important;
     }
@@ -1338,6 +1360,23 @@
         font-size: 10px !important;
         padding: 5px !important;
         border-radius: 6px !important;
+    }
+
+    .premium-stat-row {
+        padding: 10px 12px !important;
+        border-radius: 12px !important;
+    }
+    .premium-stat-row .rank-box {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 11px !important;
+    }
+    .premium-stat-row .title {
+        font-size: 13px !important;
+    }
+    .premium-stat-row .value-chip {
+        font-size: 11px !important;
+        padding: 4px 8px !important;
     }
 
 
@@ -1612,10 +1651,10 @@
 
     /* --- 16. DASHBOARD RECENT ORDER HISTORY: FULL RESPONSIVE CARDS --- */
     #tab-dashboard .recent-section {
-        padding: 12px !important;
+        padding: clamp(8px, 2vw, 12px) !important;
     }
     #tab-dashboard .recent-section .glass-card {
-        overflow: visible !important;
+        overflow-y: auto !important;
     }
     #tab-dashboard .recent-section .premium-table-v4 {
         display: block;
@@ -1627,21 +1666,30 @@
     #tab-dashboard .recent-section .premium-table-v4 tbody {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: clamp(6px, 1.5vw, 10px);
     }
     #tab-dashboard .recent-section .premium-row-v4 {
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
         align-items: center;
-        gap: 6px 10px;
-        padding: 14px 16px;
+        gap: 4px clamp(6px, 1.5vw, 10px);
+        padding: clamp(10px, 2.5vw, 14px) clamp(10px, 2.5vw, 16px);
         background: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 14px;
+        border-radius: clamp(10px, 2vw, 14px);
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         position: relative;
         cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    #tab-dashboard .recent-section .premium-row-v4 {
+        -webkit-tap-highlight-color: rgba(243,107,33,0.15);
+    }
+    #tab-dashboard .recent-section .premium-row-v4:active {
+        transform: scale(0.98);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        background: #f1f5f9 !important;
     }
     #tab-dashboard .recent-section .premium-row-v4 td {
         display: inline-flex;
@@ -1649,7 +1697,7 @@
         gap: 6px;
         padding: 0;
         border: none;
-        font-size: 12px;
+        font-size: clamp(11px, 2.8vw, 12px);
         background: transparent !important;
         flex: 0 0 auto;
     }
@@ -1664,7 +1712,7 @@
     }
     #tab-dashboard .recent-section .premium-row-v4 td:before {
         content: attr(data-label);
-        font-size: 9px;
+        font-size: clamp(8px, 2vw, 9px);
         font-weight: 700;
         color: #94a3b8;
         text-transform: uppercase;
@@ -1683,8 +1731,348 @@
     }
     #tab-dashboard .recent-section .premium-row-v4 td[data-label="Total"] {
         font-weight: 800;
-        font-size: 14px;
+        font-size: clamp(12px, 3vw, 14px);
         color: #0f172a;
+    }
+
+    /* Hide Payment & Rider on small screens (< 400px) */
+    @media (max-width: 400px) {
+        #tab-dashboard .recent-section .premium-row-v4 td[data-label="Payment"],
+        #tab-dashboard .recent-section .premium-row-v4 td[data-label="Rider"] {
+            display: none !important;
+        }
+        #tab-dashboard .recent-section .premium-row-v4 {
+            gap: 4px 8px;
+            padding: 10px 12px;
+        }
+    }
+
+    /* Hide Details on very small screens (< 360px) to save space */
+    @media (max-width: 360px) {
+        #tab-dashboard .recent-section .premium-row-v4 td[data-label="Details"] {
+            display: none !important;
+        }
+        #tab-dashboard .recent-section .premium-row-v4 td[data-label="Order"] {
+            flex: 1 1 100%;
+        }
+        #tab-dashboard .recent-section .premium-row-v4 td[data-label="Order"] .identity-info-v4 .sub {
+            display: none;
+        }
+    }
+}
+
+/* ======================================================================
+   TABLET BREAKPOINT (768px - 1200px)
+   Between mobile and full desktop — sidebar shrinks, grid adapts
+   ====================================================================== */
+@media (min-width: 769px) and (max-width: 1200px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr 260px !important;
+        gap: 16px !important;
+    }
+
+    .dashboard-sidebar {
+        gap: 12px !important;
+    }
+
+    .dashboard-sidebar .panel {
+        padding: 12px !important;
+    }
+
+    /* Recent section stays full width of main column */
+    #tab-dashboard .recent-section .glass-card {
+        max-height: 50vh !important;
+        overflow-y: auto !important;
+    }
+
+    /* KPI cards stay 2x2 grid */
+    .kpi-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Priority cards 2-column */
+    .priority-order-list {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Top items/customers panels scroll */
+    .dashboard-sidebar .scroll-y {
+        max-height: 300px !important;
+        overflow-y: auto !important;
+    }
+}
+
+/* ======================================================================
+   ANALYTICS / REPORTS MOBILE OPTIMIZATION
+   Adaptive column hiding based on screen width
+   ====================================================================== */
+@media (max-width: 1024px) {
+    /* Reports Grid - Single Column */
+    .reports-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Sales Data Table - Card Layout */
+    #tab-reports .premium-table-v4 {
+        display: block;
+        border-spacing: 0;
+    }
+    #tab-reports .premium-table-v4 thead {
+        display: none;
+    }
+    #tab-reports .premium-table-v4 tbody {
+        display: flex;
+        flex-direction: column;
+        gap: clamp(6px, 1.5vw, 10px);
+    }
+    #tab-reports .premium-row-v4 {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px clamp(6px, 1.5vw, 10px);
+        padding: clamp(10px, 2.5vw, 14px) clamp(10px, 2.5vw, 16px);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: clamp(10px, 2vw, 14px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        transition: transform 0.15s ease;
+    }
+    #tab-reports .premium-row-v4 {
+        -webkit-tap-highlight-color: rgba(243,107,33,0.15);
+    }
+    #tab-reports .premium-row-v4:active {
+        transform: scale(0.98);
+        background: #f1f5f9 !important;
+    }
+    #tab-reports .premium-row-v4 td {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0;
+        border: none;
+        font-size: clamp(11px, 2.8vw, 12px);
+        background: transparent !important;
+        flex: 0 0 auto;
+    }
+    #tab-reports .premium-row-v4 td:before {
+        content: attr(data-label);
+        font-size: clamp(8px, 2vw, 9px);
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: block;
+        width: 100%;
+    }
+    #tab-reports .premium-row-v4 td[data-label="Date"] {
+        flex: 1 1 auto;
+    }
+    #tab-reports .premium-row-v4 td[data-label="Date"]:before {
+        display: none;
+    }
+    #tab-reports .premium-row-v4 td[data-label="Customer"] {
+        flex: 1 1 auto;
+    }
+    #tab-reports .premium-row-v4 td[data-label="Total"] {
+        font-weight: 800;
+        font-size: clamp(12px, 3vw, 14px);
+        color: var(--primary);
+    }
+    #tab-reports .premium-row-v4 td[data-label="Items"] {
+        flex: 1 1 100%;
+        margin-top: 4px;
+        padding-top: 6px;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    /* Hide Payment on medium screens (< 600px) */
+    @media (max-width: 600px) {
+        #tab-reports .premium-row-v4 td[data-label="Payment"] {
+            display: none !important;
+        }
+    }
+
+    /* Hide Order Type on small screens (< 480px) */
+    @media (max-width: 480px) {
+        #tab-reports .premium-row-v4 td[data-label="Order Type"],
+        #tab-reports .premium-row-v4 td[data-label="Payment"] {
+            display: none !important;
+        }
+        #tab-reports .premium-row-v4 {
+            gap: 4px 8px;
+            padding: 10px 12px;
+        }
+    }
+
+    /* Hide Customer sub-info on very small screens (< 360px) */
+    @media (max-width: 360px) {
+        #tab-reports .premium-row-v4 td[data-label="Customer"] .identity-info-v4 .sub {
+            display: none;
+        }
+        #tab-reports .premium-row-v4 td[data-label="Items"] {
+            display: none !important;
+        }
+    }
+
+    /* Lost Sales Table - Card Layout */
+    #tab-lostSales .premium-table-v4 {
+        display: block;
+        border-spacing: 0;
+    }
+    #tab-lostSales .premium-table-v4 thead {
+        display: none;
+    }
+    #tab-lostSales .premium-table-v4 tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    #tab-lostSales .premium-row-v4 {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 8px;
+        padding: 12px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+    #tab-lostSales .premium-row-v4 td {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0;
+        border: none;
+        font-size: 12px;
+        flex: 0 0 auto;
+    }
+    #tab-lostSales .premium-row-v4 td:before {
+        content: attr(data-label);
+        font-size: 9px;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        display: block;
+        width: 100%;
+    }
+    #tab-lostSales .premium-row-v4 td[data-label="Items"] {
+        flex: 1 1 100%;
+        margin-top: 4px;
+        padding-top: 4px;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    /* Customers Table - Card Layout */
+    #tab-customers .premium-table-v4 {
+        display: block;
+        border-spacing: 0;
+    }
+    #tab-customers .premium-table-v4 thead {
+        display: none;
+    }
+    #tab-customers .premium-table-v4 tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    #tab-customers .premium-row-v4 {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 8px;
+        padding: 12px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+    #tab-customers .premium-row-v4 td {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0;
+        border: none;
+        font-size: 12px;
+        flex: 0 0 auto;
+    }
+    #tab-customers .premium-row-v4 td:before {
+        content: attr(data-label);
+        font-size: 9px;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        display: block;
+        width: 100%;
+    }
+    #tab-customers .premium-row-v4 td[data-label="Address"] {
+        flex: 1 1 100%;
+        font-size: 11px;
+        color: #64748b;
+    }
+
+    /* Hide Address on small screens */
+    @media (max-width: 480px) {
+        #tab-customers .premium-row-v4 td[data-label="Address"] {
+            display: none !important;
+        }
+    }
+
+    /* Rider Analytics - Card Layout */
+    #tab-riderAnalytics .premium-table-v4 {
+        display: block;
+        border-spacing: 0;
+    }
+    #tab-riderAnalytics .premium-table-v4 thead {
+        display: none;
+    }
+    #tab-riderAnalytics .premium-table-v4 tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    #tab-riderAnalytics .premium-row-v4 {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 8px;
+        padding: 12px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+    #tab-riderAnalytics .premium-row-v4 td {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0;
+        border: none;
+        font-size: 12px;
+        flex: 0 0 auto;
+    }
+    #tab-riderAnalytics .premium-row-v4 td:before {
+        content: attr(data-label);
+        font-size: 9px;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        display: block;
+        width: 100%;
+    }
+
+    /* Analytics KPIs - Adaptive Grid */
+    #tab-riderAnalytics .kpi-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    @media (max-width: 480px) {
+        #tab-riderAnalytics .kpi-row {
+            grid-template-columns: 1fr !important;
+        }
     }
 }
 

@@ -236,6 +236,11 @@ export const switchTab = async (tabId, skipHistory = false) => {
                 loadInventory();
                 break;
             }
+            case 'riderAnalytics': {
+                const { initRiderAnalytics } = await mod('rider-analytics');
+                initRiderAnalytics();
+                break;
+            }
         }
 
         // --- PHASE 3.5: ICON SYNCHRONIZATION ---
