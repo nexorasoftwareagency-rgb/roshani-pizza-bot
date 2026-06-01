@@ -1319,6 +1319,57 @@
         gap: 8px !important;
     }
 
+    .dish-card {
+        min-width: 0 !important;
+    }
+
+    .dish-info {
+        overflow: hidden !important;
+    }
+
+    .dish-img-container {
+        margin-bottom: 8px !important;
+        border-radius: 12px !important;
+    }
+
+    .dish-pricing-box {
+        padding: 6px 8px !important;
+        margin: 6px 0 !important;
+        overflow: hidden !important;
+    }
+
+    .dish-price-row {
+        font-size: 10px !important;
+        margin-bottom: 3px !important;
+    }
+
+    .dish-actions {
+        gap: 4px !important;
+        margin-top: 4px !important;
+    }
+
+    .dish-actions .edit-btn {
+        font-size: 9px !important;
+        padding: 4px 0 !important;
+    }
+
+    .dish-actions .delete-btn {
+        width: 22px !important;
+        padding: 4px 0 !important;
+        font-size: 9px !important;
+    }
+
+    .stock-badge {
+        padding: 3px 8px !important;
+        font-size: 8px !important;
+        top: 6px !important;
+        right: 6px !important;
+    }
+
+    .dish-price-val {
+        font-size: 11px !important;
+    }
+
     .priority-card,
     .priority-card-v4 {
         padding: 10px !important;
