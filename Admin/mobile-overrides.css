@@ -114,7 +114,6 @@
         -webkit-tap-highlight-color: var(--primary-glow);
         box-sizing: border-box;
         max-width: 100%;
-        touch-action: manipulation;
     }
 
     .modal-body, .modal-details-scroll, .drawer-content, .bottom-sheet .sheet-content,
@@ -1318,22 +1317,6 @@
     .menu-grid {
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
         gap: 8px !important;
-        touch-action: pan-y !important;
-    }
-    .menu-grid * {
-        touch-action: pan-y !important;
-    }
-
-    #tab-walkin .walkin-dish-grid,
-    #tab-walkin .walkin-dish-grid * {
-        touch-action: pan-y !important;
-    }
-
-    #tab-walkin .pos-dish-btn,
-    #tab-walkin .pos-dish-btn-v4,
-    #tab-walkin .pos-dish-btn *,
-    #tab-walkin .pos-dish-btn-v4 * {
-        touch-action: pan-y !important;
     }
 
     .priority-card,
