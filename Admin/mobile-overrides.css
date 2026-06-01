@@ -1314,10 +1314,10 @@
         font-weight: 800 !important;
     }
 
-    /* Premium Component Mobile Shrinkage */
+    /* Premium Component Mobile Responsive Grid */
     .menu-grid {
-        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)) !important;
-        gap: 5px !important;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+        gap: 8px !important;
         touch-action: pan-y !important;
     }
     .menu-grid * {
@@ -1329,70 +1329,11 @@
         touch-action: pan-y !important;
     }
 
-    .dish-card {
-        padding: 4px !important;
-        border-radius: 12px !important;
-    }
-
     #tab-walkin .pos-dish-btn,
     #tab-walkin .pos-dish-btn-v4,
     #tab-walkin .pos-dish-btn *,
     #tab-walkin .pos-dish-btn-v4 * {
         touch-action: pan-y !important;
-    }
-
-    .dish-img-container {
-        aspect-ratio: 1 / 1 !important;
-        margin-bottom: 4px !important;
-        border-radius: 8px !important;
-    }
-    
-    .dish-info h4 {
-        font-size: 10px !important;
-        margin: 0 !important;
-    }
-
-    .dish-category {
-        font-size: 8px !important;
-        margin-top: 1px !important;
-    }
-    
-    .dish-pricing-box {
-        padding: 3px 4px !important;
-        margin: 2px 0 !important;
-        border-radius: 4px !important;
-    }
-    
-    .dish-price-row {
-        font-size: 8px !important;
-        margin-bottom: 1px !important;
-    }
-
-    .dish-actions {
-        gap: 3px !important;
-        margin-top: 3px !important;
-    }
-
-    .dish-actions .edit-btn {
-        font-size: 8px !important;
-        padding: 2px 0 !important;
-    }
-
-    .dish-actions .delete-btn {
-        width: 20px !important;
-        padding: 2px 0 !important;
-        font-size: 8px !important;
-    }
-
-    .stock-badge {
-        top: 4px !important;
-        right: 4px !important;
-        padding: 2px 6px !important;
-        font-size: 7px !important;
-    }
-
-    .dish-price-val {
-        font-size: 10px !important;
     }
 
     .priority-card,
