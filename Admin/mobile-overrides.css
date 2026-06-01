@@ -347,6 +347,8 @@
         position: relative !important;
         pointer-events: auto !important;
         padding-top: 10px !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
     }
 
     /* Hide bottom nav on login and sidebar active */
@@ -1303,7 +1305,7 @@
     .kpi-card, .glass-card, .panel {
         box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.05) !important;
         border: 1px solid rgba(0, 0, 0, 0.08) !important;
-        padding: 10px !important;
+        padding: 8px !important;
         overflow: visible !important; /* Required for sticky children to work */
     }
 
@@ -1314,8 +1316,8 @@
 
     /* Premium Component Mobile Shrinkage */
     .menu-grid {
-        grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)) !important;
-        gap: 6px !important;
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)) !important;
+        gap: 5px !important;
         touch-action: pan-y !important;
     }
     .menu-grid * {
@@ -1328,8 +1330,8 @@
     }
 
     .dish-card {
-        padding: 6px !important;
-        border-radius: 14px !important;
+        padding: 4px !important;
+        border-radius: 12px !important;
     }
 
     #tab-walkin .pos-dish-btn,
@@ -1341,53 +1343,56 @@
 
     .dish-img-container {
         aspect-ratio: 1 / 1 !important;
-        margin-bottom: 6px !important;
-        border-radius: 10px !important;
+        margin-bottom: 4px !important;
+        border-radius: 8px !important;
     }
     
     .dish-info h4 {
-        font-size: 11px !important;
+        font-size: 10px !important;
+        margin: 0 !important;
     }
 
     .dish-category {
-        font-size: 9px !important;
+        font-size: 8px !important;
+        margin-top: 1px !important;
     }
     
     .dish-pricing-box {
-        padding: 4px 6px !important;
-        margin: 3px 0 !important;
+        padding: 3px 4px !important;
+        margin: 2px 0 !important;
+        border-radius: 4px !important;
     }
     
     .dish-price-row {
-        font-size: 9px !important;
+        font-size: 8px !important;
         margin-bottom: 1px !important;
     }
 
     .dish-actions {
-        gap: 4px !important;
-        margin-top: 4px !important;
+        gap: 3px !important;
+        margin-top: 3px !important;
     }
 
     .dish-actions .edit-btn {
-        font-size: 9px !important;
-        padding: 3px 0 !important;
+        font-size: 8px !important;
+        padding: 2px 0 !important;
     }
 
     .dish-actions .delete-btn {
-        width: 24px !important;
-        padding: 3px 0 !important;
-        font-size: 9px !important;
-    }
-
-    .stock-badge {
-        top: 6px !important;
-        right: 6px !important;
-        padding: 3px 8px !important;
+        width: 20px !important;
+        padding: 2px 0 !important;
         font-size: 8px !important;
     }
 
+    .stock-badge {
+        top: 4px !important;
+        right: 4px !important;
+        padding: 2px 6px !important;
+        font-size: 7px !important;
+    }
+
     .dish-price-val {
-        font-size: 11px !important;
+        font-size: 10px !important;
     }
 
     .priority-card,
