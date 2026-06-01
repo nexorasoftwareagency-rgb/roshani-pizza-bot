@@ -1318,19 +1318,24 @@
         gap: 6px !important;
         touch-action: pan-y !important;
     }
+    .menu-grid * {
+        touch-action: pan-y !important;
+    }
 
-    #tab-walkin .walkin-dish-grid {
+    #tab-walkin .walkin-dish-grid,
+    #tab-walkin .walkin-dish-grid * {
         touch-action: pan-y !important;
     }
 
     .dish-card {
         padding: 6px !important;
         border-radius: 14px !important;
-        touch-action: pan-y !important;
     }
 
     #tab-walkin .pos-dish-btn,
-    #tab-walkin .pos-dish-btn-v4 {
+    #tab-walkin .pos-dish-btn-v4,
+    #tab-walkin .pos-dish-btn *,
+    #tab-walkin .pos-dish-btn-v4 * {
         touch-action: pan-y !important;
     }
 
