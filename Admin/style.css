@@ -116,28 +116,28 @@ body {
                 #f8fafc;
     color: var(--text-primary);
     font-family: 'Inter', 'Outfit', system-ui, sans-serif;
-    height: 100dvh;
+    min-height: 100dvh;
     line-height: 1.5;
     margin: 0;
     padding: 0;
-    overflow: hidden;
     max-width: 100vw;
     scroll-behavior: smooth;
 }
 
 html {
+    height: 100%;
     overflow-x: hidden;
     max-width: 100vw;
     scroll-behavior: smooth;
 }
 
 /* 
-  PREVENT ACCIDENTAL REFRESH (PULL-TO-REFRESH)
-  Crucial for PWA and long scrolling lists on Mobile.
+  PREVENT ACCIDENTAL REFRESH (PULL-TO-REFRESH) on mobile
+  Base keeps default overscroll-behavior; mobile overrides apply
+  the contain/none rules. See Admin/mobile-overrides.css.
 */
 html, body {
     min-height: 100%;
-    overscroll-behavior: none;
 }
 
 /* Sidebar accent */
