@@ -6,8 +6,9 @@ if (self.location.protocol !== 'https:' && self.location.hostname !== 'localhost
 // Firebase Messaging is handled by firebase-messaging-sw.js (auto-registered by Firebase SDK)
 // This SW handles caching, navigation, and offline support only.
 
-const CACHE_NAME = 'roshani-erp-v4.9.0';
+const CACHE_NAME = 'roshani-erp-v4.9.1';
 const ASSETS_TO_CACHE = [
+  './index.html',
   './style.css',
   './mobile-overrides.css',
   './branding.js',
@@ -119,8 +120,17 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(async () => {
-        const cachedResponse = await caches.match(event.request);
+        // Try exact URL match first
+        let cachedResponse = await caches.match(event.request);
         if (cachedResponse) return cachedResponse;
+        // Strip cache-busting query params (?v=...&sync=...) and retry
+        const url = new URL(event.request.url);
+        if (url.searchParams.has('v') || url.searchParams.has('sync')) {
+          url.search = '';
+          const cleanReq = new Request(url.toString(), event.request);
+          cachedResponse = await caches.match(cleanReq);
+          if (cachedResponse) return cachedResponse;
+        }
         return new Response('Network error and not in cache', {
           status: 408,
           statusText: 'Network Timeout'
