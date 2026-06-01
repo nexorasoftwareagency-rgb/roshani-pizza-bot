@@ -152,7 +152,7 @@ function closeHistoryModal() {
 
 function formatTimestamp(ts) {
     if (!ts) return '—';
-    const d = typeof ts === 'number' ? new Date(ts) : new Date(ts);
+    const d = new Date(ts);
     if (isNaN(d.getTime())) return '—';
     return d.toLocaleString();
 }

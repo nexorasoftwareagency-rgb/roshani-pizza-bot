@@ -2,7 +2,7 @@ import { db, auth, Outlet, serverTimestamp, get, set, update, remove, push, onVa
 import { state } from '../state.js';
 import { showDeleteConfirm, showConfirm } from '../ui-utils.js';
 import { logAudit, showToast, initPagination, escapeHtml, getSkeletonRows } from '../utils.js';
-import { pushLog, maybeNotifyLowStock, clearLowStockNotify } from './inventory-extras.js';
+import { pushLog, maybeNotifyLowStock } from './inventory-extras.js';
 import { t, localize } from '../l10n.js';
 
 let inventoryListener = null;
@@ -53,7 +53,13 @@ export function loadInventory() {
     // Show skeleton while data loads
     const tbody = document.getElementById('inventoryTableBody');
     if (tbody) tbody.innerHTML = getSkeletonRows(5, 4);
-    
+
+    // Re-hydrate per-outlet feature toggles if outlet changed
+    if (_togglesBound && _togglesOutlet !== state.currentOutlet) {
+        refreshInventoryTogglesForOutlet();
+    }
+    _togglesOutlet = state.currentOutlet;
+
     const invRef = Outlet.ref('inventory');
     inventoryListener = onValue(invRef, (snapshot) => {
         const data = snapshot.val();
@@ -62,6 +68,19 @@ export function loadInventory() {
     }, (error) => {
         console.error("[Inventory] Load Error:", error);
         showToast("Failed to load inventory", "error");
+    });
+}
+
+export function refreshInventoryTogglesForOutlet() {
+    const toggleAvail = document.getElementById('toggleAvailability');
+    const toggleStock = document.getElementById('toggleStockTracking');
+    const availInfo = document.getElementById('availabilityInfo');
+    const stockInfo = document.getElementById('stockTrackingInfo');
+    if (!toggleAvail || !toggleStock) return;
+    hydrateToggles(toggleAvail, toggleStock).then(() => {
+        updateInfoPanel(toggleAvail, availInfo);
+        updateInfoPanel(toggleStock, stockInfo);
+        updateMenuVisibility();
     });
 }
 
@@ -115,7 +134,7 @@ function renderInventoryTable(data) {
 
     if (!data) {
         _invAllRows = [];
-        tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-40 text-muted">No items found. Click 'Add Item' to start tracking.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-40 text-muted">${t('inv.empty', 'No items found. Click \'Add Item\' to start tracking.')}</td></tr>`;
         initPagination('inventoryPagination', 0, INV_PAGE_SIZE, (p) => { _invPage = p; renderInventoryTable(); });
         return;
     }
@@ -138,10 +157,12 @@ function paintTable() {
     if (filtered.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-40 text-muted">${term ? t('inv.noMatch', 'No items match "{term}"', { term: escapeHtml(_invSearch) }) : t('inv.empty', 'No items found. Click \'Add Item\' to start tracking.')}</td></tr>`;
     } else {
-        const html = filtered.map(({ id, item }) => {
-            const t = item.threshold || 0;
-            const isLow = item.stock <= t;
-            const isReorder = !isLow && item.stock > t && item.stock <= t * 1.5;
+        const start = (_invPage - 1) * INV_PAGE_SIZE;
+        const pageRows = filtered.slice(start, start + INV_PAGE_SIZE);
+        const html = pageRows.map(({ id, item }) => {
+            const threshold = item.threshold || 0;
+            const isLow = item.stock <= threshold;
+            const isReorder = !isLow && item.stock > threshold && item.stock <= threshold * 1.5;
             const detailParts = [];
             if (item.sku) detailParts.push(`SKU: ${item.sku}`);
             if (item.unit) detailParts.push(`Unit: ${item.unit}`);
@@ -184,8 +205,7 @@ function paintTable() {
         `;
         }).join('');
 
-        const start = (_invPage - 1) * INV_PAGE_SIZE;
-        tableBody.innerHTML = html.slice(0, INV_PAGE_SIZE);
+        tableBody.innerHTML = html;
         if (window.lucide) window.lucide.createIcons();
     }
 
@@ -297,18 +317,8 @@ export async function autoDeductStock(items) {
             if (invEntry) {
                 const [id, data] = invEntry;
                 const qty = item.qty || 1;
-                const prevStock = data.stock || 0;
-                const newStock = prevStock - qty;
 
                 await adjustStock(id, -qty);
-
-                maybeNotifyLowStock({
-                    itemId: id,
-                    itemName: data.name,
-                    prevStock,
-                    newStock,
-                    threshold: data.threshold || 0
-                });
             }
         }
     } catch (e) {
@@ -428,7 +438,7 @@ export async function editInventoryItem(id) {
     document.getElementById('invItemCost').value = item.cost || '';
     document.getElementById('inventoryModal').dataset.editId = id;
     document.getElementById('inventoryModal').classList.add('active');
-};
+}
 
 export async function deleteInventoryItem(id) {
     if (!(await showDeleteConfirm("this inventory item", "This item will be removed from the inventory list."))) return;
@@ -463,6 +473,7 @@ function updateInventoryKPIs(data) {
 // ============================================================
 
 let _togglesBound = false;
+let _togglesOutlet = null;
 let _toggleWriteTimer = null;
 
 export function initInventoryToggles() {
@@ -605,13 +616,13 @@ export async function loadInventoryMenu() {
 
             if (showStock) {
                 if (inv) {
-                    const t = inv.threshold || 0;
-                    const isLow = inv.stock <= t;
-                    const isReorder = !isLow && inv.stock > t && inv.stock <= t * 1.5;
+                    const threshold = inv.threshold || 0;
+                    const isLow = inv.stock <= threshold;
+                    const isReorder = !isLow && inv.stock > threshold && inv.stock <= threshold * 1.5;
                     if (isReorder) reorderBadge = '<span class="reorder-badge">Reorder Soon</span>';
                     controlsHtml += `
                         <div class="inventory-stock-row">
-                            <span class="stock-label ${isLow ? 'text-danger' : ''}">Stock: ${inv.stock}${reorderBadge}</span>
+                            <span class="stock-label flex-row flex-gap-6 flex-center ${isLow ? 'text-danger' : ''}"><span>Stock: ${inv.stock}</span>${reorderBadge}</span>
                             <div class="stock-control-group">
                                 <button class="stock-adjust-btn minus" data-inventory-id="${inv.id}" data-delta="-1" aria-label="Decrease stock for ${escapeHtml(dish.name)}">−</button>
                                 <span class="stock-val-display" aria-live="polite">${inv.stock}</span>
@@ -686,7 +697,7 @@ function attachInventoryMenuListeners(container) {
                 threshold: 5,
                 updatedAt: serverTimestamp()
             });
-            showToast(`Now tracking stock for ${dishName}`, "success");
+            showToast(t('inv.nowTracking', 'Now tracking stock for {name}', { name: dishName }), "success");
             loadInventoryMenu();
         });
     });
