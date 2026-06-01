@@ -4,6 +4,8 @@ import { escapeHtml, playNotificationSound } from '../utils.js';
 /**
  * SHOW ALERT
  * Displays a non-intrusive alert box at the top of the screen.
+ * NOTE: Shares #alertContainer with showToast (ui-utils.js). They are visually
+ * distinct via .alert-box vs .toast classes; do not collapse the two systems.
  */
 export function showAlert(data, type = 'info') {
     const container = document.getElementById('alertContainer');

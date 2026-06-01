@@ -529,6 +529,7 @@ export function cleanupCatalog() {
 export const toggleStock = (id, current) => update(Outlet.ref(`dishes/${id}`), { stock: !current });
 export const toggleDishAvailable = (id, available) => update(Outlet.ref(`dishes/${id}`), { stock: available });
 export const editDish = (id) => showDishModal(id);
+// TODO: editCategory stub — only shows a toast. Wire to a real edit modal (similar to #dishModal) or remove the trigger button in the categories list.
 export const editCategory = (id) => showToast("Category editing coming soon!", "info");
 
 export function filterMenu(searchTerm) {

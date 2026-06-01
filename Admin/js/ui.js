@@ -131,7 +131,7 @@ export const switchTab = async (tabId, skipHistory = false) => {
     if (mainItem) mainItem.classList.add('active');
 
     // Update Mobile Bottom Nav & Header Title
-    const mobileTitle = document.querySelector('.mobile-app-title');
+    const mobileTitle = document.getElementById('mobileTabTitle');
     document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
         item.classList.remove('active');
         if (item.getAttribute('data-tab') === tabId) {

@@ -160,10 +160,10 @@ export function renderRiders(searchTerm = "") {
                     <div class="performance-bar-wrapper" style="min-width: 100px;">
                         <div class="flex-between mb-4">
                             <span class="text-xs">Success</span>
-                            <span class="text-xs font-bold">98%</span>
+                            <span class="text-xs font-bold">${stats.avgRating ? stats.avgRating.toFixed(1) + '★' : '—'}</span>
                         </div>
                         <div class="performance-track">
-                            <div class="performance-fill" style="width: 98%"></div>
+                            <div class="performance-fill" style="width: ${Math.min(100, (stats.avgRating || 0) * 20)}%"></div>
                         </div>
                     </div>
                 </td>

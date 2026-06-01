@@ -7042,6 +7042,40 @@ body.pos-selection-mode .walkin-picker {
 }
 
 
+.reorder-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #1a1a1a;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+    align-self: flex-start;
+}
+
+/* Out-of-stock overlay (Admin + customer menu mirror) */
+.oos-wrap { position: relative; }
+.oos-wrap.is-out-of-stock { opacity: 0.6; pointer-events: none; }
+.oos-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: inherit;
+    z-index: 2;
+    pointer-events: none;
+}
+
 /* Premium Modal System */
 .premium-modal-overlay {
     position: fixed;

@@ -9,6 +9,7 @@ import { standardizeOrderData, haptic, escapeHtml, playSuccessSound, logAudit } 
 import { autoDeductStock } from './inventory.js';
 import { ui } from '../ui.js';
 import { printOrderReceipt } from './printing.js';
+import { t } from '../l10n.js';
 
 /**
  * Loads the menu for the Walk-in POS view
@@ -25,9 +26,7 @@ export async function loadWalkinMenu() {
 
         snap.forEach(child => {
             const dish = child.val();
-            if (dish.stock !== false) {
-                state.allWalkinDishes.push({ id: child.key, ...dish });
-            }
+            state.allWalkinDishes.push({ id: child.key, ...dish });
         });
 
         // Load categories if not already loaded to render tabs
@@ -112,13 +111,17 @@ export function renderWalkinDishGrid(dishes) {
 
     grid.innerHTML = dishes.map(d => {
         const price = d.price ?? (d.sizes ? Object.values(d.sizes)[0] : 0);
+        const isOos = d.stock === false;
+        const oosClass = isOos ? ' oos-wrap is-out-of-stock' : ' oos-wrap';
+        const oosOverlay = isOos ? '<div class="oos-overlay">Currently Unavailable</div>' : '';
         return `
-            <div class="pos-dish-btn-v4" data-action="openPOSSelectionModal" data-id="${d.id}">
+            <div class="pos-dish-btn-v4${oosClass}" data-action="openPOSSelectionModal" data-id="${d.id}"${isOos ? ' data-out-of-stock="true"' : ''}>
                 <div class="dish-visual">
                     <img src="${escapeHtml(d.image || 'assets/images/placeholder-dish.png')}" alt="${escapeHtml(d.name)}" loading="lazy">
                     <div class="dish-overlay">
                         <span class="price-chip">₹${price}</span>
                     </div>
+                    ${oosOverlay}
                 </div>
                 <div class="dish-content">
                     <div class="dish-name">${escapeHtml(d.name)}</div>
@@ -137,6 +140,10 @@ export async function openPOSSelectionModal(dishId) {
     haptic(10);
     const dish = state.allWalkinDishes.find(d => d.id === dishId);
     if (!dish) return;
+    if (dish.stock === false) {
+        ui.showToast(t('inv.unavailable', '📦 Item is currently unavailable'), 'warning');
+        return;
+    }
 
     state.currentPOSModalDish = dish;
     state.currentPOSModalQty = 1;

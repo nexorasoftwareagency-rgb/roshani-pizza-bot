@@ -70,8 +70,8 @@
     <script src="branding.js?v=4.9.1"></script>
     <script src="firebase-config.js?v=4.9.1"></script>
 
-    <link rel="stylesheet" href="style.css?v=5.0.0">
-    <link rel="stylesheet" href="mobile-overrides.css?v=5.0.0">
+    <link rel="stylesheet" href="style.css?v=5.1.0">
+    <link rel="stylesheet" href="mobile-overrides.css?v=5.1.0">
     <link rel="manifest" href="manifest.json?v=3">
     <link rel="icon" type="image/jpeg" href="icon-erp-logo.jpeg">
     <link rel="apple-touch-icon" href="icon-erp-logo.jpeg">
@@ -1560,13 +1560,9 @@
                             <p class="panel-subtitle">High-speed product stock tracking & alerts</p>
                         </div>
                         <div class="flex-row flex-gap-10">
-                            <button class="btn-secondary btn-small" data-action="exportInventoryCSV" title="Export inventory as CSV">
-                                <i data-lucide="download" class="icon-16"></i> Export
-                            </button>
-                            <button class="btn-secondary btn-small" data-action="triggerInventoryImport" title="Import inventory from CSV">
-                                <i data-lucide="upload" class="icon-16"></i> Import
-                            </button>
-                            <button id="btnShowAddInventory" class="btn-primary btn-small">
+                            <button class="btn-secondary btn-small" data-action="exportInventoryCSV" title="Export inventory as CSV" data-i18n="inv.export">Export</button>
+                            <button class="btn-secondary btn-small" data-action="triggerInventoryImport" title="Import inventory from CSV" data-i18n="inv.import">Import</button>
+                            <button id="btnShowAddInventory" class="btn-primary btn-small" data-i18n="inv.addItem">
                                 <i data-lucide="plus-circle" class="icon-16"></i> Add Item
                             </button>
                         </div>
@@ -1618,6 +1614,7 @@
                     <div id="inventoryMenuSection" class="glass-card mb-20 p-20" style="display:none;">
                         <h4 class="panel-title mb-16">Menu Items</h4>
                         <div id="inventoryMenuGrid" class="inventory-dish-grid"></div>
+                        <div id="inventoryMenuPagination" class="pagination-controls"></div>
                     </div>
 
                     <div id="inventoryStatsRow" class="kpi-row mb-24 mt-10">
@@ -1639,7 +1636,7 @@
 
                     <div class="glass-card mb-20 p-0 overflow-hidden">
                         <div class="p-16">
-                            <input type="text" id="inventorySearch" class="form-input" placeholder="Search items by name..." aria-label="Search inventory items">
+                            <input type="text" id="inventorySearch" class="form-input" data-i18n-placeholder="inv.searchPlaceholder" data-i18n-aria="inv.searchAria" placeholder="Search items by name..." aria-label="Search inventory items">
                         </div>
                         <div class="table-responsive">
                             <table class="premium-table-v4">
@@ -2227,7 +2224,7 @@
             <div class="p-20">
                 <label class="form-label-small">Product Name</label>
                 <input type="text" id="invItemName" class="form-input" placeholder="e.g. Coca Cola 500ml">
-                
+
                 <div class="flex-row flex-gap-10">
                     <div class="flex-1">
                         <label class="form-label-small">Opening Stock</label>
@@ -2236,6 +2233,34 @@
                     <div class="flex-1">
                         <label class="form-label-small">Low Stock Alert at</label>
                         <input type="number" id="invItemThreshold" class="form-input" placeholder="5">
+                    </div>
+                </div>
+
+                <div class="flex-row flex-gap-10">
+                    <div class="flex-1">
+                        <label class="form-label-small">SKU <span class="text-muted">(optional)</span></label>
+                        <input type="text" id="invItemSku" class="form-input" placeholder="e.g. COKE-500">
+                    </div>
+                    <div class="flex-1">
+                        <label class="form-label-small">Unit</label>
+                        <select id="invItemUnit" class="form-input">
+                            <option value="each">Each</option>
+                            <option value="g">Grams (g)</option>
+                            <option value="kg">Kilograms (kg)</option>
+                            <option value="ml">Milliliters (ml)</option>
+                            <option value="l">Liters (l)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex-row flex-gap-10">
+                    <div class="flex-1">
+                        <label class="form-label-small">Supplier <span class="text-muted">(optional)</span></label>
+                        <input type="text" id="invItemSupplier" class="form-input" placeholder="e.g. Coke Co.">
+                    </div>
+                    <div class="flex-1">
+                        <label class="form-label-small">Cost per Unit <span class="text-muted">(optional)</span></label>
+                        <input type="number" id="invItemCost" class="form-input" placeholder="0" step="0.01" min="0">
                     </div>
                 </div>
 

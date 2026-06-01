@@ -2,6 +2,15 @@
  * Optimized for Mobile Touch & PWA
  */
 
+/* TODO: DEDUPLICATION NEEDED
+ * This file contains ~120 lines of duplicate CSS:
+ *   - .kpi-row, .panel, .scroll-x, body, .search-input, .reports-grid all declared 2-3 times.
+ *   - Per-tab #tab-X .premium-row-v4 selectors (reports, dashboard, customers, riderAnalytics)
+ *     have repeating td[data-label=...] blocks.
+ * Last definition wins, but the redundancy is a maintenance hazard.
+ * Consolidate by merging all per-tab #tab-X .premium-row-v4 rules into one block.
+ */
+
 @media (max-width: 1024px) {
 
     /* --- 0. LOADING SCREEN MOBILE --- */

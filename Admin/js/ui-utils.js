@@ -1,11 +1,17 @@
+// TODO: showToast and showAlert (notifications.js) share #alertContainer.
+// They serve different purposes (toast = transient status, alert = order notification)
+// but stack in the same container. Visually distinct via .toast vs .alert-box classes.
+// If you need to refactor, consider giving alerts a dedicated container like #orderAlertContainer.
 export const showToast = (message, type = 'success') => {
     const container = document.getElementById('alertContainer');
     if (!container) return;
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
     toast.innerText = message;
-    
+
     container.appendChild(toast);
 
     setTimeout(() => {

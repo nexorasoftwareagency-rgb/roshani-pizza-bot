@@ -325,6 +325,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'editDish': (await useMod('catalog')).editDish(id); break;
                 case 'deleteDish': (await useMod('catalog')).deleteDish(id); break;
                 case 'editCategory': (await useMod('catalog')).editCategory(id); break;
+                case 'adjustStock': (await useMod('inventory')).adjustStock(id, parseInt(val, 10)); break;
+                case 'editInventoryItem': (await useMod('inventory')).editInventoryItem(id); break;
+                case 'deleteInventoryItem': (await useMod('inventory')).deleteInventoryItem(id); break;
+                case 'viewStockHistory': {
+                    const extras = await useMod('inventory-extras');
+                    extras.viewStockHistory(id, el.getAttribute('data-name'));
+                    break;
+                }
+                case 'exportInventoryCSV': (await useMod('inventory-extras')).exportInventoryCSV(); break;
+                case 'triggerInventoryImport': (await useMod('inventory-extras')).triggerInventoryImport(); break;
                 case 'showRiderModal':
                 case 'showAddRiderModal': (await useMod('riders')).showRiderModal(); break;
                 case 'closeModal':
@@ -419,6 +429,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('categorySearch')?.addEventListener('input', async (e) => {
         (await useMod('catalog')).filterCategories(e.target.value);
+    });
+    document.getElementById('inventorySearch')?.addEventListener('input', async (e) => {
+        (await useMod('inventory')).setInventorySearch(e.target.value);
+    });
+    document.getElementById('inventoryImportInput')?.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            (await useMod('inventory-extras')).handleInventoryImportFile(file);
+            e.target.value = '';
+        }
     });
     
     const triggerOrderRender = () => {

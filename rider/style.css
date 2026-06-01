@@ -1,6 +1,16 @@
 /* -------------------------------------------------------------------------- */
 /* ROSHANI RIDER - PREMIUM DESIGN SYSTEM (ORANGE THEME)                       */
 /* -------------------------------------------------------------------------- */
+
+/* TODO: DEDUPLICATION NEEDED
+ * This file has ~25% duplicate CSS rules. Examples of selectors declared 3+ times:
+ *   .ping-modal-content (x3), .ping-btn-accept (x4), .ping-header (x3), .ping-title (x2)
+ *   .order-card-compact (x3), .action-pill (x4), .step-item (x3), .step-dot (x3)
+ *   .trip-map-container (x3, conflicting heights 350px vs 250px)
+ *   .empty-state-glass (x3, conflicting padding 60px vs 40px)
+ *   .bottom-nav (x4), .app-header (x3), .main-content (x3)
+ * Last definition wins, but the duplication makes refactoring risky.
+ * Recommended: run a CSS dedup tool (e.g. cssnano, uncss) before next major release. */
 :root {
     --primary: #FF5200;
     --primary-dark: #E64A19;
@@ -381,11 +391,29 @@ body {
     position: absolute;
     top: -2px;
     right: -2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    background-color: var(--danger);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
+    border-radius: 9px;
+    border: 2px solid white;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.badge-dot:empty,
+.badge-dot[data-count="0"] {
     width: 10px;
     height: 10px;
-    background-color: var(--danger);
-    border-radius: 50%;
-    border: 2px solid white;
+    min-width: 0;
+    padding: 0;
 }
 
 /* Status Pill */

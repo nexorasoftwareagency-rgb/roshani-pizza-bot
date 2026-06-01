@@ -299,12 +299,12 @@ export function renderRevenueChart(data) {
                 datasets: [{
                     label: 'Daily Revenue',
                     data: values,
-                    borderColor: '#FF6B00',
-                    backgroundColor: 'rgba(255, 107, 0, 0.1)',
+                    borderColor: '#f36b21',
+                    backgroundColor: 'rgba(243, 107, 33, 0.1)',
                     borderWidth: 3,
                     tension: 0.4,
                     fill: true,
-                    pointBackgroundColor: '#FF6B00',
+                    pointBackgroundColor: '#f36b21',
                     pointRadius: 4
                 }]
             },
