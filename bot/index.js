@@ -548,8 +548,7 @@ function getFunnyFoodJoke() {
 function getFoodFunnyProgress(status, name = "") {
     const bars = {
         "Confirmed": "✅⬜⬜⬜⬜",
-        "Preparing": "✅👨‍🍳⬜⬜⬜",
-        "Cooked": "✅👨‍🍳🔥⬜⬜",
+        "Ready": "✅👨‍🍳🔥📦",
         "Out for Delivery": "✅👨‍🍳🔥📦🚀",
         "Delivered": "✅👨‍🍳🔥📦🍕"
     };
@@ -792,15 +791,9 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
                     msg = `✅ *ORDER CONFIRMED!* 🎊\n━━━━━━━━━━━━━━━━━━━━\n${formatOrderInvoice(id, order)}\nYour order is being prepared with love! ❤️\n${getFoodFunnyProgress("Confirmed")}`;
                 }
                 img = botSettings.imgConfirmed;
-            } else if (statusLower === "preparing") {
-                msg = `👨‍🍳 *NOW PREPARING!* 🔥\n━━━━━━━━━━━━━━━━━━━━\nYour order #${id.slice(-5)} is now in the kitchen! 👨‍🍳\n\nIt won't be long now! 🍕\n${getFoodFunnyProgress("Preparing")}`;
-                img = botSettings.imgPreparing;
-            } else if (statusLower === "cooked") {
-                msg = `🔥 *KITCHEN FINISHED!* 🔥\n━━━━━━━━━━━━━━━━━━━━\nChef has finished cooking your order #${id.slice(-5)}! 🍕\n\nMoving to packing station... ❤️\n${getFoodFunnyProgress("Cooked")}`;
-                img = botSettings.imgCooked;
             } else if (statusLower === "ready" || statusLower === "packed") {
                 msg = `📦 *PACKED & READY!* 🚀\n━━━━━━━━━━━━━━━━━━━━\nYour delicious order #${id.slice(-5)} is ready and packed! 🍱\n\n${isDineIn ? "It's ready to be served! 🍽️" : "Waiting for the rider to pick it up. 🛵"}\n${getFoodFunnyProgress("Ready")}`;
-                img = botSettings.imgReady || botSettings.imgCooked;
+                img = botSettings.imgReady;
 
                 if (!isDineIn) {
                     if (order.riderPhone) {

@@ -229,8 +229,8 @@ export async function printReceiptById(orderId) {
             return;
         }
 
-        // Auto-complete walk-in orders on print
-        if (order.type === 'Walk-in' && order.status !== 'Delivered') {
+        // Auto-complete counter (Dine-in) orders on print
+        if ((order.type || '').toLowerCase() === 'dine-in' && order.status !== 'Delivered') {
             await updateStatus(orderId, 'Delivered');
         }
 

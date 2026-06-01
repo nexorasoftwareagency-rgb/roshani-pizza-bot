@@ -70,8 +70,8 @@
     <script src="branding.js?v=4.9.1"></script>
     <script src="firebase-config.js?v=4.9.1"></script>
 
-    <link rel="stylesheet" href="style.css?v=4.9.2">
-    <link rel="stylesheet" href="mobile-overrides.css?v=4.9.2">
+    <link rel="stylesheet" href="style.css?v=5.0.0">
+    <link rel="stylesheet" href="mobile-overrides.css?v=5.0.0">
     <link rel="manifest" href="manifest.json?v=3">
     <link rel="icon" type="image/jpeg" href="icon-erp-logo.jpeg">
     <link rel="apple-touch-icon" href="icon-erp-logo.jpeg">
@@ -95,6 +95,7 @@
 
 <body>
     <div id="alertContainer"></div>
+    <input type="file" id="inventoryImportInput" accept=".csv,text/csv" style="display:none" aria-hidden="true">
     <div id="connectionBanner" class="connection-banner hidden" role="alert" aria-live="polite">
         <i data-lucide="wifi-off" class="icon-16"></i>
         <span>No internet connection — changes may not save</span>
@@ -450,9 +451,9 @@
                                             </tr>
                                         </thead>
                                         <tbody id="ordersTable">
-                                            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
-                                            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
-                                            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="8"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="8"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
+                                            <tr class="skeleton-row"><td colspan="8"><div class="skeleton" style="height:40px;width:100%"></div></td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -1193,27 +1194,15 @@
                                 </div>
                                 <div
                                     class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
-                                    <label class="form-label-small mb-4">👨‍🍳 Preparing</label>
-                                    <img id="botImgPreparingPreview"
-                                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Preparing"
+                                    <label class="form-label-small mb-4">🍕 Ready</label>
+                                    <img id="botImgReadyPreview"
+                                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Ready"
                                         class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
-                                    <input type="file" id="botImgPreparingFile" accept="image/*" class="hidden"
-                                        title="Order Preparing Status Image">
-                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img"
-                                        data-target="botImgPreparingFile"
-                                        title="Upload Preparing Status Image">Upload</button>
-                                </div>
-                                <div
-                                    class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
-                                    <label class="form-label-small mb-4">🍕 Ready / Cooked</label>
-                                    <img id="botImgCookedPreview"
-                                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Cooked"
-                                        class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
-                                    <input type="file" id="botImgCookedFile" accept="image/*" class="hidden"
+                                    <input type="file" id="botImgReadyFile" accept="image/*" class="hidden"
                                         title="Order Ready Status Image">
                                     <button class="btn-secondary btn-small w-full btn-upload-bot-img"
-                                        data-target="botImgCookedFile"
-                                        title="Upload Ready / Cooked Status Image">Upload</button>
+                                        data-target="botImgReadyFile"
+                                        title="Upload Ready Status Image">Upload</button>
                                 </div>
                                 <div
                                     class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
@@ -1563,7 +1552,7 @@
                 </div>
             </div>
 
-                <div id="tab-inventory" class="tab-content hidden">
+            <div id="tab-inventory" class="tab-content hidden">
                 <div class="panel">
                     <div class="panel-header">
                         <div class="flex-col">
@@ -1571,6 +1560,12 @@
                             <p class="panel-subtitle">High-speed product stock tracking & alerts</p>
                         </div>
                         <div class="flex-row flex-gap-10">
+                            <button class="btn-secondary btn-small" data-action="exportInventoryCSV" title="Export inventory as CSV">
+                                <i data-lucide="download" class="icon-16"></i> Export
+                            </button>
+                            <button class="btn-secondary btn-small" data-action="triggerInventoryImport" title="Import inventory from CSV">
+                                <i data-lucide="upload" class="icon-16"></i> Import
+                            </button>
                             <button id="btnShowAddInventory" class="btn-primary btn-small">
                                 <i data-lucide="plus-circle" class="icon-16"></i> Add Item
                             </button>
@@ -1643,6 +1638,9 @@
                     </div>
 
                     <div class="glass-card mb-20 p-0 overflow-hidden">
+                        <div class="p-16">
+                            <input type="text" id="inventorySearch" class="form-input" placeholder="Search items by name..." aria-label="Search inventory items">
+                        </div>
                         <div class="table-responsive">
                             <table class="premium-table-v4">
                                 <thead>
@@ -1655,7 +1653,7 @@
                                 </thead>
                                 <tbody id="inventoryTableBody">
                                     <tr>
-                                <td colspan="6" class="text-center p-60 text-muted">
+                                <td colspan="4" class="text-center p-60 text-muted">
                                             <div class="loading-spinner mb-14 m-auto"></div>
                                             Syncing inventory data...
                                         </td>
@@ -2197,6 +2195,9 @@
         </div>
     </div>
 
+    <!-- TODO: unused — #premiumModalOverlay is unreferenced in feature modules.
+         window.closePremiumModal and window.openPremiumModal are never called.
+         Candidate for removal or reuse for upcoming features. -->
     <!-- Premium Global Modal System -->
     <div id="premiumModalOverlay" class="premium-modal-overlay hidden">
         <div class="premium-modal">

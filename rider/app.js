@@ -205,7 +205,7 @@ window.reachedDropLocation = async (id, outlet) => {
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         // Use cache-busting for SW registration itself
-        navigator.serviceWorker.register('sw.js?v=4.8.0').catch(err => console.error('SW failed', err));
+            navigator.serviceWorker.register('sw.js?v=5.0.0').catch(err => console.error('SW failed', err));
     });
 }
 
@@ -516,11 +516,18 @@ window.toggleRiderStatus = async () => {
     try {
         await update(ref(db, `riders/${window.currentUser.profile.id}`), { status: newStatus, lastSeen: serverTimestamp() });
         window.currentUser.profile.status = newStatus;
-        
+
         const btn = document.getElementById('statusToggleBtn');
         if (btn) {
-            btn.className = `status-pill ${newStatus.toLowerCase()}`;
-            btn.querySelector('span').innerText = newStatus.toUpperCase();
+            btn.classList.remove('Online', 'Offline', 'Busy');
+            btn.classList.add(newStatus);
+            const label = btn.querySelector('.status-text') || btn.querySelector('span');
+            if (label) label.innerText = newStatus.toUpperCase();
+            const dot = btn.querySelector('.pulse-dot');
+            if (dot) {
+                dot.classList.remove('Online', 'Offline', 'Busy');
+                dot.classList.add(newStatus);
+            }
         }
         window.showToast(`You are now ${newStatus}`, "info");
 
@@ -540,6 +547,88 @@ window.toggleAadharView = () => {
     } else {
         container.classList.add('hidden');
         btn.innerText = 'SHOW';
+    }
+};
+
+// --- PROFILE EDIT HANDLERS ---
+window.triggerProfilePhotoUpload = () => {
+    const input = document.getElementById('profile-photo-input');
+    if (input) input.click();
+};
+
+window.uploadProfilePhoto = async (e) => {
+    if (!window.currentUser?.profile?.id) return window.showToast("Not logged in.", "error");
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 500 * 1024) {
+        return window.showToast("Image too large (>500KB). Please compress.", "error");
+    }
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+        const base64 = ev.target.result;
+        try {
+            await update(ref(db, `riders/${window.currentUser.profile.id}`), { profilePhoto: base64 });
+            window.currentUser.profile.profilePhoto = base64;
+            const img = document.getElementById('r-profile-img');
+            if (img) img.src = base64;
+            const cached = JSON.parse(localStorage.getItem('riderProfile') || '{}');
+            cached.profilePhoto = base64;
+            localStorage.setItem('riderProfile', JSON.stringify(cached));
+            window.showToast("Profile photo updated", "success");
+        } catch (err) {
+            window.showToast("Upload failed. Try again.", "error");
+        }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+};
+
+window.editProfilePhone = async () => {
+    if (!window.currentUser?.profile?.id) return;
+    const span = document.getElementById('profilePhoneValue');
+    const btn = document.getElementById('btn-edit-phone');
+    if (!span || !btn) return;
+    const current = window.currentUser.profile.phone || '';
+    const newVal = prompt("Enter your new phone number:", current);
+    if (newVal === null) return;
+    const trimmed = newVal.trim();
+    if (!trimmed) return window.showToast("Phone cannot be empty.", "error");
+    if (!/^[0-9+\-\s]{6,20}$/.test(trimmed)) return window.showToast("Invalid phone format.", "error");
+    try {
+        await update(ref(db, `riders/${window.currentUser.profile.id}`), { phone: trimmed });
+        window.currentUser.profile.phone = trimmed;
+        span.innerText = trimmed;
+        const profilePhone = document.getElementById('profilePhone');
+        if (profilePhone) profilePhone.innerText = trimmed;
+        const cached = JSON.parse(localStorage.getItem('riderProfile') || '{}');
+        cached.phone = trimmed;
+        localStorage.setItem('riderProfile', JSON.stringify(cached));
+        window.showToast("Phone updated", "success");
+    } catch (err) {
+        window.showToast("Failed to update phone.", "error");
+    }
+};
+
+window.editProfileAddress = async () => {
+    if (!window.currentUser?.profile?.id) return;
+    const span = document.getElementById('r-address');
+    const btn = document.getElementById('btn-edit-address');
+    if (!span || !btn) return;
+    const current = window.currentUser.profile.address || '';
+    const newVal = prompt("Enter your new address:", current);
+    if (newVal === null) return;
+    const trimmed = newVal.trim();
+    if (!trimmed) return window.showToast("Address cannot be empty.", "error");
+    try {
+        await update(ref(db, `riders/${window.currentUser.profile.id}`), { address: trimmed });
+        window.currentUser.profile.address = trimmed;
+        span.innerText = trimmed;
+        const cached = JSON.parse(localStorage.getItem('riderProfile') || '{}');
+        cached.address = trimmed;
+        localStorage.setItem('riderProfile', JSON.stringify(cached));
+        window.showToast("Address updated", "success");
+    } catch (err) {
+        window.showToast("Failed to update address.", "error");
     }
 };
 
@@ -718,10 +807,14 @@ window.clearAllNotifications = async () => {
 };
 
 window.toggleNotifSheet = () => {
-    const sheet = document.getElementById('notifSheet');
+    const sheet = document.getElementById('notificationSheet');
     const overlay = document.querySelector('.sidebar-overlay');
-    if (!sheet) return;
-    
+    if (!sheet) {
+        console.warn('[Notif] #notificationSheet element not found');
+        return;
+    }
+
+    sheet.classList.toggle('hidden');
     sheet.classList.toggle('active');
     if (overlay) {
         overlay.classList.toggle('active');
@@ -1466,7 +1559,7 @@ window._doRenderAllOrders = () => {
             if (s === "reached drop location") return 4;
             if (s === "picked up" || s === "out for delivery") return 3;
             if (s === "arrived at restaurant" || s === "arrived at outlet") return 2;
-            if (["ready", "cooked", "packed", "waiting for pickup", "accepted"].includes(s)) return 1;
+            if (["ready", "accepted"].includes(s)) return 1;
             return 0;
         };
 
@@ -1493,7 +1586,7 @@ window._doRenderAllOrders = () => {
         if (isGhost || (!isActive && !isFresh)) return;
 
         // 1. UNASSIGNED - STRICT FILTERING
-        const allowedUnassignedStatus = ["ready", "cooked", "packed"];
+        const allowedUnassignedStatus = ["ready"];
         if (!o.assignedRider && allowedUnassignedStatus.includes(status)) {
             console.log(`[RiderUI] Rendering Unassigned Order #${id} | Status: ${status}`);
             // Ping Modal logic for VERY fresh orders (2 hours)
@@ -1510,7 +1603,7 @@ window._doRenderAllOrders = () => {
                 const safeTotal = escapeHtml(String(o.total || 0));
                 const safeId = escapeHtml(id);
                 const safeOutlet = escapeHtml(outletId);
-                const statusLabel = (status === "ready" || status === "cooked" || status === "packed") ? "READY" : "PREPARING";
+                const statusLabel = (status === "ready") ? "READY" : "PREPARING";
                 
                 const outletName = outletId === 'pizza' ? 'Pizza' : 'Cake';
                 const outletIcon = outletId === 'pizza' ? '🍕' : '🎂';
@@ -1555,7 +1648,7 @@ window._doRenderAllOrders = () => {
                 `;
                 unassignedCount++;
             }
-        else if (!o.assignedRider && (status === "preparing" || status === "confirmed" || status === "cooking")) {
+        else if (!o.assignedRider && (status === "preparing" || status === "confirmed")) {
             // Silently skip - order is not yet ready for pickup
         }
         // 2. ACTIVE (Assigned to me and not delivered)
@@ -1593,7 +1686,7 @@ window._doRenderAllOrders = () => {
                 if (statusLower === "reached drop location") currentStep = 3;
                 else if (statusLower === "picked up" || statusLower === "out for delivery") currentStep = 2;
                 else if (statusLower === "arrived at restaurant" || statusLower === "arrived at outlet") currentStep = 1;
-                else if (["ready", "cooked", "packed", "waiting for pickup"].includes(statusLower)) currentStep = 0; 
+                else if (statusLower === "ready") currentStep = 0;
                 else currentStep = 0; 
 
                 const outletCoords = window.outletCoords[outletId] || { lat: 0, lng: 0 };
@@ -1910,6 +2003,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Profile Actions
     document.getElementById('btn-toggle-aadhar')?.addEventListener('click', window.toggleAadharView);
+    document.getElementById('btn-edit-photo')?.addEventListener('click', window.triggerProfilePhotoUpload);
+    document.getElementById('profile-photo-input')?.addEventListener('change', window.uploadProfilePhoto);
+    document.getElementById('btn-edit-phone')?.addEventListener('click', window.editProfilePhone);
+    document.getElementById('btn-edit-address')?.addEventListener('click', window.editProfileAddress);
+
+    // Notification Sheet
+    document.getElementById('mobileNotifBtn')?.addEventListener('click', window.toggleNotifSheet);
+    document.getElementById('btnCloseNotifSheet')?.addEventListener('click', window.toggleNotifSheet);
+    document.getElementById('btnClearAllNotifs')?.addEventListener('click', window.clearAllNotifications);
 
     // Order Actions (Event Delegation)
     document.getElementById('unassignedOrdersList')?.addEventListener('click', (e) => {
@@ -2057,8 +2159,15 @@ onAuthStateChanged(auth, async user => {
         const status = u.profile.status || "Offline";
         const btn = document.getElementById('statusToggleBtn');
         if (btn) {
-            btn.className = `status-pill ${status.toLowerCase()}`;
-            btn.querySelector('span').innerText = status.toUpperCase();
+            btn.classList.remove('Online', 'Offline', 'Busy');
+            btn.classList.add(status);
+            const label = btn.querySelector('.status-text') || btn.querySelector('span');
+            if (label) label.innerText = status.toUpperCase();
+            const dot = btn.querySelector('.pulse-dot');
+            if (dot) {
+                dot.classList.remove('Online', 'Offline', 'Busy');
+                dot.classList.add(status);
+            }
         }
     };
 

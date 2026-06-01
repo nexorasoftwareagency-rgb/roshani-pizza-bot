@@ -15,22 +15,20 @@ import { sendToRider } from '../fcm-sender.js';
 /**
  * STATUS WORKFLOW CONFIGURATION
  */
-export const STATUS_SEQUENCE = ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"];
+export const STATUS_SEQUENCE = ["Placed", "Confirmed", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"];
 export const STATUS_SEQUENCES = {
-    'Online': ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"],
-    'Dine-in': ["Confirmed", "Preparing", "Cooked", "Ready", "Delivered"],
-    'Default': ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"]
+    'Online': ["Placed", "Confirmed", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"],
+    'Dine-in': ["Confirmed", "Ready", "Delivered"],
+    'Default': ["Placed", "Confirmed", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"]
 };
 export const STATUS_MAPPING = {
     "New": 0, "Pending": 0, "Placed": 0,
     "Confirmed": 1,
-    "Preparing": 2, "In Kitchen": 2,
-    "Cooked": 3,
-    "Ready": 4,
-    "Picked Up": 5,
-    "Out for Delivery": 6,
-    "Reached Drop Location": 7,
-    "Delivered": 8,
+    "Ready": 2, "Cooked": 2, "Preparing": 2, "In Kitchen": 2,
+    "Picked Up": 3,
+    "Out for Delivery": 4,
+    "Reached Drop Location": 5,
+    "Delivered": 6,
     "Cancelled": 0
 };
 
@@ -427,7 +425,7 @@ export function renderOrders(snap) {
     // Empty state for live tab
     if (activeTab === 'live' && sortedOrders.filter(o => {
         const status = (o.status || "Unknown").trim();
-        const liveStatuses = ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Pending", "New", "Dispatched", "In Kitchen"];
+        const liveStatuses = ["Placed", "Confirmed", "Ready", "Out for Delivery", "Pending", "New", "Dispatched", "Reached Drop Location", "Delivered"];
         return liveStatuses.some(s => s.toLowerCase() === status.toLowerCase());
     }).length === 0 && containers['live']) {
         containers['live'].innerHTML = '<tr><td colspan="7" class="empty-state-cell"><div class="empty-state"><i data-lucide="activity"></i><p>No live orders</p><span>Active orders will appear here</span></div></td></tr>';
@@ -455,7 +453,7 @@ export function renderOrders(snap) {
         o.normalizedItems = items;
 
         const status = (o.status || "Unknown").trim();
-        const liveStatuses = ["Placed", "Confirmed", "Preparing", "Cooked", "Ready", "Out for Delivery", "Pending", "New", "Dispatched", "In Kitchen"];
+        const liveStatuses = ["Placed", "Confirmed", "Ready", "Out for Delivery", "Pending", "New", "Dispatched", "Reached Drop Location", "Delivered"];
         const isLive = liveStatuses.some(s => s.toLowerCase() === status.toLowerCase());
         
         if (isLive) liveCount++;
@@ -770,7 +768,7 @@ function updateDashboardStats(orders) {
         .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
     const activeToday = todayOrders.filter(o => !['Delivered', 'Cancelled'].includes(o.status)).length;
-    const pending = orders.filter(o => ["Placed", "Confirmed", "Preparing"].includes(o.status)).length;
+    const pending = orders.filter(o => ["Placed", "Confirmed"].includes(o.status)).length;
 
     // Update UI
     const els = {
@@ -801,11 +799,11 @@ function renderPriorityOrders(orders) {
         container.dataset.hasListener = "true";
     }
 
-    const priorityStatuses = ["placed", "confirmed", "preparing", "cooked", "ready", "pending"];
+    const priorityStatuses = ["placed", "confirmed", "ready", "pending"];
     const priority = orders
         .filter(o => priorityStatuses.includes(String(o.status || "").toLowerCase()))
         .sort((a, b) => {
-            const weights = { "placed": 6, "confirmed": 5, "preparing": 4, "cooked": 3, "pending": 2, "ready": 1 };
+            const weights = { "placed": 4, "confirmed": 3, "pending": 2, "ready": 1 };
             const statusA = String(a.status || "").toLowerCase();
             const statusB = String(b.status || "").toLowerCase();
             return (weights[statusB] || 0) - (weights[statusA] || 0);
@@ -946,9 +944,13 @@ export async function updateStatus(id, status) {
     const currentStatus = order.status || "Placed";
     const type = order.type || 'Online';
     const sequence = STATUS_SEQUENCES[type] || STATUS_SEQUENCES['Default'];
-    
+
     const currentLevel = sequence.indexOf(currentStatus);
     const nextLevel = sequence.indexOf(status);
+
+    // Rule 0: Counter (Dine-in) orders can skip "Ready" and go directly to "Delivered" on print
+    const isPosSale = (type || '').toLowerCase() === 'dine-in';
+    const isPosSkipReady = isPosSale && currentStatus === "Confirmed" && status === "Delivered";
 
     // Rule 1: Allow cancellation from any state EXCEPT "Delivered"
     const isCancelling = status === "Cancelled";
@@ -960,7 +962,7 @@ export async function updateStatus(id, status) {
     // Rule 3: Allow "Resurrection" from Cancelled to Placed
     const isResurrecting = currentStatus === "Cancelled" && status === "Placed";
 
-    if (!isNextStep && !canCancel && !isResurrecting && status !== currentStatus) {
+    if (!isNextStep && !canCancel && !isResurrecting && !isPosSkipReady && status !== currentStatus) {
         if (nextLevel <= currentLevel && nextLevel !== -1 && !isCancelling) {
             showToast(`⚠️ Status Reversal Blocked: Cannot go from ${currentStatus} to ${status}`, "error");
         } else if (isCancelling && currentStatus === "Delivered") {
@@ -995,10 +997,15 @@ export async function updateStatus(id, status) {
     let paymentStatus = order.paymentStatus || "Pending";
 
     if (status === "Delivered") {
-        const method = await showPaymentPicker(order.total);
-        if (!method) {
-            renderOrders(state.lastOrdersSnap);
-            return; // Cancelled payment selection
+        let method = order.paymentMethod || "Cash";
+        // For non-POS orders without a preset method, ask the admin/rider
+        if (!isPosSale && !order.paymentMethod) {
+            const picked = await showPaymentPicker(order.total);
+            if (!picked) {
+                renderOrders(state.lastOrdersSnap);
+                return; // Cancelled payment selection
+            }
+            method = picked;
         }
         paymentMethod = method;
         paymentStatus = "Paid";
@@ -1057,8 +1064,8 @@ export async function updateStatus(id, status) {
         }
     }
 
-    // Handle Stock Deduction on Confirmation
-    if (status === "Confirmed" && !order.stockDeducted) {
+    // Handle Stock Deduction on Delivered (online orders only; POS deducts at sale time)
+    if (status === "Delivered" && !order.stockDeducted && !isPosSale) {
         const items = order.normalizedItems || order.cart || [];
         if (items.length > 0) {
             autoDeductStock(items);

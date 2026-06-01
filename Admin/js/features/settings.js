@@ -11,6 +11,30 @@ const SETTINGS_PATHS = {
 };
 
 /**
+ * v5.0.0 One-time migration: remove deprecated bot image keys (imgPreparing, imgCooked).
+ * Merged "Cooked" + "Ready" into a single "Ready" status; "Preparing" deleted.
+ * Guarded by localStorage flag so it only runs once per browser.
+ */
+async function purgeDeprecatedBotImages(botData) {
+    if (!botData) return;
+    if (localStorage.getItem('bot_images_v5_migrated') === '1') return;
+    const updates = {};
+    if ('imgPreparing' in botData) updates['imgPreparing'] = null;
+    if ('imgCooked' in botData) updates['imgCooked'] = null;
+    if (Object.keys(updates).length === 0) {
+        localStorage.setItem('bot_images_v5_migrated', '1');
+        return;
+    }
+    try {
+        await update(Outlet.ref(SETTINGS_PATHS.BOT), updates);
+        localStorage.setItem('bot_images_v5_migrated', '1');
+        console.info('[Settings] v5.0.0 migration: purged imgPreparing/imgCooked from bot images');
+    } catch (e) {
+        console.warn('[Settings] v5.0.0 bot image migration failed:', e);
+    }
+}
+
+/**
  * Validates Latitude and Longitude
  */
 function validateCoords(lat, lng) {
@@ -78,6 +102,9 @@ export async function loadStoreSettings() {
             get(Outlet.ref(SETTINGS_PATHS.DISPLAY))
         ]);
 
+        // One-time v5.0.0 migration: purge deprecated bot image keys (imgPreparing, imgCooked)
+        await purgeDeprecatedBotImages(botSnap.val());
+
         const store = storeSnap.val();
         const del = delSnap.val();
         const bot = botSnap.val();
@@ -120,8 +147,7 @@ export async function loadStoreSettings() {
         const b = bot || {};
         const botPreviews = {
             'botImgConfirmedPreview': b.imgConfirmed,
-            'botImgPreparingPreview': b.imgPreparing,
-            'botImgCookedPreview': b.imgCooked,
+            'botImgReadyPreview': b.imgReady,
             'botImgOutPreview': b.imgOut,
             'botImgDeliveredPreview': b.imgDelivered,
             'botImgFeedbackPreview': b.imgFeedback,
@@ -247,8 +273,7 @@ export async function saveStoreSettings() {
 
         const botData = {
             imgConfirmed: document.getElementById('botImgConfirmedPreview').src,
-            imgPreparing: document.getElementById('botImgPreparingPreview').src,
-            imgCooked: document.getElementById('botImgCookedPreview').src,
+            imgReady: document.getElementById('botImgReadyPreview').src,
             imgOut: document.getElementById('botImgOutPreview').src,
             imgDelivered: document.getElementById('botImgDeliveredPreview').src,
             imgFeedback: document.getElementById('botImgFeedbackPreview').src,

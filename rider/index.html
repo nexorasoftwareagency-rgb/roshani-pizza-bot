@@ -52,7 +52,7 @@
             }
         });
     </script>
-    <link rel="stylesheet" href="style.css?v=4.8.0">
+    <link rel="stylesheet" href="style.css?v=5.0.0">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="icon-512.png">
     <link rel="apple-touch-icon" href="icon-512.png">
@@ -362,6 +362,8 @@
 
 
 
+    <!-- TODO: unused — #verificationModal is hidden by default and #orderChecklist is never populated.
+         Slider confirm reuses #btnConfirmPickup directly. Candidate for removal. -->
     <div id="verificationModal" class="modal-overlay hidden">
         <div class="modal-content-bottom">
             <div class="modal-handle"></div>
@@ -400,6 +402,8 @@
         </div>
     </div>
 
+    <!-- TODO: unused — #confirmModal is replaced by dynamic window.showConfirm() overlay in app.js.
+         Buttons #btnConfirmYes and #btnConfirmNo have no event listeners. Candidate for removal. -->
     <div id="confirmModal" class="modal-overlay hidden">
         <div class="modal-card text-center">
             <h3 id="confirmTitle" class="mb-10">CONFIRM</h3>
@@ -475,7 +479,7 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=4.8.0"></script>
+    <script type="module" src="app.js?v=5.0.0"></script>
     <div id="successOverlay" class="modal-overlay">
         <div class="modal-card text-center success-card">
             <div class="success-icon-wrapper">

@@ -402,6 +402,9 @@ export function renderWalkinCart() {
                    <button class="btn-remove-v4 flex-center flex-gap-6 fs-11" data-action="walkinRemoveItem" data-id="${key}">
                        <i data-lucide="trash-2" style="width:12px;"></i> Remove
                    </button>
+                   <button class="btn-remove-v4 flex-center flex-gap-6 fs-11 ml-8" data-action="openCartAddonPicker" data-id="${key}" title="Edit add-ons for this item">
+                       <i data-lucide="settings-2" style="width:12px;"></i> Edit
+                   </button>
                 </div>
             </div>
         `;
@@ -627,10 +630,11 @@ export async function submitWalkinSale() {
             tableNo: tableNo,
             status: "Confirmed",
             type: "Dine-in",
+            stockDeducted: true,
             timestamp: serverTimestamp(),
             createdAt: new Date().toISOString(),
             outlet: Outlet.current,
-            assignedRider: "", 
+            assignedRider: "",
             createdBy: auth.currentUser ? auth.currentUser.email : 'admin'
         };
 
