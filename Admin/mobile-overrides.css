@@ -1317,10 +1317,19 @@
     .menu-grid {
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
         gap: 8px !important;
+        touch-action: pan-y !important;
     }
 
     .dish-card {
         min-width: 0 !important;
+        touch-action: pan-y !important;
+    }
+
+    #tab-walkin .walkin-picker,
+    #tab-walkin .walkin-dish-grid,
+    #tab-walkin .pos-dish-btn-v4,
+    #tab-walkin .walkin-dish-card {
+        touch-action: pan-y !important;
     }
 
     .dish-info {
