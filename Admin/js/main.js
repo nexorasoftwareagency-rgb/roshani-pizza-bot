@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             (await useMod('notifications')).clearAllNotifications();
         });
         document.getElementById('btnClearLostSales')?.addEventListener('click', async () => {
-            (await useMod('customers')).clearLostSales();
+            (await useMod('lost-sales')).clearLostSales();
         });
         document.getElementById('btnEnableNotif')?.addEventListener('click', async () => {
             (await useMod('notifications')).requestNotificationPermission();
