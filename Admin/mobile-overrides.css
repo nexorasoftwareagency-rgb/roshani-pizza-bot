@@ -1552,6 +1552,30 @@
     .search-input { min-width: 0 !important; width: 100% !important; }
     #adminLiveMap { height: 50vh !important; }
     .h-300 { height: 200px !important; }
+
+    /* --- Live Rider Tracker: sidebar → mobile chip row + collapsible --- */
+    #tab-liveTracker .tracker-layout {
+        flex-direction: column;
+        gap: 0;
+    }
+    #tab-liveTracker .tracker-sidebar {
+        display: none;
+    }
+    #tab-liveTracker .tracker-layout-collapsed .tracker-sidebar {
+        display: none;
+    }
+    #tab-liveTracker .tracker-mobile-chips {
+        display: flex;
+    }
+    #tab-liveTracker .tracker-map-wrap {
+        width: 100%;
+    }
+    #tab-liveTracker #btnToggleTrackerSidebar {
+        display: none;
+    }
+    #trackerStats { font-size: 10px; padding: 4px 8px; }
+    .tracker-stat-sep { display: none; }
+    #trackerLastUpdateTime { font-weight: 700; }
     #tab-live h3.desktop-only { display: block !important; font-size: 18px; margin-bottom: 16px; }
 
     /* --- 15. CONSOLIDATED FROM PREVIOUS 768px BLOCK --- */
@@ -2205,6 +2229,50 @@
         width: 100%;
         margin-bottom: 4px;
     }
+
+    /* Rider Analytics: stack title above controls at tablet, KPIs 2x2+1, full-width controls */
+    #tab-riderAnalytics > .flex-row.justify-between.flex-center.mb-20.p-0-10 {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 12px;
+    }
+    #tab-riderAnalytics > .flex-row.justify-between.flex-center.mb-20.p-0-10 > .section-title {
+        width: 100%;
+        margin-bottom: 0;
+    }
+    #tab-riderAnalytics .flex-row.flex-gap-10.flex-center.glass-card.p-10-20.rounded-12.flex-wrap-mobile {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px 12px !important;
+    }
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > .report-date-input,
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > select {
+        flex: 1 1 calc(50% - 4px) !important;
+        min-width: 0;
+        width: auto;
+    }
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > #riderSelectAnalytics {
+        flex: 1 1 100% !important;
+        width: 100%;
+    }
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > .btn-primary,
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > .btn-secondary {
+        flex: 1 1 calc(50% - 4px) !important;
+        min-width: 140px;
+        justify-content: center;
+    }
+
+    #tab-riderAnalytics .kpi-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+    #tab-riderAnalytics .kpi-card-v4.warning {
+        grid-column: span 2;
+    }
+    #tab-riderAnalytics .h-250 {
+        height: 240px !important;
+    }
 }
 
 /* --- Mobile (≤ 768px): single-column KPIs, swipe indicator, smaller chart --- */
@@ -2579,6 +2647,61 @@
         min-height: 0 !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* Rider Analytics: tighter padding, stacked controls, 2x2+1 KPI grid */
+    #tab-riderAnalytics .flex-row.flex-gap-10.flex-center.glass-card.p-10-20.rounded-12.flex-wrap-mobile {
+        padding: 8px 10px !important;
+        gap: 6px !important;
+    }
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > .report-date-input,
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > select,
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > .btn-primary,
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > .btn-secondary {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        min-width: 0;
+        min-height: 38px;
+        justify-content: center;
+    }
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > #riderSelectAnalytics {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+    }
+    #tab-riderAnalytics .kpi-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+    #tab-riderAnalytics .kpi-card-v4 {
+        padding: 10px !important;
+        gap: 8px !important;
+    }
+    #tab-riderAnalytics .kpi-card-v4 .icon-wrap {
+        width: 32px !important;
+        height: 32px !important;
+    }
+    #tab-riderAnalytics .kpi-card-v4 .icon-wrap i {
+        width: 14px !important;
+        height: 14px !important;
+    }
+    #tab-riderAnalytics .kpi-card-v4 .val {
+        font-size: 16px !important;
+    }
+    #tab-riderAnalytics .kpi-card-v4 .lbl {
+        font-size: 10px !important;
+    }
+    #tab-riderAnalytics .kpi-card-v4.warning {
+        grid-column: span 2;
+    }
+    #tab-riderAnalytics .h-250 {
+        height: 200px !important;
+    }
+    #tab-riderAnalytics .section-title {
+        font-size: 18px !important;
+    }
+    #tab-riderAnalytics .section-title .icon-24 {
+        width: 20px;
+        height: 20px;
     }
 }
 
