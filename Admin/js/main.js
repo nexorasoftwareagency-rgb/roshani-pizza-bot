@@ -64,7 +64,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (layout) window.lucide.createIcons({ root: layout });
     }
 
+    let _staticListenersBound = false;
     const setupStaticListeners = () => {
+        if (_staticListenersBound) return;
+        _staticListenersBound = true;
         document.addEventListener('error', (e) => {
             if (e.target.tagName === 'IMG') {
                 e.target.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\' viewBox=\'0 0 150 150\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23eee\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'12\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E';
@@ -205,9 +208,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const btnGenerateReport = document.getElementById('btnGenerateReport');
         if (btnGenerateReport) btnGenerateReport.addEventListener('click', async () => {
-            const r = await useMod('customers');
+            const r = await useMod('analytics');
             if (r.generateCustomReport) r.generateCustomReport();
         });
+
+        const reportStatusFilter = document.getElementById('reportStatusFilter');
+        if (reportStatusFilter) {
+            reportStatusFilter.addEventListener('change', async (e) => {
+                const r = await useMod('analytics');
+                if (r.setStatusFilter) r.setStatusFilter(e.target.value);
+            });
+        }
 
         const btnWhatsappReport = document.getElementById('btnWhatsappReport');
         if (btnWhatsappReport) btnWhatsappReport.addEventListener('click', async () => {
@@ -239,11 +250,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         document.getElementById('btnDownloadExcel')?.addEventListener('click', async () => {
-            const r = await useMod('customers');
+            const r = await useMod('analytics');
             r.downloadExcel?.();
         });
         document.getElementById('btnDownloadPDF')?.addEventListener('click', async () => {
-            const r = await useMod('customers');
+            const r = await useMod('analytics');
             r.downloadPDF?.();
         });
     };
@@ -470,8 +481,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             ]);
         }
     });
-
-    setupStaticListeners();
 
     if (window.lucide) {
         const layout = document.querySelector('.layout');

@@ -243,15 +243,15 @@ function renderRiderTable(orders) {
                         <span class="sub">${new Date(o.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                     </div>
                 </td>
-                <td><span class="badge-payment">#${o.id.slice(-5)}</span></td>
+                <td><span class="badge-payment">#${escapeHtml(o.id ? o.id.slice(-5) : 'N/A')}</span></td>
                 <td>
                     <div class="identity-info-v4">
                         <span class="name">${escapeHtml(o.customerName || 'Guest')}</span>
-                        <span class="sub">${o.outlet}</span>
+                        <span class="sub">${escapeHtml(o.outlet || '')}</span>
                     </div>
                 </td>
                 <td><span class="text-muted-small">${timeTaken} mins</span></td>
-                <td class="text-right font-bold text-orange">₹${o.deliveryFee || 0}</td>
+                <td class="text-right font-bold text-orange">₹${Number(o.deliveryFee || 0).toLocaleString()}</td>
             </tr>
         `;
     }).join('') || '<tr><td colspan="5" class="text-center py-20 text-muted">No deliveries found for this period.</td></tr>';
@@ -272,7 +272,7 @@ function renderRiderEarningsChart(orders) {
     const dailyEarnings = {};
     orders.forEach(o => {
         if (o.status === "Delivered") {
-            const dateStr = new Date(o.createdAt).toISOString().split('T')[0];
+            const dateStr = getISTDateString(o.createdAt);
             dailyEarnings[dateStr] = (dailyEarnings[dateStr] || 0) + (Number(o.deliveryFee) || 0);
         }
     });
@@ -337,7 +337,7 @@ function renderRiderSummary(riderId, stats) {
         <div class="rider-mini-profile flex-col flex-center text-center">
             <img src="${rider.photoUrl || 'https://placehold.co/100x100?text=Rider'}" class="rounded-full mb-10 border-2" style="width: 64px; height: 64px; border-color: var(--primary);">
             <h4 class="m-0">${escapeHtml(rider.name)}</h4>
-            <p class="text-muted-small mb-15">${rider.email}</p>
+            <p class="text-muted-small mb-15">${escapeHtml(rider.email || '')}</p>
             
             <div class="flex-row flex-between w-full p-10-0 border-top-dashed">
                 <span class="text-muted-small">Delivered Orders</span>

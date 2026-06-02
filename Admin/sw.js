@@ -6,7 +6,7 @@ if (self.location.protocol !== 'https:' && self.location.hostname !== 'localhost
 // Firebase Messaging is handled by firebase-messaging-sw.js (auto-registered by Firebase SDK)
 // This SW handles caching, navigation, and offline support only.
 
-const CACHE_NAME = 'roshani-erp-v5.1.0';
+const CACHE_NAME = 'roshani-erp-v5.1.1';
 const ASSETS_TO_CACHE = [
   './index.html',
   './style.css',
@@ -29,6 +29,8 @@ const ASSETS_TO_CACHE = [
   './js/features/riders.js',
   './js/features/catalog.js',
   './js/features/customers.js',
+  './js/features/analytics.js',
+  './js/features/lost-sales.js',
   './js/features/pos.js',
   './js/features/settings.js',
   './js/features/tracker.js',

@@ -162,6 +162,7 @@ export const switchTab = async (tabId, skipHistory = false) => {
             (await mod('tracker')).cleanupLiveRiderTracker();
         }
         if (tabId !== 'inventory') (await mod('inventory')).cleanupInventory();
+        if (tabId !== 'reports') (await mod('analytics')).cleanupReports();
 
         // --- PHASE 3.25: DATA REFRESH ---
         // Refresh appropriate data based on the tab
@@ -216,12 +217,12 @@ export const switchTab = async (tabId, skipHistory = false) => {
                 break;
             }
             case 'reports': {
-                const { loadReports } = await mod('customers');
+                const { loadReports } = await mod('analytics');
                 loadReports();
                 break;
             }
             case 'lostSales': {
-                const { loadLostSales } = await mod('customers');
+                const { loadLostSales } = await mod('lost-sales');
                 loadLostSales();
                 break;
             }
