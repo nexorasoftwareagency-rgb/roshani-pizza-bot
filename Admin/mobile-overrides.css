@@ -2313,6 +2313,102 @@
     #tab-reports .premium-row-v4 {
         position: relative;
     }
+
+    /* --- 17. MENU PAGE (#tab-menu) MOBILE ADAPTATION v5.1.3 ---
+       Fixes:
+       - Add Dish button gets squeezed/wrapped when search input is 280px
+       - Dish card has huge empty space in .dish-pricing-v4 (stretched by
+         CSS grid row alignment + flex content layout)
+       - Add New Dish modal: image+form grid stacks, but inner flex-row
+         (Dish Name flex-3 + Serial flex-1) makes Dish Name too narrow */
+    #tab-menu .panel-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+    #tab-menu .panel-header > .flex-row.flex-center.flex-gap-10 {
+        width: 100% !important;
+        flex-wrap: wrap !important;
+    }
+    #tab-menu #menuSearch.search-input-group {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        width: auto !important;
+        max-width: 100% !important;
+    }
+    #tab-menu .btn-show-dish-modal {
+        flex: 0 0 auto !important;
+        min-height: 38px !important;
+        padding: 8px 14px !important;
+        font-size: 13px !important;
+        white-space: nowrap !important;
+    }
+
+    /* Compact dish card on mobile: reduce pricing-v4 padding/gap so the
+       box hugs its content instead of stretching to fill the grid row. */
+    #tab-menu .dish-card {
+        padding: 6px !important;
+        overflow: hidden !important;
+    }
+    #tab-menu .dish-img-container {
+        margin-bottom: 6px !important;
+    }
+    #tab-menu .dish-pricing-v4 {
+        padding: 4px 6px !important;
+        gap: 4px !important;
+        margin-top: 4px !important;
+    }
+    #tab-menu .price-chip-v4 {
+        padding: 2px 6px !important;
+    }
+    #tab-menu .price-chip-v4 .size {
+        font-size: 9px !important;
+        margin-right: 4px !important;
+        padding-right: 4px !important;
+    }
+    #tab-menu .price-chip-v4 .price {
+        font-size: 11px !important;
+    }
+    #tab-menu .dish-info h4 {
+        font-size: 12px !important;
+        line-height: 1.15 !important;
+    }
+    #tab-menu .flex-row.pt-12.border-t-ghost {
+        padding-top: 8px !important;
+    }
+    #tab-menu .btn-action-v4 {
+        width: 30px !important;
+        height: 30px !important;
+    }
+
+    /* Add New Dish modal: ensure single column on mobile (override the
+       inline 200px/1fr grid from style.css). */
+    #dishModal .modal-grid-2col {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+    #dishModal .modal-media-upload {
+        max-width: 240px !important;
+        margin: 0 auto !important;
+    }
+    /* Dish Name + Serial row: stack on mobile so Dish Name gets full width.
+       The row is a direct child of .modal-details-scroll with no unique class,
+       so target by parent: .step-box is the category box, and the name/serial
+       row is the next sibling .flex-row with children that include #dishName. */
+    #dishModal .modal-details-scroll > .flex-row.flex-gap-10 {
+        flex-direction: column !important;
+    }
+    #dishModal .modal-details-scroll > .flex-row.flex-gap-10 > .flex-3,
+    #dishModal .modal-details-scroll > .flex-row.flex-gap-10 > .flex-1 {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+    /* Make sure the modal body is scrollable and the footer stays reachable */
+    #dishModal .modal-content {
+        max-height: 92dvh !important;
+        overflow-y: auto !important;
+    }
 }
 
 /* --- Very small mobile (≤ 480px): 2-col KPIs (still 2x2), chart 200px --- */
@@ -2393,6 +2489,55 @@
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+    }
+
+    /* --- MENU PAGE: very small mobile compaction --- */
+    #tab-menu .menu-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 6px !important;
+    }
+    #tab-menu .dish-card {
+        padding: 4px !important;
+    }
+    #tab-menu .dish-img-container {
+        margin-bottom: 4px !important;
+        border-radius: 10px !important;
+    }
+    #tab-menu .dish-info h4 {
+        font-size: 11px !important;
+    }
+    #tab-menu .price-chip-v4 {
+        padding: 2px 5px !important;
+    }
+    #tab-menu .price-chip-v4 .size {
+        font-size: 8px !important;
+    }
+    #tab-menu .price-chip-v4 .price {
+        font-size: 10px !important;
+    }
+    #tab-menu .btn-action-v4 {
+        width: 26px !important;
+        height: 26px !important;
+    }
+    #tab-menu .notif-time-badge-premium {
+        font-size: 9px !important;
+        padding: 2px 5px !important;
+    }
+    #tab-menu .stock-badge {
+        font-size: 8px !important;
+        padding: 2px 6px !important;
+    }
+    #tab-menu .dish-category-badge {
+        font-size: 8px !important;
+        padding: 2px 5px !important;
+    }
+
+    /* Add New Dish modal: even more compact on very small screens */
+    #dishModal .modal-media-upload {
+        max-width: 180px !important;
+    }
+    #dishModal .modal-content {
+        max-height: 96dvh !important;
     }
 }
 
