@@ -2243,10 +2243,17 @@
         height: 220px !important;
     }
 
-    /* Date filter row: stack tighter */
+    /* Date filter row: stack tighter, force wrap (parent .flex-row has
+       flex-wrap: nowrap by default which causes horizontal overflow). */
     #tab-reports .flex-row.flex-gap-10.flex-center.glass-card.p-10-20 {
         padding: 8px 10px !important;
         gap: 6px !important;
+        flex-wrap: wrap !important;
+    }
+    #tab-reports .flex-row.flex-gap-10.flex-center.glass-card.p-10-20 > .report-date-input,
+    #tab-reports .flex-row.flex-gap-10.flex-center.glass-card.p-10-20 > #reportStatusFilter {
+        flex: 1 1 calc(50% - 6px) !important;
+        min-width: 0;
     }
     #tab-reports .report-date-input,
     #reportStatusFilter {
@@ -2308,14 +2315,32 @@
     }
 }
 
-/* --- Very small mobile (≤ 480px): 1-column KPIs, smallest chart --- */
+/* --- Very small mobile (≤ 480px): 2-col KPIs (still 2x2), chart 200px --- */
 @media (max-width: 480px) {
     #tab-reports .kpi-row {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: repeat(2, 1fr) !important;
         gap: 8px !important;
     }
     #tab-reports .kpi-card-v4.warning {
-        grid-column: span 1;
+        grid-column: span 2;
+    }
+    #tab-reports .kpi-card-v4 {
+        padding: 10px !important;
+        gap: 8px !important;
+    }
+    #tab-reports .kpi-card-v4 .icon-wrap {
+        width: 30px !important;
+        height: 30px !important;
+    }
+    #tab-reports .kpi-card-v4 .icon-wrap i {
+        width: 14px !important;
+        height: 14px !important;
+    }
+    #tab-reports .kpi-card-v4 .val {
+        font-size: 14px !important;
+    }
+    #tab-reports .kpi-card-v4 .lbl {
+        font-size: 9px !important;
     }
 
     #tab-reports .h-300 {
@@ -2330,6 +2355,36 @@
     #reportStatusFilter {
         flex: 1 1 100%;
         min-width: 0;
+    }
+
+    /* Force date filter row to wrap on very small screens.
+       The base .flex-row has flex-wrap: nowrap which causes horizontal
+       overflow on the analytics date filter card. */
+    #tab-reports .flex-row.flex-wrap-mobile,
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile {
+        flex-wrap: wrap !important;
+        row-gap: 8px !important;
+    }
+    #tab-reports .flex-row.flex-wrap-mobile > .report-date-input,
+    #tab-reports .flex-row.flex-wrap-mobile > #reportStatusFilter,
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > .report-date-input,
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > select {
+        flex: 1 1 100% !important;
+        min-width: 0;
+        width: 100% !important;
+    }
+    #tab-reports .flex-row.flex-wrap-mobile > .btn-primary,
+    #tab-reports .flex-row.flex-wrap-mobile > .btn-whatsapp,
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > .btn-primary,
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > .btn-secondary {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        justify-content: center !important;
+    }
+    #tab-reports .flex-row.flex-wrap-mobile > .text-muted-small,
+    #tab-riderAnalytics .flex-row.flex-wrap-mobile > .text-muted-small {
+        width: 100% !important;
+        text-align: center !important;
     }
 
     /* Items cell on very small: clamp to 2 lines */
