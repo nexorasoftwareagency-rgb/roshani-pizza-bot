@@ -2404,10 +2404,43 @@
         width: 100% !important;
         min-width: 0 !important;
     }
-    /* Make sure the modal body is scrollable and the footer stays reachable */
+    /* Make the modal a proper flex column with a scrollable body and a
+       pinned footer. Without this, modal-content grows past the viewport
+       and the Save Dish button is unreachable. */
     #dishModal .modal-content {
         max-height: 92dvh !important;
+        height: auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: #ffffff !important;
+        border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    }
+    #dishModal .modal-grid-2col {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
         overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    #dishModal .modal-details-scroll {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    #dishModal .modal-footer {
+        flex-shrink: 0 !important;
+        position: sticky !important;
+        bottom: 0 !important;
+        background: #ffffff !important;
+        border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+        padding: 12px 16px !important;
+        z-index: 5;
+    }
+    /* Remove dimmed backdrop for the Add New Dish modal: the menu page
+       is already its own context, and the dim makes form fields hard to
+       read. Keep only a soft scrim. */
+    #dishModal {
+        background: rgba(0, 0, 0, 0.25) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
     }
 }
 
@@ -2538,6 +2571,14 @@
     }
     #dishModal .modal-content {
         max-height: 96dvh !important;
+    }
+    /* On very small screens the modal takes nearly full height, so pin
+       the footer to the bottom and let the body scroll naturally. */
+    #dishModal .modal-grid-2col {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
     }
 }
 
