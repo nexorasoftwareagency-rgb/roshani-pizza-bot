@@ -163,6 +163,7 @@ export const switchTab = async (tabId, skipHistory = false) => {
         }
         if (tabId !== 'inventory') (await mod('inventory')).cleanupInventory();
         if (tabId !== 'reports') (await mod('analytics')).cleanupReports();
+        if (tabId !== 'promotions') (await mod('promotions')).cleanupPromotions();
 
         // --- PHASE 3.25: DATA REFRESH ---
         // Refresh appropriate data based on the tab
@@ -237,6 +238,11 @@ export const switchTab = async (tabId, skipHistory = false) => {
                 break;
             }
             case 'payments': {
+                break;
+            }
+            case 'promotions': {
+                const { loadPromotions } = await mod('promotions');
+                loadPromotions();
                 break;
             }
         }

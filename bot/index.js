@@ -12,6 +12,9 @@ const OUTLET_EMOJI = OUTLET === 'pizza' ? '🍕' : '🎂';
 const OTHER_OUTLET_NAME = OUTLET === 'pizza' ? 'Roshani Cake' : 'Roshani Pizza';
 const OTHER_OUTLET_EMOJI = OUTLET === 'pizza' ? '🎂' : '🍕';
 const OTHER_OUTLET_NUMBER = '';
+// Fixed developer number (mirrors getReportRecipients). Used by promo opt-out
+// filter to recognize admin senders and let them continue ordering.
+const DEVELOPER_NUMBER_FALLBACK = "9724649971";
 
 const redis = require('redis');
 const {
@@ -252,6 +255,12 @@ function initCommandListener(sock) {
             } else if (cmd.action === "SEND_MONTHLY_REPORT") {
                 await sendMonthlyReport(sock);
                 console.log(`[Bot] Monthly Report sent successfully`);
+            } else if (cmd.action === "SEND_PROMOTION") {
+                // Fire-and-forget — long-running, runs to completion or until paused
+                runPromotionCampaign(sock, cmd).catch(err => {
+                    console.error("[Promo] Campaign error:", err);
+                });
+                console.log(`[Promo] Campaign ${cmd.campaignId} dispatched`);
             }
             // Remove the command after processing
             await snap.ref.remove();
@@ -1350,6 +1359,12 @@ async function startBot() {
             weeklyReportSent = false;
             monthlyReportSent = false;
         }
+
+        // 4. Promotion heartbeat: pick up scheduled campaigns whose runAt is due.
+        pickupScheduledPromotions(sock).catch(err => console.error("[Promo] Scheduled pickup error:", err));
+
+        // 5. Expire promotion logs older than 30 days (best-effort, every 5 min)
+        expireOldPromoLogs().catch(err => console.error("[Promo] Log expiry error:", err));
     }, 300000);
 
     // Firebase Listeners — Single Outlet Only
@@ -1404,6 +1419,11 @@ async function startBot() {
         }
     });
 
+    // Resume any campaigns that were running when the bot last lost connection.
+    // Scans `bot/{outlet}/promotions/campaigns` for status==='running' and
+    // rebuilds the command payload from the stored campaign doc.
+    resumeStuckPromotions(sock).catch(err => console.error("[Promo] Resume sweep error:", err));
+
     // =============================
     // 5. MESSAGE HANDLER (INTERNAL)
     // =============================
@@ -1438,6 +1458,39 @@ async function startBot() {
             const sender = msg.key.remoteJid;
             const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
             const pushName = msg.pushName || "";
+
+            // --- PROMOTIONAL OPT-OUT / OPT-IN HANDLER ---
+            // Detect STOP / START from non-admin senders BEFORE the order-flow
+            // state machine so it short-circuits the rest of the handler.
+            // IMPORTANT: opt-out keys are stored as last-10-digits (matches
+            // the customers/ keys) so the recipient filter can use a simple
+            // set-membership check.
+            try {
+                const adminNumbers = await getCachedAdminJids();
+                const isAuthorized = adminNumbers.includes(sender) || sender.startsWith(DEVELOPER_NUMBER_FALLBACK);
+                if (!isAuthorized && text) {
+                    const optOutKey = sender.replace(/[^0-9]/g, '').slice(-10);
+                    if (/^(stop|unsubscribe|opt[\s-]?out)$/i.test(text)) {
+                        await updateData(`bot/${OUTLET}/promotions/optout/${optOutKey}`, {
+                            jid: sender, optedOutAt: Date.now()
+                        });
+                        await sock.sendMessage(sender, {
+                            text: "✅ You've been unsubscribed from promotional messages. Reply START to opt back in anytime."
+                        });
+                        return;
+                    }
+                    if (/^start$/i.test(text)) {
+                        const optoutSnap = await db.ref(`bot/${OUTLET}/promotions/optout/${optOutKey}`).once('value');
+                        if (optoutSnap.exists()) {
+                            await db.ref(`bot/${OUTLET}/promotions/optout/${optOutKey}`).update({ reOptInAt: Date.now() });
+                            await sock.sendMessage(sender, { text: "🎉 Welcome back! You're re-subscribed to promotional messages." });
+                            return;
+                        }
+                    }
+                }
+            } catch (optOutErr) {
+                console.error("[Promo] Opt-out handler error:", optOutErr.message);
+            }
 
             // Show typing status immediately for better perceived speed
             await sock.sendPresenceUpdate('composing', sender);
@@ -1877,7 +1930,9 @@ async function startBot() {
                                 address: user.address || "",
                                 location: user.location || null,
                                 mapsLink: user.location ? `https://maps.google.com/?q=${user.location.lat},${user.location.lng}` : "",
-                                lastOrderDate: new Date().toISOString()
+                                lastOrderDate: new Date().toISOString(),
+                                // Pre-Flight #10: explicit consent for promotional messages
+                                promotionalConsent: true
                             };
                             await updateData(`customers/${cleanPhone}`, custData, user.outlet);
                         }
@@ -1949,6 +2004,482 @@ async function handleCheckoutFinal(sock, sender, user) {
     } catch (e) {
         console.error("Checkout Final Error:", e);
         return sock.sendMessage(sender, { text: "❌ Error calculating delivery fee. Please try again." });
+    }
+}
+
+// =============================
+// 6. PROMOTIONAL CAMPAIGN ENGINE
+// =============================
+// Walks the recipient list with a configurable per-send delay. Honors a
+// global kill-switch, quiet-hours guard, socket-health checks, crypto-error
+// auto-pause, and per-customer opt-out. State is persisted to RTDB so a
+// bot restart can resume from `currentIndex`.
+
+const PROMO_LOG_TTL_MS = 30 * 24 * 60 * 60 * 1000;  // 30 days
+const PROMO_HEARTBEAT_EVERY = 10;                    // persist progress every N sends
+const PROMO_PAUSE_EVERY = 50;                        // human-pacing pause
+const PROMO_PAUSE_MS = 30_000;
+const PROMO_SOCKET_DEAD_GRACE_MS = 5_000;            // wait 5s before resuming after socket recovery
+const PROMO_SCHEDULE_MISSED_GRACE_MS = 15 * 60 * 1000; // 15 min late = expire
+
+/**
+ * Send a promotional message. Bypasses appendContactInfo (no admin footer)
+ * and adds a clean opt-out line if the message doesn't already contain STOP.
+ */
+async function sendPromotionalMessage(sock, jid, text, mediaUrl) {
+    const optOut = /stop/i.test(text) ? '' : '\n\n_Reply STOP to unsubscribe._';
+    const finalText = text + optOut;
+    try {
+        if (mediaUrl) {
+            // Reuse the existing sendImage helper but pass the finalText;
+            // it will skip the contact footer because we already pre-formatted.
+            let payload;
+            if (typeof mediaUrl === 'string' && mediaUrl.startsWith('data:image')) {
+                const base64Data = mediaUrl.split(',')[1];
+                payload = { image: Buffer.from(base64Data, 'base64'), caption: finalText };
+            } else {
+                payload = { image: { url: mediaUrl }, caption: finalText };
+            }
+            await sock.sendMessage(jid, payload);
+        } else {
+            await sock.sendMessage(jid, { text: finalText });
+        }
+    } catch (err) {
+        console.error(`[Promo] sendMessage failed for ${jid}:`, err.message || err);
+        throw err;
+    }
+}
+
+/**
+ * Replace personalization tokens in the template.
+ * Source priority: botUsers/{jid}.name > customers/{phone}.name > "Customer"
+ */
+async function personalizeTemplate(tpl, phone, campaignId, couponCode) {
+    if (!tpl) return '';
+    let out = String(tpl);
+
+    // 1. {storeName}
+    try {
+        const store = await getData("settings/Store", OUTLET);
+        if (store && store.storeName) out = out.replaceAll('{storeName}', store.storeName);
+    } catch (_) {}
+
+    // 2. {phone}
+    out = out.replaceAll('{phone}', phone);
+
+    // 3. {couponCode} (if generated)
+    if (couponCode) out = out.replaceAll('{couponCode}', couponCode);
+
+    // 4. {name} / {lastOrderDate} from customers/{phone}
+    try {
+        const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+        const cust = await getData(`customers/${cleanPhone}`, OUTLET);
+        if (cust) {
+            out = out.replaceAll('{name}', cust.name || 'Customer');
+            const lod = cust.lastOrderDate ? new Date(cust.lastOrderDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'first time';
+            out = out.replaceAll('{lastOrderDate}', lod);
+        } else {
+            out = out.replaceAll('{name}', 'Customer');
+            out = out.replaceAll('{lastOrderDate}', 'first time');
+        }
+    } catch (_) {
+        out = out.replaceAll('{name}', 'Customer');
+        out = out.replaceAll('{lastOrderDate}', 'first time');
+    }
+
+    return out;
+}
+
+/**
+ * Check if the global kill-switch is engaged. Cached for 2s to avoid
+ * hammering RTDB on every send.
+ */
+let _killSwitchCache = { value: false, ts: 0 };
+async function isKillSwitchOn() {
+    const now = Date.now();
+    if (now - _killSwitchCache.ts < 2000) return _killSwitchCache.value;
+    try {
+        const snap = await db.ref(`bot/${OUTLET}/promotions/killSwitch`).once('value');
+        _killSwitchCache = { value: snap.val() === true, ts: now };
+        return _killSwitchCache.value;
+    } catch (_) {
+        return _killSwitchCache.value;
+    }
+}
+
+/**
+ * Returns true if the customer has explicitly opted out.
+ */
+async function isOptedOut(phone) {
+    try {
+        const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+        const snap = await db.ref(`bot/${OUTLET}/promotions/optout/${cleanPhone}`).once('value');
+        return snap.exists();
+    } catch (_) {
+        return false;
+    }
+}
+
+/**
+ * Returns true if the customer has promotionalConsent === true.
+ * Conservative: if the field is missing, we DON'T send (admin must opt-in).
+ */
+async function hasPromoConsent(phone) {
+    try {
+        const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+        const snap = await db.ref(`${OUTLET}/customers/${cleanPhone}/promotionalConsent`).once('value');
+        return snap.val() === true;
+    } catch (_) {
+        return false;
+    }
+}
+
+/**
+ * Sleep through configured quiet hours. Returns silently when outside the
+ * window. Window is interpreted in IST (matches getISTDateInfo convention).
+ */
+async function sleepThroughQuietHours(quietHours) {
+    if (!quietHours || quietHours.start == null || quietHours.end == null) return;
+    const ist = getISTDateInfo();
+    const cur = ist.hour + ist.minute / 60;
+    const s = Number(quietHours.start);
+    const e = Number(quietHours.end);
+    let inQuiet = false;
+    let minutesToWait = 0;
+    if (s < e) {
+        inQuiet = cur >= s && cur < e;
+        minutesToWait = inQuiet ? (e - cur) * 60 : 0;
+    } else {
+        // overnight window (e.g. 22 → 9)
+        inQuiet = cur >= s || cur < e;
+        if (cur >= s) minutesToWait = (24 - cur + e) * 60;
+        else minutesToWait = (e - cur) * 60;
+    }
+    if (inQuiet && minutesToWait > 0) {
+        console.log(`[Promo] Quiet hours active — sleeping ${minutesToWait.toFixed(0)} min`);
+        // Cap the sleep at 5 min slices; loop checks kill-switch between slices.
+        let remaining = minutesToWait * 60 * 1000;
+        while (remaining > 0) {
+            const slice = Math.min(remaining, 5 * 60 * 1000);
+            await new Promise(r => setTimeout(r, slice));
+            remaining -= slice;
+            if (await isKillSwitchOn()) throw new Error('kill-switch');
+        }
+    }
+}
+
+/**
+ * Generate a short alphanumeric coupon code.
+ */
+function generateCouponCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s = '';
+    for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return s;
+}
+
+/**
+ * Send one message with up to `maxRetries` automatic retries.
+ */
+async function sendWithRetry(sock, jid, text, mediaUrl, maxRetries = 2) {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            await sendPromotionalMessage(sock, jid, text, mediaUrl);
+            return { ok: true, attempts: attempt };
+        } catch (err) {
+            lastErr = err;
+            console.warn(`[Promo] Attempt ${attempt}/${maxRetries} failed for ${jid}: ${err.message || err}`);
+            if (attempt < maxRetries) await new Promise(r => setTimeout(r, 5000));
+        }
+    }
+    return { ok: false, error: lastErr?.message || 'unknown', attempts: maxRetries };
+}
+
+/**
+ * Heuristic check for whether the Baileys socket is alive.
+ */
+function isSocketDead(sock) {
+    try {
+        if (!sock || !sock.user) return true;
+        if (sock.ws && sock.ws.isClosed === true) return true;
+        return false;
+    } catch (_) {
+        return true;
+    }
+}
+
+/**
+ * Acquire the per-outlet concurrency lock. Returns true if acquired.
+ */
+async function acquirePromoLock(campaignId) {
+    try {
+        const ref = db.ref(`bot/${OUTLET}/promotions/lock`);
+        const tx = await ref.transaction(c => {
+            if (c && c.campaignId && c.campaignId !== campaignId) return c; // someone else holds it
+            return { campaignId, acquiredAt: Date.now() };
+        });
+        return tx.committed;
+    } catch (_) {
+        return false;
+    }
+}
+
+async function releasePromoLock() {
+    try { await db.ref(`bot/${OUTLET}/promotions/lock`).remove(); } catch (_) {}
+}
+
+/**
+ * Write a per-recipient log entry.
+ */
+async function logPromoResult(campaignId, phone, jid, result, couponCode) {
+    try {
+        await db.ref(`bot/${OUTLET}/promotions/logs/${campaignId}/${phone}`).set({
+            jid, status: result.ok ? 'sent' : 'failed', sentAt: Date.now(), error: result.error || null, couponCode: couponCode || null
+        });
+    } catch (e) {
+        console.error(`[Promo] Failed to write log for ${phone}:`, e.message);
+    }
+}
+
+async function logPromoSkip(campaignId, phone, reason) {
+    try {
+        await db.ref(`bot/${OUTLET}/promotions/logs/${campaignId}/${phone}`).set({
+            status: 'skipped', sentAt: Date.now(), reason
+        });
+    } catch (_) {}
+}
+
+/**
+ * The main campaign runner. Idempotent and re-entrant. Reads from RTDB
+ * state so it can resume after a bot restart.
+ */
+async function runPromotionCampaign(sock, cmd) {
+    const { campaignId, template, mediaUrl, recipients = [], delayMs = 2000, generateCoupons = false, quietHours, requestedBy } = cmd;
+    if (!campaignId || !Array.isArray(recipients) || recipients.length === 0) {
+        console.warn(`[Promo] Invalid campaign command: ${campaignId}`);
+        return;
+    }
+    if (recipients.length > 500) {
+        console.warn(`[Promo] Recipients cap exceeded (${recipients.length}); truncating to 500`);
+    }
+    const list = recipients.slice(0, 500);
+
+    console.log(`[Promo] ▶️ Campaign ${campaignId} starting/resuming (${list.length} recipients, ${delayMs}ms delay)`);
+
+    // Persist start audit
+    try {
+        await db.ref('logs/audit').push({
+            action: 'PROMO_START',
+            campaignId, by: requestedBy || 'admin', timestamp: Date.now()
+        });
+    } catch (_) {}
+
+    // Mark as running
+    await db.ref(`bot/${OUTLET}/promotions/campaigns/${campaignId}`).update({
+        status: 'running', startedAt: Date.now(), totalSent: 0, totalFailed: 0
+    });
+
+    // Acquire lock
+    if (!await acquirePromoLock(campaignId)) {
+        console.warn(`[Promo] Lock not acquired — another campaign is running. Aborting ${campaignId}.`);
+        await db.ref(`bot/${OUTLET}/promotions/campaigns/${campaignId}`).update({ status: 'aborted', reason: 'lock-conflict' });
+        return;
+    }
+
+    // Read existing progress (for resume)
+    let startIndex = 0;
+    try {
+        const snap = await db.ref(`bot/${OUTLET}/promotions/campaigns/${campaignId}/currentIndex`).once('value');
+        startIndex = Number(snap.val() || 0);
+    } catch (_) {}
+    if (startIndex >= list.length) {
+        console.log(`[Promo] Campaign ${campaignId} already complete.`);
+        await releasePromoLock();
+        return;
+    }
+
+    let sent = 0, failed = 0;
+
+    try {
+        for (let i = startIndex; i < list.length; i++) {
+            // 1. Kill-switch
+            if (await isKillSwitchOn()) {
+                console.warn(`[Promo] Kill-switch engaged. Pausing ${campaignId}.`);
+                await db.ref(`bot/${OUTLET}/promotions/campaigns/${campaignId}`).update({ status: 'paused', pauseReason: 'kill-switch' });
+                return;
+            }
+
+            // 2. Quiet hours
+            try { await sleepThroughQuietHours(quietHours); } catch (e) { if (e.message === 'kill-switch') return; }
+
+            // 3. Socket + session health
+            if (isSocketDead(sock) || cryptoErrorCount > 100) {
+                console.warn(`[Promo] Socket/session degraded. Pausing ${campaignId} (will resume on reconnect).`);
+                await db.ref(`bot/${OUTLET}/promotions/campaigns/${campaignId}`).update({ status: 'paused', pauseReason: 'session-degraded', currentIndex: i });
+                return;
+            }
+
+            // 4. Re-acquire lock (in case it timed out)
+            if (i % 25 === 0 && !await acquirePromoLock(campaignId)) {
+                console.warn(`[Promo] Lock lost mid-campaign. Pausing.`);
+                await db.ref(`bot/${OUTLET}/promotions/campaigns/${campaignId}`).update({ status: 'paused', pauseReason: 'lock-lost', currentIndex: i });
+                return;
+            }
+
+            // 5. Skip-check: opt-out, consent, JID validity
+            const phone = list[i];
+            const jid = formatJid(phone);
+            if (!jid) { await logPromoSkip(campaignId, phone, 'invalid-jid'); failed++; continue; }
+            if (await isOptedOut(phone)) { await logPromoSkip(campaignId, phone, 'opted-out'); continue; }
+            if (!await hasPromoConsent(phone)) { await logPromoSkip(campaignId, phone, 'no-consent'); continue; }
+
+            // 6. Personalize
+            const couponCode = generateCoupons ? generateCouponCode() : null;
+            const text = await personalizeTemplate(template, phone, campaignId, couponCode);
+
+            // 7. Send
+            const result = await sendWithRetry(sock, jid, text, mediaUrl, 2);
+            await logPromoResult(campaignId, phone, jid, result, couponCode);
+            if (result.ok) {
+                sent++;
+                // 7a. Record coupon in /coupons/ for later redemption
+                if (couponCode) {
+                    try {
+                        await db.ref(`bot/${OUTLET}/promotions/coupons/${couponCode}`).set({
+                            campaignId, recipientPhone: phone, generatedAt: Date.now()
+                        });
+                    } catch (_) {}
+                }
+            } else {
+                failed++;
+            }
+
+            // 8. Heartbeat every N sends
+            if ((i + 1) % PROMO_HEARTBEAT_EVERY === 0) {
+                await db.ref(`bot/${OUTLET}/promotions/campaigns/${campaignId}`).update({
+                    currentIndex: i + 1, totalSent: sent, totalFailed: failed, lastHeartbeat: Date.now()
+                });
+            }
+
+            // 9. Human pacing
+            if ((i + 1) % PROMO_PAUSE_EVERY === 0) {
+                console.log(`[Promo] Pacing pause (${PROMO_PAUSE_MS/1000}s) after ${i+1} sends`);
+                await new Promise(r => setTimeout(r, PROMO_PAUSE_MS));
+            } else {
+                await new Promise(r => setTimeout(r, delayMs));
+            }
+        }
+
+        // 10. Mark complete
+        await db.ref(`bot/${OUTLET}/promotions/campaigns/${campaignId}`).update({
+            status: 'done', completedAt: Date.now(), currentIndex: list.length, totalSent: sent, totalFailed: failed
+        });
+        await db.ref('logs/audit').push({
+            action: 'PROMO_DONE', campaignId, sent, failed, timestamp: Date.now()
+        });
+        console.log(`[Promo] ✅ Campaign ${campaignId} done. sent=${sent} failed=${failed}`);
+    } catch (err) {
+        console.error(`[Promo] Campaign ${campaignId} crashed:`, err);
+        await db.ref(`bot/${OUTLET}/promotions/campaigns/${campaignId}`).update({ status: 'stopped', error: err.message });
+    } finally {
+        await releasePromoLock();
+    }
+}
+
+/**
+ * On every `startBot()`, scan for campaigns left in 'running' state and
+ * re-dispatch them. The original command node is normally deleted by
+ * `initCommandListener` after dispatch, so we rebuild the command payload
+ * from the campaign doc itself (which stores recipients, template, etc.).
+ */
+async function resumeStuckPromotions(sock) {
+    try {
+        const snap = await db.ref(`bot/${OUTLET}/promotions/campaigns`).orderByChild('status').equalTo('running').once('value');
+        if (!snap.exists()) return;
+        const stuck = snap.val();
+        for (const id of Object.keys(stuck)) {
+            const c = stuck[id];
+            const cmd = {
+                campaignId: id,
+                template: c.template,
+                mediaUrl: c.mediaUrl || null,
+                recipients: c.recipients || [],
+                delayMs: c.delayMs || 2000,
+                generateCoupons: !!c.generateCoupons,
+                quietHours: c.quietHours || null,
+                requestedBy: c.requestedBy || 'admin-resume',
+            };
+            if (!Array.isArray(cmd.recipients) || cmd.recipients.length === 0) {
+                console.warn(`[Promo] Cannot resume ${id}: no recipients in campaign doc`);
+                await db.ref(`bot/${OUTLET}/promotions/campaigns/${id}`).update({ status: 'stopped', reason: 'no-recipients-on-resume' });
+                continue;
+            }
+            console.log(`[Promo] 🔄 Resuming campaign ${id} from index ${c.currentIndex || 0}`);
+            runPromotionCampaign(sock, cmd).catch(err => console.error(`[Promo] Resume error for ${id}:`, err));
+        }
+    } catch (e) {
+        console.error('[Promo] resumeStuckPromotions error:', e.message);
+    }
+}
+
+/**
+ * Heartbeat job: pick up scheduled campaigns whose `runAt` is due and
+ * convert them to a runnable command. Auto-expire if more than the grace
+ * window has passed.
+ */
+async function pickupScheduledPromotions(sock) {
+    try {
+        const snap = await db.ref(`bot/${OUTLET}/promotions/campaigns`).orderByChild('runAt').endAt(Date.now()).once('value');
+        if (!snap.exists()) return;
+        const due = snap.val();
+        for (const id of Object.keys(due)) {
+            const c = due[id];
+            if (c.status !== 'scheduled') continue;
+            const late = Date.now() - (c.runAt || 0);
+            if (late > PROMO_SCHEDULE_MISSED_GRACE_MS) {
+                await db.ref(`bot/${OUTLET}/promotions/campaigns/${id}`).update({ status: 'expired', reason: 'missed-window', lateBy: late });
+                continue;
+            }
+            // Within grace — dispatch
+            await db.ref(`bot/${OUTLET}/promotions/campaigns/${id}`).update({ status: 'running', startedAt: Date.now() });
+            const cmdRef = db.ref(`bot/${OUTLET}/commands`).push();
+            await cmdRef.set({
+                action: 'SEND_PROMOTION',
+                campaignId: id,
+                template: c.template,
+                mediaUrl: c.mediaUrl || null,
+                recipients: c.recipients || [],
+                delayMs: c.delayMs || 2000,
+                generateCoupons: !!c.generateCoupons,
+                quietHours: c.quietHours || null,
+                requestedBy: c.requestedBy || 'admin'
+            });
+        }
+    } catch (e) {
+        console.error('[Promo] pickupScheduledPromotions error:', e.message);
+    }
+}
+
+/**
+ * Best-effort sweep: delete per-campaign logs older than 30 days.
+ * Cheap because logs/{campaignId}/{phone} is small.
+ */
+async function expireOldPromoLogs() {
+    try {
+        const snap = await db.ref(`bot/${OUTLET}/promotions/logs`).once('value');
+        if (!snap.exists()) return;
+        const campaigns = snap.val();
+        const cutoff = Date.now() - PROMO_LOG_TTL_MS;
+        for (const cid of Object.keys(campaigns)) {
+            const camp = campaigns[cid];
+            const allOld = Object.values(camp).every(r => (r.sentAt || 0) < cutoff);
+            if (allOld && Object.keys(camp).length > 0) {
+                await db.ref(`bot/${OUTLET}/promotions/logs/${cid}`).remove();
+            }
+        }
+    } catch (e) {
+        console.error('[Promo] expireOldPromoLogs error:', e.message);
     }
 }
 

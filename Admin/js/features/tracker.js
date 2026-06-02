@@ -16,12 +16,6 @@ let _lastUpdateTime = null;
 let _lastUpdateTimer = null;
 let _sidebarCollapsed = false;
 
-const STATUS_COLORS = {
-    online: '#10b981',
-    delivery: '#f59e0b',
-    offline: '#94a3b8'
-};
-
 function avatarSvg(name) {
     const initial = encodeURIComponent((name || 'R').charAt(0).toUpperCase());
     return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='20' fill='%23f36b21'/%3E%3Ctext x='20' y='26' font-size='18' fill='white' text-anchor='middle' font-family='sans-serif'%3E${initial}%3C/text%3E%3C/svg%3E`;
@@ -39,22 +33,20 @@ function isOnline(r) {
 
 function displayStatus(r) {
     if (!r || r.status !== "Online") return { label: "Offline", cls: "offline" };
-    if (r.currentOrder) return { label: "On Delivery", cls: "delivery" };
+    if (r.currentOrder) return { label: "On Delivery", cls: "on-delivery" };
     return { label: "Online", cls: "online" };
 }
 
 function markerIcon(r) {
-    const { cls, label } = displayStatus(r);
-    const color = STATUS_COLORS[cls];
-    const initial = escapeHtml((r.name || 'R').charAt(0).toUpperCase());
+    const { cls } = displayStatus(r);
     return L.divIcon({
         className: 'rider-marker-wrap',
         html: `<div class="rider-marker-pill rider-marker-${cls}" title="${escapeHtml(r.name || 'Rider')}">
             <span class="rider-marker-dot"></span>
             <span class="rider-marker-name">${escapeHtml((r.name || 'Rider').split(' ')[0])}</span>
         </div>`,
-        iconSize: null,
-        iconAnchor: [28, 14]
+        iconSize: [70, 28],
+        iconAnchor: [35, 14]
     });
 }
 

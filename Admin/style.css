@@ -4567,6 +4567,7 @@ body {
 }
 
 .rider-status-pill-v4.online { background: #dcfce7; color: #166534; }
+.rider-status-pill-v4.on-delivery { background: rgba(245,158,11,0.15); color: #b45309; }
 .rider-status-pill-v4.busy { background: #dbeafe; color: #1e40af; }
 .rider-status-pill-v4.offline { background: #f1f5f9; color: #475569; }
 
@@ -7308,6 +7309,7 @@ body.pos-selection-mode .walkin-picker {
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
+
 /* ======================================================================
    LIVE RIDER TRACKER v5.1.5
    Sidebar with rider list, named marker pills, mobile bottom sheet,
@@ -7629,7 +7631,6 @@ body.pos-selection-mode .walkin-picker {
     color: var(--text-dark, #1e293b);
     box-shadow: 0 2px 6px rgba(15,23,42,0.18);
     white-space: nowrap;
-    transform: translate(-28px, -14px);
 }
 .rider-marker-dot {
     width: 8px;
@@ -7702,6 +7703,8 @@ body.pos-selection-mode .walkin-picker {
     font-weight: 600;
 }
 .tracker-popup-foot [data-lucide] { width: 11px; height: 11px; }
+
+
 
 
 /* ===== PROMOTIONS TAB ============================================ */

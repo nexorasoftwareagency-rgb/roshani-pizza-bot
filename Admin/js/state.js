@@ -49,4 +49,12 @@ export const state = {
     // Continuous notification sound
     unacknowledgedOrders: new Set(),  // Order IDs with sound playing
     continuousSoundInterval: null,     // setInterval ID for continuous sound
+
+    // Promotions tab
+    promotions: {
+        activeMode: 'now',             // 'now' | 'schedule' | 'active' | 'history'
+        csvRecipients: [],             // parsed from uploaded CSV
+        mediaDataUrl: null,            // attached image data URL
+        killSwitchEngaged: false,
+    },
 };

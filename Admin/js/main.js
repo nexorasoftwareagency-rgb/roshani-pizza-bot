@@ -376,6 +376,51 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'clearWalkinCart': (await useMod('pos')).clearWalkinCart(); break;
                 case 'submitWalkinSale': (await useMod('pos')).submitWalkinSale(); break;
                 case 'addCategory': (await useMod('catalog')).addCategory(); break;
+
+                // Promotions tab: all UI events are wired directly by the
+                // module (loadPromotions → _wireActions sets .onclick on
+                // each element, plus delegated handlers on the panes).
+                // These data-action fallthroughs are kept for safety so
+                // any future buttons that re-introduce the attribute still
+                // work, but they call the module-level handlers which
+                // match the underscore-prefixed names exposed in the
+                // module's API surface (see _wireActions).
+                case 'openPromotionsGuide': {
+                    const { renderPromotionsGuide } = await useMod('promotions-guide');
+                    renderPromotionsGuide(document.getElementById('promotionsGuideBody'));
+                    document.getElementById('promotionsGuideModal')?.classList.add('active');
+                    break;
+                }
+                case 'closePromotionsGuide': document.getElementById('promotionsGuideModal')?.classList.remove('active'); break;
+                case 'launchPromoCampaign': document.getElementById('btnPromoLaunch')?.click(); break;
+                case 'sendTestPromo': document.querySelector('[data-action="sendTestPromo"]')?.click(); break;
+                case 'previewPromo': document.querySelector('[data-action="previewPromo"]')?.click(); break;
+                case 'killAllCampaigns': document.getElementById('btnPromoKillAll')?.click(); break;
+                case 'pickPromoMedia': document.getElementById('promoMediaInput')?.click(); break;
+                case 'pickPromoCsv': document.getElementById('promoCsvInput')?.click(); break;
+
+                // Promotions — all UI events are handled in the module itself
+                // (loadPromotions wires one-time listeners). The cases below
+                // exist as a safety net for buttons that may be rendered
+                // outside the tab (e.g. via delegated clicks).
+                case 'openPromotionsGuide': {
+                    const { renderPromotionsGuide } = await useMod('promotions-guide');
+                    renderPromotionsGuide(document.getElementById('promotionsGuideBody'));
+                    document.getElementById('promotionsGuideModal')?.classList.add('active');
+                    break;
+                }
+                case 'closePromotionsGuide': document.getElementById('promotionsGuideModal')?.classList.remove('active'); break;
+                case 'launchPromoCampaign': (await useMod('promotions')).launchPromoCampaign?.(); break;
+                case 'sendTestPromo': (await useMod('promotions')).sendTestPromo?.(); break;
+                case 'previewPromo': (await useMod('promotions')).previewPromo?.(); break;
+                case 'killAllCampaigns': (await useMod('promotions')).toggleKillSwitch?.(); break;
+                case 'stopPromoCampaign': (await useMod('promotions')).stopPromoCampaign?.(el.dataset.id); break;
+                case 'clonePromoCampaign': (await useMod('promotions')).clonePromoCampaign?.(el.dataset.id); break;
+                case 'exportPromoCSV':
+                case 'exportPromoLog': (await useMod('promotions')).exportPromoCSV?.(el.dataset.id); break;
+                case 'pickPromoMedia': document.getElementById('promoMediaInput')?.click(); break;
+                case 'clearPromoMedia': (await useMod('promotions')).clearPromoMedia?.(); break;
+                case 'pickPromoCsv': document.getElementById('promoCsvInput')?.click(); break;
                 case 'addSizeField': (await useMod('catalog')).addSizeField(); break;
                 case 'addDishAddonField': (await useMod('catalog')).addDishAddonField(); break;
                 case 'addCategoryAddonField': (await useMod('catalog')).addCategoryAddonField(); break;

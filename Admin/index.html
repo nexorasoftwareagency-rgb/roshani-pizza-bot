@@ -2178,6 +2178,10 @@
             <button class="promo-mode-tab" role="tab" data-mode="history" data-i18n="promo.tab.history">History</button>
         </div>
 
+
+
+        <!-- COMPOSE PANE -->
+
         <div id="promoComposePane" class="panel mt-16">
             <h3 class="panel-title" data-i18n="promo.compose.heading">1. Compose your message</h3>
 
@@ -2253,6 +2257,10 @@
                 </div>
             </div>
 
+
+
+            <!-- SCHEDULE SUB-PANE -->
+
             <div id="promoScheduleBox" class="form-group hidden mt-8">
                 <label for="promoRunAt" data-i18n="promo.options.scheduleLabel">Run at</label>
                 <input type="datetime-local" id="promoRunAt" class="search-input-group" aria-label="Schedule date and time">
@@ -2279,6 +2287,10 @@
             </div>
         </div>
 
+
+
+        <!-- ACTIVE PANE -->
+
         <div id="promoActivePane" class="panel mt-16 hidden">
             <div class="flex-between flex-center flex-wrap-mobile">
                 <h3 class="panel-title mb-0" data-i18n="promo.active.heading">Active & recent campaigns</h3>
@@ -2291,6 +2303,10 @@
                 <p class="text-muted-small" data-i18n="promo.active.empty">No campaigns yet. Compose your first one above.</p>
             </div>
         </div>
+
+
+
+        <!-- HISTORY PANE -->
 
         <div id="promoHistoryPane" class="panel mt-16 hidden">
             <div class="flex-between flex-center flex-wrap-mobile">
@@ -2315,6 +2331,10 @@
                 </button>
             </div>
             <div class="modal-body" id="promotionsGuideBody">
+
+
+                <!-- Populated dynamically by promotions-guide.js -->
+
             </div>
             <div class="modal-footer">
                 <button class="btn-primary" data-action="closePromotionsGuide" data-i18n="promo.guide.gotIt">Got it</button>
