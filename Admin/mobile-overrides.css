@@ -2230,36 +2230,40 @@
         margin-bottom: 4px;
     }
 
-    /* Rider Analytics: stack title above controls at tablet, KPIs 2x2+1, full-width controls */
+    /* Rider Analytics: stack title above controls at tablet, KPIs 2x2+1, full-width controls
+       NOTE: base .flex-row has `flex-direction: row !important` in style.css, so every
+       override below needs !important to win. */
     #tab-riderAnalytics > .flex-row.justify-between.flex-center.mb-20.p-0-10 {
-        flex-direction: column;
+        flex-direction: column !important;
         align-items: stretch !important;
         gap: 12px;
     }
     #tab-riderAnalytics > .flex-row.justify-between.flex-center.mb-20.p-0-10 > .section-title {
-        width: 100%;
+        width: 100% !important;
         margin-bottom: 0;
     }
     #tab-riderAnalytics .flex-row.flex-gap-10.flex-center.glass-card.p-10-20.rounded-12.flex-wrap-mobile {
-        width: 100%;
+        width: 100% !important;
+        flex-direction: column !important;
         flex-wrap: wrap;
         gap: 8px;
         padding: 10px 12px !important;
     }
     #tab-riderAnalytics .flex-row.flex-wrap-mobile > .report-date-input,
     #tab-riderAnalytics .flex-row.flex-wrap-mobile > select {
-        flex: 1 1 calc(50% - 4px) !important;
+        flex: 1 1 100% !important;
         min-width: 0;
-        width: auto;
+        width: 100% !important;
     }
     #tab-riderAnalytics .flex-row.flex-wrap-mobile > #riderSelectAnalytics {
         flex: 1 1 100% !important;
-        width: 100%;
+        width: 100% !important;
     }
     #tab-riderAnalytics .flex-row.flex-wrap-mobile > .btn-primary,
     #tab-riderAnalytics .flex-row.flex-wrap-mobile > .btn-secondary {
-        flex: 1 1 calc(50% - 4px) !important;
-        min-width: 140px;
+        flex: 1 1 100% !important;
+        min-width: 0;
+        width: 100% !important;
         justify-content: center;
     }
 
@@ -2268,7 +2272,7 @@
         gap: 12px !important;
     }
     #tab-riderAnalytics .kpi-card-v4.warning {
-        grid-column: span 2;
+        grid-column: span 2 !important;
     }
     #tab-riderAnalytics .h-250 {
         height: 240px !important;
@@ -2651,6 +2655,7 @@
 
     /* Rider Analytics: tighter padding, stacked controls, 2x2+1 KPI grid */
     #tab-riderAnalytics .flex-row.flex-gap-10.flex-center.glass-card.p-10-20.rounded-12.flex-wrap-mobile {
+        flex-direction: column !important;
         padding: 8px 10px !important;
         gap: 6px !important;
     }

@@ -20,7 +20,7 @@
         }
         
         // Version Enforcement & Cache Cleanup
-        const ADMIN_VERSION = '4.10.0';
+        const ADMIN_VERSION = '4.11.1';
         if (localStorage.getItem('admin_app_version') !== ADMIN_VERSION) {
             localStorage.setItem('admin_app_version', ADMIN_VERSION);
             // On version mismatch, purge stale SW caches so users get fresh assets
@@ -70,8 +70,8 @@
     <script src="branding.js?v=4.9.1"></script>
     <script src="firebase-config.js?v=4.9.1"></script>
 
-    <link rel="stylesheet" href="style.css?v=5.1.5">
-    <link rel="stylesheet" href="mobile-overrides.css?v=5.1.5">
+    <link rel="stylesheet" href="style.css?v=5.1.5.2">
+    <link rel="stylesheet" href="mobile-overrides.css?v=5.1.5.2">
     <link rel="manifest" href="manifest.json?v=3">
     <link rel="icon" type="image/jpeg" href="icon-erp-logo.jpeg">
     <link rel="apple-touch-icon" href="icon-erp-logo.jpeg">
@@ -1542,15 +1542,15 @@
                             <span class="lbl">Delivered Orders</span>
                         </div>
                     </div>
-                    <div class="kpi-card-v4 warning">
-                        <div class="icon-wrap warning"><i data-lucide="timer"></i></div>
+                    <div class="kpi-card-v4 orange">
+                        <div class="icon-wrap orange"><i data-lucide="timer"></i></div>
                         <div class="info-wrap">
                             <span class="val" id="riderStatAvgTime">0m</span>
                             <span class="lbl">Avg. Delivery Time</span>
                         </div>
                     </div>
-                    <div class="kpi-card-v4 orange">
-                        <div class="icon-wrap orange"><i data-lucide="star"></i></div>
+                    <div class="kpi-card-v4 warning">
+                        <div class="icon-wrap warning"><i data-lucide="star"></i></div>
                         <div class="info-wrap">
                             <span class="val" id="riderStatRating">5.0</span>
                             <span class="lbl">Rider Rating</span>
