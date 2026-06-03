@@ -36,6 +36,8 @@ export const state = {
     _ordersChangedCb: null,
     walkinDiscount: 0,
     walkinDiscountPct: 0,
+    walkinAutoDiscount: null,  // { discount, amount, label, source } | null
+    walkinCouponCode: null,    // user-entered coupon code (string) | null
     currentPOSModalDish: null,
     currentPOSModalQty: 1,
     currentPOSModalSize: null,

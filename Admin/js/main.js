@@ -421,6 +421,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'pickPromoMedia': document.getElementById('promoMediaInput')?.click(); break;
                 case 'clearPromoMedia': (await useMod('promotions')).clearPromoMedia?.(); break;
                 case 'pickPromoCsv': document.getElementById('promoCsvInput')?.click(); break;
+                case 'newDiscount': window.__discounts?.openEditor(null); break;
+                case 'editDiscount': window.__discounts?.openEditor(el.dataset.id); break;
+                case 'closeDiscountEditor': window.__discounts?.closeEditor(); break;
+                case 'saveDiscount': window.__discounts?.save(); break;
+                case 'deleteDiscount': window.__discounts?.remove(el.dataset.id); break;
+                case 'openDiscountsReports': (await useMod('discountsReports')).openDiscountsReports?.(); break;
+                case 'closeDiscountsReports': (await useMod('discountsReports')).closeDiscountsReports?.(); break;
+                case 'setDiscountReportRange': (await useMod('discountsReports')).setDiscountReportRange?.(el); break;
+                case 'refreshDiscountsReport': (await useMod('discountsReports')).refreshDiscountsReport?.(); break;
+                case 'exportDiscountsReport': (await useMod('discountsReports')).exportDiscountsReport?.(); break;
+                case 'generateCouponCode': {
+                    const code = (await useMod('discountsReports')).generateCouponCode?.();
+                    const input = document.getElementById('discCouponCode');
+                    if (input && code) input.value = code;
+                    break;
+                }
                 case 'addSizeField': (await useMod('catalog')).addSizeField(); break;
                 case 'addDishAddonField': (await useMod('catalog')).addDishAddonField(); break;
                 case 'addCategoryAddonField': (await useMod('catalog')).addCategoryAddonField(); break;
@@ -431,6 +447,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const p = await useMod('pos');
                     if (amt) p.setDiscount(parseFloat(amt));
                     else if (pct) p.setDiscountPct(parseFloat(pct));
+                    break;
+                }
+                case 'applyWalkinCoupon': {
+                    (await useMod('pos')).applyWalkinCoupon();
+                    break;
+                }
+                case 'clearWalkinCoupon': {
+                    (await useMod('pos')).clearWalkinCoupon();
                     break;
                 }
                 case 'loadMoreOrders': (await useMod('orders')).loadMoreOrders(); break;
@@ -544,6 +568,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         version: '4.4.12',
         timestamp: new Date().toISOString()
     });
+
+    // Bot status on the dashboard widget
+    window.addEventListener('botStatusChange', (e) => {
+        const el = document.getElementById('promoKillWidgetBotStatus');
+        if (!el) return;
+        const { online, lastSeen } = e.detail;
+        if (online) {
+            el.innerHTML = '🟢 Bot online';
+            el.className = 'text-success';
+        } else {
+            const ago = lastSeen ? Math.floor((Date.now() - lastSeen) / 1000 / 60) : '?';
+            el.innerHTML = `🔴 Bot offline${lastSeen ? ` — ${ago}m ago` : ''}`;
+            el.className = 'text-danger';
+        }
+    });
+    // Seed from global if bot-status.js loaded first
+    if (window._botOnline !== undefined) {
+        const el = document.getElementById('promoKillWidgetBotStatus');
+        if (el) {
+            el.innerHTML = window._botOnline ? '🟢 Bot online' : '🔴 Bot offline';
+            el.className = window._botOnline ? 'text-success' : 'text-danger';
+        }
+    }
 });
 
 console.log("\uD83D\uDE80 Roshani Pizza ERP Modules Loaded");

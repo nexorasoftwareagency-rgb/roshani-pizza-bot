@@ -1287,7 +1287,7 @@ export async function openOrderDrawer(id) {
             <!-- Pricing Summary -->
             <div class="drawer-summary-panel">
                 <div class="summary-row"><span class="label">Subtotal</span><span class="value">₹${order.subtotal || 0}</span></div>
-                ${(order.discount && Number(order.discount) > 0) ? `<div class="summary-row discount"><span class="label">Discount</span><span class="value">-₹${order.discount}</span></div>` : ''}
+                ${(order.discount && Number(order.discount) > 0) ? `<div class="summary-row discount"><span class="label">Discount${order.discountLabel ? ` (${escapeHtml(order.discountLabel)})` : ''}</span><span class="value">-₹${order.discount}</span></div>` : ''}
                 ${(order.deliveryFee && Number(order.deliveryFee) > 0) ? `<div class="summary-row"><span class="label">Delivery Fee</span><span class="value">₹${order.deliveryFee}</span></div>` : ''}
                 <div class="summary-total">
                     <span class="label">Grand Total</span>

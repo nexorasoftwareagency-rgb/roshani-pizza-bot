@@ -2,9 +2,32 @@
 // They serve different purposes (toast = transient status, alert = order notification)
 // but stack in the same container. Visually distinct via .toast vs .alert-box classes.
 // If you need to refactor, consider giving alerts a dedicated container like #orderAlertContainer.
-export const showToast = (message, type = 'success') => {
+
+const _toastMap = {};
+
+export const showToast = (message, type = 'success', durationMs = 3000, id = null) => {
     const container = document.getElementById('alertContainer');
     if (!container) return;
+
+    // If an ID is given and a toast with that ID already exists, update it in place
+    if (id && _toastMap[id]) {
+        const existing = _toastMap[id];
+        existing.toast.innerText = message;
+        existing.toast.className = `toast toast-${type}`;
+        // Reset the dismiss timer
+        if (existing.timer) clearTimeout(existing.timer);
+        if (existing.removeTimer) clearTimeout(existing.removeTimer);
+        existing.timer = setTimeout(() => {
+            existing.toast.style.opacity = '0';
+            existing.toast.style.transform = 'translateX(100%)';
+            existing.toast.style.transition = 'all 0.3s ease';
+            existing.removeTimer = setTimeout(() => {
+                existing.toast.remove();
+                delete _toastMap[id];
+            }, 300);
+        }, durationMs);
+        return id;
+    }
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
@@ -14,13 +37,29 @@ export const showToast = (message, type = 'success') => {
 
     container.appendChild(toast);
 
-    setTimeout(() => {
+    const entry = { toast, timer: null, removeTimer: null };
+    if (id) _toastMap[id] = entry;
+
+    entry.timer = setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(100%)';
         toast.style.transition = 'all 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+        entry.removeTimer = setTimeout(() => {
+            toast.remove();
+            if (id) delete _toastMap[id];
+        }, 300);
+    }, durationMs);
+
+    return id;
 };
+
+// Update an existing toast by ID (created with showToast's `id` parameter)
+export const __updateToast = (id, message, type = 'success', durationMs = 3000) => {
+    if (id && _toastMap[id]) {
+        showToast(message, type, durationMs, id);
+    }
+};
+window.__updateToast = __updateToast;
 
 export const showConfirm = (message, title = "Confirm Action") => {
     return new Promise((resolve) => {

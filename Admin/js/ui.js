@@ -152,6 +152,31 @@ export const switchTab = async (tabId, skipHistory = false) => {
     if (target) {
         target.classList.remove('hidden');
 
+        // Reset scroll position to top — robust against layout shift and
+        // nested scrollable containers. Otherwise the user is left at the
+        // previous tab's offset, which can land them at the bottom of a
+        // short tab like Promotions.
+        const _resetScroll = () => {
+            const mainEl = document.querySelector('.main');
+            if (mainEl) mainEl.scrollTop = 0;
+            if (document.documentElement) document.documentElement.scrollTop = 0;
+            if (document.body) document.body.scrollTop = 0;
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            // Also clear any nested scrollable container inside the target tab
+            if (target) {
+                target.querySelectorAll('*').forEach(el => {
+                    if (el.scrollHeight > el.clientHeight && el !== mainEl) {
+                        el.scrollTop = 0;
+                    }
+                });
+            }
+        };
+        _resetScroll();
+        // Re-apply after the browser has a chance to lay out the new tab content
+        requestAnimationFrame(_resetScroll);
+        setTimeout(_resetScroll, 0);
+        setTimeout(_resetScroll, 50);
+
         // --- PHASE 3.25: PERFORMANCE ORCHESTRATION ---
         // 1. Cleanup all persistent background listeners (except Orders which stays active for alerts)
         if (tabId !== 'catalog' && tabId !== 'categories') (await mod('catalog')).cleanupCatalog();
@@ -164,6 +189,8 @@ export const switchTab = async (tabId, skipHistory = false) => {
         if (tabId !== 'inventory') (await mod('inventory')).cleanupInventory();
         if (tabId !== 'reports') (await mod('analytics')).cleanupReports();
         if (tabId !== 'promotions') (await mod('promotions')).cleanupPromotions();
+        if (tabId !== 'discounts') (await mod('discounts')).cleanupDiscounts();
+        if (tabId !== 'discounts') (await mod('discountsReports')).closeDiscountsReports?.();
 
         // --- PHASE 3.25: DATA REFRESH ---
         // Refresh appropriate data based on the tab
@@ -243,6 +270,11 @@ export const switchTab = async (tabId, skipHistory = false) => {
             case 'promotions': {
                 const { loadPromotions } = await mod('promotions');
                 loadPromotions();
+                break;
+            }
+            case 'discounts': {
+                const { loadDiscounts } = await mod('discounts');
+                loadDiscounts();
                 break;
             }
         }

@@ -6,7 +6,7 @@ if (self.location.protocol !== 'https:' && self.location.hostname !== 'localhost
 // Firebase Messaging is handled by firebase-messaging-sw.js (auto-registered by Firebase SDK)
 // This SW handles caching, navigation, and offline support only.
 
-const CACHE_NAME = 'roshani-erp-v5.1.5.2';
+const CACHE_NAME = 'roshani-erp-v5.1.5.7';
 const ASSETS_TO_CACHE = [
   './index.html',
   './style.css',
@@ -16,6 +16,8 @@ const ASSETS_TO_CACHE = [
   './receipt-templates.js',
   './manifest.json',
   './icon-erp-logo.jpeg',
+  './sw.js',
+  './firebase-messaging-sw.js',
   './js/main.js',
   './js/auth.js',
   './js/firebase.js',
@@ -41,6 +43,11 @@ const ASSETS_TO_CACHE = [
   './js/features/printing.js',
   './js/features/rider-analytics.js',
   './js/features/inventory.js',
+  './js/features/discounts.js',
+  './js/features/discount-evaluator.js',
+  './js/features/discountsReports.js',
+  './js/features/promotions.js',
+  './js/features/promotions-guide.js',
   'https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
@@ -80,7 +87,15 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 3. Fetch Event: Dual Strategy (Cache-First for CDN, Network-First for everything else)
+// 3. Fetch Event
+//   - CDN assets (unpkg, cdn.jsdelivr, cdnjs): Cache-First (offline-friendly)
+//   - Firebase RTDB / Auth: bypass (always live)
+//   - All other GETs (our own app code: index.html, JS, CSS, JSON, etc.):
+//       Network-Only. We deliberately do NOT consult the cache for app code,
+//       because a stale cache can serve old modules that reference renamed
+//       files (e.g. discounts-reports.js -> discountsReports.js) and break
+//       dynamic imports. The app already requires auth + Firebase, so it
+//       can't function offline anyway.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
 
@@ -111,32 +126,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-First for all other GET requests (HTML, JS, CSS, etc.)
+  // Network-Only for all of our own app code (HTML, JS, CSS, JSON, wasm, etc.)
+  // No cache read, no cache write. If the network is down, the user gets a
+  // real network error - which is correct behaviour, since the app can't
+  // function without the backend.
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      })
-      .catch(async () => {
-        // Try exact URL match first
-        let cachedResponse = await caches.match(event.request);
-        if (cachedResponse) return cachedResponse;
-        // Strip cache-busting query params (?v=...&sync=...) and retry
-        const url = new URL(event.request.url);
-        if (url.searchParams.has('v') || url.searchParams.has('sync')) {
-          url.search = '';
-          const cleanReq = new Request(url.toString(), event.request);
-          cachedResponse = await caches.match(cleanReq);
-          if (cachedResponse) return cachedResponse;
-        }
-        return new Response('Network error and not in cache', {
-          status: 408,
-          statusText: 'Network Timeout'
-        });
-      })
+    fetch(event.request).catch(() => {
+      return new Response('Network error and offline is not supported for app code. Please refresh when online.', {
+        status: 408,
+        statusText: 'Network Timeout',
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    })
   );
 });

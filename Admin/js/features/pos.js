@@ -10,6 +10,7 @@ import { autoDeductStock } from './inventory.js';
 import { ui } from '../ui.js';
 import { printOrderReceipt } from './printing.js';
 import { t } from '../l10n.js';
+import { evaluateDiscount, recordDiscountUsage, clearDiscountCache } from './discount-evaluator.js';
 
 /**
  * Loads the menu for the Walk-in POS view
@@ -353,6 +354,8 @@ export function clearWalkinCart() {
     state.walkinCart = {};
     state.walkinDiscount = 0;
     state.walkinDiscountPct = 0;
+    state.walkinAutoDiscount = null;
+    state.walkinCouponCode = null;
     if (document.getElementById('walkinCustPhone')) document.getElementById('walkinCustPhone').value = "";
     if (document.getElementById('walkinCustName')) document.getElementById('walkinCustName').value = "";
     if (document.getElementById('walkinTableNo')) document.getElementById('walkinTableNo').value = "";
@@ -360,6 +363,9 @@ export function clearWalkinCart() {
     if (document.getElementById('walkinDiscountRow')) document.getElementById('walkinDiscountRow').classList.add('hidden');
     if (document.getElementById('walkinDiscountVal')) document.getElementById('walkinDiscountVal').innerText = "-₹0";
     if (document.getElementById('walkinDiscount')) document.getElementById('walkinDiscount').value = "0";
+    if (document.getElementById('walkinCouponCode')) document.getElementById('walkinCouponCode').value = "";
+    if (document.getElementById('walkinCouponHint'))  document.getElementById('walkinCouponHint').classList.add('hidden');
+    if (document.getElementById('walkinCouponClearBtn')) document.getElementById('walkinCouponClearBtn').classList.add('hidden');
     renderWalkinCart();
 }
 
@@ -420,8 +426,12 @@ export function renderWalkinCart() {
     if (window.lucide) window.lucide.createIcons({ root: list });
 
     let discountValue = state.walkinDiscount;
+    let discountLabel = state.walkinAutoDiscount?.label || null;
     if (state.walkinDiscountPct > 0) {
         discountValue = (subtotal * state.walkinDiscountPct) / 100;
+        discountLabel = null; // manual % override hides auto label
+    } else if (state.walkinDiscount === 0 && state.walkinAutoDiscount && state.walkinAutoDiscount.amount > 0) {
+        discountValue = state.walkinAutoDiscount.amount;
     }
 
     const finalTotal = Math.max(0, subtotal - discountValue);
@@ -432,7 +442,9 @@ export function renderWalkinCart() {
     const discVal = document.getElementById("walkinDiscountVal");
     if (discountValue > 0) {
         if (discRow) discRow.classList.remove('hidden');
-        if (discVal) discVal.innerText = `-₹${discountValue.toLocaleString()}`;
+        if (discVal) discVal.innerText = discountLabel
+            ? `-₹${discountValue.toLocaleString()} (${discountLabel})`
+            : `-₹${discountValue.toLocaleString()}`;
     } else {
         if (discRow) discRow.classList.add('hidden');
     }
@@ -447,6 +459,14 @@ export function renderWalkinCart() {
                 const val = parseFloat(e.target.value) || 0;
                 state.walkinDiscount = val;
                 state.walkinDiscountPct = 0;
+                // Manual discount overrides any auto-applied discount
+                if (val > 0) {
+                    state.walkinAutoDiscount = null;
+                    state.walkinCouponCode = null;
+                    if (document.getElementById('walkinCouponCode')) document.getElementById('walkinCouponCode').value = "";
+                    if (document.getElementById('walkinCouponHint'))  document.getElementById('walkinCouponHint').classList.add('hidden');
+                    if (document.getElementById('walkinCouponClearBtn')) document.getElementById('walkinCouponClearBtn').classList.add('hidden');
+                }
                 // Re-calculate totals
                 renderWalkinCart();
             });
@@ -532,6 +552,76 @@ export function setDiscountPct(pct) {
     renderWalkinCart();
 }
 
+export async function applyWalkinCoupon() {
+    const input = document.getElementById('walkinCouponCode');
+    const hint  = document.getElementById('walkinCouponHint');
+    const clear = document.getElementById('walkinCouponClearBtn');
+    if (!input) return;
+    const code = (input.value || '').trim();
+    if (!code) {
+        if (hint) { hint.classList.remove('hidden'); hint.innerText = 'Enter a code first.'; }
+        return;
+    }
+    if (state.walkinDiscount > 0 || state.walkinDiscountPct > 0) {
+        if (hint) { hint.classList.remove('hidden'); hint.innerText = 'Clear the manual discount first.'; }
+        return;
+    }
+    const items = Object.values(state.walkinCart);
+    if (items.length === 0) {
+        if (hint) { hint.classList.remove('hidden'); hint.innerText = 'Add items to the cart first.'; }
+        return;
+    }
+    const subtotal = items.reduce((s, i) => s + (Number(i.price) * Number(i.qty)), 0);
+    let customer = null;
+    const phoneInput = document.getElementById('walkinCustPhone');
+    if (phoneInput && phoneInput.value.trim().length >= 10) {
+        try {
+            const cleanPhone = phoneInput.value.trim().replace(/\D/g, '').slice(-10);
+            const snap = await get(Outlet.ref(`customers/${cleanPhone}`));
+            if (snap.exists()) customer = snap.val();
+        } catch (e) { console.warn('[POS] customer fetch failed', e); }
+    }
+    try {
+        const evalResult = await evaluateDiscount({
+            customer,
+            subtotal,
+            couponCode: code,
+            cart: items.map(i => ({ category: i.category, categories: i.categories, name: i.name, id: i.id }))
+        });
+        if (!evalResult) {
+            state.walkinAutoDiscount = null;
+            state.walkinCouponCode = null;
+            if (hint) { hint.classList.remove('hidden'); hint.innerText = `❌ Code "${code}" is not valid or doesn't apply to this cart.`; }
+            if (clear) clear.classList.add('hidden');
+            renderWalkinCart();
+            return;
+        }
+        state.walkinAutoDiscount = evalResult;
+        state.walkinCouponCode = code;
+        if (hint) {
+            hint.classList.remove('hidden');
+            hint.innerText = `✅ Applied: ${evalResult.label} (saved ₹${evalResult.amount.toLocaleString()})`;
+        }
+        if (clear) clear.classList.remove('hidden');
+        renderWalkinCart();
+    } catch (e) {
+        console.error('[POS] applyWalkinCoupon failed', e);
+        if (hint) { hint.classList.remove('hidden'); hint.innerText = 'Error evaluating discount. Try again.'; }
+    }
+}
+
+export function clearWalkinCoupon() {
+    state.walkinAutoDiscount = null;
+    state.walkinCouponCode = null;
+    const input = document.getElementById('walkinCouponCode');
+    const hint  = document.getElementById('walkinCouponHint');
+    const clear = document.getElementById('walkinCouponClearBtn');
+    if (input) input.value = "";
+    if (hint)  hint.classList.add('hidden');
+    if (clear) clear.classList.add('hidden');
+    renderWalkinCart();
+}
+
 export function selectWalkinPayment(method, el) {
     state.walkinPayMethod = method;
     document.querySelectorAll('.walkin-pay-btn').forEach(c => c.classList.remove('active'));
@@ -610,15 +700,48 @@ export async function submitWalkinSale() {
         }
 
         const subtotal = validatedSubtotal;
-        let discountValue = state.walkinDiscount;
-        if (state.walkinDiscountPct > 0) {
+        // Determine final discount: manual overrides auto
+        let discountValue = 0;
+        let discountId = null;
+        let discountLabel = null;
+        let discountSource = 'none';
+        if (state.walkinDiscount > 0) {
+            discountValue = state.walkinDiscount;
+            discountSource = 'manual:flat';
+        } else if (state.walkinDiscountPct > 0) {
             discountValue = (subtotal * state.walkinDiscountPct) / 100;
+            discountSource = 'manual:percent';
+        } else {
+            // Auto-evaluate (best of: firstOrder / coupon / global / category)
+            try {
+                let customer = null;
+                if (phone && phone.length >= 10) {
+                    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+                    const custSnap = await get(Outlet.ref(`customers/${cleanPhone}`));
+                    if (custSnap.exists()) customer = custSnap.val();
+                }
+                const evalResult = await evaluateDiscount({
+                    customer,
+                    subtotal,
+                    couponCode: state.walkinCouponCode || null,
+                    cart: items.map(i => ({ category: i.category, categories: i.categories, name: i.name, id: i.id }))
+                });
+                if (evalResult && evalResult.amount > 0) {
+                    discountValue = evalResult.amount;
+                    discountId = evalResult.discount.id;
+                    discountLabel = evalResult.label;
+                    discountSource = evalResult.source;
+                }
+            } catch (e) {
+                console.warn('[POS] auto-discount evaluation failed:', e?.message || e);
+            }
         }
+        discountValue = Math.max(0, Math.round(discountValue));
         const total = Math.max(0, subtotal - discountValue);
 
         const today = new Date();
         const dateStr = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
-        
+
         // Get sequence from database
         const seqSnap = await runTransaction(ref(db, `${Outlet.current}/metadata/orderSequence/${dateStr}`), (current) => (current || 0) + 1);
         const seqNum = seqSnap.snapshot.val() || 1;
@@ -629,6 +752,9 @@ export async function submitWalkinSale() {
             items,
             subtotal,
             discount: discountValue,
+            discountId,
+            discountLabel,
+            discountSource,
             total,
             paymentMethod: state.walkinPayMethod || "Cash",
             customerName: name,
@@ -651,12 +777,37 @@ export async function submitWalkinSale() {
         // 2. Auto-deduct inventory
         await autoDeductStock(items);
 
+        // 2b. Record discount usage + mark first-order as consumed (best-effort)
+        if (discountId && discountValue > 0) {
+            try {
+                await recordDiscountUsage({
+                    discountId,
+                    orderId,
+                    customerPhone: phone || 'Walk-in',
+                    amountGiven: discountValue,
+                    channel: 'pos',
+                    discountLabel,
+                    discountSource
+                });
+            } catch (e) {
+                console.warn('[POS] recordDiscountUsage failed:', e?.message || e);
+            }
+        }
+
         // 3. Update Customer LTV if phone provided
         if (phone && phone.length >= 10) {
             const custRef = Outlet.ref(`customers/${phone}`);
+            const isFirstOrderDiscount = discountSource === 'firstOrder' && discountId;
             await runTransaction(custRef, c => {
-                if (!c) return { name, phone, orderCount: 1, totalSpent: total, lastSeen: Date.now(), lastAddress: 'Walk-in' };
-                return {
+                if (!c) {
+                    const fresh = { name, phone, orderCount: 1, totalSpent: total, lastSeen: Date.now(), lastAddress: 'Walk-in' };
+                    if (isFirstOrderDiscount) {
+                        fresh.firstOrderDiscountUsed = Date.now();
+                        fresh.firstOrderDiscountId = discountId;
+                    }
+                    return fresh;
+                }
+                const updated = {
                     ...c,
                     name: name || c.name,
                     orderCount: (c.orderCount || 0) + 1,
@@ -664,6 +815,11 @@ export async function submitWalkinSale() {
                     lastSeen: Date.now(),
                     lastAddress: 'Walk-in'
                 };
+                if (isFirstOrderDiscount) {
+                    updated.firstOrderDiscountUsed = Date.now();
+                    updated.firstOrderDiscountId = discountId;
+                }
+                return updated;
             });
         }
 

@@ -28,6 +28,7 @@ const qrcode = require('qrcode-terminal');
 const pino = require('pino');
 const admin = require('firebase-admin');
 const { getData, setData, updateData, db, pushData, getUserProfile, saveUserProfile } = require('./firebase');
+const discountEngine = require('./discount-engine');
 
 let redisClient;
 
@@ -594,6 +595,9 @@ async function sendInvalidInputHelp(sock, sender, user) {
             break;
         case "CART_VIEW":
             helpMsg += "Please reply with *1* to Proceed to Checkout or *2* to Clear Cart.";
+            break;
+        case "AWAIT_COUPON":
+            helpMsg += "If you have a coupon code, reply with it. Otherwise reply *0* to skip and continue.";
             break;
         case "REUSE_PROFILE":
             helpMsg += "Please reply with *1* to use your saved details or *2* to enter new ones.";
@@ -1731,6 +1735,27 @@ async function startBot() {
                 if (user.step === "CART_VIEW") {
                     if (text === "1") return sendCategories(sock, sender, user);
                     if (text === "2") {
+                        // New: optional coupon step
+                        user.step = "AWAIT_COUPON";
+                        let couponMsg = `🎟️ *HAVE A COUPON CODE?* 🎟️\n\n`;
+                        couponMsg += `If you have a discount code, reply with it now.\n`;
+                        couponMsg += `Otherwise, reply *0* to skip and continue to checkout.\n\n`;
+                        couponMsg += `0️⃣ *Skip — continue to checkout*`;
+                        return sock.sendMessage(sender, { text: await appendContactInfo(couponMsg, user.outlet) });
+                    }
+                    if (text === "3") {
+                        user.step = "START"; user.current = {}; user.cart = [];
+                        return sock.sendMessage(sender, { text: await appendContactInfo("🗑️ Cart cleared. Reply with any message to start again.", user.outlet) });
+                    }
+                    if (text === "0") {
+                        return sendCategories(sock, sender, user);
+                    }
+                    return sendInvalidInputHelp(sock, sender, user);
+                }
+
+                if (user.step === "AWAIT_COUPON") {
+                    if (text === "0") {
+                        // Skip coupon; go to REUSE_PROFILE or NAME
                         if (user.profile && user.profile.name) {
                             user.step = "REUSE_PROFILE";
                             let profileMsg = `👤 *REUSE YOUR SAVED DETAILS?*\n\n`;
@@ -1749,14 +1774,39 @@ async function startBot() {
                         nameMsg += `0️⃣ *Take one step Back* 🔙`;
                         return sock.sendMessage(sender, { text: await appendContactInfo(nameMsg, user.outlet) });
                     }
-                    if (text === "3") {
-                        user.step = "START"; user.current = {}; user.cart = [];
-                        return sock.sendMessage(sender, { text: await appendContactInfo("🗑️ Cart cleared. Reply with any message to start again.", user.outlet) });
+                    // Validate coupon
+                    try {
+                        const matched = await discountEngine.validateCouponCode(user.outlet, text.trim());
+                        if (matched) {
+                            user.couponCode = matched.couponCode;
+                            await sock.sendMessage(sender, { text: `✅ Coupon *${matched.couponCode}* accepted! Continuing to checkout…` });
+                        } else {
+                            user.couponCode = null;
+                            await sock.sendMessage(sender, { text: `❌ Invalid code *${text.trim()}*. Reply *0* to skip or try another code.` });
+                            return; // stay on AWAIT_COUPON
+                        }
+                    } catch (e) {
+                        console.error('[BOT] Coupon validation error:', e);
+                        user.couponCode = null;
                     }
-                    if (text === "0") {
-                        return sendCategories(sock, sender, user);
+                    // Proceed to REUSE_PROFILE or NAME
+                    if (user.profile && user.profile.name) {
+                        user.step = "REUSE_PROFILE";
+                        let profileMsg = `👤 *REUSE YOUR SAVED DETAILS?*\n\n`;
+                        profileMsg += `Name: ${user.profile.name}\n`;
+                        profileMsg += `Phone: ${user.profile.phone}\n`;
+                        profileMsg += `Address: ${user.profile.address || "N/A"}\n\n`;
+                        profileMsg += `1️⃣ Yes, use these details\n`;
+                        profileMsg += `2️⃣ No, enter new details\n`;
+                        profileMsg += `0️⃣ *Take one step Back* 🔙`;
+                        return sock.sendMessage(sender, { text: await appendContactInfo(profileMsg, user.outlet) });
                     }
-                    return sendInvalidInputHelp(sock, sender, user);
+                    user.step = "NAME";
+                    let nameMsg = `👤 *STEP 1: ENTER YOUR FULL NAME* ✨\n\n`;
+                    nameMsg += `Please provide your name so we can address you correctly and prepare your order.\n\n`;
+                    nameMsg += `_Example: Rajesh Kumar_\n`;
+                    nameMsg += `0️⃣ *Take one step Back* 🔙`;
+                    return sock.sendMessage(sender, { text: await appendContactInfo(nameMsg, user.outlet) });
                 }
 
                 if (user.step === "REUSE_PROFILE") {
@@ -1905,7 +1955,12 @@ async function startBot() {
                             createdAt: new Date().toISOString(),
                             assignedRider: "",
                             items: user.cart,
-                            stockDeducted: true
+                            stockDeducted: true,
+                            // New discount tracking fields
+                            discount: user.discount || 0,
+                            discountId: user.discountId || null,
+                            discountLabel: user.discountLabel || null,
+                            discountSource: user.discountSource || (user.discount ? 'manual' : 'none')
                         };
 
                         await setData(`orders/${orderId}`, finalOrder, user.outlet);
@@ -1934,7 +1989,30 @@ async function startBot() {
                                 // Pre-Flight #10: explicit consent for promotional messages
                                 promotionalConsent: true
                             };
+                            // If first-order discount was used, mark it consumed
+                            if (user.discountSource === 'firstOrder' && user.discountId) {
+                                custData.firstOrderDiscountUsed = Date.now();
+                                custData.firstOrderDiscountId = user.discountId;
+                            }
                             await updateData(`customers/${cleanPhone}`, custData, user.outlet);
+                        }
+
+                        // Log discount usage (best-effort)
+                        if (finalOrder.discount > 0 && finalOrder.discountId) {
+                            try {
+                                await discountEngine.recordDiscountUsage({
+                                    OUTLET: user.outlet,
+                                    discountId: finalOrder.discountId,
+                                    orderId,
+                                    customerPhone: finalOrder.phone,
+                                    amountGiven: finalOrder.discount,
+                                    channel: 'whatsapp',
+                                    discountLabel: finalOrder.discountLabel,
+                                    discountSource: finalOrder.discountSource
+                                });
+                            } catch (e) {
+                                console.warn('[BOT] recordDiscountUsage failed:', e?.message || e);
+                            }
                         }
 
                         let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY!* 🎉\n`;
@@ -1986,6 +2064,34 @@ async function handleCheckoutFinal(sock, sender, user) {
 
         user.deliveryFee = fee;
         const { lines, subtotal } = formatCartSummary(user.cart);
+
+        // Auto-evaluate discount (best of: firstOrder / coupon / global / category)
+        try {
+            const cleanPhone = String(user.phone || '').replace(/\D/g, '').slice(-10);
+            const customerSnap = cleanPhone ? await getData(`customers/${cleanPhone}`, user.outlet) : null;
+            const discountEval = await discountEngine.evaluateDiscount({
+                OUTLET: user.outlet,
+                customer: customerSnap,
+                subtotal,
+                couponCode: user.couponCode || null,
+                cart: user.cart
+            });
+            if (discountEval) {
+                user.discount = discountEval.amount;
+                user.discountId = discountEval.discount.id;
+                user.discountLabel = discountEval.label;
+                user.discountSource = discountEval.source;
+            } else {
+                user.discount = 0;
+                user.discountId = null;
+                user.discountLabel = null;
+                user.discountSource = null;
+            }
+        } catch (e) {
+            console.error('[BOT] Discount evaluation failed:', e?.message || e);
+            user.discount = 0;
+        }
+
         user.step = "CONFIRM_PAY";
 
         let sum = `🧾 *INVOICE*\n`;
@@ -1994,7 +2100,7 @@ async function handleCheckoutFinal(sock, sender, user) {
         sum += `━━━━━━━━━━━━━━━━━━━━\n`;
         sum += `💰 Subtotal: ₹${subtotal}\n`;
         sum += `🚚 Delivery (${dist.toFixed(1)}km): ₹${fee}\n`;
-        if (user.discount) sum += `🎁 Discount Allotted: -₹${user.discount}\n`;
+        if (user.discount) sum += `🎁 Discount${user.discountLabel ? ` (${user.discountLabel})` : ''}: -₹${user.discount}\n`;
         sum += `💵 *TOTAL: ₹${subtotal + fee - (user.discount || 0)}*\n\n`;
         sum += `1️⃣ Confirm Order\n`;
         sum += `2️⃣ Cancel\n`;
@@ -2104,6 +2210,24 @@ async function isKillSwitchOn() {
         return _killSwitchCache.value;
     } catch (_) {
         return _killSwitchCache.value;
+    }
+}
+
+/**
+ * Master "promotions enabled" flag from the dashboard widget.
+ * Cached for 2s. Defaults to TRUE (enabled) when unset, so existing
+ * campaigns keep working.
+ */
+let _promoEnabledCache = { value: true, ts: 0 };
+async function isPromoEnabled() {
+    const now = Date.now();
+    if (now - _promoEnabledCache.ts < 2000) return _promoEnabledCache.value;
+    try {
+        const snap = await db.ref(`bot/${OUTLET}/promotions/enabled`).once('value');
+        _promoEnabledCache = { value: snap.val() !== false, ts: now };
+        return _promoEnabledCache.value;
+    } catch (_) {
+        return _promoEnabledCache.value;
     }
 }
 
@@ -2255,7 +2379,7 @@ async function logPromoSkip(campaignId, phone, reason) {
  * state so it can resume after a bot restart.
  */
 async function runPromotionCampaign(sock, cmd) {
-    const { campaignId, template, mediaUrl, recipients = [], delayMs = 2000, generateCoupons = false, quietHours, requestedBy } = cmd;
+    const { campaignId, template, mediaUrl, recipients = [], delayMs = 2000, generateCoupons = false, quietHours, requestedBy, greeting = false, menuText = null, isTest = false } = cmd;
     if (!campaignId || !Array.isArray(recipients) || recipients.length === 0) {
         console.warn(`[Promo] Invalid campaign command: ${campaignId}`);
         return;
@@ -2265,7 +2389,7 @@ async function runPromotionCampaign(sock, cmd) {
     }
     const list = recipients.slice(0, 500);
 
-    console.log(`[Promo] ▶️ Campaign ${campaignId} starting/resuming (${list.length} recipients, ${delayMs}ms delay)`);
+    console.log(`[Promo] ▶️ Campaign ${campaignId} starting/resuming (${list.length} recipients, ${delayMs}ms delay${greeting ? ', greeting=on' : ''}${menuText ? ', menu=on' : ''})`);
 
     // Persist start audit
     try {
@@ -2303,6 +2427,13 @@ async function runPromotionCampaign(sock, cmd) {
 
     try {
         for (let i = startIndex; i < list.length; i++) {
+            // 0. Master dashboard toggle
+            if (!await isPromoEnabled()) {
+                console.warn(`[Promo] Promotional sending is OFF (dashboard toggle). Pausing ${campaignId}.`);
+                await db.ref(`bot/${OUTLET}/promotions/campaigns/${campaignId}`).update({ status: 'paused', pauseReason: 'promo-disabled' });
+                return;
+            }
+
             // 1. Kill-switch
             if (await isKillSwitchOn()) {
                 console.warn(`[Promo] Kill-switch engaged. Pausing ${campaignId}.`);
@@ -2328,15 +2459,33 @@ async function runPromotionCampaign(sock, cmd) {
             }
 
             // 5. Skip-check: opt-out, consent, JID validity
+            //    For a self-test the admin is sending to themselves, skip
+            //    all consent/optout checks (the admin knows what they're
+            //    doing) and send the raw template without personalization.
             const phone = list[i];
             const jid = formatJid(phone);
             if (!jid) { await logPromoSkip(campaignId, phone, 'invalid-jid'); failed++; continue; }
-            if (await isOptedOut(phone)) { await logPromoSkip(campaignId, phone, 'opted-out'); continue; }
-            if (!await hasPromoConsent(phone)) { await logPromoSkip(campaignId, phone, 'no-consent'); continue; }
+            if (!isTest && await isOptedOut(phone)) { await logPromoSkip(campaignId, phone, 'opted-out'); continue; }
+            if (!isTest && !await hasPromoConsent(phone)) { await logPromoSkip(campaignId, phone, 'no-consent'); continue; }
+            if (isTest) console.log(`[Promo] Test: bypassing consent/optout for ${phone}`);
 
             // 6. Personalize
-            const couponCode = generateCoupons ? generateCouponCode() : null;
-            const text = await personalizeTemplate(template, phone, campaignId, couponCode);
+            //    For test campaigns, skip personalization — send the raw
+            //    template exactly as the admin typed it.
+            const couponCode = (generateCoupons && !isTest) ? generateCouponCode() : null;
+            let text = isTest ? template : await personalizeTemplate(template, phone, campaignId, couponCode);
+            if (greeting && !isTest) {
+                // Prepend a friendly greeting with the customer's name (if not already in the template)
+                try {
+                    const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+                    const cust = await getData(`customers/${cleanPhone}`, OUTLET);
+                    const name = cust?.name || 'there';
+                    if (!/^hi\s+/i.test(text)) text = `Hi ${name},\n\n${text}`;
+                } catch (_) {
+                    if (!/^hi\s+/i.test(text)) text = `Hi there,\n\n${text}`;
+                }
+            }
+            if (isTest) console.log(`[Promo] Test: sending raw template to ${jid}`);
 
             // 7. Send
             const result = await sendWithRetry(sock, jid, text, mediaUrl, 2);
@@ -2351,6 +2500,15 @@ async function runPromotionCampaign(sock, cmd) {
                         });
                     } catch (_) {}
                 }
+                // 7b. Send menu footer as a 2nd message (if requested)
+                if (menuText && String(menuText).trim().length > 0) {
+                    try {
+                        await new Promise(r => setTimeout(r, Math.min(1500, delayMs)));
+                        await sock.sendMessage(jid, { text: String(menuText) });
+                    } catch (e) {
+                        console.warn(`[Promo] Menu footer failed for ${jid}:`, e.message || e);
+                    }
+                }
             } else {
                 failed++;
             }
@@ -2362,12 +2520,14 @@ async function runPromotionCampaign(sock, cmd) {
                 });
             }
 
-            // 9. Human pacing
-            if ((i + 1) % PROMO_PAUSE_EVERY === 0) {
-                console.log(`[Promo] Pacing pause (${PROMO_PAUSE_MS/1000}s) after ${i+1} sends`);
-                await new Promise(r => setTimeout(r, PROMO_PAUSE_MS));
-            } else {
-                await new Promise(r => setTimeout(r, delayMs));
+            // 9. Human pacing (skip for test campaigns — no rate-limiting needed)
+            if (!isTest) {
+                if ((i + 1) % PROMO_PAUSE_EVERY === 0) {
+                    console.log(`[Promo] Pacing pause (${PROMO_PAUSE_MS/1000}s) after ${i+1} sends`);
+                    await new Promise(r => setTimeout(r, PROMO_PAUSE_MS));
+                } else {
+                    await new Promise(r => setTimeout(r, delayMs));
+                }
             }
         }
 
@@ -2404,6 +2564,8 @@ async function resumeStuckPromotions(sock) {
                 campaignId: id,
                 template: c.template,
                 mediaUrl: c.mediaUrl || null,
+                greeting: c.greeting === true,
+                menuText: c.menuText || null,
                 recipients: c.recipients || [],
                 delayMs: c.delayMs || 2000,
                 generateCoupons: !!c.generateCoupons,
@@ -2449,6 +2611,8 @@ async function pickupScheduledPromotions(sock) {
                 campaignId: id,
                 template: c.template,
                 mediaUrl: c.mediaUrl || null,
+                greeting: c.greeting === true,
+                menuText: c.menuText || null,
                 recipients: c.recipients || [],
                 delayMs: c.delayMs || 2000,
                 generateCoupons: !!c.generateCoupons,

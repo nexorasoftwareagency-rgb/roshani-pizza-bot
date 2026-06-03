@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -18,29 +18,54 @@
         if (sessionStorage.getItem('adminIsLoggedIn') === 'true') {
             document.documentElement.classList.add('seamless-mode');
         }
-        
+
         // Version Enforcement & Cache Cleanup
-        const ADMIN_VERSION = '4.11.1';
-        if (localStorage.getItem('admin_app_version') !== ADMIN_VERSION) {
+        // - First time on this version: just record, no reload.
+        // - Coming from a previous version: SHOW a banner asking the user to refresh.
+        //   We deliberately do NOT auto-reload, because a stuck service worker can
+        //   cause reload loops on flaky networks. The user clicks Refresh to recover.
+        const ADMIN_VERSION = '4.14.8';
+        const _storedVersion = localStorage.getItem('admin_app_version');
+        if (!_storedVersion) {
+            // Brand new install â€” just record the version
             localStorage.setItem('admin_app_version', ADMIN_VERSION);
-            // On version mismatch, purge stale SW caches so users get fresh assets
-            (async () => {
-                try {
-                    if ('serviceWorker' in navigator) {
-                        const regs = await navigator.serviceWorker.getRegistrations();
-                        await Promise.all(regs.map(r => r.unregister()));
-                    }
-                    if ('caches' in window) {
-                        const keys = await caches.keys();
-                        await Promise.all(
-                            keys.filter(k => k.includes('roshani-erp') || k.includes('pizza-erp'))
-                                .map(k => caches.delete(k))
-                        );
-                    }
-                } catch (e) {
-                    console.warn('[Version] Cleanup failed:', e);
+        } else if (_storedVersion !== ADMIN_VERSION) {
+            // Update on this version; banner is the recovery path
+            localStorage.setItem('admin_app_version', ADMIN_VERSION);
+            window.addEventListener('DOMContentLoaded', () => {
+                const banner = document.getElementById('versionBanner');
+                const refreshBtn = document.getElementById('versionBannerRefresh');
+                const dismissBtn = document.getElementById('versionBannerDismiss');
+                if (banner) banner.classList.remove('hidden');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', async () => {
+                        refreshBtn.disabled = true;
+                        refreshBtn.textContent = 'Refreshingâ€¦';
+                        try {
+                            if ('serviceWorker' in navigator) {
+                                const regs = await navigator.serviceWorker.getRegistrations();
+                                await Promise.all(regs.map(r => r.unregister()));
+                            }
+                            if ('caches' in window) {
+                                const keys = await caches.keys();
+                                await Promise.all(
+                                    keys.filter(k => k.includes('roshani-erp') || k.includes('pizza-erp'))
+                                        .map(k => caches.delete(k))
+                                );
+                            }
+                        } catch (e) {
+                            console.warn('[Version] Cleanup failed:', e);
+                        }
+                        const cleanUrl = window.location.origin + window.location.pathname;
+                        window.location.replace(`${cleanUrl}?v=${Date.now()}&sync=${Math.random().toString(36).substring(7)}`);
+                    }, { once: true });
                 }
-            })();
+                if (dismissBtn) {
+                    dismissBtn.addEventListener('click', () => {
+                        banner.classList.add('hidden');
+                    }, { once: true });
+                }
+            });
         }
 
         // Suppress debug console.log/info in production (keep error/warn)
@@ -70,8 +95,8 @@
     <script src="branding.js?v=4.9.1"></script>
     <script src="firebase-config.js?v=4.9.1"></script>
 
-    <link rel="stylesheet" href="style.css?v=5.1.5.2">
-    <link rel="stylesheet" href="mobile-overrides.css?v=5.1.5.2">
+    <link rel="stylesheet" href="style.css?v=5.1.5.7">
+    <link rel="stylesheet" href="mobile-overrides.css?v=5.1.5.7">
     <link rel="manifest" href="manifest.json?v=3">
     <link rel="icon" type="image/jpeg" href="icon-erp-logo.jpeg">
     <link rel="apple-touch-icon" href="icon-erp-logo.jpeg">
@@ -91,6 +116,9 @@
     <!-- Leaflet Mapping -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+
+    <!-- Global bot-status listener (ES module, deferred — loads after firebase.js is ready) -->
+    <script type="module" src="js/bot-status.js?v=4.14.8"></script>
 </head>
 
 <body>
@@ -98,7 +126,17 @@
     <input type="file" id="inventoryImportInput" accept=".csv,text/csv" style="display:none" aria-hidden="true">
     <div id="connectionBanner" class="connection-banner hidden" role="alert" aria-live="polite">
         <i data-lucide="wifi-off" class="icon-16"></i>
-        <span>No internet connection — changes may not save</span>
+        <span>No internet connection â€” changes may not save</span>
+    </div>
+
+    <!-- Self-healing version banner (shown when stored version mismatches ADMIN_VERSION) -->
+    <div id="versionBanner" class="version-banner hidden" role="alert" aria-live="assertive">
+        <span class="version-banner-icon"><i data-lucide="alert-triangle" class="icon-16"></i></span>
+        <span class="version-banner-text">A new version is available â€” click Refresh to update.</span>
+        <button id="versionBannerRefresh" class="version-banner-btn" type="button" title="Unregister service worker, clear caches, and reload">
+            <i data-lucide="refresh-cw" class="icon-14"></i> Refresh
+        </button>
+        <button id="versionBannerDismiss" class="version-banner-dismiss" type="button" aria-label="Dismiss" title="Dismiss (you can refresh from sidebar Nuclear Refresh)">Ã—</button>
     </div>
     
     <!-- Initial Loader (Premium v4) -->
@@ -142,7 +180,7 @@
                         <i data-lucide="lock" class="icon-14"></i> Secret Key
                     </label>
                     <div class="input-wrapper-v4">
-                        <input type="password" id="loginPassword" class="login-input-v4" required placeholder="••••••••" autocomplete="current-password">
+                        <input type="password" id="loginPassword" class="login-input-v4" required placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password">
                         <div class="input-stitch-v4"></div>
                     </div>
                 </div>
@@ -219,6 +257,18 @@
                     </button>
                 </li>
 
+                <li class="nav-group-label">Marketing</li>
+                <li id="menu-promotions" title="Compose & Send Promotional Campaigns">
+                    <button data-action="switchTab" data-tab="promotions" class="nav-btn">
+                        <i data-lucide="megaphone"></i> <span>Promotions</span>
+                    </button>
+                </li>
+                <li id="menu-discounts" title="Schedule & Manage Discounts">
+                    <button data-action="switchTab" data-tab="discounts" class="nav-btn">
+                        <i data-lucide="percent"></i> <span>Discounts</span>
+                    </button>
+                </li>
+
                 <li class="nav-group-label">Catalogue</li>
                 <li id="menu-menu" title="Manage Product Menu and Items">
                     <button data-action="switchTab" data-tab="menu" class="nav-btn">
@@ -284,13 +334,6 @@
                 <li id="menu-payments" title="View Payment Transactions">
                     <button data-action="switchTab" data-tab="payments" class="nav-btn">
                         <i data-lucide="wallet"></i> <span>Payments</span>
-                    </button>
-                </li>
-
-                <li class="nav-group-label">Marketing</li>
-                <li id="menu-promotions" title="Compose & Send Promotional Campaigns">
-                    <button data-action="switchTab" data-tab="promotions" class="nav-btn">
-                        <i data-lucide="megaphone"></i> <span>Promotions</span>
                     </button>
                 </li>
 
@@ -390,6 +433,22 @@
             
             <!-- DASHBOARD TAB -->
             <div id="tab-dashboard" class="tab-content">
+                <!-- PROMOTIONS KILL-SWITCH WIDGET -->
+                <div id="promoKillWidget" class="panel mt-8 mb-16" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; border-radius:10px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <i data-lucide="megaphone" class="icon-18"></i>
+                        <div>
+                            <div style="font-weight:600;" data-i18n="promo.widget.title">Promotional messages</div>
+                            <div id="promoKillWidgetStatus" class="text-muted-small" data-i18n="promo.widget.on">Sending is ON â€” all campaigns running normally.</div>
+                            <div id="promoKillWidgetBotStatus" class="text-muted-small"></div>
+                        </div>
+                    </div>
+                    <label class="promo-switch" style="position:relative; display:inline-block; width:52px; height:28px;">
+                        <input type="checkbox" id="promoKillWidgetToggle" style="opacity:0; width:0; height:0;">
+                        <span class="promo-slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#22c55e; transition:0.2s; border-radius:28px;"></span>
+                    </label>
+                </div>
+
                 <div class="kpi-row mb-24">
                     <div class="kpi-card-v4 success">
                         <div class="icon-wrap success"><i data-lucide="package"></i></div>
@@ -410,7 +469,7 @@
                     <div class="kpi-card-v4 info">
                         <div class="icon-wrap info"><i data-lucide="indian-rupee"></i></div>
                         <div class="info-wrap">
-                            <span class="val" id="statRevenue">₹0</span>
+                            <span class="val" id="statRevenue">â‚¹0</span>
                             <span class="lbl">Total Revenue</span>
                         </div>
                         <div class="trend-badge" id="badgeRevenue">Today</div>
@@ -665,14 +724,14 @@
 
                                 <button id="btnAddCategory" data-action="addCategory"
                                     class="btn-primary w-full mt-20 p-12 br-12 font-weight-700"
-                                    title="Save new category">🚀 Add Category</button>
+                                    title="Save new category">ðŸš€ Add Category</button>
                             </div>
                         </div>
 
                         <!-- Right: Category List -->
                         <div class="flex-col">
                             <div class="glass-card p-20">
-                                <h4 class="mb-14">📂 Active Categories</h4>
+                                <h4 class="mb-14">ðŸ“‚ Active Categories</h4>
                                 <div id="categoryList" class="category-grid">
                                     <div class="skeleton-row-flex" style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1px solid var(--glass-border);margin-bottom:10px"><div class="skeleton" style="width:48px;height:48px;border-radius:12px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div class="skeleton skeleton-text" style="width:50%;margin:0"></div><div class="skeleton skeleton-text" style="width:30%;margin:0"></div></div></div>
                                     <div class="skeleton-row-flex" style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1px solid var(--glass-border);margin-bottom:10px"><div class="skeleton" style="width:48px;height:48px;border-radius:12px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div class="skeleton skeleton-text" style="width:40%;margin:0"></div><div class="skeleton skeleton-text" style="width:25%;margin:0"></div></div></div>
@@ -721,7 +780,7 @@
                     <div class="kpi-card-v4">
                         <div class="icon-wrap info"><i data-lucide="wallet"></i></div>
                         <div class="info-wrap">
-                            <span class="val" id="rider-stat-earnings">₹0</span>
+                            <span class="val" id="rider-stat-earnings">â‚¹0</span>
                             <span class="lbl">Today's Earnings</span>
                         </div>
                         <div class="trend-badge trend-up"><i data-lucide="trending-up"></i> Wallet</div>
@@ -791,10 +850,10 @@
                             <div id="trackerStats" class="notif-time-badge-premium">
                                 <span class="tracker-stat-dot tracker-stat-online"></span>
                                 <span id="trackerOnlineCount">0</span> Online
-                                <span class="tracker-stat-sep">·</span>
+                                <span class="tracker-stat-sep">Â·</span>
                                 <span class="tracker-stat-dot tracker-stat-delivery"></span>
                                 <span id="trackerDeliveryCount">0</span> On Delivery
-                                <span class="tracker-stat-sep">·</span>
+                                <span class="tracker-stat-sep">Â·</span>
                                 <span class="tracker-stat-dot tracker-stat-offline"></span>
                                 <span id="trackerOfflineCount">0</span> Offline
                             </div>
@@ -805,7 +864,7 @@
                         </div>
                     </div>
                     <div id="trackerLastUpdated" class="tracker-last-updated">
-                        <i data-lucide="refresh-cw"></i> Live · Last update <span id="trackerLastUpdateTime">—</span>
+                        <i data-lucide="refresh-cw"></i> Live Â· Last update <span id="trackerLastUpdateTime">â€”</span>
                     </div>
                     <div class="tracker-layout">
                         <div class="tracker-sidebar" id="trackerSidebar">
@@ -843,15 +902,15 @@
                 <div class="panel">
                     <div class="panel-header">
                         <div class="flex-col">
-                            <h3>🚨 Lost Sales (Abandoned Checkout)</h3>
+                            <h3>ðŸš¨ Lost Sales (Abandoned Checkout)</h3>
                             <p class="panel-subtitle">Insights into customers who dropped off at the finish line</p>
                         </div>
                         <div class="flex-row flex-gap-12 flex-center">
                             <div class="notif-time-badge-premium revenue-badge-lost" id="lostSalesTotalRevenue">
                                 <small class="revenue-badge-sub">Potential Revenue Lost</small>
-                                <span class="revenue-badge-val">₹0</span>
+                                <span class="revenue-badge-val">â‚¹0</span>
                             </div>
-                            <button id="btnClearLostSales" class="btn-secondary btn-lost-sales-clear">🗑️ Clear
+                            <button id="btnClearLostSales" class="btn-secondary btn-lost-sales-clear">ðŸ—‘ï¸ Clear
                                 Logs</button>
                         </div>
                     </div>
@@ -872,7 +931,7 @@
                                     <tr>
                                         <td colspan="5" class="text-center p-60 text-muted">
                                             <div class="loading-spinner mb-14 m-auto"></div>
-                                            🔄 Collecting abandonment records...
+                                            ðŸ”„ Collecting abandonment records...
                                         </td>
                                     </tr>
                                 </tbody>
@@ -978,8 +1037,8 @@
                                         </div>
                                         <select id="settingShopStatus" class="form-input" title="Shop Status Override">
                                             <option value="AUTO"><i data-lucide="clock"></i> Auto (Time Based)</option>
-                                            <option value="FORCE_OPEN"><i data-lucide="check-circle"></i> Force Open — Accept Orders</option>
-                                            <option value="FORCE_CLOSED"><i data-lucide="moon"></i> Force Closed — Reject Orders</option>
+                                            <option value="FORCE_OPEN"><i data-lucide="check-circle"></i> Force Open â€” Accept Orders</option>
+                                            <option value="FORCE_CLOSED"><i data-lucide="moon"></i> Force Closed â€” Reject Orders</option>
                                         </select>
                                         <p class="text-secondary-small mt-6" id="outletStatusHint">Status will follow
                                             your opening/closing hours.</p>
@@ -1159,7 +1218,7 @@
                         </div>
                         <!-- Store Coordinates -->
                         <div class="glass-card p-20">
-                            <h4 class="mb-14">📍 Store Location</h4>
+                            <h4 class="mb-14">ðŸ“ Store Location</h4>
                             <p class="text-secondary-small mb-14">Used for distance-based delivery calculations</p>
 
                             <label class="form-label-small">Latitude</label>
@@ -1175,7 +1234,7 @@
 
                         <!-- Admin Notifications -->
                         <div class="glass-card p-20">
-                            <h4 class="mb-14">📲 Order Notifications</h4>
+                            <h4 class="mb-14">ðŸ“² Order Notifications</h4>
 
                             <div class="notification-setting-group mb-20">
                                 <h5 class="mb-8 text-muted-small text-upper ls-sm">WhatsApp Alerts</h5>
@@ -1223,7 +1282,7 @@
 
                         <!-- WhatsApp Bot Aesthetics & Promotions -->
                         <div class="glass-card p-20">
-                            <h4 class="mb-14">🤖 WhatsApp Bot Aesthetics & Promotions</h4>
+                            <h4 class="mb-14">ðŸ¤– WhatsApp Bot Aesthetics & Promotions</h4>
                             <p class="text-secondary-small mb-14">Upload status-specific images and update your social
                                 footprints.</p>
 
@@ -1233,7 +1292,7 @@
                             <div class="grid grid-cols-2 grid-gap-12 mb-20">
                                 <div
                                     class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
-                                    <label class="form-label-small mb-4">✅ Order Confirmed</label>
+                                    <label class="form-label-small mb-4">âœ… Order Confirmed</label>
                                     <img id="botImgConfirmedPreview"
                                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Confirmed"
                                         class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
@@ -1244,7 +1303,7 @@
                                 </div>
                                 <div
                                     class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
-                                    <label class="form-label-small mb-4">🍕 Ready</label>
+                                    <label class="form-label-small mb-4">ðŸ• Ready</label>
                                     <img id="botImgReadyPreview"
                                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Ready"
                                         class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
@@ -1256,7 +1315,7 @@
                                 </div>
                                 <div
                                     class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
-                                    <label class="form-label-small mb-4">🚚 Out for Delivery</label>
+                                    <label class="form-label-small mb-4">ðŸšš Out for Delivery</label>
                                     <img id="botImgOutPreview"
                                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E"
                                         alt="Out for Delivery"
@@ -1269,7 +1328,7 @@
                                 </div>
                                 <div
                                     class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
-                                    <label class="form-label-small mb-4">🌟 Delivered (Thank You)</label>
+                                    <label class="form-label-small mb-4">ðŸŒŸ Delivered (Thank You)</label>
                                     <img id="botImgDeliveredPreview"
                                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Delivered"
                                         class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
@@ -1280,7 +1339,7 @@
                                 </div>
                                 <div
                                     class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
-                                    <label class="form-label-small mb-4">⭐ Feedback / Rating</label>
+                                    <label class="form-label-small mb-4">â­ Feedback / Rating</label>
                                     <img id="botImgFeedbackPreview"
                                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23f36b21' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Feedback"
                                         class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
@@ -1334,14 +1393,14 @@
                                     <h5 class="migration-title green m-0">Image Storage Migration</h5>
                                 </div>
                                 <p class="migration-text text-muted-small mb-14">Converts all Firebase Storage images to Base64 text in the database. Run this to finalize the move to text-only storage.</p>
-                                <button id="btnRunImageMigration" data-action="runImageMigration" class="btn-action-green btn-small w-full" title="Start image storage migration">⚡ Migrate Images</button>
+                                <button id="btnRunImageMigration" data-action="runImageMigration" class="btn-action-green btn-small w-full" title="Start image storage migration">âš¡ Migrate Images</button>
                             </div>
                         </div>
 
                         <!-- Delivery Fees -->
                         <div class="glass-card p-20">
                             <div class="flex-between flex-center mb-14">
-                                <h4>🚚 Delivery Fee Tiers</h4>
+                                <h4>ðŸšš Delivery Fee Tiers</h4>
                                 <button id="btnAddFeeSlab" data-action="addFeeSlab" class="btn-secondary btn-small"
                                     title="Add New Delivery Distance Tier">+ Add Tier</button>
                             </div>
@@ -1352,7 +1411,7 @@
                                     <thead>
                                         <tr>
                                             <th>Up to (KM)</th>
-                                            <th>Charge (₹)</th>
+                                            <th>Charge (â‚¹)</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -1425,7 +1484,7 @@
                         <div class="kpi-card-v4 success">
                             <div class="icon-wrap success"><i data-lucide="indian-rupee"></i></div>
                             <div class="info-wrap">
-                                <span class="val" id="reportRevenue">₹0</span>
+                                <span class="val" id="reportRevenue">â‚¹0</span>
                                 <span class="lbl">Total Revenue</span>
                             </div>
                         </div>
@@ -1439,7 +1498,7 @@
                         <div class="kpi-card-v4 orange">
                             <div class="icon-wrap orange"><i data-lucide="trending-up"></i></div>
                             <div class="info-wrap">
-                                <span class="val" id="reportAvg">₹0</span>
+                                <span class="val" id="reportAvg">â‚¹0</span>
                                 <span class="lbl">Avg. Ticket Size</span>
                             </div>
                         </div>
@@ -1460,9 +1519,9 @@
                                     <h4 class="panel-title m-0">Detailed Sales Data</h4>
                                     <div class="flex-row flex-gap-10">
                                         <button id="btnDownloadExcel" class="btn-secondary btn-small excel-btn"
-                                            title="Export current sales report to Excel">📥 Excel</button>
+                                            title="Export current sales report to Excel">ðŸ“¥ Excel</button>
                                         <button id="btnDownloadPDF" class="btn-secondary btn-small pdf-btn"
-                                            title="Export current sales report to PDF">📥 PDF</button>
+                                            title="Export current sales report to PDF">ðŸ“¥ PDF</button>
                                     </div>
                                 </div>
                                 <div class="scroll-x">
@@ -1474,7 +1533,7 @@
                                                 <th>Order Type</th>
                                                 <th>Payment</th>
                                                 <th>Items Summary</th>
-                                                <th class="text-right">Total (₹)</th>
+                                                <th class="text-right">Total (â‚¹)</th>
                                             </tr>
                                         </thead>
                                         <tbody id="reportTableBody">
@@ -1524,14 +1583,14 @@
                     <div class="kpi-card-v4 info">
                         <div class="icon-wrap info"><i data-lucide="wallet"></i></div>
                         <div class="info-wrap">
-                            <span class="val" id="riderStatEarnings">₹0</span>
+                            <span class="val" id="riderStatEarnings">â‚¹0</span>
                             <span class="lbl">Total Earnings</span>
                         </div>
                     </div>
                     <div class="kpi-card-v4 orange">
                         <div class="icon-wrap orange"><i data-lucide="banknote"></i></div>
                         <div class="info-wrap">
-                            <span class="val" id="riderStatPendingCash">₹0</span>
+                            <span class="val" id="riderStatPendingCash">â‚¹0</span>
                             <span class="lbl">Pending Cash</span>
                         </div>
                     </div>
@@ -1564,8 +1623,8 @@
                             <div class="flex-row justify-between flex-center mb-20">
                                 <h4 class="panel-title m-0">Delivery Performance History</h4>
                                 <div class="flex-row flex-gap-10">
-                                    <button id="btnRiderExportExcel" class="btn-secondary btn-small">📥 Excel</button>
-                                    <button id="btnRiderExportPDF" class="btn-secondary btn-small">📥 PDF</button>
+                                    <button id="btnRiderExportExcel" class="btn-secondary btn-small">ðŸ“¥ Excel</button>
+                                    <button id="btnRiderExportPDF" class="btn-secondary btn-small">ðŸ“¥ PDF</button>
                                 </div>
                             </div>
                             <div class="scroll-x">
@@ -1576,7 +1635,7 @@
                                             <th>Order ID</th>
                                             <th>Customer</th>
                                             <th>Delivery Time</th>
-                                            <th class="text-right">Earnings (₹)</th>
+                                            <th class="text-right">Earnings (â‚¹)</th>
                                         </tr>
                                     </thead>
                                     <tbody id="riderAnalyticsTableBody">
@@ -1611,7 +1670,7 @@
                 <div class="panel">
                     <div class="panel-header">
                         <div class="flex-col">
-                            <h3 class="panel-title">📦 Inventory Management</h3>
+                            <h3 class="panel-title">ðŸ“¦ Inventory Management</h3>
                             <p class="panel-subtitle">High-speed product stock tracking & alerts</p>
                         </div>
                         <div class="flex-row flex-gap-10">
@@ -1722,7 +1781,7 @@
             <!-- PAYMENTS TAB -->
             <div id="tab-payments" class="tab-content hidden">
                 <div class="panel">
-                    <h3>💳 Payment Tracking</h3>
+                    <h3>ðŸ’³ Payment Tracking</h3>
                     <div class="scroll-x">
                         <table class="premium-table-v4">
                             <thead>
@@ -1730,7 +1789,7 @@
                                     <th>Transaction Date</th>
                                     <th>Customer Detail</th>
                                     <th>Method</th>
-                                    <th>Amount (₹)</th>
+                                    <th>Amount (â‚¹)</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -1748,7 +1807,7 @@
             <div id="tab-feedback" class="tab-content hidden">
                 <div class="panel">
                     <div class="panel-header">
-                        <h3 class="panel-title">⭐ Customer Feedback & Ratings</h3>
+                        <h3 class="panel-title">â­ Customer Feedback & Ratings</h3>
                         <div class="text-muted-small">Real-time satisfaction monitor</div>
                     </div>
                     <div class="scroll-x mt-20">
@@ -1784,7 +1843,7 @@
                                     <button data-tab="dashboard" data-action="switchTab" class="btn-text mobile-only"
                                         title="Back to Dashboard" aria-label="Back to Dashboard"><i
                                             data-lucide="arrow-left"></i></button>
-                                    <h3 class="panel-title">🍽️ Select Items</h3>
+                                    <h3 class="panel-title">ðŸ½ï¸ Select Items</h3>
                                 </div>
                                 <input type="text" id="walkinDishSearch" placeholder="Search dishes..."
                                     class="search-input-group flex-1" aria-label="Search POS dishes">
@@ -1806,7 +1865,7 @@
                     <div class="walkin-cart">
                         <div class="panel sticky-cart">
                             <div class="flex-between flex-center mb-14">
-                                <h3 class="panel-title mb-0">🧾 Order Summary</h3>
+                                <h3 class="panel-title mb-0">ðŸ§¾ Order Summary</h3>
                                 <button id="btnClearWalkinCart" data-action="clearWalkinCart"
                                     class="btn-text-danger small-btn">Clear All</button>
                             </div>
@@ -1821,25 +1880,34 @@
                             <div class="divider-top mb-14">
                                 <div class="flex-between mb-8">
                                     <span class="text-muted-small font-800">Subtotal</span>
-                                    <span id="walkinSubtotal" class="font-800">₹0</span>
+                                    <span id="walkinSubtotal" class="font-800">â‚¹0</span>
                                 </div>
                                 <div id="walkinDiscountRow" class="flex-between mb-8 hidden">
                                     <span class="text-danger font-800">Discount Allotted</span>
-                                    <span id="walkinDiscountVal" class="text-danger font-800">-₹0</span>
+                                    <span id="walkinDiscountVal" class="text-danger font-800">-â‚¹0</span>
                                 </div>
+                                <div class="flex-row flex-center flex-gap-8 mb-8 walkin-coupon-row">
+                                    <input type="text" id="walkinCouponCode" placeholder="Coupon code (optional)"
+                                        class="form-input mb-0 flex-1 walkin-coupon-input" title="Apply auto-discount or coupon">
+                                    <button type="button" id="walkinCouponApplyBtn" class="btn-walkin-coupon"
+                                        data-action="applyWalkinCoupon">Apply</button>
+                                    <button type="button" id="walkinCouponClearBtn" class="btn-walkin-coupon-clear hidden"
+                                        data-action="clearWalkinCoupon">Clear</button>
+                                </div>
+                                <div id="walkinCouponHint" class="text-muted-small fs-11 mb-8 hidden walkin-coupon-hint"></div>
                                 <div class="flex-between flex-center mb-8">
                                     <span class="text-muted-small font-800">Discount</span>
                                     <div class="flex-row flex-center flex-gap-10">
                                         <div class="discount-presets" id="discountPresets">
                                             <button class="chip btn-discount-preset" data-action="applyWalkinDiscount"
-                                                data-amount="50">₹50</button>
+                                                data-amount="50">â‚¹50</button>
                                             <button class="chip btn-discount-preset" data-action="applyWalkinDiscount"
-                                                data-amount="100">₹100</button>
+                                                data-amount="100">â‚¹100</button>
                                             <button class="chip btn-discount-preset" data-action="applyWalkinDiscount"
                                                 data-pct="10">10%</button>
                                         </div>
                                         <div class="flex-row flex-center">
-                                            <span class="text-muted-small mr-4">?</span>
+                                            <i data-lucide="help-circle" class="icon-14" title="Enter custom discount amount"></i>
                                             <input type="number" id="walkinDiscount" value="0" min="0"
                                                 class="form-input mb-0 input-discount" title="Discount Amount">
                                         </div>
@@ -1847,7 +1915,7 @@
                                 </div>
                                 <div class="flex-between mt-20 checkout-total">
                                     <span>Total</span>
-                                    <span id="walkinTotal">₹0</span>
+                                    <span id="walkinTotal">â‚¹0</span>
                                 </div>
                             </div>
 
@@ -1873,21 +1941,241 @@
                                 <label class="form-label-small text-muted mb-8 d-block">Payment Method</label>
                                 <div class="flex-row flex-gap-10">
                                     <button class="walkin-pay-btn active" data-action="selectWalkinPayment"
-                                        data-method="Cash" title="Pay by Cash">💵 Cash</button>
+                                        data-method="Cash" title="Pay by Cash">ðŸ’µ Cash</button>
                                     <button class="walkin-pay-btn" data-action="selectWalkinPayment" data-method="UPI"
-                                        title="Pay by UPI / Scanner">📱 UPI</button>
+                                        title="Pay by UPI / Scanner">ðŸ“± UPI</button>
                                 </div>
                             </div>
 
                             <!-- Submit -->
                             <button id="walkinSubmitBtn" data-action="submitWalkinSale"
                                 class="btn-primary w-full btn-checkout">
-                                ✅ Record Sale
+                                âœ… Record Sale
                             </button>
                         </div>
                     </div>
                 </div>
 
+            </div>
+            <!-- PROMOTIONS TAB (must live inside .main, alongside other tab-content) -->
+            <div id="tab-promotions" class="tab-content hidden">
+                <div id="promotionsOfflineBanner" class="offline-banner hidden" role="alert" aria-live="polite">
+                    <i data-lucide="wifi-off" class="icon-16"></i>
+                    <span data-i18n="promo.offlineBanner">Bot is offline â€” campaigns cannot start. Messages already queued will resume automatically once the bot reconnects.</span>
+                </div>
+        
+                <div class="promo-page-header">
+                    <div>
+                        <h2 class="panel-title mb-0" data-i18n="promo.title">Promotional Campaigns</h2>
+                        <p class="text-muted-small mt-4" data-i18n="promo.subtitle">Compose, schedule and monitor WhatsApp campaigns to your customers.</p>
+                    </div>
+                    <button class="btn-text" data-action="openPromotionsGuide" title="How to use the Promotions page" aria-label="How to use the Promotions page">
+                        <i data-lucide="help-circle"></i> <span data-i18n="promo.howToUse">How to use</span>
+                    </button>
+                </div>
+        
+                <div class="promo-mode-tabs" role="tablist">
+                    <button class="promo-mode-tab active" role="tab" data-mode="now" data-i18n="promo.tab.sendNow">Send Now</button>
+                    <button class="promo-mode-tab" role="tab" data-mode="schedule" data-i18n="promo.tab.schedule">Schedule</button>
+                    <button class="promo-mode-tab" role="tab" data-mode="active" data-i18n="promo.tab.active">Active</button>
+                    <button class="promo-mode-tab" role="tab" data-mode="history" data-i18n="promo.tab.history">History</button>
+                </div>
+        
+                <!-- COMPOSE PANE -->
+                <div id="promoComposePane" class="panel mt-16">
+                    <h3 class="panel-title" data-i18n="promo.compose.heading">1. Compose your message</h3>
+        
+                    <div class="promo-options-grid">
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="promoGreeting" checked> <span data-i18n="promo.compose.greeting">Start with "Hi {name}," greeting</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="promoAttachMenu"> <span data-i18n="promo.compose.attachMenu">Attach menu footer (sent as a 2nd message)</span>
+                            </label>
+                        </div>
+                    </div>
+        
+                    <div class="form-group">
+                        <label for="promoTemplate" data-i18n="promo.compose.template">Message template</label>
+                        <textarea id="promoTemplate" rows="6" class="search-input-group" maxlength="1500"
+                            placeholder="Hello {name}! ðŸ• Try our new Margherita â€” flat 20% off today only. Use code {couponCode} at checkout."
+                            data-i18n-placeholder="promo.compose.templatePlaceholder"
+                            aria-label="Message template"></textarea>
+                        <div class="flex-between mt-4">
+                            <span class="text-muted-small" data-i18n="promo.compose.tokensHint">Tokens: {name} {phone} {lastOrderDate} {storeName} {couponCode}</span>
+                            <span id="promoCharCount" class="text-muted-small">0 / 1500</span>
+                        </div>
+                    </div>
+        
+                    <div id="promoMenuBox" class="form-group hidden">
+                        <label for="promoMenuText" data-i18n="promo.compose.menuText">Menu footer (sent in a follow-up message when "Attach menu" is on)</label>
+                        <textarea id="promoMenuText" rows="6" class="search-input-group" maxlength="1200"
+                            placeholder="ðŸ• *Our Bestsellers* â€” Margherita â‚¹199, Farmhouse â‚¹299, Veggie Supreme â‚¹349&#10;ðŸ¥¤ *Drinks* â€” Coke â‚¹40, Lime Soda â‚¹60"
+                            aria-label="Menu footer text"></textarea>
+                        <span class="text-muted-small" data-i18n="promo.compose.menuHint">Tip: keep it short â€” this becomes a separate WhatsApp message.</span>
+                    </div>
+        
+                    <div class="form-group">
+                        <label data-i18n="promo.compose.media">Attach image (optional)</label>
+                        <div class="flex-row flex-gap-10 flex-center flex-wrap-mobile">
+                            <input type="file" id="promoMediaInput" accept="image/*" class="hidden" aria-hidden="true">
+                            <button class="btn-secondary" data-action="pickPromoMedia">
+                                <i data-lucide="image"></i> <span data-i18n="promo.compose.chooseImage">Choose Image</span>
+                            </button>
+                            <div id="promoMediaPreview" class="promo-media-preview hidden">
+                                <img id="promoMediaImg" alt="Selected image preview">
+                                <button class="btn-text text-danger" data-action="clearPromoMedia" aria-label="Remove image">
+                                    <i data-lucide="x"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <h3 class="panel-title mt-24" data-i18n="promo.recipients.heading">2. Choose recipients</h3>
+                    <div class="form-group">
+                        <label for="promoRecipientFilter" data-i18n="promo.recipients.filter">Audience</label>
+                        <select id="promoRecipientFilter" class="search-input-group" aria-label="Recipient audience">
+                            <option value="all_customers" data-i18n="promo.recipients.all">All customers with promotional consent</option>
+                            <option value="recent_30d" data-i18n="promo.recipients.recent30">Active in last 30 days</option>
+                            <option value="upload" data-i18n="promo.recipients.upload">Custom list (Excel/CSV upload)</option>
+                        </select>
+                    </div>
+        
+                    <div id="promoCsvBox" class="form-group hidden">
+                        <label for="promoCsvInput" data-i18n="promo.recipients.csvLabel">Upload Excel (.xlsx) or CSV â€” one phone per row, header optional. Auto-detects the phone column.</label>
+                        <div class="flex-row flex-gap-10 flex-center flex-wrap-mobile">
+                            <input type="file" id="promoCsvInput" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" class="hidden" aria-hidden="true">
+                            <button class="btn-secondary" data-action="pickPromoCsv">
+                                <i data-lucide="file-spreadsheet"></i> <span data-i18n="promo.recipients.chooseCsv">Choose Excel/CSV</span>
+                            </button>
+                            <button class="btn-secondary" data-action="downloadPromoCsv" title="Download sample CSV template">
+                                <i data-lucide="download"></i> <span>Sample CSV</span>
+                            </button>
+                            <button class="btn-secondary" data-action="downloadPromoXlsx" title="Download sample XLSX template">
+                                <i data-lucide="file-spreadsheet"></i> <span>Sample XLSX</span>
+                            </button>
+                            <span id="promoCsvName" class="text-muted-small">â€”</span>
+                            <span id="promoCsvCount" class="text-muted-small"></span>
+                        </div>
+                    </div>
+        
+                    <div class="flex-between flex-center flex-wrap-mobile mt-8">
+                        <span class="text-muted-small">
+                            <strong id="promoRecipientCount">0</strong> <span data-i18n="promo.recipients.count">recipients selected</span>
+                            <span id="promoRecipientCap" class="text-warning ml-8 hidden" data-i18n="promo.recipients.capWarn">Capped at 500</span>
+                        </span>
+                        <span class="text-muted-small" data-i18n="promo.recipients.consentNote">Only customers with promotional consent will receive the message.</span>
+                    </div>
+        
+                    <h3 class="panel-title mt-24" data-i18n="promo.options.heading">3. Delivery options</h3>
+                    <div class="promo-options-grid">
+                        <div class="form-group">
+                            <label for="promoDelay" data-i18n="promo.options.delay">Delay between sends (seconds)</label>
+                            <input type="number" id="promoDelay" min="1" max="30" step="1" value="2" class="search-input-group" aria-label="Delay between sends">
+                            <span class="text-muted-small" data-i18n="promo.options.delayHint">Default 2s. A 30s pause happens automatically every 50 sends.</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="promoGenerateCoupons"> <span data-i18n="promo.options.coupons">Generate a unique coupon code per recipient</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label for="promoTestPhone" data-i18n="promo.options.testPhone">Send-test phone (your WhatsApp, 10 digits)</label>
+                            <input type="tel" id="promoTestPhone" maxlength="10" inputmode="numeric" pattern="[0-9]{10}" placeholder="9876543210" class="search-input-group" aria-label="Send-test phone number">
+                            <span class="text-muted-small" data-i18n="promo.options.testPhoneHint">Used by "Send test to me". Falls back to admins/{uid}/phone if blank.</span>
+                        </div>
+                    </div>
+        
+                    <!-- SCHEDULE SUB-PANE -->
+                    <div id="promoScheduleBox" class="form-group hidden mt-8">
+                        <label for="promoRunAt" data-i18n="promo.options.scheduleLabel">Run at</label>
+                        <input type="datetime-local" id="promoRunAt" class="search-input-group" aria-label="Schedule date and time">
+                        <div class="form-group mt-8">
+                            <label data-i18n="promo.options.quietHours">Quiet hours (no sends)</label>
+                            <div class="flex-row flex-gap-10 flex-center">
+                                <input type="number" id="promoQuietStart" min="0" max="23" placeholder="Start hour" class="search-input-group" aria-label="Quiet hours start">
+                                <span>â€”</span>
+                                <input type="number" id="promoQuietEnd" min="0" max="23" placeholder="End hour" class="search-input-group" aria-label="Quiet hours end">
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="promo-action-row mt-24 flex-row flex-gap-10 flex-wrap-mobile">
+                        <button class="btn-primary" id="btnPromoLaunch" data-action="launchPromoCampaign" disabled>
+                            <i data-lucide="send"></i> <span data-i18n="promo.actions.launch">Launch campaign</span>
+                        </button>
+                        <button class="btn-secondary" data-action="sendTestPromo">
+                            <i data-lucide="message-circle"></i> <span data-i18n="promo.actions.sendTest">Send test to me</span>
+                        </button>
+                        <button class="btn-secondary" data-action="previewPromo">
+                            <i data-lucide="eye"></i> <span data-i18n="promo.actions.preview">Preview</span>
+                        </button>
+                    </div>
+                </div>
+        
+                <!-- ACTIVE PANE -->
+                <div id="promoActivePane" class="panel mt-16 hidden">
+                    <div class="flex-between flex-center flex-wrap-mobile">
+                        <h3 class="panel-title mb-0" data-i18n="promo.active.heading">Active & recent campaigns</h3>
+                        <button class="btn-danger" data-action="killAllCampaigns" id="btnPromoKillAll" disabled>
+                            <i data-lucide="octagon"></i> <span data-i18n="promo.active.killAll">EMERGENCY STOP ALL</span>
+                        </button>
+                    </div>
+                    <div id="promoKillSwitchNote" class="text-muted-small mt-8" data-i18n="promo.active.killNote">When enabled, the bot will pause every active campaign before its next send.</div>
+                    <div id="promoCampaignList" class="promo-campaign-list mt-16">
+                        <p class="text-muted-small" data-i18n="promo.active.empty">No campaigns yet. Compose your first one above.</p>
+                    </div>
+                </div>
+        
+                <!-- HISTORY PANE -->
+                <div id="promoHistoryPane" class="panel mt-16 hidden">
+                    <div class="flex-between flex-center flex-wrap-mobile">
+                        <h3 class="panel-title mb-0" data-i18n="promo.history.heading">Campaign history</h3>
+                        <button class="btn-secondary" data-action="exportPromoCSV">
+                            <i data-lucide="download"></i> <span data-i18n="promo.history.export">Export last campaign log</span>
+                        </button>
+                    </div>
+                    <div id="promoHistoryList" class="promo-campaign-list mt-16">
+                        <p class="text-muted-small" data-i18n="promo.history.empty">Past campaigns will appear here once completed.</p>
+                    </div>
+                </div>
+            </div>
+        
+            <!-- DISCOUNTS TAB (inside .main, after tab-promotions) -->
+            <div id="tab-discounts" class="tab-content hidden">
+                <div class="promo-page-header">
+                    <div>
+                        <h2 class="panel-title mb-0" data-i18n="discount.title">Discount Control Panel</h2>
+                        <p class="text-muted-small mt-4" data-i18n="discount.subtitle">Schedule time-windowed discounts, new-customer offers, and coupon codes. Auto-applies at POS and WhatsApp checkout.</p>
+                    </div>
+                    <div class="flex-row flex-gap-10">
+                        <button class="btn-secondary" data-action="openDiscountsReports">
+                            <i data-lucide="bar-chart-3"></i> <span>Reports</span>
+                        </button>
+                        <button class="btn-primary" data-action="newDiscount">
+                            <i data-lucide="plus"></i> <span data-i18n="discount.actions.new">New Discount</span>
+                        </button>
+                    </div>
+                </div>
+        
+                <div class="promo-mode-tabs mt-16">
+                    <button class="promo-mode-tab active" data-mode="active" data-target="discountListActive">
+                        <i data-lucide="zap"></i> <span data-i18n="discount.tabs.active">Active</span> <span class="badge" id="discountCountActive">0</span>
+                    </button>
+                    <button class="promo-mode-tab" data-mode="scheduled" data-target="discountListScheduled">
+                        <i data-lucide="calendar-clock"></i> <span data-i18n="discount.tabs.scheduled">Scheduled</span> <span class="badge" id="discountCountScheduled">0</span>
+                    </button>
+                    <button class="promo-mode-tab" data-mode="expired" data-target="discountListExpired">
+                        <i data-lucide="archive"></i> <span data-i18n="discount.tabs.expired">Expired / Disabled</span> <span class="badge" id="discountCountExpired">0</span>
+                    </button>
+                </div>
+        
+                <div id="discountListActive" class="discount-list mt-16"></div>
+                <div id="discountListScheduled" class="discount-list mt-16 hidden"></div>
+                <div id="discountListExpired" class="discount-list mt-16 hidden"></div>
             </div>
         </div>
     </div>
@@ -1939,7 +2227,7 @@
                         </div>
                     </div>
 
-                    <label class="form-label">Base Price (₹)</label>
+                    <label class="form-label">Base Price (â‚¹)</label>
                     <input id="dishPriceBase" type="number" placeholder="499" class="form-input w-full mb-20">
 
                     <div class="divider-top">
@@ -2030,7 +2318,7 @@
                                     <label class="form-label" id="riderPassLabel">Portal Password</label>
                                     <div class="password-input-group flex-row flex-gap-8">
                                         <input id="riderPass" type="password" autocomplete="new-password"
-                                            placeholder="••••••••" class="form-input flex-1"
+                                            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" class="form-input flex-1"
                                             title="New password for rider portal">
                                         <button type="button" id="btnToggleRiderPass"
                                             class="btn-secondary flex-center p-0-10" title="Toggle password visibility" aria-label="Show password" aria-pressed="false"><i data-lucide="eye" id="riderPassIcon" class="icon-16"></i></button>
@@ -2135,7 +2423,7 @@
                 <div class="summary-icon"><i data-lucide="shopping-bag"></i></div>
                 <div>
                     <div id="mobileCartCount" class="summary-count">0 Items</div>
-                    <div id="mobileCartTotal" class="summary-total">₹0</div>
+                    <div id="mobileCartTotal" class="summary-total">â‚¹0</div>
                 </div>
             </div>
             <button class="btn-checkout-mobile">View Cart <i data-lucide="chevron-right"></i></button>
@@ -2152,171 +2440,62 @@
             <div class="shimmer skeleton-text"></div>
         </div>
     </div>
-    </div> <!-- END LAYOUT -->
 
-    <!-- PROMOTIONS TAB -->
-    <div id="tab-promotions" class="tab-content hidden">
-        <div id="promotionsOfflineBanner" class="offline-banner hidden" role="alert" aria-live="polite">
-            <i data-lucide="wifi-off" class="icon-16"></i>
-            <span data-i18n="promo.offlineBanner">Bot is offline — campaigns cannot start. Messages already queued will resume automatically once the bot reconnects.</span>
-        </div>
 
-        <div class="promo-page-header">
-            <div>
-                <h2 class="panel-title mb-0" data-i18n="promo.title">Promotional Campaigns</h2>
-                <p class="text-muted-small mt-4" data-i18n="promo.subtitle">Compose, schedule and monitor WhatsApp campaigns to your customers.</p>
+    <!-- DISCOUNTS REPORTS MODAL -->
+    <div id="discountsReportsModal" class="modal" role="dialog" aria-labelledby="discountsReportsTitle" aria-hidden="true">
+        <div class="modal-content glass-card" style="max-width: 880px;">
+            <div class="modal-header">
+                <h3 id="discountsReportsTitle">Discount Performance Reports</h3>
+                <button class="btn-text" data-action="closeDiscountsReports" aria-label="Close">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
-            <button class="btn-text" data-action="openPromotionsGuide" title="How to use the Promotions page" aria-label="How to use the Promotions page">
-                <i data-lucide="help-circle"></i> <span data-i18n="promo.howToUse">How to use</span>
-            </button>
-        </div>
-
-        <div class="promo-mode-tabs" role="tablist">
-            <button class="promo-mode-tab active" role="tab" data-mode="now" data-i18n="promo.tab.sendNow">Send Now</button>
-            <button class="promo-mode-tab" role="tab" data-mode="schedule" data-i18n="promo.tab.schedule">Schedule</button>
-            <button class="promo-mode-tab" role="tab" data-mode="active" data-i18n="promo.tab.active">Active</button>
-            <button class="promo-mode-tab" role="tab" data-mode="history" data-i18n="promo.tab.history">History</button>
-        </div>
-
-
-
-        <!-- COMPOSE PANE -->
-
-        <div id="promoComposePane" class="panel mt-16">
-            <h3 class="panel-title" data-i18n="promo.compose.heading">1. Compose your message</h3>
-
-            <div class="form-group">
-                <label for="promoTemplate" data-i18n="promo.compose.template">Message template</label>
-                <textarea id="promoTemplate" rows="6" class="search-input-group" maxlength="1500"
-                    placeholder="Hello {name}! 🍕 Try our new Margherita — flat 20% off today only. Use code {couponCode} at checkout."
-                    data-i18n-placeholder="promo.compose.templatePlaceholder"
-                    aria-label="Message template"></textarea>
-                <div class="flex-between mt-4">
-                    <span class="text-muted-small" data-i18n="promo.compose.tokensHint">Tokens: {name} {phone} {lastOrderDate} {storeName} {couponCode}</span>
-                    <span id="promoCharCount" class="text-muted-small">0 / 1500</span>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label data-i18n="promo.compose.media">Attach image (optional)</label>
-                <div class="flex-row flex-gap-10 flex-center flex-wrap-mobile">
-                    <input type="file" id="promoMediaInput" accept="image/*" class="hidden" aria-hidden="true">
-                    <button class="btn-secondary" data-action="pickPromoMedia">
-                        <i data-lucide="image"></i> <span data-i18n="promo.compose.chooseImage">Choose Image</span>
-                    </button>
-                    <div id="promoMediaPreview" class="promo-media-preview hidden">
-                        <img id="promoMediaImg" alt="Selected image preview">
-                        <button class="btn-text text-danger" data-action="clearPromoMedia" aria-label="Remove image">
-                            <i data-lucide="x"></i>
+            <div class="modal-body">
+                <div class="flex-between flex-center mb-16 flex-wrap" style="gap:10px;">
+                    <div class="flex-row flex-gap-8">
+                        <button class="chip btn-discount-preset active" data-range="7" data-action="setDiscountReportRange">Last 7 days</button>
+                        <button class="chip btn-discount-preset" data-range="30" data-action="setDiscountReportRange">Last 30 days</button>
+                        <button class="chip btn-discount-preset" data-range="90" data-action="setDiscountReportRange">Last 90 days</button>
+                        <button class="chip btn-discount-preset" data-range="0" data-action="setDiscountReportRange">All time</button>
+                    </div>
+                    <div class="flex-row flex-gap-8">
+                        <button class="btn-secondary" data-action="exportDiscountsReport">
+                            <i data-lucide="download"></i> Export CSV
+                        </button>
+                        <button class="btn-text" data-action="refreshDiscountsReport" title="Refresh">
+                            <i data-lucide="refresh-cw"></i>
                         </button>
                     </div>
                 </div>
-            </div>
 
-            <h3 class="panel-title mt-24" data-i18n="promo.recipients.heading">2. Choose recipients</h3>
-            <div class="form-group">
-                <label for="promoRecipientFilter" data-i18n="promo.recipients.filter">Audience</label>
-                <select id="promoRecipientFilter" class="search-input-group" aria-label="Recipient audience">
-                    <option value="all_customers" data-i18n="promo.recipients.all">All customers with promotional consent</option>
-                    <option value="recent_30d" data-i18n="promo.recipients.recent30">Active in last 30 days</option>
-                    <option value="csv" data-i18n="promo.recipients.csv">Custom list (CSV upload)</option>
-                </select>
-            </div>
-
-            <div id="promoCsvBox" class="form-group hidden">
-                <label for="promoCsvInput" data-i18n="promo.recipients.csvLabel">Upload CSV (one phone per row, header optional)</label>
-                <div class="flex-row flex-gap-10 flex-center flex-wrap-mobile">
-                    <input type="file" id="promoCsvInput" accept=".csv,text/csv" class="hidden" aria-hidden="true">
-                    <button class="btn-secondary" data-action="pickPromoCsv">
-                        <i data-lucide="file-text"></i> <span data-i18n="promo.recipients.chooseCsv">Choose CSV</span>
-                    </button>
-                    <span id="promoCsvName" class="text-muted-small">—</span>
-                    <span id="promoCsvCount" class="text-muted-small"></span>
-                </div>
-            </div>
-
-            <div class="flex-between flex-center flex-wrap-mobile mt-8">
-                <span class="text-muted-small">
-                    <strong id="promoRecipientCount">0</strong> <span data-i18n="promo.recipients.count">recipients selected</span>
-                    <span id="promoRecipientCap" class="text-warning ml-8 hidden" data-i18n="promo.recipients.capWarn">Capped at 500</span>
-                </span>
-                <span class="text-muted-small" data-i18n="promo.recipients.consentNote">Only customers with promotional consent will receive the message.</span>
-            </div>
-
-            <h3 class="panel-title mt-24" data-i18n="promo.options.heading">3. Delivery options</h3>
-            <div class="promo-options-grid">
-                <div class="form-group">
-                    <label for="promoDelay" data-i18n="promo.options.delay">Delay between sends (seconds)</label>
-                    <input type="number" id="promoDelay" min="1" max="30" step="1" value="2" class="search-input-group" aria-label="Delay between sends">
-                    <span class="text-muted-small" data-i18n="promo.options.delayHint">Default 2s. A 30s pause happens automatically every 50 sends.</span>
-                </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="promoGenerateCoupons"> <span data-i18n="promo.options.coupons">Generate a unique coupon code per recipient</span>
-                    </label>
-                </div>
-            </div>
-
-
-
-            <!-- SCHEDULE SUB-PANE -->
-
-            <div id="promoScheduleBox" class="form-group hidden mt-8">
-                <label for="promoRunAt" data-i18n="promo.options.scheduleLabel">Run at</label>
-                <input type="datetime-local" id="promoRunAt" class="search-input-group" aria-label="Schedule date and time">
-                <div class="form-group mt-8">
-                    <label data-i18n="promo.options.quietHours">Quiet hours (no sends)</label>
-                    <div class="flex-row flex-gap-10 flex-center">
-                        <input type="number" id="promoQuietStart" min="0" max="23" placeholder="Start hour" class="search-input-group" aria-label="Quiet hours start">
-                        <span>—</span>
-                        <input type="number" id="promoQuietEnd" min="0" max="23" placeholder="End hour" class="search-input-group" aria-label="Quiet hours end">
+                <div class="discount-kpi-grid" id="discountKpiGrid">
+                    <div class="discount-kpi-card">
+                        <div class="kpi-label">Total Redemptions</div>
+                        <div class="kpi-value" id="drKpiRedemptions">0</div>
+                    </div>
+                    <div class="discount-kpi-card">
+                        <div class="kpi-label">Total Savings Given</div>
+                        <div class="kpi-value" id="drKpiSavings">â‚¹0</div>
+                    </div>
+                    <div class="discount-kpi-card">
+                        <div class="kpi-label">Active Discounts</div>
+                        <div class="kpi-value" id="drKpiActive">0</div>
+                    </div>
+                    <div class="discount-kpi-card">
+                        <div class="kpi-label">Average Discount</div>
+                        <div class="kpi-value" id="drKpiAverage">â‚¹0</div>
                     </div>
                 </div>
-            </div>
 
-            <div class="promo-action-row mt-24 flex-row flex-gap-10 flex-wrap-mobile">
-                <button class="btn-primary" id="btnPromoLaunch" data-action="launchPromoCampaign" disabled>
-                    <i data-lucide="send"></i> <span data-i18n="promo.actions.launch">Launch campaign</span>
-                </button>
-                <button class="btn-secondary" data-action="sendTestPromo">
-                    <i data-lucide="message-circle"></i> <span data-i18n="promo.actions.sendTest">Send test to me</span>
-                </button>
-                <button class="btn-secondary" data-action="previewPromo">
-                    <i data-lucide="eye"></i> <span data-i18n="promo.actions.preview">Preview</span>
-                </button>
-            </div>
-        </div>
+                <h4 class="panel-title mt-24 mb-8 fs-14">Per-Discount Breakdown</h4>
+                <div id="discountReportBreakdown" class="discount-report-list"></div>
 
+                <h4 class="panel-title mt-24 mb-8 fs-14">Channel Split</h4>
+                <div id="discountReportChannels" class="discount-report-channels"></div>
 
-
-        <!-- ACTIVE PANE -->
-
-        <div id="promoActivePane" class="panel mt-16 hidden">
-            <div class="flex-between flex-center flex-wrap-mobile">
-                <h3 class="panel-title mb-0" data-i18n="promo.active.heading">Active & recent campaigns</h3>
-                <button class="btn-danger" data-action="killAllCampaigns" id="btnPromoKillAll" disabled>
-                    <i data-lucide="octagon"></i> <span data-i18n="promo.active.killAll">EMERGENCY STOP ALL</span>
-                </button>
-            </div>
-            <div id="promoKillSwitchNote" class="text-muted-small mt-8" data-i18n="promo.active.killNote">When enabled, the bot will pause every active campaign before its next send.</div>
-            <div id="promoCampaignList" class="promo-campaign-list mt-16">
-                <p class="text-muted-small" data-i18n="promo.active.empty">No campaigns yet. Compose your first one above.</p>
-            </div>
-        </div>
-
-
-
-        <!-- HISTORY PANE -->
-
-        <div id="promoHistoryPane" class="panel mt-16 hidden">
-            <div class="flex-between flex-center flex-wrap-mobile">
-                <h3 class="panel-title mb-0" data-i18n="promo.history.heading">Campaign history</h3>
-                <button class="btn-secondary" data-action="exportPromoCSV">
-                    <i data-lucide="download"></i> <span data-i18n="promo.history.export">Export last campaign log</span>
-                </button>
-            </div>
-            <div id="promoHistoryList" class="promo-campaign-list mt-16">
-                <p class="text-muted-small" data-i18n="promo.history.empty">Past campaigns will appear here once completed.</p>
+                <h4 class="panel-title mt-24 mb-8 fs-14">Recent Redemptions</h4>
+                <div id="discountReportRecent" class="discount-report-list"></div>
             </div>
         </div>
     </div>
@@ -2338,6 +2517,117 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-primary" data-action="closePromotionsGuide" data-i18n="promo.guide.gotIt">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW DISCOUNT MODAL (outside .main, alongside other modals) -->
+    <div id="discountEditorModal" class="modal" role="dialog" aria-labelledby="discountEditorTitle" aria-hidden="true">
+        <div class="modal-content glass-card" style="max-width:640px;">
+            <div class="modal-header">
+                <h3 id="discountEditorTitle" data-i18n="discount.editor.newTitle">New Discount</h3>
+                <button class="btn-text" data-action="closeDiscountEditor" aria-label="Close">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="discName" data-i18n="discount.editor.name">Name (shown on receipts & invoices)</label>
+                    <input type="text" id="discName" maxlength="60" placeholder="Festive 5% Off" class="search-input-group">
+                </div>
+
+                <div class="promo-options-grid">
+                    <div class="form-group">
+                        <label data-i18n="discount.editor.type">Type</label>
+                        <select id="discType" class="search-input-group">
+                            <option value="global" data-i18n="discount.editor.typeGlobal">Global (entire menu)</option>
+                            <option value="category" data-i18n="discount.editor.typeCategory">Category-specific</option>
+                            <option value="firstOrder" data-i18n="discount.editor.typeFirstOrder">New customer (first order)</option>
+                            <option value="coupon" data-i18n="discount.editor.typeCoupon">Coupon code</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="discount.editor.mode">Mode</label>
+                        <select id="discMode" class="search-input-group">
+                            <option value="percent">% Percent</option>
+                            <option value="fixed">â‚¹ Fixed amount</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="promo-options-grid">
+                    <div class="form-group">
+                        <label for="discValue" data-i18n="discount.editor.value">Value</label>
+                        <input type="number" id="discValue" min="0" step="0.01" placeholder="5" class="search-input-group">
+                        <span class="text-muted-small" id="discValueHint">% off subtotal</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="discMaxCap" data-i18n="discount.editor.maxCap">Max cap (â‚¹, optional)</label>
+                        <input type="number" id="discMaxCap" min="0" step="1" placeholder="100" class="search-input-group">
+                    </div>
+                </div>
+
+                <div class="form-group" id="discCategoryBox" style="display:none;">
+                    <label data-i18n="discount.editor.categories">Categories</label>
+                    <div id="discCategoryList" class="discount-cat-chips"></div>
+                    <span class="text-muted-small" data-i18n="discount.editor.categoriesHint">Click to toggle. Discount applies if any item in cart matches a selected category.</span>
+                </div>
+
+                <div class="form-group" id="discCouponBox" style="display:none;">
+                    <label for="discCouponCode" data-i18n="discount.editor.coupon">Coupon code</label>
+                    <div class="flex-row flex-gap-8">
+                        <input type="text" id="discCouponCode" maxlength="20" placeholder="FESTIVE5" class="search-input-group flex-1" style="text-transform:uppercase;">
+                        <button type="button" class="btn-secondary" data-action="generateCouponCode" title="Generate random code">Generate</button>
+                    </div>
+                    <label class="checkbox-label mt-8">
+                        <input type="checkbox" id="discStackable"> <span data-i18n="discount.editor.stackable">Stackable with other discounts</span>
+                    </label>
+                </div>
+
+                <div class="promo-options-grid">
+                    <div class="form-group">
+                        <label for="discStartsAt" data-i18n="discount.editor.startsAt">Starts at</label>
+                        <input type="datetime-local" id="discStartsAt" class="search-input-group">
+                    </div>
+                    <div class="form-group">
+                        <label for="discEndsAt" data-i18n="discount.editor.endsAt">Ends at</label>
+                        <input type="datetime-local" id="discEndsAt" class="search-input-group">
+                        <label class="checkbox-label mt-4">
+                            <input type="checkbox" id="discNoEnd" checked> <span data-i18n="discount.editor.noEnd">No end date</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="promo-options-grid">
+                    <div class="form-group">
+                        <label for="discMinSubtotal" data-i18n="discount.editor.minSubtotal">Min subtotal (â‚¹, optional)</label>
+                        <input type="number" id="discMinSubtotal" min="0" step="1" placeholder="0" class="search-input-group">
+                    </div>
+                    <div class="form-group">
+                        <label for="discExclusiveGroup" data-i18n="discount.editor.exclusiveGroup">Exclusive group (optional)</label>
+                        <input type="text" id="discExclusiveGroup" maxlength="30" placeholder="welcome" class="search-input-group">
+                        <span class="text-muted-small" data-i18n="discount.editor.exclusiveGroupHint">Only one discount in the same group can apply per order.</span>
+                    </div>
+                </div>
+
+                <div class="promo-options-grid">
+                    <div class="form-group">
+                        <label for="discPerCustomerLimit" data-i18n="discount.editor.perCustomerLimit">Per-customer limit (0 = unlimited)</label>
+                        <input type="number" id="discPerCustomerLimit" min="0" step="1" value="0" class="search-input-group">
+                    </div>
+                    <div class="form-group">
+                        <label for="discGlobalLimit" data-i18n="discount.editor.globalLimit">Global limit (0 = unlimited)</label>
+                        <input type="number" id="discGlobalLimit" min="0" step="1" value="0" class="search-input-group">
+                    </div>
+                </div>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="discEnabled" checked> <span data-i18n="discount.editor.enabled">Enabled</span>
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-action="closeDiscountEditor" data-i18n="discount.editor.cancel">Cancel</button>
+                <button class="btn-primary" data-action="saveDiscount" data-i18n="discount.editor.save">Save Discount</button>
             </div>
         </div>
     </div>
@@ -2379,7 +2669,7 @@
                         <i data-lucide="hash" class="icon-14"></i> QUANTITY
                     </label>
                     <div class="flex-row flex-center flex-gap-20 mt-10">
-                        <button id="btnPosQtyDec" data-action="adjustPOSModalQty" data-val="-1" class="qty-btn-large" title="Decrease quantity">−</button>
+                        <button id="btnPosQtyDec" data-action="adjustPOSModalQty" data-val="-1" class="qty-btn-large" title="Decrease quantity">âˆ’</button>
                         <span id="posModalQty" class="qty-val-large">1</span>
                         <button id="btnPosQtyInc" data-action="adjustPOSModalQty" data-val="1" class="qty-btn-large" title="Increase quantity">+</button>
                     </div>
@@ -2391,7 +2681,7 @@
                     <div class="text-muted-small flex-row flex-center flex-gap-6">
                         <i data-lucide="calculator" class="icon-12"></i> Total Price
                     </div>
-                    <div id="posModalTotal" class="total-price-large">₹0</div>
+                    <div id="posModalTotal" class="total-price-large">â‚¹0</div>
                 </div>
                 <button id="posAddBtn" data-action="addToWalkinCartFromModal" class="btn-primary btn-add-large flex-center flex-gap-10"
                     title="Add this item with selected options to your cart">
@@ -2433,7 +2723,7 @@
         </div>
     </div>
 
-    <!-- TODO: unused — #premiumModalOverlay is unreferenced in feature modules.
+    <!-- TODO: unused â€” #premiumModalOverlay is unreferenced in feature modules.
          window.closePremiumModal and window.openPremiumModal are never called.
          Candidate for removal or reuse for upcoming features. -->
     <!-- Premium Global Modal System -->
@@ -2535,8 +2825,8 @@
         </div>
     </div>
 
-    <script src="receipt-templates.js?v=4.9.1"></script>
-    <script type="module" src="js/main.js?v=4.9.1"></script>
+    <script src="receipt-templates.js?v=4.14.8"></script>
+    <script type="module" src="js/main.js?v=4.14.8"></script>
 </body>
 
 </html>

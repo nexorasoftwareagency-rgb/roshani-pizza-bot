@@ -52,8 +52,24 @@ export async function setupAdminFCM(userId) {
 
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      const token = await getToken(m);
-      if (token) await storeToken(userId, token);
+      // getToken() requires an active service worker. Wait for one to be
+      // ready before calling, so we don't throw "no active Service Worker"
+      // when the SW hasn't finished installing yet.
+      if ('serviceWorker' in navigator) {
+        try {
+          const reg = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 4000))
+          ]);
+          const token = await getToken(m, { serviceWorkerRegistration: reg });
+          if (token) await storeToken(userId, token);
+        } catch (swErr) {
+          console.warn('[FCM] No active service worker; push notifications disabled. Foreground messages still work via onMessage.');
+        }
+      } else {
+        const token = await getToken(m);
+        if (token) await storeToken(userId, token);
+      }
     }
   } catch (e) {
     console.error('[FCM] Setup error:', e);
@@ -64,6 +80,19 @@ export async function refreshFCMToken(userId) {
   try {
     const m = getMessagingInstance();
     if (!m || !userId) return;
+    if ('serviceWorker' in navigator) {
+      try {
+        const reg = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 4000))
+        ]);
+        const token = await getToken(m, { serviceWorkerRegistration: reg });
+        if (token) await storeToken(userId, token);
+        return;
+      } catch (swErr) {
+        // fall through
+      }
+    }
     const token = await getToken(m);
     if (token) await storeToken(userId, token);
   } catch (e) {

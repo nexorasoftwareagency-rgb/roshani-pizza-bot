@@ -132,7 +132,7 @@ window.ReceiptTemplates = {
                         <span>₹${Number(order.subtotal || 0).toFixed(2)}</span>
                     </div>
                     ${order.deliveryFee > 0 ? `<div class="summary-row"><span>Delivery:</span> <span>₹${Number(order.deliveryFee).toFixed(2)}</span></div>` : ''}
-                    ${order.discount > 0 ? `<div class="summary-row"><span class="bold">Discount Allotted:</span> <span class="bold">-₹${Number(order.discount).toFixed(2)}</span></div>` : ''}
+                    ${order.discount > 0 ? `<div class="summary-row"><span class="bold">Discount${order.discountLabel ? ` (${this.escapeHtml(order.discountLabel)})` : ''}:</span> <span class="bold">-₹${Number(order.discount).toFixed(2)}</span></div>` : ''}
                     
                     <div class="summary-row grand-total">
                         <span style="font-size: 1rem;">NET PAYABLE</span>
