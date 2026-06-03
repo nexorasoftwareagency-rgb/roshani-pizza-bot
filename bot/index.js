@@ -2132,9 +2132,10 @@ const PROMO_SCHEDULE_MISSED_GRACE_MS = 15 * 60 * 1000; // 15 min late = expire
  * Send a promotional message. Bypasses appendContactInfo (no admin footer)
  * and adds a clean opt-out line if the message doesn't already contain STOP.
  */
-async function sendPromotionalMessage(sock, jid, text, mediaUrl) {
-    const optOut = /stop/i.test(text) ? '' : '\n\n_Reply STOP to unsubscribe._';
-    const finalText = text + optOut;
+async function sendPromotionalMessage(sock, jid, text, mediaUrl, closingMessage, sendStopMsg) {
+    let finalText = text;
+    if (closingMessage) finalText += '\n\n' + closingMessage;
+    if (sendStopMsg && !/stop/i.test(finalText)) finalText += '\n\n_Reply STOP to unsubscribe._';
     try {
         if (mediaUrl) {
             // Reuse the existing sendImage helper but pass the finalText;
@@ -2305,11 +2306,11 @@ function generateCouponCode() {
 /**
  * Send one message with up to `maxRetries` automatic retries.
  */
-async function sendWithRetry(sock, jid, text, mediaUrl, maxRetries = 2) {
+async function sendWithRetry(sock, jid, text, mediaUrl, maxRetries = 2, closingMessage, sendStopMsg) {
     let lastErr = null;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            await sendPromotionalMessage(sock, jid, text, mediaUrl);
+            await sendPromotionalMessage(sock, jid, text, mediaUrl, closingMessage, sendStopMsg);
             return { ok: true, attempts: attempt };
         } catch (err) {
             lastErr = err;
@@ -2379,7 +2380,7 @@ async function logPromoSkip(campaignId, phone, reason) {
  * state so it can resume after a bot restart.
  */
 async function runPromotionCampaign(sock, cmd) {
-    const { campaignId, template, mediaUrl, recipients = [], delayMs = 2000, generateCoupons = false, quietHours, requestedBy, greeting = false, menuText = null, isTest = false } = cmd;
+    const { campaignId, template, mediaUrl, recipients = [], delayMs = 2000, generateCoupons = false, quietHours, requestedBy, greeting = false, menuText = null, menuImageUrl = null, closingMessage = null, sendStopMsg = true, isTest = false } = cmd;
     if (!campaignId || !Array.isArray(recipients) || recipients.length === 0) {
         console.warn(`[Promo] Invalid campaign command: ${campaignId}`);
         return;
@@ -2389,7 +2390,7 @@ async function runPromotionCampaign(sock, cmd) {
     }
     const list = recipients.slice(0, 500);
 
-    console.log(`[Promo] ▶️ Campaign ${campaignId} starting/resuming (${list.length} recipients, ${delayMs}ms delay${greeting ? ', greeting=on' : ''}${menuText ? ', menu=on' : ''})`);
+    console.log(`[Promo] ▶️ Campaign ${campaignId} starting/resuming (${list.length} recipients, ${delayMs}ms delay${greeting ? ', greeting=on' : ''}${menuText ? ', menu=on' : ''}${menuImageUrl ? ', menu-img=on' : ''}${closingMessage ? ', closing=on' : ''}${sendStopMsg ? ', stop=on' : ', stop=off'})`);
 
     // Persist start audit
     try {
@@ -2488,7 +2489,7 @@ async function runPromotionCampaign(sock, cmd) {
             if (isTest) console.log(`[Promo] Test: sending raw template to ${jid}`);
 
             // 7. Send
-            const result = await sendWithRetry(sock, jid, text, mediaUrl, 2);
+            const result = await sendWithRetry(sock, jid, text, mediaUrl, 2, closingMessage, sendStopMsg);
             await logPromoResult(campaignId, phone, jid, result, couponCode);
             if (result.ok) {
                 sent++;
@@ -2507,6 +2508,22 @@ async function runPromotionCampaign(sock, cmd) {
                         await sock.sendMessage(jid, { text: String(menuText) });
                     } catch (e) {
                         console.warn(`[Promo] Menu footer failed for ${jid}:`, e.message || e);
+                    }
+                }
+                // 7c. Send menu image as a separate message (if requested)
+                if (menuImageUrl) {
+                    try {
+                        await new Promise(r => setTimeout(r, Math.min(1500, delayMs)));
+                        let imgPayload;
+                        if (typeof menuImageUrl === 'string' && menuImageUrl.startsWith('data:image')) {
+                            const base64Data = menuImageUrl.split(',')[1];
+                            imgPayload = { image: Buffer.from(base64Data, 'base64') };
+                        } else {
+                            imgPayload = { image: { url: menuImageUrl } };
+                        }
+                        await sock.sendMessage(jid, imgPayload);
+                    } catch (e) {
+                        console.warn(`[Promo] Menu image failed for ${jid}:`, e.message || e);
                     }
                 }
             } else {

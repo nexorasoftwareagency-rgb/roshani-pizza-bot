@@ -26,6 +26,8 @@ let _recipientsCache = [];
 let _uploadFile = null;
 let _mediaDataUrl = null;
 let _mediaFile = null;
+let _menuImageDataUrl = null;
+let _menuImageFile = null;
 let _activeMode = 'now';
 let _killSwitchLocal = false;
 let _promoEnabledLocal = true;
@@ -403,6 +405,8 @@ async function _preview() {
     const greeting = !!document.getElementById('promoGreeting')?.checked;
     const attachMenu = !!document.getElementById('promoAttachMenu')?.checked;
     const menuText = (document.getElementById('promoMenuText')?.value || '').trim();
+    const closingMsg = (document.getElementById('promoClosingMsg')?.value || '').trim();
+    const sendStop = !!document.getElementById('promoSendStopMsg')?.checked;
     if (!template) { showToast('Nothing to preview', 'warning'); return; }
     const storeSnap = await get(_ref('settings/Store'));
     const store = storeSnap.exists() ? storeSnap.val() : {};
@@ -417,7 +421,8 @@ async function _preview() {
     let body = template;
     for (const [k, v] of Object.entries(tokens)) body = body.split(k).join(v);
     if (greeting) body = `Hi ${sampleName},\n\n${body}`;
-    body += '\n\n_Reply STOP to unsubscribe._';
+    if (closingMsg) body += '\n\n' + closingMsg;
+    if (sendStop) body += '\n\n_Reply STOP to unsubscribe._';
 
     // Build a custom preview modal so we can render an image
     let modal = document.getElementById('promoPreviewModal');
@@ -444,13 +449,21 @@ async function _preview() {
         });
     }
     const bodyEl = document.getElementById('promoPreviewBody');
+    const attachMenuImg = !!document.getElementById('promoAttachMenuImage')?.checked;
     bodyEl.innerHTML = `
         ${_mediaDataUrl ? `<div style="margin-bottom:12px;"><img src="${_esc(_mediaDataUrl)}" alt="Attached media" style="max-width:100%; border-radius:8px; display:block;"></div>` : ''}
         <div style="white-space:pre-wrap; background:#0b1220; color:#e5e7eb; padding:12px; border-radius:8px; font-family:monospace; font-size:13px;">${_esc(body)}</div>
+        ${sendStop ? '' : '<div class="text-muted-small mt-8" style="font-size:11px;">ℹ️ STOP footer is OFF — no opt-out message will be sent.</div>'}
         ${attachMenu && menuText ? `
             <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
-                <div class="text-muted-small" style="margin-bottom:6px;">— followed by a 2nd message with the menu —</div>
+                <div class="text-muted-small" style="margin-bottom:6px;">— followed by a 2nd message with the menu text —</div>
                 <div style="white-space:pre-wrap; background:#0b1220; color:#e5e7eb; padding:12px; border-radius:8px; font-family:monospace; font-size:13px;">${_esc(menuText)}</div>
+            </div>
+        ` : ''}
+        ${attachMenuImg && _menuImageDataUrl ? `
+            <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
+                <div class="text-muted-small" style="margin-bottom:6px;">— followed by a message with the menu image —</div>
+                <div><img src="${_esc(_menuImageDataUrl)}" alt="Menu image" style="max-width:100%; max-height:120px; border-radius:8px;"></div>
             </div>
         ` : ''}
     `;
@@ -479,6 +492,9 @@ async function _launchCampaign() {
     if (attachMenu && !menuText) {
         showToast('Menu footer is empty — turning off menu attachment', 'warning');
     }
+    const attachMenuImg = !!document.getElementById('promoAttachMenuImage')?.checked;
+    const closingMsg = (document.getElementById('promoClosingMsg')?.value || '').trim();
+    const sendStop = !!document.getElementById('promoSendStopMsg')?.checked;
     const mode = _activeMode;
     const runAt = mode === 'schedule'
         ? new Date(document.getElementById('promoRunAt')?.value || '').getTime()
@@ -497,6 +513,9 @@ async function _launchCampaign() {
         status: mode === 'schedule' ? 'scheduled' : 'running',
         template, mediaUrl: _mediaDataUrl || null,
         greeting, menuText: menuText || null,
+        menuImageUrl: _menuImageDataUrl || null,
+        closingMessage: closingMsg || null,
+        sendStopMsg: sendStop,
         recipients, delayMs: delaySec * 1000, generateCoupons,
         runAt, quietHours, requestedBy: window.currentAdmin?.uid || 'admin',
         createdAt: _nowMs(),
@@ -521,6 +540,9 @@ async function _launchCampaign() {
             campaignId,
             template, mediaUrl: _mediaDataUrl || null,
             greeting, menuText: menuText || null,
+            menuImageUrl: _menuImageDataUrl || null,
+            closingMessage: closingMsg || null,
+            sendStopMsg: sendStop,
             recipients, delayMs: delaySec * 1000, generateCoupons,
             quietHours, requestedBy: campaignDoc.requestedBy
         });
@@ -530,6 +552,9 @@ async function _launchCampaign() {
 }
 
 async function _sendTest() {
+    const btns = [...document.querySelectorAll('[data-action="sendTestPromo"]')];
+    btns.forEach(b => b.disabled = true);
+    try {
     const template = (document.getElementById('promoTemplate')?.value || '').trim();
     if (!template) { showToast('Write a template first', 'warning'); return; }
     const phone = await _resolveTestPhone();
@@ -538,6 +563,9 @@ async function _sendTest() {
     const greeting = !!document.getElementById('promoGreeting')?.checked;
     const attachMenu = !!document.getElementById('promoAttachMenu')?.checked;
     const menuText = attachMenu ? (document.getElementById('promoMenuText')?.value || '').trim() : '';
+    const attachMenuImg = !!document.getElementById('promoAttachMenuImage')?.checked;
+    const closingMsg = (document.getElementById('promoClosingMsg')?.value || '').trim();
+    const sendStop = !!document.getElementById('promoSendStopMsg')?.checked;
     const campaignId = 'test_' + Date.now().toString(36);
     const cmdRef = push(_ref(`bot/${_outlet()}/commands`));
     await set(cmdRef, {
@@ -545,6 +573,9 @@ async function _sendTest() {
         campaignId,
         template, mediaUrl: _mediaDataUrl || null,
         greeting, menuText: menuText || null,
+        menuImageUrl: _menuImageDataUrl || null,
+        closingMessage: closingMsg || null,
+        sendStopMsg: sendStop,
         recipients: [phone],
         delayMs: delaySec * 1000,
         generateCoupons: false,
@@ -587,6 +618,7 @@ async function _sendTest() {
         cleanup();
         window.__updateToast?.(toastId, `⏳ No response from bot in 10s — check bot.out.log`, 'warning');
     }, 10000);
+} finally { btns.forEach(b => b.disabled = false); }
 }
 
 async function _toggleKillSwitch() {
@@ -637,6 +669,20 @@ async function _cloneCampaign(id) {
         const img = document.getElementById('promoMediaImg');
         if (img) img.src = c.mediaUrl;
         document.getElementById('promoMediaPreview')?.classList.remove('hidden');
+    }
+    if (document.getElementById('promoClosingMsg') && c.closingMessage) {
+        document.getElementById('promoClosingMsg').value = c.closingMessage;
+    }
+    if (document.getElementById('promoSendStopMsg')) {
+        document.getElementById('promoSendStopMsg').checked = c.sendStopMsg !== false;
+    }
+    if (c.menuImageUrl) {
+        _menuImageDataUrl = c.menuImageUrl;
+        const img = document.getElementById('promoMenuImageImg');
+        if (img) img.src = c.menuImageUrl;
+        document.getElementById('promoMenuImagePreview')?.classList.remove('hidden');
+        const chk = document.getElementById('promoAttachMenuImage');
+        if (chk) { chk.checked = true; document.getElementById('promoMenuImageBox')?.classList.remove('hidden'); }
     }
     _switchMode('now');
     showToast('Cloned into composer', 'success');
@@ -705,6 +751,30 @@ export function loadPromotions() {
         _refreshLaunchButton();
     });
 
+    // Attach-menu-image toggle
+    document.getElementById('promoAttachMenuImage')?.addEventListener('change', (e) => {
+        document.getElementById('promoMenuImageBox')?.classList.toggle('hidden', !e.target.checked);
+    });
+
+    // Menu image file input (guarded against accumulation)
+    const menuImgInput = document.getElementById('promoMenuImageInput');
+    if (menuImgInput && !menuImgInput._promoMenuImageChangeBound) {
+        menuImgInput._promoMenuImageChangeBound = true;
+        menuImgInput.addEventListener('change', () => {
+            const file = menuImgInput.files?.[0];
+            if (!file) return;
+            _menuImageFile = file;
+            const reader = new FileReader();
+            reader.onload = e => {
+                _menuImageDataUrl = e.target.result;
+                const img = document.getElementById('promoMenuImageImg');
+                if (img) img.src = _menuImageDataUrl;
+                document.getElementById('promoMenuImagePreview')?.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
     // Recipient filter
     const filter = document.getElementById('promoRecipientFilter');
     if (filter) {
@@ -722,20 +792,10 @@ export function loadPromotions() {
         _buildRecipients().then(list => _updateRecipientCount(list.length));
     }
 
-    // Image attach
-    document.querySelectorAll('[data-action="pickPromoMedia"]').forEach(btn => {
-        btn.addEventListener('click', () => document.getElementById('promoMediaInput')?.click());
-    });
-    document.querySelectorAll('[data-action="clearPromoMedia"]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            _mediaDataUrl = null; _mediaFile = null;
-            const img = document.getElementById('promoMediaImg');
-            if (img) img.src = '';
-            document.getElementById('promoMediaPreview')?.classList.add('hidden');
-        });
-    });
+    // Image attach (onclick bound in _wireActions; change handler guarded via onchange)
     const mediaInput = document.getElementById('promoMediaInput');
-    if (mediaInput) {
+    if (mediaInput && !mediaInput._promoMediaChangeBound) {
+        mediaInput._promoMediaChangeBound = true;
         mediaInput.addEventListener('change', () => {
             const file = mediaInput.files?.[0];
             if (!file) return;
@@ -848,10 +908,43 @@ function _wireActions() {
     document.querySelectorAll('[data-action="closePromotionsGuide"]').forEach(el => {
         el.onclick = () => document.getElementById('promotionsGuideModal')?.classList.remove('active');
     });
+    document.querySelectorAll('[data-action="pickPromoTemplate"]').forEach(el => {
+        el.onclick = () => {
+            import('./promotions-templates.js').then(m => {
+                m.renderTemplatePicker(document.getElementById('promoTemplatePickerBody'));
+                document.getElementById('promoTemplatePickerModal')?.classList.add('active');
+            });
+        };
+    });
+    document.querySelectorAll('[data-action="closePromoTemplatePicker"]').forEach(el => {
+        el.onclick = () => document.getElementById('promoTemplatePickerModal')?.classList.remove('active');
+    });
     const launch = document.getElementById('btnPromoLaunch');
     if (launch) launch.onclick = _launchCampaign;
     document.querySelectorAll('[data-action="sendTestPromo"]').forEach(el => el.onclick = _sendTest);
     document.querySelectorAll('[data-action="previewPromo"]').forEach(el => el.onclick = _preview);
+    document.querySelectorAll('[data-action="pickPromoMedia"]').forEach(el => {
+        el.onclick = () => document.getElementById('promoMediaInput')?.click();
+    });
+    document.querySelectorAll('[data-action="clearPromoMedia"]').forEach(el => {
+        el.onclick = () => {
+            _mediaDataUrl = null; _mediaFile = null;
+            const img = document.getElementById('promoMediaImg');
+            if (img) img.src = '';
+            document.getElementById('promoMediaPreview')?.classList.add('hidden');
+        };
+    });
+    document.querySelectorAll('[data-action="pickPromoMenuImage"]').forEach(el => {
+        el.onclick = () => document.getElementById('promoMenuImageInput')?.click();
+    });
+    document.querySelectorAll('[data-action="clearPromoMenuImage"]').forEach(el => {
+        el.onclick = () => {
+            _menuImageDataUrl = null; _menuImageFile = null;
+            const img = document.getElementById('promoMenuImageImg');
+            if (img) img.src = '';
+            document.getElementById('promoMenuImagePreview')?.classList.add('hidden');
+        };
+    });
     const kill = document.getElementById('btnPromoKillAll');
     if (kill) kill.onclick = _toggleKillSwitch;
     document.getElementById('promoActivePane')?.addEventListener('click', (e) => {
