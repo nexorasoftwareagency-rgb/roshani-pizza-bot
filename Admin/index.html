@@ -50,7 +50,7 @@
 
         //   cause reload loops on flaky networks. The user clicks Refresh to recover.
 
-        const ADMIN_VERSION = '4.14.16';
+        const ADMIN_VERSION = '4.14.17';
 
         const _storedVersion = localStorage.getItem('admin_app_version');
 
@@ -857,6 +857,12 @@
                     <button id="logoutBtn" data-action="userLogout" class="btn-secondary btn-small"
 
                         title="Exit Admin System">Logout</button>
+
+                    <button class="btn-text" data-action="openPageGuide" title="How to use this page" aria-label="How to use this page">
+
+                        <i data-lucide="help-circle"></i>
+
+                    </button>
 
                 </div>
 
@@ -5766,9 +5772,45 @@
 
 
 
-    <script src="receipt-templates.js?v=4.14.8"></script>
+    <!-- PAGE GUIDE MODAL (generic, used by all tabs) -->
 
-    <script type="module" src="js/main.js?v=4.14.8"></script>
+    <div id="pageGuideModal" class="modal" role="dialog" aria-labelledby="pageGuideTitle" aria-hidden="true">
+
+        <div class="modal-content glass-card" style="max-width:640px;">
+
+            <div class="modal-header">
+
+                <h3 id="pageGuideTitle">How to use this page</h3>
+
+                <button class="btn-text" data-action="closePageGuide" aria-label="Close">
+
+                    <i data-lucide="x"></i>
+
+                </button>
+
+            </div>
+
+            <div class="modal-body" id="pageGuideBody">
+
+                <!-- Populated dynamically by page-guide.js -->
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button class="btn-primary" data-action="closePageGuide">Got it</button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <script src="receipt-templates.js?v=4.14.17"></script>
+
+    <script type="module" src="js/main.js?v=4.14.17"></script>
 
 </body>
 

@@ -21,7 +21,7 @@ body: 'The <strong>Recent Orders</strong> feed shows the latest orders with thei
 {
 icon: 'trending-up',
 title: 'Quick Actions',
-body: 'Use the sidebar to navigate to any section. The top-right area shows your <strong>outlet badge</strong> (PIZZA / CAKES), the Firebase connection status dot (green = connected), and your logged-in email. Click the <strong>help-circle icon</strong> to reopen this guide from any page.'
+body: 'Use the sidebar to navigate to any section. The top-right area shows your <strong>outlet badge</strong> (PIZZA / CAKES), the Firebase connection status dot (green = connected), your logged-in email, and a <strong>help-circle icon</strong> that opens this guide for the current page.'
 },
 ],
 
@@ -100,7 +100,7 @@ body: 'Click a menu item to choose a <strong>size</strong> (if available). After
 {
 icon: 'percent',
 title: 'Discounts & Coupons',
-body: 'Apply a discount using the dropdown or type a custom amount. The <strong>help-circle icon</strong> next to the discount field explains the format. You can also enter a <strong>coupon code</strong> to apply a predefined discount. The running total updates in real time.'
+body: 'Use the <strong>discount preset chips</strong> (₹50, ₹100, 10%) for quick discounts, or type a custom amount in the discount field. Enter a <strong>coupon code</strong> and click Apply to use a predefined discount. The system auto-evaluates the best applicable discount (first-order, coupon, global, or category) at checkout. Only channel-matched discounts apply (POS discounts for walk-in orders).'
 },
 {
 icon: 'credit-card',
@@ -118,32 +118,32 @@ promotions: [
 {
 icon: 'edit-3',
 title: 'Compose Message',
-body: 'Write your promotional message in the composer. Use personalization tokens: <code>{name}</code>, <code>{phone}</code>, <code>{lastOrderDate}</code>, <code>{storeName}</code>, <code>{couponCode}</code>. The character counter below shows your progress (max 1500). A greeting prefix and menu attachment can be toggled on/off.'
+body: 'Write your promotional message in the composer. Use personalization tokens: <code>{name}</code>, <code>{phone}</code>, <code>{lastOrderDate}</code>, <code>{storeName}</code>, <code>{couponCode}</code>. Click the <strong>template picker</strong> button to choose from 22 pre-built templates. Toggle the <strong>STOP footer</strong>, add a <strong>closing message</strong>, and attach a <strong>menu image</strong> (3rd message).'
 },
 {
 icon: 'users',
 title: 'Select Recipients',
-body: 'Choose who receives this campaign: <strong>All consenting customers</strong>, <strong>Active (last 30 days)</strong>, or <strong>Upload CSV/Excel</strong>. Customers who replied STOP to a previous campaign are automatically excluded. The recipient count updates as you change the filter.'
+body: 'Choose who receives this campaign: <strong>All consenting customers</strong>, <strong>Active (last 30 days)</strong>, or <strong>Upload CSV/Excel</strong>. Customers who replied STOP to a previous campaign are automatically excluded. Recipients are capped at <strong>300 per campaign</strong>.'
 },
 {
 icon: 'image',
-title: 'Media Attachment',
-body: 'Click the image icon to attach a picture to your message. Supported formats: JPG, PNG, WebP. The preview shows how the image will appear in the WhatsApp message. Use the × button to remove the attached image.'
+title: 'Media & Menu Image',
+body: 'Attach a <strong>campaign image</strong> (sent as part of the main message) and optionally a separate <strong>menu image</strong> (sent as a 3rd message after the main text). Supported formats: JPG, PNG, WebP. Both are optional.'
 },
 {
 icon: 'eye',
 title: 'Preview & Test',
-body: 'Click <strong>Preview</strong> to see how a sample recipient will read your message — it shows the rendered text with tokens replaced and any attached image. Click <strong>Send test to me</strong> to receive the exact message on your own WhatsApp before launching to customers.'
+body: 'Click <strong>Preview</strong> to see how a sample recipient will read your message — including STOP footer, closing message, and menu image. Click <strong>Send test to me</strong> to receive the exact message on your own WhatsApp before launching to customers.'
 },
 {
 icon: 'send',
 title: 'Launch & Schedule',
-body: 'Click <strong>Launch Campaign</strong> to send immediately. Switch to the <strong>Schedule</strong> tab to set a future date and time. The bot paces itself with a 2-second delay between messages and pauses 30 seconds every 50 sends to avoid WhatsApp rate limits.'
+body: 'Click <strong>Launch Campaign</strong> to send immediately. Switch to the <strong>Schedule</strong> tab to set a future date and time with quiet hours. The bot paces itself with an <strong>8-15s random delay</strong> between messages and pauses <strong>60-120s every 30 sends</strong> to avoid WhatsApp rate limits.'
 },
 {
 icon: 'shield',
 title: 'Monitor & Emergency Stop',
-body: 'The <strong>Active</strong> tab shows live progress of running campaigns with sent/failed/skipped counts and a progress bar. Use <strong>Stop</strong> on any individual campaign, or the red <strong>EMERGENCY STOP ALL</strong> button to pause every active campaign immediately.'
+body: 'The <strong>Active</strong> tab shows live progress of running campaigns with sent/failed/skipped counts and a progress bar. Use <strong>Stop</strong> on any individual campaign, or the red <strong>EMERGENCY STOP ALL</strong> button to pause every active campaign immediately. A daily cap of 300 messages prevents over-sending.'
 },
 ],
 
@@ -151,27 +151,27 @@ discounts: [
 {
 icon: 'list',
 title: 'Discount List',
-body: 'The main view lists all existing discounts with their name, type (percentage/flat), value, schedule dates, and status (active/inactive/expired). Use the <strong>sort</strong> and <strong>filter</strong> controls to find specific discounts. Expired discounts are marked in red.'
+body: 'The main view lists all existing discounts grouped by status: <strong>Active</strong>, <strong>Scheduled</strong>, and <strong>Expired / Disabled</strong>. Each card shows name, type, value, channel badge, and a toggle to enable/disable. Click the pencil icon to edit.'
 },
 {
 icon: 'plus-circle',
 title: 'Create / Edit Discount',
-body: 'Click <strong>New Discount</strong> to open the editor modal. Set a name, choose percentage or flat amount, set minimum order value, and optionally schedule start/end dates. For percentage discounts, the value is entered as a whole number (e.g., 10 for 10%).'
+body: 'Click <strong>New Discount</strong> to open the editor. Set a name, choose <strong>type</strong> (Global, Category, New Customer, Coupon), select <strong>% Percent</strong> or <strong>Fixed amount</strong>, and set the value. Choose the <strong>channel</strong> where this discount applies: WhatsApp only, POS only, Both, Website, or All channels.'
 },
 {
 icon: 'calendar',
-title: 'Schedule & Expiry',
-body: 'Discounts can be scheduled to activate and expire on specific dates. Leave the dates empty for an always-active discount. Expired discounts are automatically marked as inactive. The schedule is evaluated against the outlet\'s local timezone.'
+title: 'Schedule & Limits',
+body: 'Set start/end dates for time-windowed discounts. Configure <strong>per-customer limits</strong> and <strong>global redemption limits</strong>. Add a <strong>minimum subtotal</strong> requirement. Use <strong>exclusive groups</strong> to prevent multiple discounts stacking on the same order.'
 },
 {
 icon: 'ticket',
 title: 'Coupon Codes',
-body: 'Enable <strong>coupon code</strong> on a discount to generate a unique code that customers can enter at checkout. The code can be auto-generated or custom. Coupon-required discounts only apply when the valid code is entered during order placement.'
+body: 'Choose <strong>Coupon code</strong> type to create a code customers enter at checkout. Click <strong>Generate</strong> for a random code or type your own. Enable <strong>Stackable</strong> to allow this coupon to combine with other discounts. Coupon discounts apply on both WhatsApp and POS when the code is entered.'
 },
 {
 icon: 'bar-chart-2',
 title: 'Discount Reports',
-body: 'Click <strong>Reports</strong> to see how each discount has performed: times used, total discount amount given, and revenue impact. Filter by date range. Export the report as a CSV file for external analysis.'
+body: 'Click <strong>Reports</strong> to see per-discount performance: redemptions, total savings, and a <strong>channel split</strong> showing WhatsApp vs POS usage. Filter by date range (7/30/90 days or all time). Export as CSV for external analysis.'
 },
 ],
 
