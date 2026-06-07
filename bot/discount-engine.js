@@ -49,7 +49,7 @@ function _pickBest(group, subtotal) {
  * Evaluate the best discount for a given checkout context.
  * Returns { discount, allApplied, amount, label, source } or null.
  */
-async function evaluateDiscount({ OUTLET, customer, subtotal, couponCode, cart, now = Date.now() }) {
+async function evaluateDiscount({ OUTLET, customer, subtotal, couponCode, cart, channel = 'whatsapp', now = Date.now() }) {
     if (!subtotal || subtotal <= 0) return null;
 
     // Feature flag check
@@ -71,6 +71,7 @@ async function evaluateDiscount({ OUTLET, customer, subtotal, couponCode, cart, 
         && (d.endsAt === 0 || d.endsAt == null || now <= d.endsAt)
         && (!d.minSubtotal || subtotal >= d.minSubtotal)
         && (!d.globalLimit || (d.stats?.usedCount || 0) < d.globalLimit)
+        && (!d.channel || d.channel === 'all' || d.channel === channel || (d.channel === 'both' && (channel === 'whatsapp' || channel === 'pos')))
     );
 
     const applicable = candidates.filter(d => {

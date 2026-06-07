@@ -7816,16 +7816,6 @@ body.pos-selection-mode .walkin-picker {
 .promo-guide-item { display:flex; gap:12px; align-items:flex-start; }
 .promo-guide-num { flex:0 0 28px; height:28px; border-radius:50%; background:var(--primary, #f36b21); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; }
 .promo-guide-title { display:flex; align-items:center; gap:6px; margin:0; font-size:15px; }
-.template-category-title { font-size:14px; font-weight:600; margin:0 0 8px 0; color:var(--text-secondary, #6b7280); text-transform:uppercase; letter-spacing:0.5px; }
-.template-grid { display:flex; flex-direction:column; gap:8px; }
-.template-card { background:var(--bg-secondary, #1f2937); border:1px solid var(--border-color, #374151); border-radius:8px; padding:12px; cursor:default; transition:border-color 0.15s; }
-.template-card:hover { border-color:var(--primary, #f36b21); }
-.template-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
-.template-card-title { font-weight:600; font-size:13px; color:var(--text-primary, #f3f4f6); }
-.template-card-body { font-size:12px; color:var(--text-muted, #9ca3af); line-height:1.4; margin:0 0 4px 0; white-space:pre-wrap; }
-.template-card-note { font-size:11px; color:var(--text-muted, #9ca3af); margin:4px 0 0 0; font-style:italic; }
-.template-use-btn { font-size:11px !important; padding:2px 10px !important; }
-#promoMenuImagePreview img { max-width:120px; max-height:80px; border-radius:6px; object-fit:cover; }
 .btn-danger { background:#dc2626; color:#fff; }
 .btn-danger:hover { background:#b91c1c; }
 .btn-warning { background:#f59e0b; color:#fff; }

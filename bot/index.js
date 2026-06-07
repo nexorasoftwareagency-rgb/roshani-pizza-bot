@@ -30,6 +30,18 @@ const admin = require('firebase-admin');
 const { getData, setData, updateData, db, pushData, getUserProfile, saveUserProfile } = require('./firebase');
 const discountEngine = require('./discount-engine');
 
+// ── Extracted modules ──────────────────────────────────────────────────────
+const {
+    escapeHtml, formatJid, maskJid, maskPhone,
+    getISTDateInfo, getISTDateString, parseTime, isShopOpen, randomBetween,
+    calculateDistance, getFeeFromSlabs,
+    formatCartSummary, formatOrderInvoice, getFunnyFoodJoke, getFoodFunnyProgress,
+    generateCouponCode, isSocketDead
+} = require('./utils');
+const promo = require('./promotions');
+const { sendDailyReport, sendMonthlyReport, sendWeeklyReport } = require('./reports');
+const riderNotify = require('./rider');
+
 let redisClient;
 
 // Admin JIDs cache — refreshed every 5 minutes to avoid per-message Firebase calls
@@ -118,18 +130,6 @@ async function saveProcessedStatus(id, data) {
             localStatusCache.set(id, data);
             if (redisReady) await redisClient.setEx(`status:${id}`, STATUS_TTL, JSON.stringify(data));
         }
-    } catch (e) { }
-}
-
-async function getProcessedOTP(phone) {
-    try {
-        const data = await redisClient.get(`otp:${phone}`);
-        return data ? JSON.parse(data) : null;
-    } catch (e) { return null; }
-}
-async function saveProcessedOTP(phone, data) {
-    try {
-        if (data) await redisClient.setEx(`otp:${phone}`, 300, JSON.stringify(data)); // 5 mins
     } catch (e) { }
 }
 
@@ -248,20 +248,28 @@ function initCommandListener(sock) {
 
         try {
             if (cmd.action === "SEND_DAILY_REPORT") {
-                await sendDailyReport(sock, cmd.targetDate);
+                await sendDailyReport(sock, { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids }, cmd.targetDate);
                 console.log(`[Bot] Daily Report sent successfully for ${cmd.targetDate}`);
             } else if (cmd.action === "SEND_WEEKLY_REPORT") {
-                await sendWeeklyReport(sock);
+                await sendWeeklyReport(sock, { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids });
                 console.log(`[Bot] Weekly Report sent successfully`);
             } else if (cmd.action === "SEND_MONTHLY_REPORT") {
-                await sendMonthlyReport(sock);
+                await sendMonthlyReport(sock, { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids });
                 console.log(`[Bot] Monthly Report sent successfully`);
             } else if (cmd.action === "SEND_PROMOTION") {
                 // Fire-and-forget — long-running, runs to completion or until paused
-                runPromotionCampaign(sock, cmd).catch(err => {
+                promo.runPromotionCampaign(sock, cmd, { OUTLET, db, getData, cryptoErrorCount }).catch(err => {
                     console.error("[Promo] Campaign error:", err);
                 });
                 console.log(`[Promo] Campaign ${cmd.campaignId} dispatched`);
+            } else if (cmd.action === "SEND_GENERIC_MESSAGE") {
+                const jid = formatJid(cmd.phone);
+                if (jid) {
+                    await sock.sendMessage(jid, { text: cmd.message || "" });
+                    console.log(`[Bot] Generic message sent to ${maskJid(jid)}`);
+                } else {
+                    console.warn(`[Bot] SEND_GENERIC_MESSAGE skipped — invalid phone: "${cmd.phone}"`);
+                }
             }
             // Remove the command after processing
             await snap.ref.remove();
@@ -269,10 +277,6 @@ function initCommandListener(sock) {
             console.error("[Bot] Command Execution Error:", err);
         }
     });
-}
-
-function cleanupSessions() {
-    // Sessions and processed status are now automatically managed by Redis TTL
 }
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -787,7 +791,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
             // NEW: Notify Rider on Assignment
             if (isRiderChanged) {
                 console.log(`[RIDER] 🔄 Rider Change Detected for #${id.slice(-5)}: ${lastRider} -> ${currentRider}`);
-                await notifyRiderAssignment(sock, id, order);
+                await riderNotify.notifyRiderAssignment(sock, id, order, addInAppNotification);
             }
 
             const botSettings = await getData("settings/Bot", order.outlet) || {};
@@ -810,11 +814,16 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
 
                 if (!isDineIn) {
                     if (order.riderPhone) {
-                        await notifyRiderPickup(sock, order);
+                        await riderNotify.notifyRiderPickup(sock, order, addInAppNotification);
                     } else {
-                        await broadcastPickupAvailable(sock, id, order);
+                        await riderNotify.broadcastPickupAvailable(sock, id, order, getData, addInAppNotification);
                     }
                 }
+            } else if (statusLower === "arriving at restaurant" || statusLower === "arrived at restaurant") {
+                const riderLabel = statusLower === "arriving at restaurant"
+                    ? "Our rider is on the way to the restaurant to pick up your order! 🛵"
+                    : "Our rider has arrived at the restaurant and is picking up your order now! 📦";
+                msg = `📍 *RIDER UPDATE* 📍\n━━━━━━━━━━━━━━━━━━━━\n${riderLabel}\n\n🆔 Order: #${id.slice(-5)}\n💰 Total: ₹${order.total || 0}\n\n_Your order will be on its way shortly!_ 🙏`;
             } else if (statusLower === "picked up" || statusLower === "out for delivery") {
                 let otp = storedOTP;
                 if (!otp) {
@@ -1320,7 +1329,6 @@ async function startBot() {
     // Heartbeat & Cleanup & Report Scheduling
     if (reportInterval) clearInterval(reportInterval);
     reportInterval = setInterval(async () => {
-        cleanupSessions();
         // Log crypto health summary (helpful to detect session degradation)
         if (cryptoErrorCount > 0) {
             console.log(`[CRYPTO] 📊 ${cryptoErrorCount} undecryptable messages since last connect (session ${cryptoErrorCount > 10 ? 'may need attention' : 'healthy'})`);
@@ -1345,7 +1353,7 @@ async function startBot() {
 
         // 1. Daily Report at 9:30 PM (21:30)
         if (hour === 21 && minute === 30 && !dailyReportSent) {
-            await sendDailyReport(sock);
+            await sendDailyReport(sock, { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids });
             dailyReportSent = true;
         }
 
@@ -1353,7 +1361,7 @@ async function startBot() {
         if (hour === 1 && minute === 30 && !dailyReportSent) {
             const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
             const yDateStr = getISTDateString(yesterday.toISOString());
-            await sendDailyReport(sock, yDateStr);
+            await sendDailyReport(sock, { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids }, yDateStr);
             dailyReportSent = true;
         }
 
@@ -1365,10 +1373,10 @@ async function startBot() {
         }
 
         // 4. Promotion heartbeat: pick up scheduled campaigns whose runAt is due.
-        pickupScheduledPromotions(sock).catch(err => console.error("[Promo] Scheduled pickup error:", err));
+        promo.pickupScheduledPromotions(sock, { OUTLET, db }).catch(err => console.error("[Promo] Scheduled pickup error:", err));
 
         // 5. Expire promotion logs older than 30 days (best-effort, every 5 min)
-        expireOldPromoLogs().catch(err => console.error("[Promo] Log expiry error:", err));
+        promo.expireOldPromoLogs(OUTLET, db).catch(err => console.error("[Promo] Log expiry error:", err));
     }, 300000);
 
     // Firebase Listeners — Single Outlet Only
@@ -1426,7 +1434,7 @@ async function startBot() {
     // Resume any campaigns that were running when the bot last lost connection.
     // Scans `bot/{outlet}/promotions/campaigns` for status==='running' and
     // rebuilds the command payload from the stored campaign doc.
-    resumeStuckPromotions(sock).catch(err => console.error("[Promo] Resume sweep error:", err));
+    promo.resumeStuckPromotions(sock, { OUTLET, db }).catch(err => console.error("[Promo] Resume sweep error:", err));
 
     // =============================
     // 5. MESSAGE HANDLER (INTERNAL)
@@ -1545,7 +1553,7 @@ async function startBot() {
 
                     if (cmd === 'report' || cmd === 'sales') {
                         await sock.sendMessage(sender, { text: "⏳ Generating latest sales report..." });
-                        await sendDailyReport(sock);
+                        await sendDailyReport(sock, { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids });
                         return;
                     }
                     if (cmd === 'status') {
@@ -1945,10 +1953,10 @@ async function startBot() {
                         const finalOrder = {
                             orderId, outlet: user.outlet,
                             type: "Online", // Explicitly tag as Online order
-                            customerName: escapeHtml(user.name),
+                            customerName: user.name,
                             phone: user.phone,
                             whatsappNumber: sender, // Save sender JID for status updates
-                            address: escapeHtml(user.address),
+                            address: user.address,
                             lat: user.location.lat, lng: user.location.lng,
                             subtotal, deliveryFee, total: subtotal + deliveryFee - (user.discount || 0),
                             status: "Placed", paymentMethod: method, paymentStatus: "Pending",
@@ -1976,25 +1984,34 @@ async function startBot() {
                             lastOutlet: user.outlet
                         });
 
-                        // Save complete profile to outlet's customers node for POS access
+                        // Save complete profile to outlet's customers node (transactional, merges bot + POS fields)
                         if (user.phone) {
                             const cleanPhone = String(user.phone).replace(/\D/g, '').slice(-10);
-                            const custData = {
-                                name: user.name,
-                                phone: cleanPhone,
-                                address: user.address || "",
-                                location: user.location || null,
-                                mapsLink: user.location ? `https://maps.google.com/?q=${user.location.lat},${user.location.lng}` : "",
-                                lastOrderDate: new Date().toISOString(),
-                                // Pre-Flight #10: explicit consent for promotional messages
-                                promotionalConsent: true
-                            };
-                            // If first-order discount was used, mark it consumed
-                            if (user.discountSource === 'firstOrder' && user.discountId) {
-                                custData.firstOrderDiscountUsed = Date.now();
-                                custData.firstOrderDiscountId = user.discountId;
-                            }
-                            await updateData(`customers/${cleanPhone}`, custData, user.outlet);
+                            const mapsLink = user.location ? `https://maps.google.com/?q=${user.location.lat},${user.location.lng}` : "";
+                            const isFirstOrderDiscount = user.discountSource === 'firstOrder' && user.discountId;
+
+                            const custRef = db.ref(`${user.outlet}/customers/${cleanPhone}`);
+                            await custRef.transaction((existing) => {
+                                const base = existing || {};
+                                const merged = {
+                                    ...base,
+                                    name: user.name || base.name,
+                                    phone: cleanPhone,
+                                    address: user.address || base.address || "",
+                                    location: user.location || base.location || null,
+                                    mapsLink: mapsLink || base.mapsLink || "",
+                                    lastOrderDate: new Date().toISOString(),
+                                    promotionalConsent: true,
+                                    orderCount: (base.orderCount || 0) + 1,
+                                    totalSpent: (base.totalSpent || 0) + (user.total || 0),
+                                    lastSeen: Date.now()
+                                };
+                                if (isFirstOrderDiscount) {
+                                    merged.firstOrderDiscountUsed = Date.now();
+                                    merged.firstOrderDiscountId = user.discountId;
+                                }
+                                return merged;
+                            });
                         }
 
                         // Log discount usage (best-effort)
@@ -2074,7 +2091,8 @@ async function handleCheckoutFinal(sock, sender, user) {
                 customer: customerSnap,
                 subtotal,
                 couponCode: user.couponCode || null,
-                cart: user.cart
+                cart: user.cart,
+                channel: 'whatsapp'
             });
             if (discountEval) {
                 user.discount = discountEval.amount;
@@ -2123,10 +2141,17 @@ async function handleCheckoutFinal(sock, sender, user) {
 
 const PROMO_LOG_TTL_MS = 30 * 24 * 60 * 60 * 1000;  // 30 days
 const PROMO_HEARTBEAT_EVERY = 10;                    // persist progress every N sends
-const PROMO_PAUSE_EVERY = 50;                        // human-pacing pause
+const PROMO_PAUSE_EVERY = 30;                        // human-pacing pause (batch size)
 const PROMO_PAUSE_MS = 30_000;
 const PROMO_SOCKET_DEAD_GRACE_MS = 5_000;            // wait 5s before resuming after socket recovery
 const PROMO_SCHEDULE_MISSED_GRACE_MS = 15 * 60 * 1000; // 15 min late = expire
+const PROMO_DAILY_LIMIT = 300;                       // 6+ month account safe cap
+const PROMO_MIN_DELAY_MS = 8000;                     // min delay between individual sends (8s)
+const PROMO_MAX_DELAY_MS = 15000;                    // max delay between individual sends (15s)
+const PROMO_BATCH_MIN_PAUSE_MS = 60000;              // min pause between batches (60s)
+const PROMO_BATCH_MAX_PAUSE_MS = 120000;             // max pause between batches (120s)
+const PROMO_MENU_MIN_DELAY_MS = 1500;                // min delay before menu follow-up (1.5s)
+const PROMO_MENU_MAX_DELAY_MS = 3000;                // max delay before menu follow-up (3s)
 
 /**
  * Send a promotional message. Bypasses appendContactInfo (no admin footer)
@@ -2376,6 +2401,13 @@ async function logPromoSkip(campaignId, phone, reason) {
 }
 
 /**
+ * Return a random integer between min and max (inclusive).
+ */
+function randomBetween(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/**
  * The main campaign runner. Idempotent and re-entrant. Reads from RTDB
  * state so it can resume after a bot restart.
  */
@@ -2385,10 +2417,10 @@ async function runPromotionCampaign(sock, cmd) {
         console.warn(`[Promo] Invalid campaign command: ${campaignId}`);
         return;
     }
-    if (recipients.length > 500) {
-        console.warn(`[Promo] Recipients cap exceeded (${recipients.length}); truncating to 500`);
+    if (recipients.length > PROMO_DAILY_LIMIT) {
+        console.warn(`[Promo] Recipients cap exceeded (${recipients.length}); truncating to ${PROMO_DAILY_LIMIT}`);
     }
-    const list = recipients.slice(0, 500);
+    const list = recipients.slice(0, PROMO_DAILY_LIMIT);
 
     console.log(`[Promo] ▶️ Campaign ${campaignId} starting/resuming (${list.length} recipients, ${delayMs}ms delay${greeting ? ', greeting=on' : ''}${menuText ? ', menu=on' : ''}${menuImageUrl ? ', menu-img=on' : ''}${closingMessage ? ', closing=on' : ''}${sendStopMsg ? ', stop=on' : ', stop=off'})`);
 
@@ -2423,6 +2455,15 @@ async function runPromotionCampaign(sock, cmd) {
         await releasePromoLock();
         return;
     }
+
+    // Read daily promo counter
+    const todayStr = getISTDateInfo().dateStr;
+    let dailySentToday = 0;
+    try {
+        const dailySnap = await db.ref(`bot/${OUTLET}/promotions/dailyCount/${todayStr}`).once('value');
+        dailySentToday = Number(dailySnap.val() || 0);
+        console.log(`[Promo] Daily promo count today: ${dailySentToday}/${PROMO_DAILY_LIMIT}`);
+    } catch (_) {}
 
     let sent = 0, failed = 0;
 
@@ -2459,7 +2500,14 @@ async function runPromotionCampaign(sock, cmd) {
                 return;
             }
 
-            // 5. Skip-check: opt-out, consent, JID validity
+            // 5. Daily cap check (skip for test campaigns)
+            if (!isTest && dailySentToday >= PROMO_DAILY_LIMIT) {
+                console.log(`[Promo] Daily limit (${PROMO_DAILY_LIMIT}) reached. Pausing ${campaignId}.`);
+                await db.ref(`bot/${OUTLET}/promotions/campaigns/${campaignId}`).update({ status: 'paused', pauseReason: 'daily-limit', currentIndex: i });
+                return;
+            }
+
+            // 6. Skip-check: opt-out, consent, JID validity
             //    For a self-test the admin is sending to themselves, skip
             //    all consent/optout checks (the admin knows what they're
             //    doing) and send the raw template without personalization.
@@ -2470,7 +2518,7 @@ async function runPromotionCampaign(sock, cmd) {
             if (!isTest && !await hasPromoConsent(phone)) { await logPromoSkip(campaignId, phone, 'no-consent'); continue; }
             if (isTest) console.log(`[Promo] Test: bypassing consent/optout for ${phone}`);
 
-            // 6. Personalize
+            // 7. Personalize
             //    For test campaigns, skip personalization — send the raw
             //    template exactly as the admin typed it.
             const couponCode = (generateCoupons && !isTest) ? generateCouponCode() : null;
@@ -2488,12 +2536,17 @@ async function runPromotionCampaign(sock, cmd) {
             }
             if (isTest) console.log(`[Promo] Test: sending raw template to ${jid}`);
 
-            // 7. Send
+            // 8. Send
             const result = await sendWithRetry(sock, jid, text, mediaUrl, 2, closingMessage, sendStopMsg);
             await logPromoResult(campaignId, phone, jid, result, couponCode);
             if (result.ok) {
                 sent++;
-                // 7a. Record coupon in /coupons/ for later redemption
+                // 8a. Increment daily counter
+                if (!isTest) {
+                    dailySentToday++;
+                    try { await db.ref(`bot/${OUTLET}/promotions/dailyCount/${todayStr}`).set(dailySentToday); } catch (_) {}
+                }
+                // 8b. Record coupon in /coupons/ for later redemption
                 if (couponCode) {
                     try {
                         await db.ref(`bot/${OUTLET}/promotions/coupons/${couponCode}`).set({
@@ -2501,19 +2554,19 @@ async function runPromotionCampaign(sock, cmd) {
                         });
                     } catch (_) {}
                 }
-                // 7b. Send menu footer as a 2nd message (if requested)
+                // 8c. Send menu footer as a 2nd message (if requested)
                 if (menuText && String(menuText).trim().length > 0) {
                     try {
-                        await new Promise(r => setTimeout(r, Math.min(1500, delayMs)));
+                        await new Promise(r => setTimeout(r, randomBetween(PROMO_MENU_MIN_DELAY_MS, PROMO_MENU_MAX_DELAY_MS)));
                         await sock.sendMessage(jid, { text: String(menuText) });
                     } catch (e) {
                         console.warn(`[Promo] Menu footer failed for ${jid}:`, e.message || e);
                     }
                 }
-                // 7c. Send menu image as a separate message (if requested)
+                // 8d. Send menu image as a separate message (if requested)
                 if (menuImageUrl) {
                     try {
-                        await new Promise(r => setTimeout(r, Math.min(1500, delayMs)));
+                        await new Promise(r => setTimeout(r, randomBetween(PROMO_MENU_MIN_DELAY_MS, PROMO_MENU_MAX_DELAY_MS)));
                         let imgPayload;
                         if (typeof menuImageUrl === 'string' && menuImageUrl.startsWith('data:image')) {
                             const base64Data = menuImageUrl.split(',')[1];
@@ -2530,25 +2583,34 @@ async function runPromotionCampaign(sock, cmd) {
                 failed++;
             }
 
-            // 8. Heartbeat every N sends
+            // 9. Heartbeat every N sends
             if ((i + 1) % PROMO_HEARTBEAT_EVERY === 0) {
+                // Re-sync daily counter from Firebase (in case parallel campaigns incremented it)
+                if (!isTest) {
+                    try {
+                        const fresh = await db.ref(`bot/${OUTLET}/promotions/dailyCount/${todayStr}`).once('value');
+                        dailySentToday = Number(fresh.val() || dailySentToday);
+                    } catch (_) {}
+                }
                 await db.ref(`bot/${OUTLET}/promotions/campaigns/${campaignId}`).update({
                     currentIndex: i + 1, totalSent: sent, totalFailed: failed, lastHeartbeat: Date.now()
                 });
             }
 
-            // 9. Human pacing (skip for test campaigns — no rate-limiting needed)
+            // 10. Human pacing (skip for test campaigns — no rate-limiting needed)
             if (!isTest) {
                 if ((i + 1) % PROMO_PAUSE_EVERY === 0) {
-                    console.log(`[Promo] Pacing pause (${PROMO_PAUSE_MS/1000}s) after ${i+1} sends`);
-                    await new Promise(r => setTimeout(r, PROMO_PAUSE_MS));
+                    const pauseMs = randomBetween(PROMO_BATCH_MIN_PAUSE_MS, PROMO_BATCH_MAX_PAUSE_MS);
+                    console.log(`[Promo] Batch pause (${Math.round(pauseMs/1000)}s) after ${i+1} sends`);
+                    await new Promise(r => setTimeout(r, pauseMs));
                 } else {
-                    await new Promise(r => setTimeout(r, delayMs));
+                    const sendDelay = randomBetween(PROMO_MIN_DELAY_MS, PROMO_MAX_DELAY_MS);
+                    await new Promise(r => setTimeout(r, sendDelay));
                 }
             }
         }
 
-        // 10. Mark complete
+        // 11. Mark complete
         await db.ref(`bot/${OUTLET}/promotions/campaigns/${campaignId}`).update({
             status: 'done', completedAt: Date.now(), currentIndex: list.length, totalSent: sent, totalFailed: failed
         });
@@ -2583,6 +2645,9 @@ async function resumeStuckPromotions(sock) {
                 mediaUrl: c.mediaUrl || null,
                 greeting: c.greeting === true,
                 menuText: c.menuText || null,
+                menuImageUrl: c.menuImageUrl || null,
+                closingMessage: c.closingMessage || null,
+                sendStopMsg: c.sendStopMsg !== false,
                 recipients: c.recipients || [],
                 delayMs: c.delayMs || 2000,
                 generateCoupons: !!c.generateCoupons,
@@ -2630,6 +2695,9 @@ async function pickupScheduledPromotions(sock) {
                 mediaUrl: c.mediaUrl || null,
                 greeting: c.greeting === true,
                 menuText: c.menuText || null,
+                menuImageUrl: c.menuImageUrl || null,
+                closingMessage: c.closingMessage || null,
+                sendStopMsg: c.sendStopMsg !== false,
                 recipients: c.recipients || [],
                 delayMs: c.delayMs || 2000,
                 generateCoupons: !!c.generateCoupons,

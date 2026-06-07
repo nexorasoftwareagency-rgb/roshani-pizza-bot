@@ -11,18 +11,24 @@ import { ui } from '../ui.js';
 import { printOrderReceipt } from './printing.js';
 import { t } from '../l10n.js';
 import { evaluateDiscount, recordDiscountUsage, clearDiscountCache } from './discount-evaluator.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Loads the menu for the Walk-in POS view
  */
 export async function loadWalkinMenu() {
     const grid = document.getElementById("walkinDishGrid");
-    if (!grid) return;
+    if (!grid) {
+        logger.warn('POS', 'walkinDishGrid not found, skipping load');
+        return;
+    }
 
     try {
         grid.innerHTML = '<div class="pos-loader">Loading Menu...</div>';
+        logger.info('POS', 'Fetching walkin menu from Firebase...');
         const snap = await get(Outlet.ref("dishes"));
-        console.log(`[POS] Fetched ${Object.keys(snap.val() || {}).length} dishes from ${snap.ref.toString()}`);
+        const count = Object.keys(snap.val() || {}).length;
+        logger.firebase('POS', `Fetched ${count} dishes`);
         state.allWalkinDishes = [];
 
         snap.forEach(child => {
@@ -32,18 +38,21 @@ export async function loadWalkinMenu() {
 
         // Load categories if not already loaded to render tabs
         if (state.categories.length === 0) {
+            logger.info('POS', 'Loading categories...');
             const catSnap = await get(Outlet.ref("categories"));
             state.categories = [];
             catSnap.forEach(c => {
                 state.categories.push({ id: c.key, ...c.val() });
             });
+            logger.firebase('POS', `Loaded ${state.categories.length} categories`);
         }
 
         renderWalkinCategoryTabs();
         applyWalkinFilters();
+        logger.success('POS', 'Walkin menu loaded');
 
     } catch (e) {
-        console.error("POS Load Error:", e);
+        logger.error('POS', `Menu load error: ${e.message}`, e);
         ui.showToast("Failed to load POS menu.", "error");
     }
 }
@@ -215,7 +224,7 @@ export async function openPOSSelectionModal(dishId) {
         document.getElementById('posAddonsSection').classList.add('hidden');
     }
 
-    console.log(`[POS] Opening selection modal for: ${dish.name}`);
+    logger.info('POS', `Opening selection modal for: ${dish.name} (${dish.category || 'no category'})`);
     updatePOSModalTotal();
     const modal = document.getElementById('posSelectionModal');
     if (modal) {
@@ -226,7 +235,7 @@ export async function openPOSSelectionModal(dishId) {
         // Ensure all icons (including ones in headers and the button) are rendered
         if (window.lucide) window.lucide.createIcons({ root: modal });
     } else {
-        console.error("[POS] Modal element #posSelectionModal not found!");
+        logger.error('POS', 'Modal element #posSelectionModal not found!');
     }
 }
 
@@ -236,11 +245,12 @@ export function hidePOSSelectionModal() {
         modal.classList.add('hidden');
         modal.classList.remove('active', 'side-panel-active');
         document.body.classList.remove('pos-selection-mode');
+        logger.info('POS', 'Selection modal closed');
     }
 }
 
 export function selectPOSSize(name, price, el) {
-    console.log(`[POS] Selecting Size: ${name} (Price: ${price})`);
+    logger.info('POS', `Selecting Size: ${name} (Price: ₹${price})`);
     document.querySelectorAll('.size-card').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     state.currentPOSModalSize = { name, price };
@@ -282,13 +292,14 @@ export function addToWalkinCartFromModal() {
     try {
         haptic(5);
         const dish = state.currentPOSModalDish;
-        console.log("[POS] addToWalkinCartFromModal triggered for:", dish ? dish.name : "NULL");
+        logger.info('POS', `addToWalkinCartFromModal triggered: ${dish ? dish.name : 'NULL'}`);
         if (!dish) {
-            console.error("[POS] No dish selected in modal context.");
+            logger.error('POS', 'No dish selected in modal context');
             ui.showToast("No item selected", "error");
             return;
         }
         if (!state.currentPOSModalSize) {
+            logger.warn('POS', 'No size selected');
             ui.showToast("Please select a size", "warning");
             return;
         }
@@ -329,11 +340,10 @@ export function addToWalkinCartFromModal() {
         renderWalkinCart();
         haptic(20);
         playSuccessSound();
-        console.log(`[POS] Cart updated. ${qty}x ${dish.name} added/updated.`);
+        logger.success('POS', `Cart updated: ${qty}x ${dish.name} (${size.name})`, { cartKey, pricePerItem, addons: addonNames });
         ui.showToast(`Added ${qty}x ${dish.name} (${size.name})`, "success");
-        console.log("[POS] Cart updated successfully.");
     } catch (error) {
-        console.error("[POS] Add to Cart Error:", error);
+        logger.error('POS', `Add to Cart error: ${error.message}`, error);
         ui.showToast("Failed to add to cart", "error");
     }
 }
@@ -345,12 +355,15 @@ export function removeFromWalkinCart(cartKey) {
 
 export function walkinQtyChange(cartKey, delta) {
     if (state.walkinCart[cartKey]) {
+        const oldQty = state.walkinCart[cartKey].qty;
         state.walkinCart[cartKey].qty = Math.max(1, state.walkinCart[cartKey].qty + delta);
+        logger.info('POS', `Cart qty: ${oldQty} → ${state.walkinCart[cartKey].qty} for ${state.walkinCart[cartKey].name}`);
         renderWalkinCart();
     }
 }
 
 export function clearWalkinCart() {
+    const count = Object.keys(state.walkinCart).length;
     state.walkinCart = {};
     state.walkinDiscount = 0;
     state.walkinDiscountPct = 0;
@@ -366,6 +379,7 @@ export function clearWalkinCart() {
     if (document.getElementById('walkinCouponCode')) document.getElementById('walkinCouponCode').value = "";
     if (document.getElementById('walkinCouponHint'))  document.getElementById('walkinCouponHint').classList.add('hidden');
     if (document.getElementById('walkinCouponClearBtn')) document.getElementById('walkinCouponClearBtn').classList.add('hidden');
+    logger.info('POS', `Cart cleared (${count} items removed)`);
     renderWalkinCart();
 }
 
@@ -586,7 +600,8 @@ export async function applyWalkinCoupon() {
             customer,
             subtotal,
             couponCode: code,
-            cart: items.map(i => ({ category: i.category, categories: i.categories, name: i.name, id: i.id }))
+            cart: items.map(i => ({ category: i.category, categories: i.categories, name: i.name, id: i.id })),
+            channel: 'pos'
         });
         if (!evalResult) {
             state.walkinAutoDiscount = null;
@@ -635,6 +650,7 @@ export function selectWalkinPayment(method, el) {
 export async function submitWalkinSale() {
     const items = Object.values(state.walkinCart);
     if (items.length === 0) {
+        logger.warn('POS', 'Submit blocked: cart is empty');
         ui.showToast("Cart is empty!", "error");
         return;
     }
@@ -646,6 +662,8 @@ export async function submitWalkinSale() {
     const combinedNote = tableNo ? `[Table: ${tableNo}] ${note}` : note;
     const btn = document.getElementById('walkinSubmitBtn');
     
+    logger.info('POS', `Submitting walkin sale: ${items.length} items`, { items: items.map(i => `${i.qty}x ${i.name}`), name, phone, tableNo });
+
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Processing...';
@@ -724,7 +742,8 @@ export async function submitWalkinSale() {
                     customer,
                     subtotal,
                     couponCode: state.walkinCouponCode || null,
-                    cart: items.map(i => ({ category: i.category, categories: i.categories, name: i.name, id: i.id }))
+                    cart: items.map(i => ({ category: i.category, categories: i.categories, name: i.name, id: i.id })),
+                    channel: 'pos'
                 });
                 if (evalResult && evalResult.amount > 0) {
                     discountValue = evalResult.amount;
@@ -746,6 +765,7 @@ export async function submitWalkinSale() {
         const seqSnap = await runTransaction(ref(db, `${Outlet.current}/metadata/orderSequence/${dateStr}`), (current) => (current || 0) + 1);
         const seqNum = seqSnap.snapshot.val() || 1;
         const orderId = `${dateStr}-${seqNum.toString().padStart(4, '0')}`;
+        logger.firebase('POS', `Generated order ID: ${orderId}`);
 
         const orderData = {
             orderId,
@@ -772,10 +792,14 @@ export async function submitWalkinSale() {
         };
 
         // 1. Save Order
+        logger.firebase('POS', `Saving order to Firebase: orders/${orderId}`);
         await set(Outlet.ref(`orders/${orderId}`), orderData);
+        logger.firebase('POS', `Order saved: ${orderId}`);
 
         // 2. Auto-deduct inventory
+        logger.info('POS', 'Auto-deducting stock...');
         await autoDeductStock(items);
+        logger.info('POS', 'Stock deducted');
 
         // 2b. Record discount usage + mark first-order as consumed (best-effort)
         if (discountId && discountValue > 0) {
@@ -794,7 +818,7 @@ export async function submitWalkinSale() {
             }
         }
 
-        // 3. Update Customer LTV if phone provided
+        // 3. Update Customer LTV if phone provided (transactional, merges POS + bot fields)
         if (phone && phone.length >= 10) {
             const custRef = Outlet.ref(`customers/${phone}`);
             const isFirstOrderDiscount = discountSource === 'firstOrder' && discountId;
@@ -810,6 +834,9 @@ export async function submitWalkinSale() {
                 const updated = {
                     ...c,
                     name: name || c.name,
+                    address: c.address || "Walk-in",
+                    mapsLink: c.mapsLink || "",
+                    promotionalConsent: c.promotionalConsent !== undefined ? c.promotionalConsent : true,
                     orderCount: (c.orderCount || 0) + 1,
                     totalSpent: (c.totalSpent || 0) + total,
                     lastSeen: Date.now(),
@@ -826,20 +853,23 @@ export async function submitWalkinSale() {
         playSuccessSound();
         ui.showToast(`Sale #${orderId} completed!`, "success");
         logAudit("Sales", `POS Sale Recorded: #${orderId}`, `Total: ₹${total}`);
+        logger.success('POS', `Sale completed: #${orderId} (Total: ₹${total}, ${state.walkinPayMethod || 'Cash'})`);
 
         // 3. Print Receipt
         printOrderReceipt(orderData);
+        logger.info('POS', 'Receipt printed');
 
         // 4. Reset
         clearWalkinCart();
 
     } catch (e) {
-        console.error("Sale Error:", e);
+        logger.error('POS', `Sale failed: ${e.message}`, e);
         ui.showToast("Failed to process sale: " + e.message, "error");
     } finally {
         if (btn) {
             btn.disabled = false;
             btn.innerHTML = '\u2705 Record Sale';
+            logger.info('POS', 'Submit button re-enabled');
         }
     }
 }

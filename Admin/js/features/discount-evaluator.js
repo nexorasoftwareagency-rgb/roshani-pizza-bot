@@ -69,11 +69,12 @@ function _pickBest(group, subtotal) {
  * @param {number} ctx.subtotal - Food subtotal in ₹ (NOT including delivery)
  * @param {string} [ctx.couponCode] - Customer-entered coupon code
  * @param {Array}  [ctx.cart] - Cart items (for category discounts)
+ * @param {string} [ctx.channel] - Channel: 'pos', 'whatsapp', 'website', etc.
  * @param {number} [ctx.now] - Override "now" timestamp (default Date.now())
  * @returns {Promise<null | { discount, allApplied, amount, label, source }>}
  */
 export async function evaluateDiscount(ctx = {}) {
-    const { customer = null, subtotal = 0, couponCode = null, cart = [], now = Date.now() } = ctx;
+    const { customer = null, subtotal = 0, couponCode = null, cart = [], channel = 'whatsapp', now = Date.now() } = ctx;
     if (!subtotal || subtotal <= 0) return null;
     if (!await _isFeatureEnabled()) return null;
 
@@ -88,6 +89,7 @@ export async function evaluateDiscount(ctx = {}) {
         && (d.endsAt === 0 || d.endsAt == null || now <= d.endsAt)
         && (!d.minSubtotal || subtotal >= d.minSubtotal)
         && (!d.globalLimit || (d.stats?.usedCount || 0) < d.globalLimit)
+        && (!d.channel || d.channel === 'all' || d.channel === channel || (d.channel === 'both' && (channel === 'whatsapp' || channel === 'pos')))
     );
 
     const applicable = candidates.filter(d => {
