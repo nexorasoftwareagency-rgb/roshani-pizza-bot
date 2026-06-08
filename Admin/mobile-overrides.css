@@ -1072,16 +1072,16 @@
     /* --- Mobile Category Tabs - Filter Pills (Sticky) --- */
     .category-tabs-container {
         position: sticky !important;
-        top: var(--pos-header-height) !important; /* Stacks exactly below POS header (56px) */
+        top: var(--pos-header-height) !important;
         z-index: 1999 !important;
         background: #ffffff !important;
         display: flex !important;
+        flex-wrap: wrap !important;
         overflow-x: auto !important;
-        gap: 10px !important;
-        padding: 10px 12px !important;
+        gap: 5px !important;
+        padding: 6px 10px !important;
         margin: 0 !important;
         width: 100% !important;
-        height: var(--pos-tabs-height) !important;
         
         scrollbar-width: none;
         scroll-behavior: smooth;
@@ -1094,17 +1094,16 @@
     }
 
     .category-tab {
-        padding: 10px 22px !important; /* Larger touch area */
+        padding: 4px 10px !important;
         background: #f1f5f9 !important;
         border: 1px solid #e2e8f0 !important;
-        border-radius: 30px !important; /* Pill style */
-        font-size: 14px !important;
+        border-radius: 20px !important;
+        font-size: 11px !important;
         font-weight: 700 !important;
         color: #475569 !important;
         white-space: nowrap !important;
         cursor: pointer !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        flex-shrink: 0 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -1115,7 +1114,7 @@
         border-color: var(--primary) !important;
         color: #fff !important;
         box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.3) !important;
-        transform: translateY(-1px) scale(1.05) !important;
+        transform: translateY(-1px) !important;
     }
 
     /* Search input */

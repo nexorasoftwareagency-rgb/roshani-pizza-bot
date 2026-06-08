@@ -89,6 +89,10 @@ let weeklyReportSent = false;
 let monthlyReportSent = false;
 const startupTime = Date.now();
 
+// Track current socket to clean up on reconnect
+let currentSock = null;
+let firebaseListenersInitialized = false;
+
 // Crypto/session error monitoring (for auto-healing and visibility)
 let cryptoErrorCount = 0;
 let reconnectAttempts = 0;
@@ -735,6 +739,13 @@ process.on('unhandledRejection', (err) => {
 
 async function startBot() {
     console.log(`🚀 Starting ${OUTLET_NAME} WhatsApp Bot (${OUTLET})...`);
+
+    // Clean up previous socket on reconnect
+    if (currentSock) {
+        try { currentSock.end(undefined); } catch (_) {}
+        currentSock = null;
+    }
+
     const { state, saveCreds } = await useMultiFileAuthState('session_data_' + OUTLET);
     const { version } = await fetchLatestBaileysVersion();
 
@@ -745,6 +756,7 @@ async function startBot() {
         logger: pino({ level: 'silent' }),
         browser: ['Roshani ERP', 'Chrome', '1.0.0']
     });
+    currentSock = sock;
 
     sock.ev.on('creds.update', saveCreds);
     initCommandListener(sock);
@@ -776,7 +788,7 @@ async function startBot() {
 
         // 1. Daily Report at 9:30 PM (21:30)
         if (hour === 21 && minute === 30 && !dailyReportSent) {
-            await sendDailyReport(sock, { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids });
+            await sendDailyReport(currentSock, { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids });
             dailyReportSent = true;
         }
 
@@ -784,7 +796,7 @@ async function startBot() {
         if (hour === 1 && minute === 30 && !dailyReportSent) {
             const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
             const yDateStr = getISTDateString(yesterday.toISOString());
-            await sendDailyReport(sock, { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids }, yDateStr);
+            await sendDailyReport(currentSock, { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids }, yDateStr);
             dailyReportSent = true;
         }
 
@@ -796,24 +808,23 @@ async function startBot() {
         }
 
         // 4. Promotion heartbeat: pick up scheduled campaigns whose runAt is due.
-        promo.pickupScheduledPromotions(sock, { OUTLET, db }).catch(err => console.error("[Promo] Scheduled pickup error:", err));
+        promo.pickupScheduledPromotions(currentSock, { OUTLET, db }).catch(err => console.error("[Promo] Scheduled pickup error:", err));
 
         // 5. Expire promotion logs older than 30 days (best-effort, every 5 min)
         promo.expireOldPromoLogs(OUTLET, db).catch(err => console.error("[Promo] Log expiry error:", err));
     }, 300000);
 
-    // Firebase Listeners — Single Outlet Only
-    const orderRef = db.ref(`${OUTLET}/orders`);
-    orderRef.off("child_changed"); // Clear previous to avoid duplicates
-    orderRef.off("child_added");
+    // Firebase Listeners — Only initialize once, reuse across reconnects
+    if (!firebaseListenersInitialized) {
+        const orderRef = db.ref(`${OUTLET}/orders`);
 
-    orderRef.on("child_changed", (snap) => {
-        const order = snap.val();
-        if (order) handleOrderStatusUpdate(sock, snap.key, order);
-    });
-    orderRef.on("child_added", async (snap) => {
-        const order = snap.val();
-        if (!order) return;
+        orderRef.on("child_changed", (snap) => {
+            const order = snap.val();
+            if (order && currentSock) handleOrderStatusUpdate(currentSock, snap.key, order);
+        });
+        orderRef.on("child_added", async (snap) => {
+            const order = snap.val();
+            if (!order || !currentSock) return;
 
         // Only handle "new" orders if they were created after the bot started
         const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : 0;
@@ -825,14 +836,17 @@ async function startBot() {
 
         const currentProcessedStatus = await getProcessedStatus(snap.key);
         if (!currentProcessedStatus && orderTime > startupTime - timeBuffer) {
-            handleOrderStatusUpdate(sock, snap.key, order, true);
+            handleOrderStatusUpdate(currentSock, snap.key, order, true);
         } else {
             // Just mark as processed without sending message
             await saveProcessedStatus(snap.key, { status: order.status, timestamp: Date.now() });
         }
     });
+        firebaseListenersInitialized = true;
+    }
 
     sock.ev.on('connection.update', (update) => {
+        if (sock !== currentSock) return;
         const { connection, lastDisconnect, qr } = update;
         if (qr) qrcode.generate(qr, { small: true });
         if (connection === 'open') {
@@ -857,13 +871,15 @@ async function startBot() {
     // Resume any campaigns that were running when the bot last lost connection.
     // Scans `bot/{outlet}/promotions/campaigns` for status==='running' and
     // rebuilds the command payload from the stored campaign doc.
-    promo.resumeStuckPromotions(sock, { OUTLET, db }).catch(err => console.error("[Promo] Resume sweep error:", err));
+    promo.resumeStuckPromotions(currentSock, { OUTLET, db }).catch(err => console.error("[Promo] Resume sweep error:", err));
 
     // =============================
     // 5. MESSAGE HANDLER (INTERNAL)
     // =============================
     sock.ev.on('messages.upsert', async (m) => {
         try {
+            // Skip if this is from an old socket (reconnected)
+            if (sock !== currentSock) return;
             if (m.type !== 'notify') return;
             const msg = m.messages[0];
             if (!msg.message) {
@@ -1408,7 +1424,7 @@ async function startBot() {
 
                         // Fire-and-forget: all side effects (non-blocking)
                         notifyAdmin(sock, orderId, finalOrder, 'NEW').catch(() => {});
-                        sendFCMToAdmins(orderId, finalOrder);
+                        sendFCMToAdmins(orderId, finalOrder).catch(() => {});
                         saveUserProfile(sender, {
                             name: user.name, phone: user.phone,
                             address: user.address, location: user.location,
