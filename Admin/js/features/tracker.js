@@ -27,12 +27,21 @@ function formatTime(ts) {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+const RIDER_STALE_MS = 5 * 60 * 1000;
+
+function isFresh(r) {
+    if (!r) return false;
+    if (r.status !== "Online") return false;
+    const ts = r.lastSeen || r.location?.ts || 0;
+    return ts && (Date.now() - ts) < RIDER_STALE_MS;
+}
+
 function isOnline(r) {
-    return r && r.status === "Online" && r.location && r.location.lat && r.location.lng;
+    return isFresh(r) && r.location && r.location.lat && r.location.lng;
 }
 
 function displayStatus(r) {
-    if (!r || r.status !== "Online") return { label: "Offline", cls: "offline" };
+    if (!isFresh(r)) return { label: "Offline", cls: "offline" };
     if (r.currentOrder) return { label: "On Delivery", cls: "on-delivery" };
     return { label: "Online", cls: "online" };
 }
@@ -124,7 +133,7 @@ function updateStats(allRiders) {
     let online = 0, delivery = 0, offline = 0;
     Object.values(allRiders).forEach(r => {
         if (!r) return;
-        if (r.status === "Online") {
+        if (isFresh(r)) {
             if (r.currentOrder) delivery++;
             else online++;
         } else {
@@ -147,7 +156,7 @@ function renderSidebar(allRiders) {
     const offlineRiders = [];
     Object.entries(allRiders).forEach(([id, r]) => {
         if (!r) return;
-        if (r.status === "Online") onlineRiders.push([id, r]);
+        if (isFresh(r)) onlineRiders.push([id, r]);
         else offlineRiders.push([id, r]);
     });
 
@@ -358,6 +367,6 @@ function startRiderLocationListener() {
         updateStats(all);
         renderSidebar(all);
         updateMarkers(entries);
-        fitMapToRiders(entries.filter(([, r]) => r.status === "Online" && r.location));
+        fitMapToRiders(entries.filter(([, r]) => isFresh(r) && r.location));
     });
 }

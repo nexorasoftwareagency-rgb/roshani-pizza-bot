@@ -141,9 +141,14 @@ async function broadcastPickupAvailable(sock, orderId, order, getData, addInAppN
         const outlet = order.outlet || 'pizza';
         const riders = await getData("riders", outlet) || {};
 
+        const RIDER_STALE_MS = 5 * 60 * 1000;
         const onlineRiders = Object.entries(riders)
             .map(([uid, data]) => ({ uid, ...data }))
-            .filter(r => r.status === "Online" && r.phone);
+            .filter(r => {
+                if (r.status !== "Online" || !r.phone) return false;
+                const ts = r.lastSeen || r.location?.ts || 0;
+                return ts && (Date.now() - ts) < RIDER_STALE_MS;
+            });
 
         console.log(`[RIDER] 📢 Broadcasting pickup for #${orderId.slice(-5)} to ${onlineRiders.length} online riders.`);
 

@@ -1,5 +1,5 @@
 // ── Firebase (via rider/js/firebase.js) ────────────────────────────────────
-import { app, auth, db, dbStorage, messaging, onAuthStateChanged, signInWithEmailAndPassword, signOut, ref, onValue, get, set, update, runTransaction, query, orderByChild, equalTo, off, serverTimestamp, remove, limitToLast, push, getToken, onMessage } from './js/firebase.js';
+import { app, auth, db, dbStorage, messaging, onAuthStateChanged, signInWithEmailAndPassword, signOut, ref, onValue, get, set, update, runTransaction, query, orderByChild, equalTo, off, serverTimestamp, remove, limitToLast, push, getToken, onMessage, onDisconnect } from './js/firebase.js';
 
 // ── Extracted modules ──────────────────────────────────────────────────────
 import { initUI } from './js/ui.js';
@@ -1667,6 +1667,8 @@ onAuthStateChanged(auth, async user => {
         initRealtimeListeners();
         setupPushNotifications(user.uid);
         _startInactivityTimer();
+        _setupDisconnectHandlers(user.uid);
+        _startHeartbeat(user.uid);
 
         if (dashboard) dashboard.classList.remove('hidden');
         window.showSection('home');
@@ -1677,6 +1679,40 @@ onAuthStateChanged(auth, async user => {
     } catch (e) { 
         console.error(e);
         window.hideLoader();
+    }
+});
+
+// ── Disconnect / cleanup handlers ──────────────────────────────────────────
+function _setupDisconnectHandlers(uid) {
+    const statusRef = ref(db, `riders/${uid}/status`);
+    const lastSeenRef = ref(db, `riders/${uid}/lastSeen`);
+    onDisconnect(statusRef).set('Offline');
+    onDisconnect(lastSeenRef).set(serverTimestamp());
+}
+
+function _startHeartbeat(uid) {
+    setInterval(() => {
+        if (window.currentUser?.profile?.status === 'Online') {
+            update(ref(db, `riders/${uid}`), { lastSeen: serverTimestamp() }).catch(() => {});
+        }
+    }, 60000);
+}
+
+window.addEventListener('beforeunload', () => {
+    if (window.currentUser?.profile?.status === 'Online') {
+        const uid = window.currentUser.uid;
+        navigator.sendBeacon?.(
+            '',
+            new Blob([JSON.stringify({ uid })], { type: 'application/json' })
+        );
+        update(ref(db, `riders/${uid}`), { status: 'Offline', lastSeen: serverTimestamp() }).catch(() => {});
+    }
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && window.currentUser?.profile?.status === 'Online') {
+        const uid = window.currentUser.uid;
+        update(ref(db, `riders/${uid}`), { lastSeen: serverTimestamp() }).catch(() => {});
     }
 });
 

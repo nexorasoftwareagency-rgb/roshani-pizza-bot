@@ -98,11 +98,18 @@ export function renderRiders(searchTerm = "") {
     const query = (searchTerm || "").toLowerCase();
     const allRows = [];
 
+    const RIDER_STALE_MS = 5 * 60 * 1000;
+    const isFresh = (r) => {
+        if (!r || r.status !== "Online") return false;
+        const ts = r.lastSeen || r.location?.ts || 0;
+        return ts && (Date.now() - ts) < RIDER_STALE_MS;
+    };
+
     state.ridersList.forEach(r => {
         const stats = state.riderStatsData[r.id] || { totalOrders: 0, avgDeliveryTime: 0, totalEarnings: 0 };
         totalEarnings += (stats.totalEarnings || 0);
 
-        let displayStatus = r.status || "Offline";
+        let displayStatus = isFresh(r) ? "Online" : (r.status || "Offline");
         if (displayStatus === "Online" && r.currentOrder) displayStatus = "On Delivery";
 
         if (displayStatus === "Online") onlineCount++;

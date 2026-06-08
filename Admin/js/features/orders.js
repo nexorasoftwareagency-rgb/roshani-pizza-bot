@@ -12,6 +12,15 @@ import { autoDeductStock } from './inventory.js';
 import { sendToRider } from '../fcm-sender.js';
 import { logger } from '../utils/logger.js';
 
+const RIDER_STALE_MS = 5 * 60 * 1000;
+function isRiderFresh(r) {
+    if (!r) return false;
+    if (r.status === "On Delivery") return true;
+    if (r.status !== "Online") return false;
+    const ts = r.lastSeen || r.location?.ts || 0;
+    return ts && (Date.now() - ts) < RIDER_STALE_MS;
+}
+
 
 /**
  * STATUS WORKFLOW CONFIGURATION
@@ -485,7 +494,7 @@ export function renderOrders(snap) {
 
         if (activeTab === 'dashboard') {
             const itemSummary = items.length > 0 ? `${items.length} Items` : "No Items";
-            const onlineRiders = (state.ridersList || []).filter(r => r.status === "Online" || r.status === "On Delivery");
+            const onlineRiders = (state.ridersList || []).filter(r => isRiderFresh(r));
             const riderOptions = onlineRiders.map(r => `
                 <option value="${r.id}" ${o.riderId === r.id ? 'selected' : ''}>${escapeHtml(r.name)}</option>
             `).join('');
@@ -548,7 +557,7 @@ export function renderOrders(snap) {
             `;
         } else if (activeTab === 'live') {
             const itemSummary = items.length > 0 ? `${items.length} Items` : "No Items";
-            const onlineRiders = (state.ridersList || []).filter(r => r.status === "Online" || r.status === "On Delivery");
+            const onlineRiders = (state.ridersList || []).filter(r => isRiderFresh(r));
             const riderOptions = onlineRiders.map(r => `
                 <option value="${r.id}" ${o.riderId === r.id ? 'selected' : ''}>${escapeHtml(r.name)}</option>
             `).join('');
@@ -777,7 +786,7 @@ function updateDashboardStats(orders) {
         'statOrders': activeToday,
         'statPending': pending,
         'statRevenue': `₹${revenue.toLocaleString()}`,
-        'statRidersActive': (state.ridersList || []).filter(r => r.status === "Online" || r.status === "On Delivery").length
+        'statRidersActive': (state.ridersList || []).filter(r => isRiderFresh(r)).length
     };
 
     Object.entries(els).forEach(([id, val]) => {
@@ -1251,7 +1260,7 @@ export async function openOrderDrawer(id) {
     }).join('');
 
     const riderOptions = (state.ridersList || [])
-        .filter(r => r.status === "Online" || r.status === "On Delivery")
+        .filter(r => isRiderFresh(r))
         .map(r => `<option value="${r.id}" ${order.riderId === r.id ? 'selected' : ''}>${escapeHtml(r.name)} (${r.status})</option>`)
         .join('');
 

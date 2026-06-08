@@ -32,6 +32,11 @@ export function initAuth() {
     window.logout = async () => {
         if (await window.showConfirm("End your shift and logout?", "Confirm Logout")) {
             window.clearAllListeners();
+            try {
+                if (window.currentUser?.profile?.id) {
+                    await update(ref(db, `riders/${window.currentUser.profile.id}`), { status: 'Offline', lastSeen: serverTimestamp() });
+                }
+            } catch (_) {}
             localStorage.removeItem('rider_authenticated');
             await signOut(auth);
         }

@@ -30,7 +30,7 @@ fcmMessaging.onBackgroundMessage((payload) => {
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-const CACHE_NAME = 'roshani-rider-v5.3.0';
+const CACHE_NAME = 'roshani-rider-v5.3.2';
 const ASSETS = [
   './',
   './login.html',
