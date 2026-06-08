@@ -52,11 +52,11 @@ function _pickBest(group, subtotal) {
 async function evaluateDiscount({ OUTLET, customer, subtotal, couponCode, cart, channel = 'whatsapp', now = Date.now() }) {
     if (!subtotal || subtotal <= 0) return null;
 
-    // Feature flag check
+    // Feature flag check (cached via getData)
     let enabled = true;
     try {
-        const flagSnap = await db.ref(`${OUTLET}/discounts/featureEnabled`).once('value');
-        enabled = flagSnap.val() !== false;
+        const flagVal = await getData('discounts/featureEnabled', OUTLET);
+        enabled = flagVal !== false;
     } catch (_) {}
     if (!enabled) return null;
 
@@ -145,16 +145,17 @@ async function recordDiscountUsage({ OUTLET, discountId, orderId, customerPhone,
             appliedAt: Date.now(), channel: channel || 'whatsapp',
             source: discountSource || ''
         };
-        await db.ref(`${OUTLET}/discountsUsage/${usageId}`).set(usage);
-        // Bump stats atomically
-        await db.ref(`${OUTLET}/discounts/${discountId}/stats`).transaction((cur) => {
-            cur = cur || {};
-            return {
-                usedCount: (cur.usedCount || 0) + 1,
-                totalDiscountGiven: (cur.totalDiscountGiven || 0) + Math.round(Number(amountGiven) || 0),
-                lastUsedAt: Date.now()
-            };
-        });
+        await Promise.all([
+            db.ref(`${OUTLET}/discountsUsage/${usageId}`).set(usage),
+            db.ref(`${OUTLET}/discounts/${discountId}/stats`).transaction((cur) => {
+                cur = cur || {};
+                return {
+                    usedCount: (cur.usedCount || 0) + 1,
+                    totalDiscountGiven: (cur.totalDiscountGiven || 0) + Math.round(Number(amountGiven) || 0),
+                    lastUsedAt: Date.now()
+                };
+            })
+        ]);
     } catch (e) {
         console.warn('[Discounts] recordDiscountUsage failed:', e?.message || e);
     }

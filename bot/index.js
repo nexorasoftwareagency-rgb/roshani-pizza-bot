@@ -524,9 +524,7 @@ async function notifyAdmin(sock, orderId, order, type = 'NEW') {
             msg = adminMsg;
         }
 
-        for (const jid of jids) {
-            await sock.sendMessage(jid, { text: msg });
-        }
+        await Promise.all(jids.map(jid => sock.sendMessage(jid, { text: msg }).catch(() => {})));
     } catch (err) { console.error("Admin Notify Error:", err); }
 }
 
@@ -887,10 +885,10 @@ async function startBot() {
             // Deduplication to prevent double responses
             const msgId = msg.key.id;
             if (await getProcessedStatus(msgId)) return;
-            await saveProcessedStatus(msgId, { ts: Date.now() });
+            saveProcessedStatus(msgId, { ts: Date.now() }).catch(() => {});
 
-            // Mark as read
-            await sock.readMessages([msg.key]);
+            // Mark as read (fire-and-forget — don't block processing)
+            sock.readMessages([msg.key]).catch(() => {});
 
             const sender = msg.key.remoteJid;
             const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
@@ -929,8 +927,8 @@ async function startBot() {
                 console.error("[Promo] Opt-out handler error:", optOutErr.message);
             }
 
-            // Show typing status immediately for better perceived speed
-            await sock.sendPresenceUpdate('composing', sender);
+            // Show typing indicator (fire-and-forget — don't block processing)
+            sock.sendPresenceUpdate('composing', sender).catch(() => {});
 
             let user = await getSession(sender);
             if (!user) {
@@ -1397,26 +1395,33 @@ async function startBot() {
                         };
 
                         await setData(`orders/${orderId}`, finalOrder, user.outlet);
-                        await notifyAdmin(sock, orderId, finalOrder, 'NEW');
+
+                        // Send confirmation to user IMMEDIATELY (fastest possible response)
+                        let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY!* 🎉\n`;
+                        successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        successMsg += `🆔 *Order ID:* #${orderId.slice(-5)}\n`;
+                        successMsg += `🏪 *Shop:* ${OUTLET_NAME}\n`;
+                        successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        successMsg += `*Please wait while the admin confirms your order!* ⏳\n\n`;
+                        successMsg += `Total: ₹${finalOrder.total}`;
+                        sock.sendMessage(sender, { text: await appendContactInfo(successMsg, user.outlet) }).catch(() => {});
+
+                        // Fire-and-forget: all side effects (non-blocking)
+                        notifyAdmin(sock, orderId, finalOrder, 'NEW').catch(() => {});
                         sendFCMToAdmins(orderId, finalOrder);
-
-                        // Save user profile for next time
-                        await saveUserProfile(sender, {
-                            name: user.name,
-                            phone: user.phone,
-                            address: user.address,
-                            location: user.location,
+                        saveUserProfile(sender, {
+                            name: user.name, phone: user.phone,
+                            address: user.address, location: user.location,
                             lastOutlet: user.outlet
-                        });
+                        }).catch(() => {});
 
-                        // Save complete profile to outlet's customers node (transactional, merges bot + POS fields)
+                        // Save complete profile to outlet's customers node
                         if (user.phone) {
                             const cleanPhone = String(user.phone).replace(/\D/g, '').slice(-10);
                             const mapsLink = user.location ? `https://maps.google.com/?q=${user.location.lat},${user.location.lng}` : "";
                             const isFirstOrderDiscount = user.discountSource === 'firstOrder' && user.discountId;
-
                             const custRef = db.ref(`${user.outlet}/customers/${cleanPhone}`);
-                            await custRef.transaction((existing) => {
+                            custRef.transaction((existing) => {
                                 const base = existing || {};
                                 const merged = {
                                     ...base,
@@ -1436,38 +1441,24 @@ async function startBot() {
                                     merged.firstOrderDiscountId = user.discountId;
                                 }
                                 return merged;
-                            });
+                            }).catch(() => {});
                         }
 
                         // Log discount usage (best-effort)
                         if (finalOrder.discount > 0 && finalOrder.discountId) {
-                            try {
-                                await discountEngine.recordDiscountUsage({
-                                    OUTLET: user.outlet,
-                                    discountId: finalOrder.discountId,
-                                    orderId,
-                                    customerPhone: finalOrder.phone,
-                                    amountGiven: finalOrder.discount,
-                                    channel: 'whatsapp',
-                                    discountLabel: finalOrder.discountLabel,
-                                    discountSource: finalOrder.discountSource
-                                });
-                            } catch (e) {
-                                console.warn('[BOT] recordDiscountUsage failed:', e?.message || e);
-                            }
+                            discountEngine.recordDiscountUsage({
+                                OUTLET: user.outlet,
+                                discountId: finalOrder.discountId,
+                                orderId,
+                                customerPhone: finalOrder.phone,
+                                amountGiven: finalOrder.discount,
+                                channel: 'whatsapp',
+                                discountLabel: finalOrder.discountLabel,
+                                discountSource: finalOrder.discountSource
+                            }).catch(() => {});
                         }
 
-                        let successMsg = `🎉 *ORDER PLACED SUCCESSFULLY!* 🎉\n`;
-                        successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                        successMsg += `🆔 *Order ID:* #${orderId.slice(-5)}\n`;
-                        successMsg += `🏪 *Shop:* ${OUTLET_NAME}\n`;
-                        successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                        successMsg += `*Please wait while the admin confirms your order!* ⏳\n\n`;
-                        successMsg += `Total: ₹${finalOrder.total}`;
-
-                        await sock.sendMessage(sender, { text: await appendContactInfo(successMsg, user.outlet) });
-
-                        // Fire-and-forget: deduct stock AFTER user gets reply (non-blocking)
+                        // Fire-and-forget: deduct stock AFTER user gets reply
                         deductInventoryStock(sock, finalOrder.items, user.outlet).catch(e =>
                             console.error("[BOT] Stock deduction failed:", e)
                         );
@@ -1491,9 +1482,11 @@ async function startBot() {
 
 async function handleCheckoutFinal(sock, sender, user) {
     try {
-        const [delSettings, storeSettings] = await Promise.all([
+        const cleanPhone = String(user.phone || '').replace(/\D/g, '').slice(-10);
+        const [delSettings, storeSettings, customerSnap] = await Promise.all([
             getData("settings/Delivery", user.outlet) || {},
-            getData("settings/Store", user.outlet) || {}
+            getData("settings/Store", user.outlet) || {},
+            cleanPhone ? getData(`customers/${cleanPhone}`, user.outlet) : null
         ]);
 
         const outletCoords = {
@@ -1509,8 +1502,6 @@ async function handleCheckoutFinal(sock, sender, user) {
 
         // Auto-evaluate discount (best of: firstOrder / coupon / global / category)
         try {
-            const cleanPhone = String(user.phone || '').replace(/\D/g, '').slice(-10);
-            const customerSnap = cleanPhone ? await getData(`customers/${cleanPhone}`, user.outlet) : null;
             const discountEval = await discountEngine.evaluateDiscount({
                 OUTLET: user.outlet,
                 customer: customerSnap,
