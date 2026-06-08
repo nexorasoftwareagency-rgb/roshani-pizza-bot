@@ -15,12 +15,12 @@ export const formatDate = (ts) => {
 };
 
 // Re-export IST date helper from shared — single source of truth
-export { getISTDateString } from '../../shared/format/date.js';
+export { getISTDateString } from '../shared/format/date.js';
 
 export { escapeHtml } from './utils/escape.js';
 
 // Re-export geo utilities from shared — single source of truth
-export { calculateDistance } from '../../shared/geo/geo.js';
+export { calculateDistance } from '../shared/geo/geo.js';
 
 export const getFeeFromSlabs = (dist, slabs) => {
     if (!slabs || slabs.length === 0) return 0;

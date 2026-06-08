@@ -2,7 +2,7 @@
  * RIDER Geo utilities — location tracking, outlet coords, distance checks.
  * Uses shared/geo/geo.js for the Haversine formula.
  */
-import { calculateDistance } from '../../shared/geo/geo.js';
+import { calculateDistance } from '../shared/geo/geo.js';
 import { db, ref, get, update, serverTimestamp } from './firebase.js';
 
 const DEFAULT_COORDS = {

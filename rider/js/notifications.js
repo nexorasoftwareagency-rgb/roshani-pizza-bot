@@ -2,7 +2,7 @@
  * RIDER Notifications — render, mark read, clear, toggle sheet.
  */
 import { db, ref, update, remove } from './firebase.js';
-import { escapeHtml } from '../../shared/dom/escape.js';
+import { escapeHtml } from '../shared/dom/escape.js';
 
 export function initNotifications() {
     window.renderNotifications = () => {

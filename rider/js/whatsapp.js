@@ -2,7 +2,7 @@
  * RIDER WhatsApp alerts — sends messages via bot command node.
  */
 import { db, ref, push, serverTimestamp } from './firebase.js';
-import { cleanPhone } from '../../shared/format/phone.js';
+import { cleanPhone } from '../shared/format/phone.js';
 
 export function initWhatsApp() {
     window.triggerWhatsAppAlert = (phone, orderId, actionType, extraData = {}, isManual = false) => {
