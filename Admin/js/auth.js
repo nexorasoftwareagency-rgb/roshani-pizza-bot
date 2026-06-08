@@ -27,6 +27,9 @@ function initActivityListeners() {
 function removeActivityListeners() {
     const events = ['mousemove', 'keydown', 'click', 'touchstart', 'visibilitychange'];
     events.forEach(e => window.removeEventListener(e, resetIdleTimer));
+    // Cleanup new order notification listener
+    if (_newOrderUnsub) { _newOrderUnsub(); _newOrderUnsub = null; }
+    _lastNewOrder = '';
 }
 
 
@@ -327,16 +330,19 @@ export function userLogout() {
 
 // Track last notified order ID to avoid duplicate browser notifications
 let _lastNewOrder = '';
+let _newOrderUnsub = null;
 
 function initNewOrderNotifications() {
     if (!('Notification' in window)) return;
     if (Notification.permission === 'default') {
         Notification.requestPermission();
     }
+    // Cleanup previous listener if any
+    if (_newOrderUnsub) { _newOrderUnsub(); _newOrderUnsub = null; }
     const outlet = window.currentOutlet || 'pizza';
     const r = ref(db, `${outlet}/orders`);
     let initial = true;
-    onChildAdded(r, (snap) => {
+    _newOrderUnsub = onChildAdded(r, (snap) => {
         if (initial) { initial = false; return; }
         const order = snap.val();
         if (!order || order.orderId === _lastNewOrder) return;

@@ -4,6 +4,7 @@ import {
     initPagination,
     getSkeletonRows
 } from '../utils.js';
+import { logger } from '../utils/logger.js';
 
 const CUSTOMERS_PAGE_SIZE = 25;
 let _customersData = [];
@@ -58,9 +59,13 @@ function renderCustomersPage(page) {
 
 export async function loadCustomers() {
     const table = document.getElementById("customersTableBody") || document.getElementById("customersTable");
-    if (!table) return;
+    if (!table) {
+        logger.warn('CUSTOMERS', 'Customers table not found, skipping load');
+        return;
+    }
 
     table.innerHTML = getSkeletonRows(5, 5);
+    logger.info('CUSTOMERS', 'Loading customers from Firebase...');
 
     const [custSnap, orderSnap] = await Promise.all([
         get(Outlet.ref("customers")),
@@ -89,6 +94,7 @@ export async function loadCustomers() {
     });
     renderCustomersPage(1);
     initPagination('customersPagination', _customersData.length, CUSTOMERS_PAGE_SIZE, renderCustomersPage);
+    logger.success('CUSTOMERS', `Loaded ${_customersData.length} customers`);
 }
 
 export function filterCustomers(searchTerm) {

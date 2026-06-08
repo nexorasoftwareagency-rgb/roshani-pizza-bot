@@ -132,7 +132,7 @@ async function renderReport() {
                 const pct = maxTotal > 0 ? Math.round((b.total / maxTotal) * 100) : 0;
                 const typeBadge = `<span class="discount-type-badge discount-type-${escapeHtml(b.type)}">${escapeHtml(b.type)}</span>`;
                 return `
-                    <div class="discount-report-row">
+                    <div class="discount-report-row" style="cursor:pointer;" data-action="viewCodeUses" data-discount-id="${escapeHtml(b.id)}">
                         <div class="drr-label">
                             <div class="drr-name">${escapeHtml(b.name)} ${typeBadge}</div>
                             <div class="drr-meta">${b.count} redemption${b.count === 1 ? '' : 's'} \u00B7 avg ${_fmtINR(avg)}</div>
@@ -274,11 +274,68 @@ export function exportDiscountsReport() {
     showToast(`Exported ${rows.length} discount row(s) to CSV.`, 'success');
 }
 
-export function generateCouponCode(length = 8) {
-    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let out = '';
-    const buf = new Uint32Array(length);
-    (window.crypto || window.msCrypto).getRandomValues(buf);
-    for (let i = 0; i < length; i++) out += alphabet[buf[i] % alphabet.length];
-    return out;
+const _COUPON_WORDS = ['PIZZA', 'DEAL', 'FEAST', 'SAVE', 'YUMMY', 'TREAT', 'SALE', 'FRESH', 'HOT', 'MEGA', 'SUPER', 'LUCKY', 'BOGO', 'FREE', 'WOW', 'YAY'];
+
+export function generateCouponCode(prefix = '') {
+    const word = prefix || _COUPON_WORDS[Math.floor(Math.random() * _COUPON_WORDS.length)];
+    const num = Math.floor(Math.random() * 90 + 10);
+    return `${word}${num}`;
+}
+
+export function openCodeUses(discountId) {
+    const all = REPORT_STATE.usage || [];
+    const filtered = all.filter(u => u.discountId === discountId);
+    const sorted = filtered.sort((a, b) => (b.appliedAt || 0) - (a.appliedAt || 0));
+    const disc = REPORT_STATE.discounts[discountId];
+    const title = document.getElementById('discountCodeUsesTitle');
+    const list = document.getElementById('discountCodeUsesList');
+    const panel = document.getElementById('discountCodeUsesPanel');
+
+    if (title) title.textContent = `Code Uses: ${disc?.name || discountId}`;
+    if (panel) panel.classList.remove('hidden');
+
+    if (!list) return;
+    if (sorted.length === 0) {
+        list.innerHTML = '<div class="discount-report-empty">No usage recorded for this discount.</div>';
+        return;
+    }
+    const totalSaved = sorted.reduce((s, u) => s + (Number(u.amountGiven) || 0), 0);
+    list.innerHTML = `
+        <div style="margin-bottom:12px; font-size:13px; color:var(--text-muted);">
+            Total: <strong>${sorted.length} uses</strong> · <strong>${_fmtINR(totalSaved)}</strong> saved
+        </div>
+        <div style="overflow-x:auto;">
+        <table style="width:100%; font-size:13px; border-collapse:collapse;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border); text-align:left;">
+                    <th style="padding:6px 8px;">Phone</th>
+                    <th style="padding:6px 8px;">Order</th>
+                    <th style="padding:6px 8px;">Saved</th>
+                    <th style="padding:6px 8px;">Date</th>
+                    <th style="padding:6px 8px;">Channel</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${sorted.slice(0, 200).map(u => {
+                    const d = new Date(u.appliedAt || 0);
+                    const dateStr = d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                    const channel = String(u.channel || 'other');
+                    return `<tr style="border-bottom:1px solid var(--border-light);">
+                        <td style="padding:6px 8px;">${escapeHtml(u.customerPhone || '—')}</td>
+                        <td style="padding:6px 8px;">#${escapeHtml(u.orderId || '—')}</td>
+                        <td style="padding:6px 8px;">${_fmtINR(u.amountGiven)}</td>
+                        <td style="padding:6px 8px;">${escapeHtml(dateStr)}</td>
+                        <td style="padding:6px 8px;"><span class="channel-chip channel-${escapeHtml(channel)}">${escapeHtml(channel)}</span></td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>
+        </div>
+        ${sorted.length > 200 ? `<div style="margin-top:8px; font-size:12px; color:var(--text-muted);">Showing 200 of ${sorted.length} uses</div>` : ''}
+    `;
+}
+
+export function closeCodeUsesPanel() {
+    const panel = document.getElementById('discountCodeUsesPanel');
+    if (panel) panel.classList.add('hidden');
 }

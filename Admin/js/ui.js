@@ -41,7 +41,10 @@ export const closeSidebar = () => {
 
 
 export const switchTab = async (tabId, skipHistory = false) => {
-    if (state.currentActiveTab === tabId) return;
+    if (state.currentActiveTab === tabId) {
+        window.__adminLogger?.info('NAV', `Tab already active: ${tabId}`);
+        return;
+    }
 
     // --- PHASE 3: DIRTY STATE TRACKING ---
     if (state.settingsDirty && state.currentActiveTab === 'settings') {
@@ -62,8 +65,9 @@ export const switchTab = async (tabId, skipHistory = false) => {
         state.settingsDirty = false;
     }
 
+    const previousTab = state.currentActiveTab;
     state.currentActiveTab = tabId;
-    console.log(`[Navigation] Switching to: ${tabId}`);
+    window.__adminLogger?.nav('TAB', `Switching: ${previousTab || '(none)'} → ${tabId}`);
 
     if (!skipHistory) {
         history.pushState({ tabId }, "", `#${tabId}`);
@@ -194,6 +198,7 @@ export const switchTab = async (tabId, skipHistory = false) => {
 
         // --- PHASE 3.25: DATA REFRESH ---
         // Refresh appropriate data based on the tab
+        window.__adminLogger?.data('TAB', `Loading data for: ${tabId}`);
         switch (tabId) {
             case 'dashboard':
             case 'orders':
@@ -285,6 +290,10 @@ export const switchTab = async (tabId, skipHistory = false) => {
 
         // --- PHASE 3.6: MOBILE TABLE LABELS ---
         applyDataLabels();
+
+        window.__adminLogger?.success('TAB', `Tab loaded: ${tabId}`);
+    } else {
+        window.__adminLogger?.warn('TAB', `Tab target not found: tab-${tabId}`);
     }
 };
 

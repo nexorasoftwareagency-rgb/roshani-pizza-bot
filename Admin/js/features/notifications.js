@@ -176,6 +176,13 @@ export function toggleNotificationSheet(show) {
     }
 }
 
+// Listen for browser back button to close notification sheet
+window.addEventListener('popstate', (e) => {
+    if (e.state?.action === 'closeUI' && e.state?.target === 'notifications') {
+        toggleNotificationSheet(false);
+    }
+});
+
 function renderNotifItem(n, isFull = false) {
     const outletIcon = n.outlet === 'cake' ? '🎂' : '🍕';
     const typeClass = n.type || 'info';

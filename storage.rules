@@ -7,6 +7,20 @@ service firebase.storage {
       return request.auth != null && request.auth.token.admin == true;
     }
 
+    // Helper: Size limits in bytes
+    function maxDishImageSize() {
+      return 300 * 1024;  // 300KB
+    }
+
+    function maxRiderPhotoSize() {
+      return 300 * 1024;  // 300KB
+    }
+
+    // Helper: Restrict outlet wildcard to known outlets
+    function isOutletRestricted(userOutlet, resourceOutlet) {
+      return (request.auth != null && isAdmin()) || userOutlet == resourceOutlet;
+    }
+
     // --------------------------------------------
     // ADMINS: Full access for administrators
     // --------------------------------------------
@@ -15,15 +29,19 @@ service firebase.storage {
     }
     
     // --------------------------------------------
-    // RIDERS: Admin write, Self/Admin read
+    // RIDERS: Admin write, Self/Admin read, Self photo write (300KB limit)
     // --------------------------------------------
     match /riders/{riderId}/{allPaths=**} {
       allow read: if request.auth != null && (isAdmin() || request.auth.uid == riderId);
       allow write: if isAdmin();
+      allow write: if request.auth != null 
+                   && request.auth.uid == riderId
+                   && request.resource.size < maxRiderPhotoSize()
+                   && request.resource.contentType.matches('image/.*');
     }
     
     // --------------------------------------------
-    // BOT: WhatsApp order/status images
+    // BOT: WhatsApp order/status images (5MB limit)
     // --------------------------------------------
     match /bot/{allPaths=**} {
       allow read: if isAdmin();
@@ -32,29 +50,25 @@ service firebase.storage {
                    && request.resource.contentType.matches('image/.*');
     }
     
-      // --------------------------------------------
-      // OUTLET DISHES: Authenticated read, admin write
-      // --------------------------------------------
-      match /{outlet}/dishes/{dishId}/{allPaths=**} {
-        allow read: if request.auth != null && !isOutletRestricted(request.auth.token.outlet, outlet);
-        allow write: if isAdmin();
-      }
-      
-      // --------------------------------------------
-      // OUTLET CATEGORIES: Authenticated read, admin write  
-      // --------------------------------------------
-      match /{outlet}/categories/{catId}/{allPaths=**} {
-        allow read: if request.auth != null && !isOutletRestricted(request.auth.token.outlet, outlet);
-        allow write: if isAdmin();
-      }
-
-      // --------------------------------------------
-      // HELPER: Restrict outlet wildcard to known outlets
-      // --------------------------------------------
-      function isOutletRestricted(userOutlet, resourceOutlet) {
-        // Allow if same outlet or admin
-        return request.auth != null && isAdmin() || userOutlet == resourceOutlet;
-      }
+    // --------------------------------------------
+    // OUTLET DISHES: Authenticated read, admin write (300KB limit)
+    // --------------------------------------------
+    match /{outlet}/dishes/{dishId}/{allPaths=**} {
+      allow read: if request.auth != null && isOutletRestricted(request.auth.token.outlet, outlet);
+      allow write: if isAdmin() 
+                   && request.resource.size < maxDishImageSize()
+                   && request.resource.contentType.matches('image/.*');
+    }
+    
+    // --------------------------------------------
+    // OUTLET CATEGORIES: Authenticated read, admin write (300KB limit)
+    // --------------------------------------------
+    match /{outlet}/categories/{catId}/{allPaths=**} {
+      allow read: if request.auth != null && isOutletRestricted(request.auth.token.outlet, outlet);
+      allow write: if isAdmin()
+                   && request.resource.size < maxDishImageSize()
+                   && request.resource.contentType.matches('image/.*');
+    }
     
     // --------------------------------------------
     // RECEIPTS: Admin read/write

@@ -147,7 +147,7 @@ export async function generateRiderPerformanceReport() {
         });
 
         // Calculate Stats
-        const stats = calculateRiderStats(allOrders);
+        const stats = calculateRiderStats(allOrders, riderId);
         updateRiderKPIs(stats);
         renderRiderTable(allOrders);
         renderRiderEarningsChart(allOrders);
@@ -166,7 +166,7 @@ export async function generateRiderPerformanceReport() {
 /**
  * CALCULATE STATS FROM FILTERED ORDERS
  */
-function calculateRiderStats(orders) {
+function calculateRiderStats(orders, riderId) {
     let totalEarnings = 0;
     let deliveredCount = 0;
     let totalDeliveryTime = 0; // in minutes
@@ -197,11 +197,15 @@ function calculateRiderStats(orders) {
         }
     });
 
+    // Look up rider rating from stats data
+    const riderStats = riderId ? (state.riderStatsData?.[riderId] || {}) : {};
+
     return {
         totalEarnings,
         deliveredCount,
         pendingCash,
-        avgTime: deliveryTimeCount > 0 ? Math.round(totalDeliveryTime / deliveryTimeCount) : 0
+        avgTime: deliveryTimeCount > 0 ? Math.round(totalDeliveryTime / deliveryTimeCount) : 0,
+        avgRating: riderStats.avgRating || null
     };
 }
 
@@ -212,7 +216,7 @@ function updateRiderKPIs(stats) {
     document.getElementById('riderStatEarnings').innerText = `₹${stats.totalEarnings.toLocaleString()}`;
     document.getElementById('riderStatDeliveries').innerText = stats.deliveredCount;
     document.getElementById('riderStatAvgTime').innerText = `${stats.avgTime}m`;
-    document.getElementById('riderStatRating').innerText = 'N/A';
+    document.getElementById('riderStatRating').innerText = stats.avgRating || 'N/A';
     const pendingCashEl = document.getElementById('riderStatPendingCash');
     if (pendingCashEl) {
         pendingCashEl.innerText = `₹${stats.pendingCash.toLocaleString()}`;
@@ -228,7 +232,11 @@ function renderRiderTable(orders) {
     if (!tbody) return;
 
     // Sort by date desc
-    orders.sort((a, b) => b.createdAt - a.createdAt);
+    orders.sort((a, b) => {
+        const aTime = typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt).getTime() || 0;
+        const bTime = typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt).getTime() || 0;
+        return bTime - aTime;
+    });
 
     const displayOrders = orders.slice(0, 50);
     const totalCount = orders.length;

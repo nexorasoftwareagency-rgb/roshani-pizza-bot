@@ -15,18 +15,18 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 if (window.reCaptchaSiteKey) {
-    try {
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        if (isLocal) {
-            const debugToken = window.firebaseConfig?.appCheckDebugToken;
-            self.FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) {
+        console.log('[App Check] Skipped on localhost — reCAPTCHA v3 requires HTTPS');
+    } else {
+        try {
+            initializeAppCheck(app, {
+                provider: new ReCaptchaV3Provider(window.reCaptchaSiteKey),
+                isTokenAutoRefreshEnabled: true
+            });
+        } catch (e) {
+            console.warn("[App Check] Activation failed:", e.message);
         }
-        initializeAppCheck(app, {
-            provider: new ReCaptchaV3Provider(window.reCaptchaSiteKey),
-            isTokenAutoRefreshEnabled: true
-        });
-    } catch (e) {
-        console.warn("[App Check] Activation failed:", e.message);
     }
 }
 
@@ -50,10 +50,8 @@ onValue(connectedRef, (snap) => {
     }
     if (!connected) {
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        console.warn('[Firebase] Lost connection - data may not sync. Retrying...');
-        if (isLocal) {
-            console.info("[Firebase Hint] On localhost, ensure your App Check Debug Token is registered in the Firebase Console if App Check is enforced.");
-            console.info("[Firebase Hint] Check if your Firewall or Adblocker is blocking WebSockets (wss://).");
+        if (!isLocal) {
+            console.warn('[Firebase] Lost connection - data may not sync. Retrying...');
         }
     } else {
         console.log('[Firebase] Connection restored.');
@@ -69,7 +67,7 @@ export const Outlet = {
     },
     ref(path) {
         if (!path) return ref(db);
-        const globalPaths = ['admins', 'riders', 'logs', 'bot', 'migrationStatus', 'admins_list'];
+        const globalPaths = ['admins', 'riders', 'riderStats', 'logs', 'bot', 'migrationStatus', 'admins_list'];
         const cleanPath = path.startsWith('/') ? path.slice(1) : path;
         const firstSegment = cleanPath.split('/')[0];
         let finalPath;

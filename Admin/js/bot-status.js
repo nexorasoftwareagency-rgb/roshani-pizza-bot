@@ -3,12 +3,15 @@
  * Monitors bot/{outlet}/status from Firebase and dispatches a
  * `botStatusChange` custom event so any component can react.
  */
-import { Outlet } from './firebase.js';
+import { Outlet, onValue } from './firebase.js';
+import { logger } from './utils/logger.js';
 
 if (!window.__botStatusInit) {
   window.__botStatusInit = true;
+  logger.info('BOT', 'Initializing bot status listener');
 
   let _statusListener = null;
+  let _currentRef = null;
 
   function _dispatch(online, lastSeen) {
     window._botOnline = online;
@@ -16,25 +19,30 @@ if (!window.__botStatusInit) {
     window.dispatchEvent(new CustomEvent('botStatusChange', {
       detail: { online, lastSeen }
     }));
+    logger.info('BOT', `Bot status changed: ${online ? 'ONLINE' : 'OFFLINE'} (last seen: ${lastSeen ? new Date(lastSeen).toLocaleTimeString() : 'never'})`);
   }
 
   function _attachListener() {
-    if (_statusListener) { _statusListener(); _statusListener = null; }
+    if (typeof _statusListener === 'function') { try { _statusListener(); } catch (e) {} _statusListener = null; }
     const outlet = window.state?.currentOutlet || 'pizza';
     try {
-      const ref = Outlet.ref(`bot/${outlet}/status`);
-      _statusListener = ref.on('value', (snap) => {
+      const statusRef = Outlet.ref(`bot/${outlet}/status`);
+      if (!statusRef || typeof statusRef.toString !== 'function') {
+        throw new Error('Outlet.ref returned invalid reference: ' + typeof statusRef);
+      }
+      const unsub = onValue(statusRef, (snap) => {
         const val = snap.val() || {};
         const seen = val.lastSeen || 0;
         const fresh = (Date.now() - seen) < 90 * 1000;
         const online = val.status === 'Online' && fresh;
         _dispatch(online, seen);
       }, (err) => {
-        console.warn('[BotStatus] Listener error:', err);
+        logger.warn('BOT', `Listener error: ${err.message}`);
         _dispatch(false, 0);
       });
+      _statusListener = (typeof unsub === 'function') ? unsub : null;
     } catch (err) {
-      console.warn('[BotStatus] Failed to attach listener:', err);
+      logger.warn('BOT', `Failed to attach listener: ${err.message}`);
       _dispatch(false, 0);
     }
   }
@@ -42,6 +50,7 @@ if (!window.__botStatusInit) {
   _attachListener();
 
   document.addEventListener('switchOutlet', () => {
+    logger.info('BOT', 'Outlet switched, reattaching listener');
     if (_statusListener) { _statusListener(); _statusListener = null; }
     setTimeout(_attachListener, 100);
   });

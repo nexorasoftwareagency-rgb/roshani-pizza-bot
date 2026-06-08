@@ -243,11 +243,11 @@ export async function printReceiptById(orderId) {
 }
 
 /**
- * Reprint the most recent Walk-in (POS) order
+ * Reprint the most recent Dine-in (POS) order
  */
 export async function reprintLastPosReceipt() {
     try {
-        const snap = await get(query(Outlet.ref("orders"), orderByChild("type"), equalTo("Walk-in"), limitToLast(1)));
+        const snap = await get(query(Outlet.ref("orders"), orderByChild("type"), equalTo("Dine-in"), limitToLast(1)));
 
         let lastOrder = null;
         snap.forEach(child => {

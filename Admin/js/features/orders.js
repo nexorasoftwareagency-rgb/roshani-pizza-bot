@@ -10,6 +10,7 @@ import { showAlert, addNotification, highlightOrder } from './notifications.js';
 import { showPaymentPicker } from '../ui-utils.js';
 import { autoDeductStock } from './inventory.js';
 import { sendToRider } from '../fcm-sender.js';
+import { logger } from '../utils/logger.js';
 
 
 /**
@@ -17,9 +18,9 @@ import { sendToRider } from '../fcm-sender.js';
  */
 export const STATUS_SEQUENCE = ["Placed", "Confirmed", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"];
 export const STATUS_SEQUENCES = {
-    'Online': ["Placed", "Confirmed", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"],
+    'Online': ["Placed", "Confirmed", "Ready", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"],
     'Dine-in': ["Confirmed", "Ready", "Delivered"],
-    'Default': ["Placed", "Confirmed", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"]
+    'Default': ["Placed", "Confirmed", "Ready", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"]
 };
 export const STATUS_MAPPING = {
     "New": 0, "Pending": 0, "Placed": 0,
@@ -169,6 +170,7 @@ const PAGE_SIZE = 50;
 export function loadOrdersPage(reset = false) {
     if (state.ordersPageLoading && !reset) return;
     state.ordersPageLoading = true;
+    logger.info('ORDERS', `Loading orders page (reset=${reset})`);
 
     if (reset) {
         state.ordersPageData = [];
@@ -936,10 +938,18 @@ function renderTopCustomers(orders) {
  */
 
 export async function updateStatus(id, status) {
-    if (!id || !status) return;
+    if (!id || !status) {
+        logger.warn('ORDERS', `updateStatus called with invalid args: id=${id}, status=${status}`);
+        return;
+    }
+
+    logger.info('ORDERS', `updateStatus requested: ${id} → ${status}`);
 
     const order = state.ordersMap.get(id) || (state.liveOrdersMap.get(id));
-    if (!order) return;
+    if (!order) {
+        logger.warn('ORDERS', `Order not found: ${id}`);
+        return;
+    }
 
     const currentStatus = order.status || "Placed";
     const type = order.type || 'Online';
@@ -1068,23 +1078,31 @@ export async function updateStatus(id, status) {
     if (status === "Delivered" && !order.stockDeducted && !isPosSale) {
         const items = order.normalizedItems || order.cart || [];
         if (items.length > 0) {
+            logger.info('ORDERS', `Auto-deducting stock on Delivered: ${items.length} items`);
             autoDeductStock(items);
             updates.stockDeducted = true;
         }
     }
 
     try {
+        logger.firebase('ORDERS', `Saving status update: orders/${id} → ${status}`);
         await update(Outlet.ref(`orders/${id}`), updates);
         logAudit("Orders", `Updated Status: #${id.slice(-5)} -> ${status}`, id);
         showToast(`Order status updated to ${status}`, "success");
+        logger.success('ORDERS', `Status updated: ${id} → ${status}`);
     } catch (e) {
+        logger.error('ORDERS', `Status update failed: ${e.message}`, e);
         showToast("Update failed: " + e.message, "error");
         renderOrders(state.lastOrdersSnap);
     }
 }
 
 export async function assignRider(id, riderId) {
-    if (!id || !riderId) return;
+    if (!id || !riderId) {
+        logger.warn('ORDERS', `assignRider missing args: id=${id}, riderId=${riderId}`);
+        return;
+    }
+    logger.info('ORDERS', `Assigning rider ${riderId} to order ${id}`);
     try {
         const riderSnap = await get(ref(db, `riders/${riderId}`));
         const rider = riderSnap.val();
@@ -1092,6 +1110,7 @@ export async function assignRider(id, riderId) {
 
         const order = state.ordersMap.get(id) || state.liveOrdersMap.get(id);
         if (!order) {
+            logger.warn('ORDERS', `Order data not found: ${id}`);
             showToast("⚠️ Order data not found. Please refresh.", "error");
             return;
         }
@@ -1122,6 +1141,7 @@ export async function assignRider(id, riderId) {
         // Manual assignment only - Rider will handle status advancement via "PICKUP"
         showToast(`Rider ${rider.name} assigned. Status updated if needed.`, "success");
 
+        logger.firebase('ORDERS', `Saving rider assignment: orders/${id}`);
         await update(Outlet.ref(`orders/${id}`), updateData);
         
         // Notify Rider
@@ -1129,7 +1149,9 @@ export async function assignRider(id, riderId) {
         sendToRider(riderId, "🚚 New Order Assigned!", `Order #${id.slice(-5)} for ₹${order.total} — Please check the app.`, { orderId: id });
 
         logAudit("Orders", `Assigned Rider: ${rider.name} to #${id.slice(-5)}`, id);
+        logger.success('ORDERS', `Rider ${rider.name} assigned to ${id}`);
     } catch (e) {
+        logger.error('ORDERS', `Rider assignment failed: ${e.message}`, e);
         showToast("Assignment failed: " + e.message, "error");
     }
 }
@@ -1172,8 +1194,10 @@ export async function saveDeliveredOrder(id) {
  */
 export async function openOrderDrawer(id) {
     window.openOrderDrawer = openOrderDrawer;
+    logger.info('ORDERS', `Opening order drawer: ${id}`);
     const order = state.ordersMap.get(id);
     if (!order) {
+        logger.warn('ORDERS', `Order not found: ${id}`);
         showToast("Order not found. It may have been removed.", "error");
         return;
     }
@@ -1349,6 +1373,7 @@ export async function openOrderDrawer(id) {
 }
 
 export function closeOrderDrawer() {
+    logger.info('ORDERS', 'Closing order drawer');
     const drawer = document.getElementById('orderDrawer');
     const overlay = document.getElementById('orderDrawerOverlay');
     if (drawer) drawer.classList.remove('active');

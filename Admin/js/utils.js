@@ -14,30 +14,13 @@ export const formatDate = (ts) => {
     return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ", " + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 };
 
-/**
- * Returns YYYY-MM-DD in IST (GMT+5:30) for accurate report filtering
- */
-export const getISTDateString = (dateInput = new Date()) => {
-    const date = new Date(dateInput);
-    // Add 5.5 hours to UTC time to get IST
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const istDate = new Date(date.getTime() + istOffset);
-    return istDate.toISOString().split('T')[0];
-};
-
+// Re-export IST date helper from shared — single source of truth
+export { getISTDateString } from '../../shared/format/date.js';
 
 export { escapeHtml } from './utils/escape.js';
 
-export const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-};
+// Re-export geo utilities from shared — single source of truth
+export { calculateDistance } from '../../shared/geo/geo.js';
 
 export const getFeeFromSlabs = (dist, slabs) => {
     if (!slabs || slabs.length === 0) return 0;

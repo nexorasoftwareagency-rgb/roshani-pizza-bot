@@ -7,6 +7,7 @@ export const state = {
     adminData: null,
     currentOutlet: 'pizza',
     categories: [],
+    dishes: [],
     allWalkinDishes: [],
     activeWalkinCategory: 'All',
     walkinCart: {},

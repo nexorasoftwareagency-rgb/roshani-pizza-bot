@@ -777,6 +777,7 @@ export async function submitWalkinSale() {
             discountSource,
             total,
             paymentMethod: state.walkinPayMethod || "Cash",
+            paymentStatus: "Paid",
             customerName: name,
             phone: phone || "Walk-in",
             customerNote: combinedNote,

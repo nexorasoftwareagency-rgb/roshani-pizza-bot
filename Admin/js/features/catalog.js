@@ -28,20 +28,38 @@ export function loadCategories() {
         cats.sort((a, b) => (a.order || 0) - (b.order || 0));
         state.categories = cats;
 
+        // Count dishes per category
+        const dishCounts = {};
+        if (state.dishes) {
+            state.dishes.forEach(d => {
+                const cat = d.category || 'Uncategorized';
+                dishCounts[cat] = (dishCounts[cat] || 0) + 1;
+            });
+        }
+
         cats.forEach(cat => {
             const div = document.createElement('div');
             div.className = "premium-row-v4 p-10 flex-row flex-center flex-gap-10 br-12";
             div.style.border = "1px solid rgba(0,0,0,0.02)";
+
+            const addonCount = cat.addons ? Object.keys(cat.addons).length : 0;
+            const dishCount = dishCounts[cat.name] || 0;
+            const subParts = [`Serial: ${cat.order || 0}`];
+            if (dishCount > 0) subParts.push(`${dishCount} dish${dishCount !== 1 ? 'es' : ''}`);
+            if (addonCount > 0) subParts.push(`${addonCount} addon${addonCount !== 1 ? 's' : ''}`);
 
             div.innerHTML = `
                 <div class="identity-chip-v4" style="flex: 1;">
                     <img src="${cat.image || 'https://placehold.co/100/orange/white?text=Category'}" class="identity-avatar-v4" style="width:40px; height:40px;">
                     <div class="identity-info-v4">
                         <span class="name" style="font-size:13px;">${escapeHtml(cat.name)}</span>
-                        <span class="sub" style="font-size:10px;">Serial: ${cat.order || 0}</span>
+                        <span class="sub" style="font-size:10px;">${subParts.join(' · ')}</span>
                     </div>
                 </div>
                 <div class="action-group-v4">
+                    <button data-action="editCategory" data-id="${cat.id}" class="btn-action-v4" title="Edit Category">
+                         <i data-lucide="pencil" style="width:12px;"></i>
+                    </button>
                     <button data-action="deleteCategory" data-id="${cat.id}" class="btn-action-v4 danger" title="Delete Category">
                          <i data-lucide="trash-2" style="width:12px;"></i>
                     </button>
@@ -59,6 +77,12 @@ export async function addCategory() {
     const nameInput = document.getElementById('newCatName');
     const name = nameInput.value.trim();
     if (!name) return showToast('Enter category name', 'warning');
+
+    // Check for duplicate name
+    const existingCats = state.categories || [];
+    if (existingCats.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+        return showToast('A category with this name already exists', 'warning');
+    }
 
     const fileInput = document.getElementById('catFile');
     const previewImg = document.getElementById('catPreview');
@@ -172,7 +196,8 @@ export function loadMenu() {
     const grid = document.getElementById("menuGrid");
     if (!grid) return;
 
-    cleanupCatalog();
+    // Only clean up the dishes listener, NOT categories
+    if (_dishesUnsub) { _dishesUnsub(); _dishesUnsub = null; }
     // Show skeleton while data loads
     grid.innerHTML = Array.from({ length: 6 }, () =>
         '<div class="skeleton-dish-card" style="animation: skeleton-pulse 1.2s ease-in-out infinite alternate;"></div>'
@@ -187,6 +212,7 @@ export function loadMenu() {
 
         // Sort by order field
         dishes.sort((a, b) => (a.order || 0) - (b.order || 0));
+        state.dishes = dishes;
 
         dishes.forEach(d => {
             const dishId = d.id;
@@ -529,12 +555,30 @@ export function cleanupCatalog() {
 export const toggleStock = (id, current) => update(Outlet.ref(`dishes/${id}`), { stock: !current });
 export const toggleDishAvailable = (id, available) => update(Outlet.ref(`dishes/${id}`), { stock: available });
 export const editDish = (id) => showDishModal(id);
-// TODO: editCategory stub — only shows a toast. Wire to a real edit modal (similar to #dishModal) or remove the trigger button in the categories list.
-export const editCategory = (id) => showToast("Category editing coming soon!", "info");
+export const editCategory = async (id) => {
+    const cat = state.categories?.find(c => c.id === id);
+    if (!cat) return showToast("Category not found", "error");
+    const newName = prompt("Edit category name:", cat.name);
+    if (newName === null || newName.trim() === '') return;
+    if (newName.trim() === cat.name) return;
+    // Check for duplicate name
+    const existingCats = state.categories || [];
+    if (existingCats.some(c => c.id !== id && c.name.toLowerCase() === newName.trim().toLowerCase())) {
+        return showToast('A category with this name already exists', 'warning');
+    }
+    try {
+        await update(Outlet.ref(`categories/${id}`), { name: newName.trim() });
+        logAudit("Category Edit", `Renamed "${cat.name}" → "${newName.trim()}"`, "Catalog");
+        showToast("Category updated!", "success");
+    } catch (e) {
+        console.error("[Catalog] Category edit failed:", e);
+        showToast("Failed to update category", "error");
+    }
+};
 
 export function filterMenu(searchTerm) {
     const term = (searchTerm || '').toLowerCase().trim();
-    const cards = document.querySelectorAll('#menuGrid .menu-card');
+    const cards = document.querySelectorAll('#menuGrid .dish-card');
     
     cards.forEach(card => {
         if (!term) {
@@ -644,10 +688,10 @@ export async function runImageMigration() {
             const catsData = catsSnap.val();
             if (catsData) {
                 for (const id in catsData) {
-                    if (catsData[id].imageUrl && catsData[id].imageUrl.includes("firebasestorage")) {
+                    if (catsData[id].image && catsData[id].image.includes("firebasestorage")) {
                         console.log("Migrating Category:", catsData[id].name);
-                        const b64 = await convertUrlToDataUri(catsData[id].imageUrl);
-                        updates[`categories/${id}/imageUrl`] = b64;
+                        const b64 = await convertUrlToDataUri(catsData[id].image);
+                        updates[`categories/${id}/image`] = b64;
                     }
                 }
             }

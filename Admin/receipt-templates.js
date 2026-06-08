@@ -100,7 +100,7 @@ window.ReceiptTemplates = {
                 </div>
 
                 <div style="font-size: 0.8rem;">
-                    <div class="summary-row"><span>ORDER: #${order.orderId.slice(-6).toUpperCase()}</span> <span>${order.time || ''}</span></div>
+                    <div class="summary-row"><span>ORDER: #${order.orderId.slice(-5).toUpperCase()}</span> <span>${order.time || ''}</span></div>
                     <div class="summary-row"><span>DATE: ${order.date || ''}</span> <span>${order.paymentMethod || 'Cash'}</span></div>
                     ${order.tableNo ? `<div class="summary-row"><span class="bold">TABLE NO: ${order.tableNo}</span></div>` : ''}
                 </div>

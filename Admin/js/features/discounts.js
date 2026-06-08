@@ -69,6 +69,28 @@ function _renderCard(d) {
     const status = _status(d);
     const used = d.stats?.usedCount || 0;
     const given = d.stats?.totalDiscountGiven || 0;
+    const lastUsed = d.stats?.lastUsedAt ? _fmtDate(d.stats.lastUsedAt) : null;
+
+    // Expiry countdown
+    let expiryBadge = '';
+    if (d.endsAt && d.endsAt > 0) {
+        const msLeft = d.endsAt - Date.now();
+        if (msLeft > 0) {
+            const days = Math.ceil(msLeft / 86400000);
+            expiryBadge = `<span class="badge badge-warning">Expires in ${days}d</span>`;
+        } else {
+            const daysExpired = Math.ceil(-msLeft / 86400000);
+            expiryBadge = `<span class="badge badge-danger">Expired ${daysExpired}d ago</span>`;
+        }
+    }
+
+    // Usage bar (when globalLimit is set)
+    let usageBar = '';
+    if (d.globalLimit && used > 0) {
+        const pct = Math.min(100, Math.round((used / d.globalLimit) * 100));
+        usageBar = `<div class="discount-usage-bar"><div style="width:${pct}%;"></div></div>`;
+    }
+
     return `
     <div class="discount-card" data-id="${_esc(d.id)}">
         <div class="flex-between flex-center flex-wrap-mobile">
@@ -79,6 +101,7 @@ function _renderCard(d) {
                     <span class="badge badge-${status}">${_esc(status)}</span>
                     ${d.stackable ? '<span class="badge badge-info">stackable</span>' : ''}
                     ${d.channel && d.channel !== 'all' ? `<span class="badge badge-secondary">${_esc(d.channel === 'whatsapp' ? 'WhatsApp' : d.channel === 'pos' ? 'POS' : d.channel === 'both' ? 'WA+POS' : d.channel)}</span>` : ''}
+                    ${expiryBadge}
                 </div>
                 <div class="text-muted-small mt-4">
                     ${_valueBadge(d)}${d.maxCap ? ` (cap ₹${Number(d.maxCap).toFixed(0)})` : ''}
@@ -86,7 +109,8 @@ function _renderCard(d) {
                     ${d.type === 'category' && Array.isArray(d.categoryIds) ? ` · ${d.categoryIds.length} categor${d.categoryIds.length === 1 ? 'y' : 'ies'}` : ''}
                 </div>
                 <div class="text-muted-small">${_windowLine(d)}</div>
-                ${used > 0 ? `<div class="text-muted-small mt-4">Used <strong>${used}×</strong> · given away <strong>₹${given.toLocaleString('en-IN')}</strong></div>` : ''}
+                ${used > 0 ? `<div class="text-muted-small mt-4">Used <strong>${used}×</strong> · given <strong>₹${given.toLocaleString('en-IN')}</strong>${d.globalLimit ? ` / ${d.globalLimit} limit` : ''}${lastUsed ? ` · Last: ${lastUsed}` : ''}</div>` : ''}
+                ${usageBar}
             </div>
             <div class="flex-row flex-gap-6 flex-center">
                 <label class="promo-switch" title="Enable / disable">
@@ -166,9 +190,14 @@ function _renderCategoryChips(selectedIds = []) {
             ${_esc(c.name)}
         </button>
     `).join('');
-    el.querySelectorAll('.disc-cat-chip').forEach(chip => {
-        chip.addEventListener('click', () => chip.classList.toggle('selected'));
-    });
+    // Use event delegation to avoid listener accumulation
+    if (!el.dataset.delegationAttached) {
+        el.dataset.delegationAttached = '1';
+        el.addEventListener('click', (e) => {
+            const chip = e.target.closest('.disc-cat-chip');
+            if (chip) chip.classList.toggle('selected');
+        });
+    }
 }
 
 function _openEditor(id) {

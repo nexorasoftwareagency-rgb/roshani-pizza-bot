@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#FF5200">
+    <meta name="theme-color" content="#f36b21">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="msapplication-TileColor" content="#f36b21">
@@ -18,7 +18,7 @@
         }
         
         // Version Enforcement
-        const APP_VERSION = '4.8.0';
+        const APP_VERSION = '5.2.0';
         if (localStorage.getItem('rider_app_version') !== APP_VERSION) {
             localStorage.setItem('rider_app_version', APP_VERSION);
             // Optionally clear specific caches
@@ -30,7 +30,7 @@
 
     <script>
         // Force cleanup of old service workers and caches if stuck on old versions
-        const CURRENT_VERSION = '4.8.0';
+        const CURRENT_VERSION = '5.2.0';
         if (localStorage.getItem('app_version') !== CURRENT_VERSION) {
             console.log(`Stale version detected. Cleaning up (${CURRENT_VERSION})...`);
             if ('serviceWorker' in navigator) {
@@ -52,7 +52,7 @@
             }
         });
     </script>
-    <link rel="stylesheet" href="style.css?v=5.0.1">
+    <link rel="stylesheet" href="style.css?v=5.2.0">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="icon-512.png">
     <link rel="apple-touch-icon" href="icon-512.png">
@@ -362,18 +362,8 @@
 
 
 
-    <!-- TODO: unused — #verificationModal is hidden by default and #orderChecklist is never populated.
-         Slider confirm reuses #btnConfirmPickup directly. Candidate for removal. -->
-    <div id="verificationModal" class="modal-overlay hidden">
-        <div class="modal-content-bottom">
-            <div class="modal-handle"></div>
-            <div class="modal-header">
-                <h2>Verify Items</h2>
-            </div>
-            <div class="checklist-container" id="orderChecklist"></div>
-            <button class="btn-primary full-width" id="btnConfirmPickup">ORDER PICKED UP</button>
-        </div>
-    </div>
+    <!-- NOTE: #verificationModal and #confirmModal removed — #verificationModal was unused (no listeners),
+         #confirmModal was replaced by dynamic window.showConfirm() in app.js. -->
 
     <div id="otpPanel" class="modal-overlay">
         <div class="modal-card text-center">
@@ -402,20 +392,8 @@
         </div>
     </div>
 
-    <!-- TODO: unused — #confirmModal is replaced by dynamic window.showConfirm() overlay in app.js.
-         Buttons #btnConfirmYes and #btnConfirmNo have no event listeners. Candidate for removal. -->
-    <div id="confirmModal" class="modal-overlay hidden">
-        <div class="modal-card text-center">
-            <h3 id="confirmTitle" class="mb-10">CONFIRM</h3>
-            <p id="confirmMsg" class="text-muted mb-20">Proceed?</p>
-            <div class="flex-row gap-10">
-                <button id="btnConfirmYes" class="btn-primary flex-1">YES</button>
-                <button id="btnConfirmNo" class="btn-outline flex-1">CANCEL</button>
-            </div>
-        </div>
-    </div>
 
-    <div id="notificationSheet" class="notif-sheet hidden">
+    <div id="notificationSheet" class="notif-sheet">
         <div class="notif-sheet-header">
             <h3>Notifications</h3>
             <button id="btnClearAllNotifs" class="btn-clear-all">Clear All</button>
@@ -479,7 +457,7 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=5.0.1"></script>
+    <script type="module" src="app.js?v=5.2.0"></script>
     <div id="successOverlay" class="modal-overlay">
         <div class="modal-card text-center success-card">
             <div class="success-icon-wrapper">

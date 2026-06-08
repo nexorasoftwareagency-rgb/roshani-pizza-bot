@@ -1,150 +1,26 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, onValue, get, set, update, runTransaction, query, orderByChild, equalTo, off, serverTimestamp, remove, limitToLast, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
-import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
-// Utility for haptic feedback
-window.haptic = (pattern) => {
-    try {
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            navigator.vibrate(pattern);
-        }
-    } catch (e) {}
-};
+// ── Firebase (via rider/js/firebase.js) ────────────────────────────────────
+import { app, auth, db, dbStorage, messaging, onAuthStateChanged, signInWithEmailAndPassword, signOut, ref, onValue, get, set, update, runTransaction, query, orderByChild, equalTo, off, serverTimestamp, remove, limitToLast, push, getToken, onMessage } from './js/firebase.js';
 
-// Firebase Database modular SDK does not export enablePersistence for RTDB on Web
+// ── Extracted modules ──────────────────────────────────────────────────────
+import { initUI } from './js/ui.js';
+import { initGeo, loadOutletCoords, initLocationTracking } from './js/geo.js';
+import { initAuth } from './js/auth.js';
+import { initPWA } from './js/pwa.js';
+import { initWhatsApp } from './js/whatsapp.js';
+import { initNotifications } from './js/notifications.js';
+import { initSettlement } from './js/settlement.js';
 
-const firebaseConfig = {
-    apiKey: "AIzaSyDcx-SN5eak8PAs-8NtTGelJ_sICr5yb7Y",
-    authDomain: "prashant-pizza-e86e4.firebaseapp.com",
-    databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
-    projectId: "prashant-pizza-e86e4",
-    storageBucket: "prashant-pizza-e86e4.firebasestorage.app",
-    messagingSenderId: "857471482885",
-    appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c"
-};
+// ── Shared modules ─────────────────────────────────────────────────────────
+import { escapeHtml } from '../shared/dom/escape.js';
 
-const reCaptchaSiteKey = "6LeAlcwsAAAAAH4F3p5aCNvyPlhC3BRHOXTdDEGK";
-
-let app, auth, db, dbStorage, messaging;
-try {
-    app = initializeApp(firebaseConfig);
-    
-    // Initialize App Check (Phase 2.16)
-    initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider(reCaptchaSiteKey),
-        isTokenAutoRefreshEnabled: true
-    });
-    console.log("[App Check] Activated for Rider Portal");
-
-    auth = getAuth(app);
-    // Explicitly set persistence to Local to survive PWA restarts on iOS/Android
-    setPersistence(auth, browserLocalPersistence).catch(e => console.error("[Auth] Persistence Error:", e));
-    db = getDatabase(app);
-    
-    // Offline persistence is handled automatically by the browser/SDK for RTDB metadata, 
-    // but disk persistence is not available in the Web Modular SDK for RTDB.
-    console.log("[Firebase] Modular SDK initialized");
-    
-    dbStorage = getStorage(app);
-    try {
-        messaging = getMessaging(app);
-    } catch (e) {
-        console.warn("FCM not supported in this browser:", e);
-    }
-} catch (e) {
-    console.error("Firebase Init Error:", e);
-}
-
-// ==========================================
-// PIZZA ERP | RIDER PORTAL v3.0 (MODULAR)
-// ==========================================
-window.haptic = window.haptic || ((val) => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate(val);
-    }
-});
-
-let deferredPrompt;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    if (typeof Capacitor !== 'undefined') return;
-    deferredPrompt = e;
-    const downloadBtn = document.getElementById('menu-downloadapp');
-    if (downloadBtn) downloadBtn.classList.remove('hidden');
-});
-
-window.installPWA = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-        const downloadBtn = document.getElementById('menu-downloadapp');
-        if (downloadBtn) downloadBtn.classList.add('hidden');
-    }
-    deferredPrompt = null;
-};
-
-window.addEventListener('appinstalled', () => {
-    const downloadBtn = document.getElementById('menu-downloadapp');
-    if (downloadBtn) downloadBtn.classList.add('hidden');
-    deferredPrompt = null;
-});
-
-// Attach click listener for PWA install button
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('menu-downloadapp')?.addEventListener('click', window.installPWA);
-});
-
-// NUCLEAR REFRESH CIRCUIT BREAKER
-window.completeSiteRefresh = async () => {
-    window.haptic(50);
-    console.log("[Refresh] Initializing Deep Sync & Cache Purge...");
-    window.showToast("Purging Caches & Syncing...", "info");
-    
-    try {
-        // 1. Unregister all service workers with timeout
-        if ('serviceWorker' in navigator) {
-            const swPromise = navigator.serviceWorker.getRegistrations().then(async registrations => {
-                for (let registration of registrations) {
-                    await registration.unregister();
-                }
-            });
-            // Don't wait forever for SW
-            await Promise.race([swPromise, new Promise(res => setTimeout(res, 2000))]);
-        }
-
-        // 2. Clear all caches with timeout
-        if ('caches' in window) {
-            const cachePromise = caches.keys().then(async keys => {
-                for (let key of keys) {
-                    await caches.delete(key);
-                }
-            });
-            await Promise.race([cachePromise, new Promise(res => setTimeout(res, 2000))]);
-        }
-
-        // 3. Clear local storage for active state
-        localStorage.removeItem('activeOrderId');
-        localStorage.removeItem('activeOrderData');
-        sessionStorage.clear();
-        
-        console.log("[Refresh] Purge Complete. Triggering Reload.");
-        window.showToast("System Purged. Reloading...", "success");
-
-        // Force reload from server with double-cache-busting
-        setTimeout(() => {
-            const cleanUrl = window.location.origin + window.location.pathname;
-            window.location.href = `${cleanUrl}?v=${Date.now()}&sync=${Math.random().toString(36).substring(7)}`;
-        }, 800);
-
-    } catch (err) {
-        console.error("Critical Refresh Error:", err);
-        window.location.reload();
-    }
-};
+// ── Initialize modules (sets window.* globals) ─────────────────────────────
+initUI();
+initGeo();
+initAuth();
+initPWA();
+initWhatsApp();
+initNotifications();
+initSettlement();
 
 // Status Update Actions
 window.reachedOutlet = async (id, outlet) => {
@@ -190,7 +66,7 @@ window.reachedDropLocation = async (id, outlet) => {
         
         if (o && o.customerPhone) {
             // Send Arrival Alert (Safe - doesn't expose OTP)
-            window.triggerWhatsAppAlert(o.customerPhone, o.orderId || id.slice(-6), 'ARRIVED');
+            window.triggerWhatsAppAlert(o.customerPhone, o.orderId || id.slice(-5), 'ARRIVED');
         }
         
         window.activeOrderId = id;
@@ -212,12 +88,6 @@ if ('serviceWorker' in navigator) {
 
 
 
-
-const escapeHtml = (text) => {
-    if (!text && text !== 0) return "";
-    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-    return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
-};
 
 const logError = (context, error) => {
     console.error(`[${context}] Error:`, error);
@@ -258,76 +128,9 @@ window.orderCache = { pizza: {}, cake: {} };
 window.outletCoords = { pizza: { lat: 25.887944, lng: 85.026194 }, cake: { lat: 25.887472, lng: 85.026861 } };
 window.PICKUP_RADIUS_KM = 0.5; // 500m — rider must be within this distance to accept/pickup
 
-// Load outlet coordinates from Firebase on init
-async function loadOutletCoords() {
-    try {
-        const pizzaStore = await get(ref(db, 'pizza/settings/Store'));
-        const cakeStore = await get(ref(db, 'cake/settings/Store'));
-        if (pizzaStore.val()) {
-            window.outletCoords.pizza.lat = parseFloat(pizzaStore.val().lat) || 25.887944;
-            window.outletCoords.pizza.lng = parseFloat(pizzaStore.val().lng) || 85.026194;
-        }
-        if (cakeStore.val()) {
-            window.outletCoords.cake.lat = parseFloat(cakeStore.val().lat) || 25.887472;
-            window.outletCoords.cake.lng = parseFloat(cakeStore.val().lng) || 85.026861;
-        }
-        console.log("[Outlet] Coordinates loaded:", window.outletCoords);
-    } catch (e) { console.warn("[Outlet] Using default coordinates"); }
-}
-
-window.getDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-};
-
-window.triggerWhatsAppAlert = (phone, orderId, actionType, extraData = {}, isManual = false) => {
-    if (!phone) return;
-    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-    let message = "";
-
-    const riderName = window.currentUser?.profile?.name || "Your Rider";
-    const riderPhone = window.currentUser?.profile?.phone || "our support number";
-
-    if (actionType === "ACCEPTED") {
-        message = `Hello! I am ${riderName}, your delivery partner for Roshani Sudha order #${orderId}. I am on my way to pick up your order! 🛵`;
-    }
-    else if (actionType === "PICKED_UP") {
-        message = `Great news! I have picked up your order #${orderId}. If you need anything, you can call me at ${riderPhone}. I am on my way! 🍕🎂`;
-    }
-    else if (actionType === "REACHED_DROP") {
-        message = `I have arrived at your drop location with your order #${orderId}! Please have your 4-digit OTP ready. ✅`;
-    }
-    else if (actionType === "SEND_OTP") {
-        message = `Your Roshani Sudha order #${orderId} has arrived! 📍 \n\nTo safely receive your order, please provide this 4-digit OTP to the rider: *${extraData.otp}* ✅`;
-    }
-    else if (actionType === "ARRIVED") {
-        message = `I have arrived with your order #${orderId}! Please have your 4-digit OTP ready. ✅`;
-    }
-
-    if (isManual) {
-        const url = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`;
-        window.open(url, '_blank', 'noopener,noreferrer');
-    } else {
-        // Send via Bot command node
-        const outlet = window.activeOrderOutlet || 'pizza';
-        const cmdRef = ref(db, `bot/${outlet}/commands`);
-        push(cmdRef, {
-            action: "SEND_GENERIC_MESSAGE",
-            phone: cleanPhone,
-            message: message,
-            timestamp: serverTimestamp()
-        });
-        console.log(`[Alert] Pushed automated message to bot for ${cleanPhone}`);
-    }
-};
-
 function resolvePath(path, outlet = null) {
     if (!path) return "";
-    const sharedNodes = ['admins', 'migrationStatus', 'riders', 'logs', 'errorLogs'];
+    const sharedNodes = ['admins', 'admins_list', 'riders', 'logs', 'errorLogs', 'bot', 'migrationStatus'];
     const parts = path.split('/');
     const rootNode = parts[0];
 
@@ -387,250 +190,6 @@ if (typeof Capacitor === 'undefined' && messaging) {
 }
 
 
-
-// NAVIGATION
-window.toggleRiderSidebar = () => {
-    console.log("[Navigation] Toggling Sidebar. Width:", window.innerWidth);
-    window.haptic(10);
-    const nav = document.getElementById('sidebarNav');
-    const overlay = document.getElementById('sidebarOverlay');
-    if (!nav) {
-        console.error("[Navigation] sidebarNav element not found!");
-        return;
-    }
-
-    if (window.innerWidth > 1024) {
-        document.body.classList.toggle('sidebar-collapsed');
-        console.log("[Navigation] Laptop mode: toggled .sidebar-collapsed on body");
-    } else {
-        const isActive = nav.classList.toggle('active');
-        if (overlay) overlay.classList.toggle('active', isActive);
-        console.log("[Navigation] Mobile mode: sidebar active =", isActive);
-    }
-};
-
-window.showSection = (sectionId) => {
-    if (window.haptic) window.haptic(10);
-
-    document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
-    const target = document.getElementById(`sec-${sectionId}`);
-    if (target) {
-        target.classList.add('active');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // UPDATE BOTTOM NAVIGATION UI
-    document.querySelectorAll('.bottom-nav .nav-item').forEach(tab => {
-        tab.classList.toggle('active', tab.getAttribute('data-section') === sectionId);
-    });
-
-    document.querySelectorAll('.nav-links .nav-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('data-section') === sectionId);
-    });
-
-    const nav = document.getElementById('sidebarNav');
-    if (nav && nav.classList.contains('active')) window.toggleRiderSidebar();
-    if (window.lucide) window.lucide.createIcons({ root: target || document.body });
-
-    // Re-init map if switching to active section
-    if (sectionId === 'active' && window.activeOrderData) {
-        setTimeout(() => window.initActiveMap(window.activeOrderData), 200);
-    } else if (sectionId === 'active') {
-        setTimeout(() => window.initDefaultMap(), 200);
-    }
-};
-
-window.showToast = (msg, type = "info") => {
-    const toast = document.createElement('div');
-    let bgColor = type === 'error' ? '#EF4444' : (type === 'success' ? '#10B981' : '#1E293B');
-    toast.style.cssText = `position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: ${bgColor}; color: white; padding: 12px 24px; border-radius: 30px; font-weight: 700; z-index: 9999; text-transform: uppercase; text-align: center; white-space: nowrap; box-shadow: 0 4px 15px rgba(0,0,0,0.2);`;
-    toast.innerText = msg;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-};
-
-window.showConfirm = (msg, title = "Confirm") => {
-    return new Promise((resolve) => {
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;`;
-        overlay.innerHTML = `
-            <div style="background: #1c1c1c; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 32px; max-width: 360px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
-                <h3 style="color: #fff; margin: 0 0 12px; font-size: 18px; font-weight: 700;">${title}</h3>
-                <p style="color: #aaa; font-size: 14px; margin: 0 0 24px;">${msg}</p>
-                <div style="display: flex; gap: 12px; justify-content: center;">
-                    <button class="confirm-no" style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #333; background: transparent; color: #aaa; cursor: pointer; font-size: 14px; font-weight: 600;">Cancel</button>
-                    <button class="confirm-yes" style="flex: 1; padding: 12px; border-radius: 12px; border: none; background: #10B981; color: #fff; cursor: pointer; font-size: 14px; font-weight: 700;">Confirm</button>
-                </div>
-            </div>`;
-        document.body.appendChild(overlay);
-        const cleanup = (val) => {
-            overlay.style.opacity = '0';
-            overlay.style.transition = 'opacity 0.2s';
-            setTimeout(() => { overlay.remove(); resolve(val); }, 200);
-        };
-        overlay.querySelector('.confirm-yes').onclick = () => cleanup(true);
-        overlay.querySelector('.confirm-no').onclick = () => cleanup(false);
-        overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
-    });
-};
-
-// LOGIN & AUTH
-window.login = async () => {
-    const identifier = document.getElementById('email').value.trim();
-    const pass = document.getElementById('password').value;
-    const errEl = document.getElementById('loginError');
-    if (errEl) errEl.classList.add('hidden');
-    if (!identifier || !pass) return;
-
-    let loginEmail = /^\d{10}$/.test(identifier) ? `${identifier}@rider.com` : identifier;
-
-    try {
-        await signInWithEmailAndPassword(auth, loginEmail, pass);
-        localStorage.setItem('isLoggedIn', 'true');
-    } catch (e) {
-        console.error("Login Error:", e);
-        let msg = "Authentication failed. Check credentials.";
-        if (e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
-            msg = "Incorrect mobile number or password.";
-        } else if (e.code === 'auth/too-many-requests') {
-            msg = "Too many failed attempts. Try again later.";
-        } else if (e.code === 'auth/network-request-failed') {
-            msg = "Network error. Check internet connection.";
-        }
-        window.showToast(msg, "error");
-    }
-};
-
-window.logout = async () => {
-    if (await window.showConfirm("End your shift and logout?", "Confirm Logout")) {
-        window.clearAllListeners();
-        localStorage.removeItem('rider_authenticated');
-        await signOut(auth);
-    }
-};
-
-window.toggleRiderStatus = async () => {
-    if (!window.currentUser || !window.currentUser.profile) return window.showToast("Authentication error.", "error");
-    const currentStatus = window.currentUser.profile.status || "Offline";
-    const newStatus = currentStatus === "Online" ? "Offline" : "Online";
-    try {
-        await update(ref(db, `riders/${window.currentUser.profile.id}`), { status: newStatus, lastSeen: serverTimestamp() });
-        window.currentUser.profile.status = newStatus;
-
-        const btn = document.getElementById('statusToggleBtn');
-        if (btn) {
-            btn.classList.remove('Online', 'Offline', 'Busy');
-            btn.classList.add(newStatus);
-            const label = btn.querySelector('.status-text') || btn.querySelector('span');
-            if (label) label.innerText = newStatus.toUpperCase();
-            const dot = btn.querySelector('.pulse-dot');
-            if (dot) {
-                dot.classList.remove('Online', 'Offline', 'Busy');
-                dot.classList.add(newStatus);
-            }
-        }
-        window.showToast(`You are now ${newStatus}`, "info");
-
-        if (newStatus === "Online") initLocationTracking();
-        else stopLocationTracking();
-    } catch (e) { window.showToast("Failed to sync status", "error"); }
-};
-
-window.toggleAadharView = () => {
-    const container = document.getElementById('aadhar-container');
-    const img = document.getElementById('r-aadhar-img');
-    const btn = document.getElementById('btn-toggle-aadhar');
-    if (container.classList.contains('hidden')) {
-        container.classList.remove('hidden');
-        img.src = window.currentUser.profile.aadharPhoto || '';
-        btn.innerText = 'HIDE';
-    } else {
-        container.classList.add('hidden');
-        btn.innerText = 'SHOW';
-    }
-};
-
-// --- PROFILE EDIT HANDLERS ---
-window.triggerProfilePhotoUpload = () => {
-    const input = document.getElementById('profile-photo-input');
-    if (input) input.click();
-};
-
-window.uploadProfilePhoto = async (e) => {
-    if (!window.currentUser?.profile?.id) return window.showToast("Not logged in.", "error");
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 500 * 1024) {
-        return window.showToast("Image too large (>500KB). Please compress.", "error");
-    }
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-        const base64 = ev.target.result;
-        try {
-            await update(ref(db, `riders/${window.currentUser.profile.id}`), { profilePhoto: base64 });
-            window.currentUser.profile.profilePhoto = base64;
-            const img = document.getElementById('r-profile-img');
-            if (img) img.src = base64;
-            const cached = JSON.parse(localStorage.getItem('riderProfile') || '{}');
-            cached.profilePhoto = base64;
-            localStorage.setItem('riderProfile', JSON.stringify(cached));
-            window.showToast("Profile photo updated", "success");
-        } catch (err) {
-            window.showToast("Upload failed. Try again.", "error");
-        }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-};
-
-window.editProfilePhone = async () => {
-    if (!window.currentUser?.profile?.id) return;
-    const span = document.getElementById('profilePhoneValue');
-    const btn = document.getElementById('btn-edit-phone');
-    if (!span || !btn) return;
-    const current = window.currentUser.profile.phone || '';
-    const newVal = prompt("Enter your new phone number:", current);
-    if (newVal === null) return;
-    const trimmed = newVal.trim();
-    if (!trimmed) return window.showToast("Phone cannot be empty.", "error");
-    if (!/^[0-9+\-\s]{6,20}$/.test(trimmed)) return window.showToast("Invalid phone format.", "error");
-    try {
-        await update(ref(db, `riders/${window.currentUser.profile.id}`), { phone: trimmed });
-        window.currentUser.profile.phone = trimmed;
-        span.innerText = trimmed;
-        const profilePhone = document.getElementById('profilePhone');
-        if (profilePhone) profilePhone.innerText = trimmed;
-        const cached = JSON.parse(localStorage.getItem('riderProfile') || '{}');
-        cached.phone = trimmed;
-        localStorage.setItem('riderProfile', JSON.stringify(cached));
-        window.showToast("Phone updated", "success");
-    } catch (err) {
-        window.showToast("Failed to update phone.", "error");
-    }
-};
-
-window.editProfileAddress = async () => {
-    if (!window.currentUser?.profile?.id) return;
-    const span = document.getElementById('r-address');
-    const btn = document.getElementById('btn-edit-address');
-    if (!span || !btn) return;
-    const current = window.currentUser.profile.address || '';
-    const newVal = prompt("Enter your new address:", current);
-    if (newVal === null) return;
-    const trimmed = newVal.trim();
-    if (!trimmed) return window.showToast("Address cannot be empty.", "error");
-    try {
-        await update(ref(db, `riders/${window.currentUser.profile.id}`), { address: trimmed });
-        window.currentUser.profile.address = trimmed;
-        span.innerText = trimmed;
-        const cached = JSON.parse(localStorage.getItem('riderProfile') || '{}');
-        cached.address = trimmed;
-        localStorage.setItem('riderProfile', JSON.stringify(cached));
-        window.showToast("Address updated", "success");
-    } catch (err) {
-        window.showToast("Failed to update address.", "error");
-    }
-};
 
 window.confirmPickup = async () => {
     if (!window.activeOrderId) {
@@ -708,8 +267,8 @@ window.initActiveMap = (order) => {
     if (window.riderLocation) {
         if (riderMarker) activeMap.removeLayer(riderMarker);
         riderMarker = L.circleMarker([window.riderLocation.lat, window.riderLocation.lng], {
-            color: '#FF5200',
-            fillColor: '#FF5200',
+            color: '#f36b21',
+            fillColor: '#f36b21',
             fillOpacity: 0.8,
             radius: 8
         }).addTo(activeMap).bindPopup("You are here");
@@ -734,122 +293,13 @@ window.initDefaultMap = () => {
 
     if (window.riderLocation) {
         riderMarker = L.circleMarker([window.riderLocation.lat, window.riderLocation.lng], {
-            color: '#FF5200',
-            fillColor: '#FF5200',
+            color: '#f36b21',
+            fillColor: '#f36b21',
             fillOpacity: 0.8,
             radius: 8
         }).addTo(activeMap).bindPopup("You are here");
     }
 };
-
-window.renderNotifications = () => {
-    const list = document.getElementById('notifList');
-    const badge = document.getElementById('notifBadge');
-    if (!list) return;
-
-    const notifs = Object.entries(window.riderNotifications || {})
-        .sort((a, b) => b[1].timestamp - a[1].timestamp);
-
-    const unreadCount = notifs.filter(([id, n]) => !n.read).length;
-    if (badge) {
-        badge.innerText = unreadCount;
-        badge.style.display = unreadCount > 0 ? 'flex' : 'none';
-    }
-
-    if (notifs.length === 0) {
-        list.innerHTML = `
-            <div class="empty-notif">
-                <i data-lucide="bell-off"></i>
-                <p>No new notifications</p>
-            </div>
-        `;
-        if (window.lucide) window.lucide.createIcons({ root: list });
-        return;
-    }
-
-    list.innerHTML = notifs.map(([id, n]) => `
-        <div class="notif-item ${n.read ? '' : 'unread'}" data-action="markNotifRead" data-id="${escapeHtml(id)}">
-            <div class="notif-icon ${escapeHtml(n.type || 'info')}">
-                <i data-lucide="${escapeHtml(n.icon || 'bell')}"></i>
-            </div>
-            <div class="notif-body">
-                <h4>${escapeHtml(n.title)}</h4>
-                <p>${escapeHtml(n.body)}</p>
-                <span class="notif-time">${new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
-            ${!n.read ? '<div class="unread-dot"></div>' : ''}
-        </div>
-    `).join('');
-
-    if (window.lucide) window.lucide.createIcons({ root: list });
-};
-
-window.markNotifRead = async (id) => {
-    if (!id || !window.currentUser?.profile?.id) return;
-    try {
-        const riderId = window.currentUser.profile.id;
-        await update(ref(db, `riders/${riderId}/notifications/${id}`), { read: true });
-    } catch (e) {
-        console.warn("[Rider Notif] Mark Read Failed:", e);
-    }
-};
-
-window.clearAllNotifications = async () => {
-    if (!window.currentUser?.profile?.id) return;
-    if (!(await window.showConfirm("Clear all notifications?", "Confirm Clear"))) return;
-    try {
-        const riderId = window.currentUser.profile.id;
-        await remove(ref(db, `riders/${riderId}/notifications`));
-        window.showToast("Notifications cleared", "success");
-    } catch (e) {
-        window.showToast("Failed to clear notifications", "error");
-    }
-};
-
-window.toggleNotifSheet = () => {
-    const sheet = document.getElementById('notificationSheet');
-    const overlay = document.querySelector('.sidebar-overlay');
-    if (!sheet) {
-        console.warn('[Notif] #notificationSheet element not found');
-        return;
-    }
-
-    sheet.classList.toggle('hidden');
-    sheet.classList.toggle('active');
-    if (overlay) {
-        overlay.classList.toggle('active');
-        if (sheet.classList.contains('active')) {
-            overlay.onclick = window.toggleNotifSheet;
-        }
-    }
-};
-
-// GPS LOCATION ENGINE
-let _locationWatchId = null;
-let _locationInterval = null;
-
-function initLocationTracking() {
-    if (!navigator.geolocation) return;
-    if (_locationWatchId) return;
-
-    _locationWatchId = navigator.geolocation.watchPosition(
-        pos => {
-            window.riderLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() };
-        }, err => { }, { enableHighAccuracy: true }
-    );
-
-    if (_locationInterval) clearInterval(_locationInterval);
-    _locationInterval = setInterval(() => {
-        if (window.riderLocation && currentUser && currentUser.profile.status === "Online") {
-            set(ref(db, resolvePath(`riders/${currentUser.profile.id}/location`)), window.riderLocation).catch(() => { });
-        }
-    }, 30000);
-}
-
-function stopLocationTracking() {
-    if (_locationWatchId) { navigator.geolocation.clearWatch(_locationWatchId); _locationWatchId = null; }
-    if (_locationInterval) { clearInterval(_locationInterval); _locationInterval = null; }
-}
 
 // CORE DELIVERY LOGIC
 window.acceptOrder = async (id, outletId) => {
@@ -1024,7 +474,7 @@ window.finalizeDeliverySequence = async (orderPath, matchesFallback, order, paym
             particleCount: 150,
             spread: 70,
             origin: { y: 0.6 },
-            colors: ['#FF5200', '#FF7A00', '#22C55E']
+            colors: ['#f36b21', '#FF7A00', '#22C55E']
         });
     }
 
@@ -1052,7 +502,7 @@ window.emergencyOverride = async () => {
         window.closeOTPPanel();
         window.activeOrderForPayment = { path: orderPath, data: order, matchesFallback: true };
         document.getElementById('paymentTotalTxt').innerText = `Total to collect: ₹${order.total || 0}`;
-        document.getElementById('paymentPanel').classList.remove('hidden');
+        document.getElementById('paymentPanel').classList.add('active');
     }
 };
 
@@ -1145,7 +595,7 @@ window.showPingModal = (id, outletId, order) => {
     
     document.getElementById('pingOutletName').innerText = (outletId === 'pizza' ? 'Pizza' : 'Cake') + ' Outlet';
     document.getElementById('pingCustomerAddress').innerText = order.address || 'Unknown';
-    document.getElementById('pingOrderId').innerText = '#' + (order.orderId || id.slice(-6)).toUpperCase();
+    document.getElementById('pingOrderId').innerText = '#' + (order.orderId || id.slice(-5)).toUpperCase();
     document.getElementById('pingOrderTotal').innerText = '₹' + (order.deliveryFee || '0');
     
     const acceptBtn = document.getElementById('btnAcceptOrder');
@@ -1597,7 +1047,7 @@ window._doRenderAllOrders = () => {
                     window._pingCandidate = { id, outletId, order: o };
                 }
             }
-                const safeOrderId = escapeHtml((o.orderId || id.slice(-6)).toUpperCase());
+                const safeOrderId = escapeHtml((o.orderId || id.slice(-5)).toUpperCase());
                 const safeAddress = escapeHtml(o.address || 'Unknown');
                 const safeFee = escapeHtml(String(o.deliveryFee || 0));
                 const safeTotal = escapeHtml(String(o.total || 0));
@@ -1657,7 +1107,7 @@ window._doRenderAllOrders = () => {
                 const cName = o.customerName || 'Customer';
                 const cAdd = o.address || 'Location Details';
                 const cPhone = (o.customerPhone || o.phone || '').replace(/\D/g, '').slice(-10);
-                const oId = (o.orderId || id.slice(-6)).toUpperCase();
+                const oId = (o.orderId || id.slice(-5)).toUpperCase();
 
                 const safeName = escapeHtml(cName);
                 const safeAdd = escapeHtml(cAdd);
@@ -1837,7 +1287,7 @@ window._doRenderAllOrders = () => {
 
                 if (isCash && !o.settled) totalCashToSettle += orderTotal;
 
-                const oId = (o.orderId || id.slice(-6)).toUpperCase();
+                const oId = (o.orderId || id.slice(-5)).toUpperCase();
                 const dTime = o.deliveredAt ? new Date(o.deliveredAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
                 const safeAddress = escapeHtml(o.address || '---');
                 
@@ -2100,12 +1550,16 @@ document.addEventListener('DOMContentLoaded', () => {
         touchStart = 0;
     });
 
-    // History Search
+    // History Search — works on both desktop table and mobile card views
     document.getElementById('historySearch')?.addEventListener('input', (e) => {
         const term = (e.target.value || '').toLowerCase().trim();
         document.querySelectorAll('#completedOrdersList tbody tr').forEach(row => {
             const text = row.textContent.toLowerCase();
             row.style.display = text.includes(term) ? '' : 'none';
+        });
+        document.querySelectorAll('#completedOrdersList .order-card-grid').forEach(card => {
+            const text = card.textContent.toLowerCase();
+            card.style.display = text.includes(term) ? '' : 'none';
         });
     });
 });
@@ -2212,6 +1666,7 @@ onAuthStateChanged(auth, async user => {
         initLocationTracking();
         initRealtimeListeners();
         setupPushNotifications(user.uid);
+        _startInactivityTimer();
 
         if (dashboard) dashboard.classList.remove('hidden');
         window.showSection('home');
@@ -2224,6 +1679,30 @@ onAuthStateChanged(auth, async user => {
         window.hideLoader();
     }
 });
+
+// Auto-offline after 30 minutes of inactivity
+let _inactivityTimer = null;
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+function _startInactivityTimer() {
+    _resetInactivityTimer();
+    ['mousemove', 'keydown', 'click', 'touchstart', 'visibilitychange'].forEach(evt => {
+        window.addEventListener(evt, _resetInactivityTimer, { passive: true });
+    });
+}
+
+function _resetInactivityTimer() {
+    if (_inactivityTimer) clearTimeout(_inactivityTimer);
+    _inactivityTimer = setTimeout(async () => {
+        if (window.currentUser?.profile?.status === 'Online') {
+            try {
+                await update(ref(db, `riders/${window.currentUser.uid}/status`), 'Offline');
+                window.showToast("Auto-set Offline due to inactivity", "warning");
+                window.currentUser.profile.status = 'Offline';
+            } catch (_) {}
+        }
+    }, INACTIVITY_TIMEOUT);
+}
 
 // Realtime Connection Monitoring
 let isFirstConnect = true;
@@ -2242,60 +1721,6 @@ onValue(ref(db, '.info/connected'), (snap) => {
 
 window.initGlobalSlider();
 window.updateRiderPerformanceUI = () => { }; 
-
-// SETTLEMENT HISTORY
-window.openSettlementHistory = async () => {
-    const modal = document.getElementById('settlementModal');
-    const list = document.getElementById('settlementList');
-    if (!modal || !list) return;
-
-    modal.classList.add('active');
-    list.innerHTML = '<div class="loader-spinner-small m-auto mt-20"></div><p class="text-center text-muted-small mt-10">Fetching records...</p>';
-
-    try {
-        const sRef = ref(db, `settlements/${auth.currentUser.uid}`);
-        const snap = await get(sRef);
-        
-        if (!snap.exists()) {
-            list.innerHTML = '<div class="glass-panel text-center p-40 mt-20"><p class="text-muted">No settlement records found.</p></div>';
-            return;
-        }
-
-        const data = snap.val();
-        const settlements = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-        settlements.sort((a, b) => b.timestamp - a.timestamp);
-
-        list.innerHTML = settlements.map(s => `
-            <div class="order-card-compact mb-10">
-                <div class="card-header">
-                    <div class="order-meta">
-                        <span class="order-id-badge" style="background: var(--success-bg); color: var(--success);">SETTLED</span>
-                        <span class="text-muted-small">${new Date(s.timestamp).toLocaleDateString()}</span>
-                    </div>
-                    <div class="earn-badge" style="color: var(--success);">₹${s.amountCollected.toLocaleString()}</div>
-                </div>
-                <div class="address-line">
-                    <i data-lucide="user-check"></i>
-                    <span class="text-muted-small">Admin: ${escapeHtml(s.settledByAdmin)}</span>
-                </div>
-                <div class="address-line">
-                    <i data-lucide="package-check"></i>
-                    <span class="text-muted-small">Cleared ${s.ordersClearedCount} orders</span>
-                </div>
-            </div>
-        `).join('');
-
-        if (window.lucide) window.lucide.createIcons({ root: list });
-
-    } catch (e) {
-        console.error(e);
-        list.innerHTML = '<div class="glass-panel text-center p-40 mt-20"><p class="text-danger">Failed to load settlements.</p></div>';
-    }
-};
-
-window.closeSettlementHistory = () => {
-    document.getElementById('settlementModal').classList.remove('active');
-};
 
 // LEGACY COMPATIBILITY SHIMS (Prevents crashes in cached environments)
 window.initPingCheck = window.initPingCheck || (() => console.log("[System] initPingCheck shim executed"));

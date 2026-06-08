@@ -4,6 +4,8 @@ import { showDeleteConfirm } from '../ui-utils.js';
 import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm, addRiderNotification, initPagination, getSkeletonRows } from '../utils.js';
 const RIDERS_PAGE_SIZE = 30;
 let _riderPage = 1;
+let _ridersUnsub = null;
+let _statsUnsub = null;
 import { uploadImage } from '../firebase.js';
 import { requireAdminReauth } from '../auth.js';
 import { populateRiderSelect } from './rider-analytics.js';
@@ -25,13 +27,13 @@ export function loadRiders() {
     console.log(`[Riders] Initializing listeners at: ${ridersRef.toString()}`);
     
     // Listen for performance stats
-    onValue(statsRef, s => {
+    _statsUnsub = onValue(statsRef, s => {
         state.riderStatsData = s.val() || {};
         if (state.ridersList.length > 0) renderRiders();
     });
 
     // Listen for riders
-    onValue(ridersRef, snapshot => {
+    _ridersUnsub = onValue(ridersRef, snapshot => {
         console.log(`[Riders] Data received: ${Object.keys(snapshot.val() || {}).length} items`);
         const data = snapshot.val();
         state.ridersList = [];
@@ -68,8 +70,9 @@ export function loadRiders() {
  * Detaches listeners to save bandwidth on Spark plan.
  */
 export function cleanupRiders() {
-    console.log("[Riders] Listeners detached by module unload pattern.");
-    // Listeners are managed via onValue cleanup; on re-init they are replaced.
+    if (_ridersUnsub) { _ridersUnsub(); _ridersUnsub = null; }
+    if (_statsUnsub) { _statsUnsub(); _statsUnsub = null; }
+    console.log("[Riders] Listeners detached.");
 }
 
 /**

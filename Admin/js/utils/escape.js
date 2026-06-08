@@ -1,10 +1,2 @@
-export const escapeHtml = (str) => {
-    if (str === null || str === undefined) return '';
-    if (typeof str !== 'string') str = String(str);
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-};
+// Re-export from shared — single source of truth
+export { escapeHtml } from '../../../shared/dom/escape.js';

@@ -220,8 +220,10 @@ export async function saveStoreSettings() {
     if (vFssai !== true && !vFssai.valid) return showToast(vFssai.msg, "error");
 
     const backupCode = document.getElementById('settingDeliveryBackupCode').value.trim();
-    const vBackup = validateBackupCode(backupCode);
-    if (vBackup !== true && !vBackup.valid) return showToast(vBackup.msg, "error");
+    if (backupCode) {
+        const vBackup = validateBackupCode(backupCode);
+        if (!vBackup.valid) return showToast(vBackup.msg, "error");
+    }
 
     const phones = [
         { id: 'settingDevPhone', label: "Developer Phone" },

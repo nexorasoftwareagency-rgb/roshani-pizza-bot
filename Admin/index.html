@@ -50,7 +50,7 @@
 
         //   cause reload loops on flaky networks. The user clicks Refresh to recover.
 
-        const ADMIN_VERSION = '4.14.17';
+        const ADMIN_VERSION = '5.2.0';
 
         const _storedVersion = localStorage.getItem('admin_app_version');
 
@@ -82,7 +82,7 @@
 
                         refreshBtn.disabled = true;
 
-                        refreshBtn.textContent = 'Refreshingâ€¦';
+                        refreshBtn.textContent = 'Refreshing…';
 
                         try {
 
@@ -186,15 +186,15 @@
 
     <!-- Dynamic Branding Engine -->
 
-    <script src="branding.js?v=4.9.1"></script>
+    <script src="branding.js?v=5.3.0"></script>
 
-    <script src="firebase-config.js?v=4.9.1"></script>
+    <script src="firebase-config.js?v=5.3.0"></script>
 
 
 
-    <link rel="stylesheet" href="style.css?v=5.1.5.7">
+    <link rel="stylesheet" href="style.css?v=5.3.0">
 
-    <link rel="stylesheet" href="mobile-overrides.css?v=5.1.5.7">
+    <link rel="stylesheet" href="mobile-overrides.css?v=5.3.0">
 
     <link rel="manifest" href="manifest.json?v=3">
 
@@ -238,7 +238,7 @@
 
     <!-- Global bot-status listener (ES module, deferred — loads after firebase.js is ready) -->
 
-    <script type="module" src="js/bot-status.js?v=4.14.8"></script>
+    <script type="module" src="js/bot-status.js?v=5.3.0"></script>
 
 </head>
 
@@ -274,7 +274,7 @@
 
         </button>
 
-        <button id="versionBannerDismiss" class="version-banner-dismiss" type="button" aria-label="Dismiss" title="Dismiss (you can refresh from sidebar Nuclear Refresh)">Ã—</button>
+        <button id="versionBannerDismiss" class="version-banner-dismiss" type="button" aria-label="Dismiss" title="Dismiss (you can refresh from sidebar Nuclear Refresh)">×</button>
 
     </div>
 
@@ -454,7 +454,7 @@
 
                         <h1 class="logo-text">ROSHANI ERP</h1>
 
-                        <div class="version-badge">Premium v4.2</div>
+                        <div class="version-badge">Premium v5.3.0</div>
 
                     </div>
 
@@ -2426,11 +2426,17 @@
 
                                                     </div>
 
-                                                </div>
+                    </div>
 
-                                            </div>
+                </div>
 
-                                        </div>
+                <label class="checkbox-label mt-8">
+
+                    <input type="checkbox" id="discStackable"> <span data-i18n="discount.editor.stackable">Stackable with other discounts</span>
+
+                </label>
+
+            </div>
 
                                     </div>
 
@@ -3984,7 +3990,7 @@
 
                             <label class="checkbox-label">
 
-                                <input type="checkbox" id="promoGreeting" checked> <span data-i18n="promo.compose.greeting">Start with "Hi {name}," greeting</span>
+                                <input type="checkbox" id="promoGreeting"> <span data-i18n="promo.compose.greeting">Start with "Hi {name}," greeting</span>
 
                             </label>
 
@@ -4008,9 +4014,14 @@
 
                         <label for="promoTemplate" data-i18n="promo.compose.template">Message template</label>
 
+                        <div class="flex-between mb-4">
+                            <span></span>
+                            <button type="button" class="btn-secondary btn-sm" data-action="pickPromoTemplate"><i data-lucide="layout-template"></i> Choose Template</button>
+                        </div>
+
                         <textarea id="promoTemplate" rows="6" class="search-input-group" maxlength="1500"
 
-                            placeholder="Hello {name}! 🍕 Try our new Margherita — flat 20% off today only. Use code {couponCode} at checkout."
+                            placeholder="Hey {name}! 🎉 Enjoy 20% off on your first order! 🍕✨"
 
                             data-i18n-placeholder="promo.compose.templatePlaceholder"
 
@@ -4018,7 +4029,7 @@
 
                         <div class="flex-between mt-4">
 
-                            <span class="text-muted-small" data-i18n="promo.compose.tokensHint">Tokens: {name} {phone} {lastOrderDate} {storeName} {couponCode}</span>
+                            <span class="text-muted-small" data-i18n="promo.compose.tokensHint">Tokens: {name} {phone} {lastOrderDate} {storeName}</span>
 
                             <span id="promoCharCount" class="text-muted-small">0 / 1500</span>
 
@@ -4218,23 +4229,19 @@
 
                         <label class="checkbox-label">
 
-                            <input type="checkbox" id="promoAttachMenuImage"> <span>Attach a menu/offer image (sent as a separate 3rd message)</span>
+                            <input type="checkbox" id="promoAttachMenuImage"> <span>Attach the outlet menu image (sent as a separate 3rd message from Settings → Bot Aesthetics)</span>
 
                         </label>
 
                         <div id="promoMenuImageBox" class="hidden mt-8">
 
-                            <button type="button" class="btn-secondary" data-action="pickPromoMenuImage"><i data-lucide="image"></i> Choose Image</button>
+                            <div id="promoMenuImagePreview" style="position:relative;display:inline-block;">
 
-                            <input type="file" id="promoMenuImageInput" accept="image/*" class="hidden">
-
-                            <div id="promoMenuImagePreview" class="hidden mt-8" style="position:relative;display:inline-block;">
-
-                                <img id="promoMenuImageImg" src="" alt="Menu image preview" style="max-width:120px;max-height:80px;border-radius:6px;object-fit:cover;">
-
-                                <button type="button" class="btn-text-danger" data-action="clearPromoMenuImage" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border-radius:50%;width:20px;height:20px;font-size:12px;line-height:20px;text-align:center;padding:0;">&times;</button>
+                                <img id="promoMenuImageImg" src="" alt="Menu image preview" style="max-width:180px;max-height:120px;border-radius:8px;object-fit:cover;border:1px solid var(--border-color);">
 
                             </div>
+
+                            <p class="text-muted-small mt-4">Uses the menu image uploaded in <strong>Settings → Bot Aesthetics → Menu Image</strong>.</p>
 
                         </div>
 
@@ -5054,6 +5061,14 @@
 
                 <div id="discountReportRecent" class="discount-report-list"></div>
 
+                <div id="discountCodeUsesPanel" class="hidden" style="margin-top:20px;">
+                    <div class="flex-between flex-center mb-8">
+                        <h4 class="panel-title fs-14" id="discountCodeUsesTitle">Code Uses</h4>
+                        <button class="btn-text" data-action="closeCodeUsesPanel"><i data-lucide="arrow-left"></i> Back to reports</button>
+                    </div>
+                    <div id="discountCodeUsesList" class="discount-report-list"></div>
+                </div>
+
             </div>
 
         </div>
@@ -5106,9 +5121,9 @@
 
     <!-- TEMPLATE PICKER MODAL -->
 
-    <div id="promoTemplatePickerModal" class="modal-overlay hidden">
+    <div id="promoTemplatePickerModal" class="modal">
 
-        <div class="modal" style="max-width:700px;">
+        <div class="modal-content" style="max-width:700px;">
 
             <div class="modal-header">
 
@@ -5244,19 +5259,17 @@
 
                     <label for="discCouponCode" data-i18n="discount.editor.coupon">Coupon code</label>
 
-                    <div class="flex-row flex-gap-8">
+                    <div class="flex-row flex-gap-8 mb-4">
 
-                        <input type="text" id="discCouponCode" maxlength="20" placeholder="FESTIVE5" class="search-input-group flex-1" style="text-transform:uppercase;">
+                        <input type="text" id="discCouponPrefix" maxlength="10" placeholder="PIZZA (prefix)" class="search-input-group" style="text-transform:uppercase; max-width:140px;">
 
-                        <button type="button" class="btn-secondary" data-action="generateCouponCode" title="Generate random code">Generate</button>
+                        <button type="button" class="btn-secondary" data-action="generateCouponCode" title="Generate word-based code">Generate</button>
 
                     </div>
 
-                    <label class="checkbox-label mt-8">
+                    <input type="text" id="discCouponCode" maxlength="20" placeholder="PIZZA42" class="search-input-group" style="text-transform:uppercase;">
 
-                        <input type="checkbox" id="discStackable"> <span data-i18n="discount.editor.stackable">Stackable with other discounts</span>
-
-                    </label>
+                    <span class="text-muted-small">Type your own or click Generate for a word-based code</span>
 
                 </div>
 
@@ -5568,50 +5581,6 @@
 
 
 
-    <!-- TODO: unused — #premiumModalOverlay is unreferenced in feature modules.
-
-         window.closePremiumModal and window.openPremiumModal are never called.
-
-         Candidate for removal or reuse for upcoming features. -->
-
-    <!-- Premium Global Modal System -->
-
-    <div id="premiumModalOverlay" class="premium-modal-overlay hidden">
-
-        <div class="premium-modal">
-
-            <div class="modal-header">
-
-                <h3 id="premiumModalTitle">Title</h3>
-
-                <button class="modal-close" onclick="window.closePremiumModal()" aria-label="Close modal" title="Close">
-
-                    <i data-lucide="x"></i>
-
-                </button>
-
-            </div>
-
-            <div class="modal-body" id="modalBody">
-
-                <!-- Dynamic Inputs Go Here -->
-
-            </div>
-
-            <div class="modal-footer">
-
-                <button class="btn-secondary" onclick="window.closePremiumModal()">Cancel</button>
-
-                <button class="btn-primary" id="modalSaveBtn">Save</button>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-
     <!-- ADD/EDIT INVENTORY MODAL -->
 
     <div id="inventoryModal" class="modal">
@@ -5808,9 +5777,9 @@
 
 
 
-    <script src="receipt-templates.js?v=4.14.17"></script>
+    <script src="receipt-templates.js?v=5.3.0"></script>
 
-    <script type="module" src="js/main.js?v=4.14.17"></script>
+    <script type="module" src="js/main.js?v=5.3.0"></script>
 
 </body>
 

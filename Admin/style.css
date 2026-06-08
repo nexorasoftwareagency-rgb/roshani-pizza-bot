@@ -62,8 +62,8 @@
     --danger: var(--error);
 
     /* Layout */
-    --sidebar-width: 260px;
-    --sidebar-collapsed-width: 80px;
+    --sidebar-width: 182px;
+    --sidebar-collapsed-width: 56px;
     --header-height: 80px;
     --header-offset: var(--header-height);
     --sidebar-transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -978,6 +978,17 @@ html, body {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
+}
+
+.modal-content {
+    background: var(--surface, #fff);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .modal.active .modal-content {
@@ -3904,30 +3915,6 @@ body {
         transform: translateX(0);
         opacity: 1;
     }
-}
-
-/* PREMIUM RIDER PANEL UI */
-.premium-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-}
-
-.premium-table th {
-    background: rgba(0, 0, 0, 0.02);
-    padding: 14px 16px;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-muted);
-    font-weight: 700;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.premium-table td {
-    padding: 16px;
-    vertical-align: middle;
-    border-bottom: 1px solid var(--border-color);
 }
 
 .rider-row:hover {
@@ -7082,41 +7069,6 @@ body.pos-selection-mode .walkin-picker {
     pointer-events: none;
 }
 
-/* Premium Modal System */
-.premium-modal-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.6);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 1;
-    transition: opacity 0.3s ease;
-}
-.premium-modal-overlay.hidden {
-    opacity: 0;
-    pointer-events: none;
-    display: flex !important; /* Keep flex for transition, use pointer-events and opacity to hide */
-}
-.premium-modal {
-    background: var(--surface);
-    border-radius: 20px;
-    width: 90%;
-    max-width: 400px;
-    box-shadow: 0 25px 50px rgba(0,0,0,0.3);
-    border: 1px solid rgba(255,255,255,0.1);
-    transform: translateY(0) scale(1);
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-.premium-modal-overlay.hidden .premium-modal {
-    transform: translateY(30px) scale(0.95);
-}
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -7816,6 +7768,16 @@ body.pos-selection-mode .walkin-picker {
 .promo-guide-item { display:flex; gap:12px; align-items:flex-start; }
 .promo-guide-num { flex:0 0 28px; height:28px; border-radius:50%; background:var(--primary, #f36b21); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; }
 .promo-guide-title { display:flex; align-items:center; gap:6px; margin:0; font-size:15px; }
+.template-category-title { font-size:14px; font-weight:600; margin:0 0 8px 0; color:var(--text-secondary, #6b7280); text-transform:uppercase; letter-spacing:0.5px; }
+.template-grid { display:flex; flex-direction:column; gap:8px; }
+.template-card { background:var(--bg-secondary, #1f2937); border:1px solid var(--border-color, #374151); border-radius:8px; padding:12px; cursor:default; transition:border-color 0.15s; }
+.template-card:hover { border-color:var(--primary, #f36b21); }
+.template-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+.template-card-title { font-weight:600; font-size:13px; color:var(--text-primary, #f3f4f6); }
+.template-card-body { font-size:12px; color:var(--text-muted, #9ca3af); line-height:1.4; margin:0 0 4px 0; white-space:pre-wrap; }
+.template-card-note { font-size:11px; color:var(--text-muted, #9ca3af); margin:4px 0 0 0; font-style:italic; }
+.template-use-btn { font-size:11px !important; padding:2px 10px !important; }
+#promoMenuImagePreview img { max-width:120px; max-height:80px; border-radius:6px; object-fit:cover; }
 .btn-danger { background:#dc2626; color:#fff; }
 .btn-danger:hover { background:#b91c1c; }
 .btn-warning { background:#f59e0b; color:#fff; }
@@ -7861,6 +7823,12 @@ body.pos-selection-mode .walkin-picker {
 .discount-card code {
     background:#f1f5f9; color:#0f172a; padding:1px 6px; border-radius:4px;
     font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size:12px;
+}
+.discount-usage-bar {
+    height:4px; background:#e2e8f0; border-radius:2px; margin-top:6px; overflow:hidden;
+}
+.discount-usage-bar > div {
+    height:100%; background:#3b82f6; border-radius:2px; transition:width .3s;
 }
 .walkin-coupon-row { gap:8px; }
 .walkin-coupon-input { text-transform: uppercase; letter-spacing:.5px; }
@@ -7945,3 +7913,13 @@ body.pos-selection-mode .walkin-picker {
 .channel-pos      { background:#dbeafe; color:#1e40af; }
 .channel-manual   { background:#f1f5f9; color:#475569; }
 .channel-other    { background:#f1f5f9; color:#64748b; }
+
+/* Old POS design utility classes */
+.search-input-w200 { width: 200px; max-width: 100%; }
+.btn-text-danger { background: none; border: none; color: var(--danger, #ef4444); cursor: pointer; font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 6px; transition: background 0.2s; }
+.btn-text-danger:hover { background: rgba(239, 68, 68, 0.08); }
+.menu-loading-placeholder { color: var(--text-muted, #94a3b8); text-align: center; padding: 32px 16px; font-size: 14px; }
+.discount-presets { display: flex; gap: 6px; align-items: center; }
+.chip { background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer; color: #6366f1; transition: all 0.2s; }
+.chip:hover { background: rgba(99, 102, 241, 0.16); }
+.divider-top { border-top: 1px dashed rgba(0,0,0,0.08); padding-top: 12px; }

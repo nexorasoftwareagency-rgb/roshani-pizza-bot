@@ -100,7 +100,7 @@ body: 'Click a menu item to choose a <strong>size</strong> (if available). After
 {
 icon: 'percent',
 title: 'Discounts & Coupons',
-body: 'Use the <strong>discount preset chips</strong> (₹50, ₹100, 10%) for quick discounts, or type a custom amount in the discount field. Enter a <strong>coupon code</strong> and click Apply to use a predefined discount. The system auto-evaluates the best applicable discount (first-order, coupon, global, or category) at checkout. Only channel-matched discounts apply (POS discounts for walk-in orders).'
+body: 'Use the <strong>discount preset chips</strong> (₹50, ₹100, 10%) for quick discounts, or type a custom amount in the discount field. The system auto-evaluates the best applicable discount (first-order, coupon, global, or category) at checkout. Only channel-matched discounts apply (POS discounts for walk-in orders).'
 },
 {
 icon: 'credit-card',
@@ -118,7 +118,7 @@ promotions: [
 {
 icon: 'edit-3',
 title: 'Compose Message',
-body: 'Write your promotional message in the composer. Use personalization tokens: <code>{name}</code>, <code>{phone}</code>, <code>{lastOrderDate}</code>, <code>{storeName}</code>, <code>{couponCode}</code>. Click the <strong>template picker</strong> button to choose from 22 pre-built templates. Toggle the <strong>STOP footer</strong>, add a <strong>closing message</strong>, and attach a <strong>menu image</strong> (3rd message).'
+body: 'Write your promotional message in the composer. Use personalization tokens: <code>{name}</code>, <code>{phone}</code>, <code>{lastOrderDate}</code>, <code>{storeName}</code>. Click the <strong>template picker</strong> button to choose from 24 pre-built templates. Toggle the <strong>STOP footer</strong>, add a <strong>closing message</strong>, and attach a <strong>menu image</strong> (3rd message).'
 },
 {
 icon: 'users',
@@ -166,7 +166,7 @@ body: 'Set start/end dates for time-windowed discounts. Configure <strong>per-cu
 {
 icon: 'ticket',
 title: 'Coupon Codes',
-body: 'Choose <strong>Coupon code</strong> type to create a code customers enter at checkout. Click <strong>Generate</strong> for a random code or type your own. Enable <strong>Stackable</strong> to allow this coupon to combine with other discounts. Coupon discounts apply on both WhatsApp and POS when the code is entered.'
+body: 'Choose <strong>Coupon code</strong> type to create a code customers enter at checkout. Set a <strong>prefix</strong> (e.g. PIZZA, SUMMER) and click <strong>Generate</strong> for a word-based code like PIZZA42, or type your own. Enable <strong>Stackable</strong> to allow this coupon to combine with other discounts. Click any discount in Reports to <strong>view code uses</strong> — see who used it, when, and how much they saved.'
 },
 {
 icon: 'bar-chart-2',
