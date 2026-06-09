@@ -58,7 +58,7 @@ export function initRealtimeListeners() {
     // Show skeleton while data loads
     ['ordersTable','ordersTableFull','liveOrdersTable','paymentsTable'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = getSkeletonRows(5, el.closest('table').querySelectorAll('thead th').length || 7);
+        if (el) el.innerHTML = getSkeletonRows(5, 7);
     });
 
     let firstLoad = true;
