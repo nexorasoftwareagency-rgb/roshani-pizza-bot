@@ -165,7 +165,10 @@ function formatOrderInvoice(orderId, order) {
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
     msg += `💰 *Subtotal:* ₹${order.subtotal || order.itemTotal || 0}\n`;
     if (order.deliveryFee) msg += `🚚 *Shipping:* ₹${order.deliveryFee}\n`;
-    if (order.discount) msg += `🎁 *Discount Allotted:* -₹${order.discount}\n`;
+    if (order.discount) {
+        const pctInfo = order.discountMode === 'percent' && order.discountValue ? ` (${order.discountValue}% off)` : '';
+        msg += `🎁 *Discount${pctInfo}:* -₹${order.discount}\n`;
+    }
     msg += `💵 *TOTAL AMOUNT: ₹${order.total || 0}*\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
     return msg;

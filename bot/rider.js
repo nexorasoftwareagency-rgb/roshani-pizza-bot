@@ -42,7 +42,7 @@ async function notifyRiderPickup(sock, order, addInAppNotification) {
             `━━━━━━━━━━━━━━━━━━━━\n` +
             `💰 *Subtotal:* ₹${order.subtotal || order.itemTotal || 0}\n` +
             (order.deliveryFee ? `🚚 *Delivery:* ₹${order.deliveryFee}\n` : "") +
-            (order.discount ? `🎁 *Discount:* -₹${order.discount}\n` : "") +
+            (order.discount ? `🎁 *Discount${order.discountMode === 'percent' && order.discountValue ? ` (${order.discountValue}% off)` : ''}:* -₹${order.discount}\n` : "") +
             `💵 *TOTAL: ₹${order.total || 0}* (${order.paymentMethod || 'N/A'})\n` +
             `━━━━━━━━━━━━━━━━━━━━\n\n` +
             `👤 *CUSTOMER INFO:*\n` +
@@ -106,7 +106,7 @@ async function notifyRiderAssignment(sock, orderId, order, addInAppNotification)
         msg += `━━━━━━━━━━━━━━━━━━━━\n`;
         msg += `💰 *Subtotal:* ₹${order.subtotal || order.itemTotal || 0}\n`;
         if (order.deliveryFee) msg += `🚚 *Delivery:* ₹${order.deliveryFee}\n`;
-        if (order.discount) msg += `🎁 *Discount:* -₹${order.discount}\n`;
+        if (order.discount) msg += `🎁 *Discount${order.discountMode === 'percent' && order.discountValue ? ` (${order.discountValue}% off)` : ''}:* -₹${order.discount}\n`;
         msg += `💵 *TOTAL: ₹${order.total || 0}* (${order.paymentMethod || 'N/A'})\n`;
         msg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
         msg += `👤 *CUSTOMER INFO:*\n`;
@@ -181,7 +181,7 @@ async function broadcastPickupAvailable(sock, orderId, order, getData, addInAppN
             `━━━━━━━━━━━━━━━━━━━━\n` +
             `💰 *Subtotal:* ₹${order.subtotal || order.itemTotal || 0}\n` +
             (order.deliveryFee ? `🚚 *Delivery:* ₹${order.deliveryFee}\n` : "") +
-            (order.discount ? `🎁 *Discount:* -₹${order.discount}\n` : "") +
+            (order.discount ? `🎁 *Discount${order.discountMode === 'percent' && order.discountValue ? ` (${order.discountValue}% off)` : ''}:* -₹${order.discount}\n` : "") +
             `💵 *TOTAL: ₹${order.total || 0}* (${order.paymentMethod || 'N/A'})\n` +
             `━━━━━━━━━━━━━━━━━━━━\n\n` +
             `👤 *CUSTOMER INFO:*\n` +

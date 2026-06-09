@@ -1273,9 +1273,21 @@ async function startBot() {
                     // Validate coupon
                     try {
                         const matched = await discountEngine.validateCouponCode(user.outlet, text.trim());
-                        if (matched) {
+                        if (matched && matched.status === 'valid') {
                             user.couponCode = matched.couponCode;
                             await sock.sendMessage(sender, { text: `✅ Coupon *${matched.couponCode}* accepted! Continuing to checkout…` });
+                        } else if (matched && matched.status === 'expired') {
+                            user.couponCode = null;
+                            await sock.sendMessage(sender, { text: `⏰ Coupon *${text.trim()}* has expired. Reply *0* to skip or try another code.` });
+                            return;
+                        } else if (matched && matched.status === 'not_started') {
+                            user.couponCode = null;
+                            await sock.sendMessage(sender, { text: `📅 Coupon *${text.trim()}* is not active yet. Reply *0* to skip or try another code.` });
+                            return;
+                        } else if (matched && matched.status === 'disabled') {
+                            user.couponCode = null;
+                            await sock.sendMessage(sender, { text: `❌ Coupon *${text.trim()}* is no longer active. Reply *0* to skip or try another code.` });
+                            return;
                         } else {
                             user.couponCode = null;
                             await sock.sendMessage(sender, { text: `❌ Invalid code *${text.trim()}*. Reply *0* to skip or try another code.` });
@@ -1456,7 +1468,9 @@ async function startBot() {
                             discount: user.discount || 0,
                             discountId: user.discountId || null,
                             discountLabel: user.discountLabel || null,
-                            discountSource: user.discountSource || (user.discount ? 'manual' : 'none')
+                            discountSource: user.discountSource || (user.discount ? 'manual' : 'none'),
+                            discountMode: user.discountMode || 'flat',
+                            discountValue: user.discountValue || 0
                         };
 
                         await setData(`orders/${orderId}`, finalOrder, user.outlet);
@@ -1580,11 +1594,15 @@ async function handleCheckoutFinal(sock, sender, user) {
                 user.discountId = discountEval.discount.id;
                 user.discountLabel = discountEval.label;
                 user.discountSource = discountEval.source;
+                user.discountMode = discountEval.discount.mode || 'flat';
+                user.discountValue = discountEval.discount.value || 0;
             } else {
                 user.discount = 0;
                 user.discountId = null;
                 user.discountLabel = null;
                 user.discountSource = null;
+                user.discountMode = null;
+                user.discountValue = 0;
             }
         } catch (e) {
             console.error('[BOT] Discount evaluation failed:', e?.message || e);
@@ -1599,7 +1617,11 @@ async function handleCheckoutFinal(sock, sender, user) {
         sum += `━━━━━━━━━━━━━━━━━━━━\n`;
         sum += `💰 Subtotal: ₹${subtotal}\n`;
         sum += `🚚 Delivery (${dist.toFixed(1)}km): ₹${fee}\n`;
-        if (user.discount) sum += `🎁 Discount${user.discountLabel ? ` (${user.discountLabel})` : ''}: -₹${user.discount}\n`;
+        if (user.discount) {
+            const discLabel = user.discountLabel ? ` (${user.discountLabel})` : '';
+            const pctInfo = user.discountMode === 'percent' ? ` ${user.discountValue}% off` : '';
+            sum += `🎁 Discount${discLabel}${pctInfo}: -₹${user.discount}\n`;
+        }
         sum += `💵 *TOTAL: ₹${subtotal + fee - (user.discount || 0)}*\n\n`;
         sum += `1️⃣ Confirm Order\n`;
         sum += `2️⃣ Cancel\n`;

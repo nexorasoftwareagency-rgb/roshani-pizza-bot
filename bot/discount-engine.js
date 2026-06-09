@@ -123,10 +123,14 @@ async function validateCouponCode(OUTLET, code) {
     if (!code) return null;
     const all = await getAllDiscounts(OUTLET);
     const lower = String(code).toLowerCase();
+    const now = Date.now();
     for (const [id, d] of Object.entries(all)) {
         if (!d || d.type !== 'coupon' || !d.couponCode) continue;
-        if (String(d.couponCode).toLowerCase() === lower && d.enabled !== false) {
-            return { id, ...d };
+        if (String(d.couponCode).toLowerCase() === lower) {
+            if (d.enabled === false) return { id, ...d, status: 'disabled' };
+            if (d.startsAt && now < d.startsAt) return { id, ...d, status: 'not_started' };
+            if (d.endsAt && d.endsAt > 0 && now > d.endsAt) return { id, ...d, status: 'expired' };
+            return { id, ...d, status: 'valid' };
         }
     }
     return null;
