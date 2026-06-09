@@ -169,13 +169,15 @@ export function createGrid(elementId, columns, extraOptions = {}) {
 
     const table = new Tabulator(`#${elementId}`, options);
     table._pendingData = null;
-    table._built = false;
+    table._ready = false;
     table.on("tableBuilt", () => {
-        table._built = true;
-        if (table._pendingData) {
-            table.replaceData(table._pendingData);
-            table._pendingData = null;
-        }
+        requestAnimationFrame(() => {
+            table._ready = true;
+            if (table._pendingData) {
+                table.replaceData(table._pendingData);
+                table._pendingData = null;
+            }
+        });
     });
     return table;
 }
@@ -192,7 +194,7 @@ export function createGrid(elementId, columns, extraOptions = {}) {
  */
 export function updateGridData(table, data) {
     if (!table || !data) return;
-    if (!table._built) {
+    if (!table._ready) {
         table._pendingData = data;
         return;
     }

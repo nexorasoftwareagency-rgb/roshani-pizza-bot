@@ -86,13 +86,15 @@ function buildGrid() {
         ]
     });
     _grid._pendingData = null;
-    _grid._built = false;
+    _grid._ready = false;
     _grid.on("tableBuilt", () => {
-        _grid._built = true;
-        if (_grid._pendingData) {
-            _grid.replaceData(_grid._pendingData);
-            _grid._pendingData = null;
-        }
+        requestAnimationFrame(() => {
+            _grid._ready = true;
+            if (_grid._pendingData) {
+                _grid.replaceData(_grid._pendingData);
+                _grid._pendingData = null;
+            }
+        });
     });
 }
 
