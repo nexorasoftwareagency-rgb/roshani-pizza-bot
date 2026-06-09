@@ -16,6 +16,8 @@ const OTHER_OUTLET_NUMBER = '';
 // filter to recognize admin senders and let them continue ordering.
 const DEVELOPER_NUMBER_FALLBACK = "9724649971";
 
+const fs = require('fs');
+const path = require('path');
 const redis = require('redis');
 const {
     default: makeWASocket,
@@ -104,6 +106,42 @@ const STATUS_TTL = 24 * 60 * 60; // 24 hours
 // In-memory dedup fallback used when Redis is offline
 const localStatusCache = new Map();
 const LOCAL_CACHE_TTL = 3600000; // 1 hour
+
+// ── Auto-cleanup stale session files (prevents Bad MAC errors) ──────────────
+// Baileys stores Signal Protocol session files in session_data_{OUTLET}/.
+// When contacts rebuild sessions (reinstall WhatsApp, new phone), old files
+// become stale and cause "Bad MAC" errors. This prunes files older than 7 days.
+const SESSION_DIR = path.join(__dirname, 'session_data_' + OUTLET);
+const SESSION_FILE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function cleanupStaleSessions() {
+    try {
+        if (!fs.existsSync(SESSION_DIR)) return;
+        const files = fs.readdirSync(SESSION_DIR);
+        const now = Date.now();
+        let cleaned = 0;
+        for (const file of files) {
+            if (file === 'creds.json') continue; // Never delete main credentials
+            const filePath = path.join(SESSION_DIR, file);
+            try {
+                const stat = fs.statSync(filePath);
+                if (now - stat.mtimeMs > SESSION_FILE_MAX_AGE) {
+                    fs.unlinkSync(filePath);
+                    cleaned++;
+                }
+            } catch (_) {}
+        }
+        if (cleaned > 0) console.log(`[SESSION] 🧹 Cleaned ${cleaned} stale session files (older than 7 days)`);
+    } catch (e) {
+        console.error('[SESSION] Cleanup error:', e.message);
+    }
+}
+
+// Run cleanup immediately on startup
+cleanupStaleSessions();
+
+// Run cleanup every 24 hours
+setInterval(cleanupStaleSessions, 24 * 60 * 60 * 1000);
 
 // --- REDIS HELPERS ---
 async function getSession(sender) {
@@ -890,9 +928,20 @@ async function startBot() {
                 if (cryptoErrorCount % 100 === 1) {
                     console.warn(`[CRYPTO] ⚠️ ${cryptoErrorCount} messages undecryptable so far. StubType: ${msg.messageStubType || 'N/A'}`);
                 }
-                // If crypto errors spike past threshold within 120s of startup, suggest session reset
+                // Auto-recovery: if crypto errors spike, aggressively prune session files
                 if (cryptoErrorCount === MAX_CRYPTO_ERRORS) {
-                    console.error(`[CRYPTO] 🔴 ${MAX_CRYPTO_ERRORS}+ undecryptable messages. Session may be corrupt. Try deleting session_data_${OUTLET} folder and re-scanning QR.`);
+                    console.error(`[CRYPTO] 🔴 ${MAX_CRYPTO_ERRORS}+ undecryptable messages. Auto-pruning stale sessions...`);
+                    try {
+                        if (fs.existsSync(SESSION_DIR)) {
+                            const files = fs.readdirSync(SESSION_DIR);
+                            let pruned = 0;
+                            for (const file of files) {
+                                if (file === 'creds.json') continue;
+                                try { fs.unlinkSync(path.join(SESSION_DIR, file)); pruned++; } catch (_) {}
+                            }
+                            console.log(`[CRYPTO] 🧹 Auto-pruned ${pruned} session files. Bot will re-establish sessions on next messages.`);
+                        }
+                    } catch (_) {}
                 }
                 return;
             }
