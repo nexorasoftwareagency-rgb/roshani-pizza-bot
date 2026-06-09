@@ -1322,6 +1322,7 @@ async function startBot() {
                         user.name = user.profile.name;
                         user.phone = user.profile.phone;
                         user.address = user.profile.address;
+                        saveUserProfile(sender, { name: user.name, phone: user.phone, address: user.address }).catch(() => {});
                         // Note: We intentionally DO NOT reuse user.location here as per request
 
                         user.step = "LOCATION";
@@ -1356,7 +1357,7 @@ async function startBot() {
                     user.name = text;
                     user.step = "PHONE";
                     if (user.name) {
-                        await saveUserProfile(sender, { name: user.name, phone: user.phone || "" });
+                        saveUserProfile(sender, { name: user.name, phone: user.phone || "", address: user.address || "" }).catch(() => {});
                     }
                     return sock.sendMessage(sender, { text: await appendContactInfo("📞 *STEP 2: ENTER YOUR 10 DIGIT MOBILE NUMBER*\n\n_Example: 9876543210. We will use this to contact you regarding your order._\n0️⃣ *Take one step Back* 🔙", user.outlet) });
                 }
@@ -1371,6 +1372,7 @@ async function startBot() {
                         return sock.sendMessage(sender, { text: await appendContactInfo(nameMsg, user.outlet) });
                     }
                     user.phone = text;
+                    saveUserProfile(sender, { name: user.name || "", phone: user.phone }).catch(() => {});
                     user.step = "ADDRESS";
                     return sock.sendMessage(sender, { text: await appendContactInfo("🏠 *STEP 3: ENTER YOUR DELIVERY ADDRESS*\n\n_Please provide your complete address including landmark, house number, etc._\n0️⃣ *Take one step Back* 🔙", user.outlet) });
                 }
@@ -1380,7 +1382,9 @@ async function startBot() {
                         user.step = "PHONE";
                         return sock.sendMessage(sender, { text: await appendContactInfo("📞 *STEP 2: ENTER YOUR 10 DIGIT MOBILE NUMBER*\n\n_Example: 9876543210. We will use this to contact you regarding your order._\n0️⃣ *Take one step Back* 🔙", user.outlet) });
                     }
-                    user.address = text; user.step = "LOCATION";
+                    user.address = text;
+                    saveUserProfile(sender, { name: user.name || "", phone: user.phone || "", address: user.address }).catch(() => {});
+                    user.step = "LOCATION";
                     let locMsg = `📍 *SHARE YOUR LOCATION* 🌍\n\n`;
                     locMsg += `Please share your *Live* or *Current* Location so we can calculate the delivery fee.\n\n`;
                     locMsg += `*How to share:*\n`;
@@ -1401,6 +1405,7 @@ async function startBot() {
                     if (!loc) return sendInvalidInputHelp(sock, sender, user);
 
                     user.location = { lat: loc.degreesLatitude, lng: loc.degreesLongitude };
+                    saveUserProfile(sender, { name: user.name || "", phone: user.phone || "", address: user.address || "", location: user.location }).catch(() => {});
                     return handleCheckoutFinal(sock, sender, user);
                 }
 
