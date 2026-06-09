@@ -1,11 +1,11 @@
 import { Outlet, get } from '../firebase.js';
 import { escapeHtml, getSkeletonDivs } from '../utils.js';
 import { logger } from '../utils/logger.js';
-import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
+import { GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
 
 let _grid = null;
 
-function buildGrid() {
+function buildGrid(data) {
     const el = document.getElementById("customersTableBody");
     if (!el) return;
     el.innerHTML = '';
@@ -14,6 +14,7 @@ function buildGrid() {
         ...GRID_DEFAULTS,
         ...PAGINATION_DEFAULTS,
         paginationSize: 25,
+        data: data || [],
         placeholder: '<div style="padding:40px; color:#94a3b8;">👥 No customers found</div>',
         columns: [
             { formatter: "rownum", hozAlign: "center", width: 45, headerSort: false },
@@ -77,18 +78,6 @@ function buildGrid() {
             }
         ]
     });
-    _grid._pendingData = null;
-    _grid._ready = false;
-    const self = _grid;
-    _grid.on("tableBuilt", () => {
-        requestAnimationFrame(() => {
-            self._ready = true;
-            if (self._pendingData) {
-                self.replaceData(self._pendingData);
-                self._pendingData = null;
-            }
-        });
-    });
 }
 
 export async function loadCustomers() {
@@ -129,10 +118,7 @@ export async function loadCustomers() {
             });
         });
 
-        if (!_grid) buildGrid();
-        if (_grid) {
-            updateGridData(_grid, customers);
-        }
+        buildGrid(customers);
 
         logger.success('CUSTOMERS', `Loaded ${customers.length} customers`);
     } catch (e) {

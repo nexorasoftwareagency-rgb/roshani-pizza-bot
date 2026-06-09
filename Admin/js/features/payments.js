@@ -8,12 +8,13 @@ import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '
 
 let _grid = null;
 
-function buildGrid() {
+function buildGrid(data) {
     const el = document.getElementById('paymentsTable');
     if (!el) return;
     el.innerHTML = '';
 
     _grid = new Tabulator("#paymentsTable", {
+        data: data || [],
         ...GRID_DEFAULTS,
         ...PAGINATION_DEFAULTS,
         paginationSize: 25,
@@ -78,18 +79,6 @@ function buildGrid() {
             }
         ]
     });
-    _grid._pendingData = null;
-    _grid._ready = false;
-    const self = _grid;
-    _grid.on("tableBuilt", () => {
-        requestAnimationFrame(() => {
-            self._ready = true;
-            if (self._pendingData) {
-                self.replaceData(self._pendingData);
-                self._pendingData = null;
-            }
-        });
-    });
 }
 
 /**
@@ -97,6 +86,5 @@ function buildGrid() {
  * Called from orders.js renderOrders() when activeTab === 'payments'.
  */
 export function renderPayments(orders) {
-    if (!_grid) buildGrid();
-    if (_grid) updateGridData(_grid, orders);
+    buildGrid(orders);
 }

@@ -10,12 +10,13 @@ import { createGrid, updateGridData, GRID_DEFAULTS } from '../tabulator-setup.js
 let _feedbackUnsub = null;
 let _grid = null;
 
-function buildGrid() {
+function buildGrid(data) {
     const el = document.getElementById('feedbackTableBody');
     if (!el) return;
     el.innerHTML = '';
 
     _grid = new Tabulator("#feedbackTableBody", {
+        data: data || [],
         ...GRID_DEFAULTS,
         pagination: false,
         placeholder: '<div style="padding:40px; color:#94a3b8;">💬 No feedback received yet.</div>',
@@ -85,18 +86,6 @@ function buildGrid() {
             }
         ]
     });
-    _grid._pendingData = null;
-    _grid._ready = false;
-    const self = _grid;
-    _grid.on("tableBuilt", () => {
-        requestAnimationFrame(() => {
-            self._ready = true;
-            if (self._pendingData) {
-                self.replaceData(self._pendingData);
-                self._pendingData = null;
-            }
-        });
-    });
 }
 
 export function loadFeedbacks() {
@@ -119,8 +108,8 @@ export function loadFeedbacks() {
             return dateB - dateA;
         });
 
-        if (!_grid) buildGrid();
-        if (_grid) updateGridData(_grid, feedbacks);
+        if (!_grid) buildGrid(feedbacks);
+        else _grid.replaceData(feedbacks);
     });
 }
 

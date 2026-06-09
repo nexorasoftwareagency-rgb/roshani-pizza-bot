@@ -8,12 +8,13 @@ let _allLostSales = [];
 let _grid = null;
 let _outletFilter = 'all';
 
-function buildGrid() {
+function buildGrid(data) {
     const el = document.getElementById('lostSalesTableBody');
     if (!el) return;
     el.innerHTML = '';
 
     _grid = new Tabulator("#lostSalesTableBody", {
+        data: data || [],
         ...GRID_DEFAULTS,
         pagination: false,
         placeholder: '<div style="padding:40px; color:#94a3b8;">🛍️ No lost sales found!</div>',
@@ -122,18 +123,6 @@ function buildGrid() {
             }
         ]
     });
-    _grid._pendingData = null;
-    _grid._ready = false;
-    const self = _grid;
-    _grid.on("tableBuilt", () => {
-        requestAnimationFrame(() => {
-            self._ready = true;
-            if (self._pendingData) {
-                self.replaceData(self._pendingData);
-                self._pendingData = null;
-            }
-        });
-    });
 }
 
 export async function loadLostSales() {
@@ -195,8 +184,7 @@ function _renderLostSales(tbody, revenueBadge, countBadge) {
     if (revenueBadge) revenueBadge.innerText = `₹${totalLost.toLocaleString()}`;
     if (countBadge) countBadge.innerText = String(filtered.length);
 
-    if (!_grid) buildGrid();
-    if (_grid) updateGridData(_grid, filtered);
+    buildGrid(filtered);
 }
 
 export async function clearLostSales() {

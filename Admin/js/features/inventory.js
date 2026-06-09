@@ -100,12 +100,13 @@ function _invKeyHandler(e) {
     }
 }
 
-function buildGrid() {
+function buildGrid(data) {
     const el = document.getElementById('inventoryTableBody');
     if (!el) return;
     el.innerHTML = '';
 
     _grid = new Tabulator("#inventoryTableBody", {
+        data: data || [],
         ...GRID_DEFAULTS,
         ...PAGINATION_DEFAULTS,
         paginationSize: 30,
@@ -196,32 +197,20 @@ function buildGrid() {
             }
         ]
     });
-    _grid._pendingData = null;
-    _grid._ready = false;
-    const self = _grid;
-    _grid.on("tableBuilt", () => {
-        requestAnimationFrame(() => {
-            self._ready = true;
-            if (self._pendingData) {
-                self.replaceData(self._pendingData);
-                self._pendingData = null;
-            }
-        });
-    });
 }
 
 function renderInventoryTable(data) {
     if (!data) {
-        if (_grid) updateGridData(_grid, []);
-        else buildGrid();
+        if (_grid) _grid.replaceData([]);
+        else buildGrid([]);
         return;
     }
 
     const sorted = Object.entries(data).sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''));
     const items = sorted.map(([id, item]) => ({ id, ...item }));
 
-    if (!_grid) buildGrid();
-    if (_grid) updateGridData(_grid, items);
+    if (!_grid) buildGrid(items);
+    else _grid.replaceData(items);
 }
 
 export function setInventorySearch(term) {

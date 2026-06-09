@@ -60,12 +60,13 @@ export function populateRiderSelect() {
     updateSelect();
 }
 
-function buildGrid() {
+function buildGrid(data) {
     const el = document.getElementById('riderAnalyticsTableBody');
     if (!el) return;
     el.innerHTML = '';
 
     _grid = new Tabulator("#riderAnalyticsTableBody", {
+        data: data || [],
         ...GRID_DEFAULTS,
         paginationSize: 25,
         placeholder: '<div style="padding:40px; color:#94a3b8;">📊 No deliveries found</div>',
@@ -121,18 +122,6 @@ function buildGrid() {
             }
         ]
     });
-    _grid._pendingData = null;
-    _grid._ready = false;
-    const self = _grid;
-    _grid.on("tableBuilt", () => {
-        requestAnimationFrame(() => {
-            self._ready = true;
-            if (self._pendingData) {
-                self.replaceData(self._pendingData);
-                self._pendingData = null;
-            }
-        });
-    });
 }
 
 export async function generateRiderPerformanceReport() {
@@ -175,8 +164,7 @@ export async function generateRiderPerformanceReport() {
         const stats = calculateRiderStats(allOrders, riderId);
         updateRiderKPIs(stats);
 
-        if (!_grid) buildGrid();
-        if (_grid) updateGridData(_grid, allOrders.slice(0, 50));
+        buildGrid(allOrders.slice(0, 50));
 
         renderRiderEarningsChart(allOrders);
         renderRiderSummary(riderId, stats);

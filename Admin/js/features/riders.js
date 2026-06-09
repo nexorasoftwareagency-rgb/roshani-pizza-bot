@@ -57,12 +57,13 @@ export function cleanupRiders() {
     if (_statsUnsub) { _statsUnsub(); _statsUnsub = null; }
 }
 
-function buildGrid() {
+function buildGrid(data) {
     const el = document.getElementById('ridersTable');
     if (!el) return;
     el.innerHTML = '';
 
     _grid = new Tabulator("#ridersTable", {
+        data: data || [],
         ...GRID_DEFAULTS,
         ...PAGINATION_DEFAULTS,
         paginationSize: 30,
@@ -161,18 +162,6 @@ function buildGrid() {
             }
         ]
     });
-    _grid._pendingData = null;
-    _grid._ready = false;
-    const self = _grid;
-    _grid.on("tableBuilt", () => {
-        requestAnimationFrame(() => {
-            self._ready = true;
-            if (self._pendingData) {
-                self.replaceData(self._pendingData);
-                self._pendingData = null;
-            }
-        });
-    });
 }
 
 export function renderRiders(searchTerm = "") {
@@ -238,8 +227,8 @@ export function renderRiders(searchTerm = "") {
         }
     });
 
-    if (!_grid) buildGrid();
-    if (_grid) updateGridData(_grid, riders);
+    if (!_grid) buildGrid(riders);
+    else _grid.replaceData(riders);
 
     if (statOnline) statOnline.innerText = onlineCount;
     if (statBusy) statBusy.innerText = busyCount;

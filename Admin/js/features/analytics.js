@@ -42,12 +42,13 @@ export function loadReports() {
     generateCustomReport();
 }
 
-function buildGrid() {
+function buildGrid(data) {
     const el = document.getElementById('reportTableBody');
     if (!el) return;
     el.innerHTML = '';
 
     _grid = new Tabulator("#reportTableBody", {
+        data: data || [],
         ...GRID_DEFAULTS,
         pagination: false,
         placeholder: '<div style="padding:40px; color:#94a3b8;">📊 No orders found for this range</div>',
@@ -112,18 +113,6 @@ function buildGrid() {
                 sorter: "number"
             }
         ]
-    });
-    _grid._pendingData = null;
-    _grid._ready = false;
-    const self = _grid;
-    _grid.on("tableBuilt", () => {
-        requestAnimationFrame(() => {
-            self._ready = true;
-            if (self._pendingData) {
-                self.replaceData(self._pendingData);
-                self._pendingData = null;
-            }
-        });
     });
 }
 
@@ -221,8 +210,7 @@ function renderFromCache() {
     if (ordEl) ordEl.innerText = totalOrd;
     if (avgEl) avgEl.innerText = '₹' + (totalOrd > 0 ? Math.round(totalRev / totalOrd) : 0);
 
-    if (!_grid) buildGrid();
-    if (_grid) updateGridData(_grid, filtered);
+    buildGrid(filtered);
 
     renderRevenueChart(filtered);
 }
