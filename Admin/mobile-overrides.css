@@ -2061,42 +2061,6 @@
         }
     }
 
-    /* Rider Analytics - Card Layout */
-    #tab-riderAnalytics .premium-table-v4 {
-        display: block;
-        border-spacing: 0;
-    }
-    #tab-riderAnalytics .premium-row-v4 {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 4px 8px;
-        padding: 12px;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-    }
-    #tab-riderAnalytics .premium-row-v4 td {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 0;
-        border: none;
-        font-size: 12px;
-        flex: 0 0 auto;
-    }
-    #tab-riderAnalytics .premium-row-v4 td:before {
-        content: attr(data-label);
-        font-size: 9px;
-        font-weight: 700;
-        color: #94a3b8;
-        text-transform: uppercase;
-        display: block;
-        width: 100%;
-    }
-
     /* Analytics KPIs - Adaptive Grid */
     #tab-riderAnalytics .kpi-row {
         grid-template-columns: repeat(2, 1fr) !important;

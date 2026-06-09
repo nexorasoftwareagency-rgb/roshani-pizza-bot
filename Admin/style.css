@@ -357,6 +357,9 @@ html, body {
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
 }
+#tab-riderAnalytics .kpi-row {
+    grid-template-columns: repeat(5, 1fr);
+}
 
 .h-250 { height: 250px; }
 .reports-container-fluid { width: 100%; }
@@ -4404,6 +4407,13 @@ body {
     border-bottom: 2px solid #f1f5f9;
     padding-bottom: 12px;
     margin-bottom: 20px;
+}
+
+.glass-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-premium);
+    box-shadow: var(--glass-shadow);
 }
 
 #tab-reports .glass-card {

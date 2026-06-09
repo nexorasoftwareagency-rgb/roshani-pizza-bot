@@ -67,7 +67,7 @@ function buildGrid() {
 
     _grid = new Tabulator("#riderAnalyticsTableBody", {
         ...GRID_DEFAULTS,
-        pagination: false,
+        paginationSize: 25,
         placeholder: '<div style="padding:40px; color:#94a3b8;">📊 No deliveries found</div>',
         columns: [
             { formatter: "rownum", hozAlign: "center", width: 45, headerSort: false },
