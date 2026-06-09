@@ -170,12 +170,13 @@ export function createGrid(elementId, columns, extraOptions = {}) {
     const table = new Tabulator(`#${elementId}`, options);
     table._pendingData = null;
     table._ready = false;
+    const self = table;
     table.on("tableBuilt", () => {
         requestAnimationFrame(() => {
-            table._ready = true;
-            if (table._pendingData) {
-                table.replaceData(table._pendingData);
-                table._pendingData = null;
+            self._ready = true;
+            if (self._pendingData) {
+                self.replaceData(self._pendingData);
+                self._pendingData = null;
             }
         });
     });

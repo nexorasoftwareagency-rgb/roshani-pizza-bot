@@ -115,12 +115,13 @@ function buildGrid() {
     });
     _grid._pendingData = null;
     _grid._ready = false;
+    const self = _grid;
     _grid.on("tableBuilt", () => {
         requestAnimationFrame(() => {
-            _grid._ready = true;
-            if (_grid._pendingData) {
-                _grid.replaceData(_grid._pendingData);
-                _grid._pendingData = null;
+            self._ready = true;
+            if (self._pendingData) {
+                self.replaceData(self._pendingData);
+                self._pendingData = null;
             }
         });
     });
@@ -154,8 +155,8 @@ export async function generateCustomReport() {
     }
 
     _isLoading = true;
-    tableBody.innerHTML = getSkeletonRows(5, 6);
     if (_grid) { _grid.destroy(); _grid = null; }
+    tableBody.innerHTML = getSkeletonRows(5, 6);
 
     try {
         const dFrom = new Date(from); dFrom.setDate(dFrom.getDate() - 1);

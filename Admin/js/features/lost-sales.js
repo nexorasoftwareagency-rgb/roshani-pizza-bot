@@ -124,12 +124,13 @@ function buildGrid() {
     });
     _grid._pendingData = null;
     _grid._ready = false;
+    const self = _grid;
     _grid.on("tableBuilt", () => {
         requestAnimationFrame(() => {
-            _grid._ready = true;
-            if (_grid._pendingData) {
-                _grid.replaceData(_grid._pendingData);
-                _grid._pendingData = null;
+            self._ready = true;
+            if (self._pendingData) {
+                self.replaceData(self._pendingData);
+                self._pendingData = null;
             }
         });
     });
@@ -141,8 +142,8 @@ export async function loadLostSales() {
     const countBadge = document.getElementById('lostSalesCount');
     if (!tbody) return;
 
-    tbody.innerHTML = getSkeletonRows(5, 9);
     if (_grid) { _grid.destroy(); _grid = null; }
+    tbody.innerHTML = getSkeletonRows(5, 9);
 
     try {
         const lostRef = Outlet.ref('logs/lostSales');

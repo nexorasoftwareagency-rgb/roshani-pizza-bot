@@ -123,12 +123,13 @@ function buildGrid() {
     });
     _grid._pendingData = null;
     _grid._ready = false;
+    const self = _grid;
     _grid.on("tableBuilt", () => {
         requestAnimationFrame(() => {
-            _grid._ready = true;
-            if (_grid._pendingData) {
-                _grid.replaceData(_grid._pendingData);
-                _grid._pendingData = null;
+            self._ready = true;
+            if (self._pendingData) {
+                self.replaceData(self._pendingData);
+                self._pendingData = null;
             }
         });
     });
@@ -148,8 +149,8 @@ export async function generateRiderPerformanceReport() {
     btn.innerHTML = 'Analyzing...';
 
     const raTbody = document.getElementById('riderAnalyticsTableBody');
-    if (raTbody) raTbody.innerHTML = getSkeletonRows(5, 5);
     if (_grid) { _grid.destroy(); _grid = null; }
+    if (raTbody) raTbody.innerHTML = getSkeletonRows(5, 5);
 
     try {
         const ordersSnap = await get(query(Outlet.ref("orders"), orderByChild("riderId"), equalTo(riderId)));

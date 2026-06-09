@@ -80,12 +80,13 @@ function buildGrid() {
     });
     _grid._pendingData = null;
     _grid._ready = false;
+    const self = _grid;
     _grid.on("tableBuilt", () => {
         requestAnimationFrame(() => {
-            _grid._ready = true;
-            if (_grid._pendingData) {
-                _grid.replaceData(_grid._pendingData);
-                _grid._pendingData = null;
+            self._ready = true;
+            if (self._pendingData) {
+                self.replaceData(self._pendingData);
+                self._pendingData = null;
             }
         });
     });
