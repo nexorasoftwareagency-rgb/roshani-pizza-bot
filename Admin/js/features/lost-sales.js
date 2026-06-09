@@ -122,6 +122,15 @@ function buildGrid() {
             }
         ]
     });
+    _grid._pendingData = null;
+    _grid._built = false;
+    _grid.on("tableBuilt", () => {
+        _grid._built = true;
+        if (_grid._pendingData) {
+            _grid.replaceData(_grid._pendingData);
+            _grid._pendingData = null;
+        }
+    });
 }
 
 export async function loadLostSales() {

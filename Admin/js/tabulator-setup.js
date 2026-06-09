@@ -167,7 +167,17 @@ export function createGrid(elementId, columns, extraOptions = {}) {
         ...extraOptions,
     };
 
-    return new Tabulator(`#${elementId}`, options);
+    const table = new Tabulator(`#${elementId}`, options);
+    table._pendingData = null;
+    table._built = false;
+    table.on("tableBuilt", () => {
+        table._built = true;
+        if (table._pendingData) {
+            table.replaceData(table._pendingData);
+            table._pendingData = null;
+        }
+    });
+    return table;
 }
 
 // =============================
@@ -176,11 +186,16 @@ export function createGrid(elementId, columns, extraOptions = {}) {
 
 /**
  * Silently update grid data without resetting sort/filter/scroll.
+ * If the table isn't built yet, queues the data for when it is.
  * @param {Tabulator} table - Tabulator instance
  * @param {Array} data - New data array
  */
 export function updateGridData(table, data) {
     if (!table || !data) return;
+    if (!table._built) {
+        table._pendingData = data;
+        return;
+    }
     table.replaceData(data);
 }
 

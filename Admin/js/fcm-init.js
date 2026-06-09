@@ -50,11 +50,10 @@ export async function setupAdminFCM(userId) {
     const m = getMessagingInstance();
     if (!m) return;
 
-    const permission = await Notification.requestPermission();
+    // Only proceed if permission is already granted.
+    // Don't call requestPermission() here — it must be triggered by a user gesture.
+    const permission = Notification.permission;
     if (permission === 'granted') {
-      // getToken() requires an active service worker. Wait for one to be
-      // ready before calling, so we don't throw "no active Service Worker"
-      // when the SW hasn't finished installing yet.
       if ('serviceWorker' in navigator) {
         try {
           const reg = await Promise.race([
@@ -70,6 +69,15 @@ export async function setupAdminFCM(userId) {
         const token = await getToken(m);
         if (token) await storeToken(userId, token);
       }
+    } else if (permission === 'default') {
+      // Schedule a permission request for the next user gesture (click)
+      const requestOnce = () => {
+        Notification.requestPermission().then(p => {
+          if (p === 'granted') setupAdminFCM(userId);
+        });
+        document.removeEventListener('click', requestOnce);
+      };
+      document.addEventListener('click', requestOnce, { once: true });
     }
   } catch (e) {
     console.error('[FCM] Setup error:', e);
