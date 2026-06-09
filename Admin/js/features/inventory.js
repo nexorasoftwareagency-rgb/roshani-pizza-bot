@@ -1,47 +1,30 @@
 import { db, auth, Outlet, serverTimestamp, get, set, update, remove, push, onValue, runTransaction } from '../firebase.js';
 import { state } from '../state.js';
 import { showDeleteConfirm, showConfirm } from '../ui-utils.js';
-import { logAudit, showToast, initPagination, escapeHtml, getSkeletonRows } from '../utils.js';
+import { logAudit, showToast, escapeHtml, getSkeletonRows } from '../utils.js';
 import { pushLog, maybeNotifyLowStock } from './inventory-extras.js';
 import { t, localize } from '../l10n.js';
+import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
 
 let inventoryListener = null;
-const INV_PAGE_SIZE = 30;
-const MENU_PAGE_SIZE = 20;
-let _invPage = 1;
+let _grid = null;
 let _invSearch = '';
-let _invAllRows = [];
 let _menuPage = 1;
 let _menuAllRows = [];
+const MENU_PAGE_SIZE = 20;
 
 export function initInventory() {
     console.log("[Inventory] Initializing Simplified Module...");
-    
-    // UI Event Listeners
     const btnShowAdd = document.getElementById('btnShowAddInventory');
     const btnSave = document.getElementById('btnSaveInventory');
     const modal = document.getElementById('inventoryModal');
     const closeBtn = modal?.querySelector('.close-btn');
 
-    if (btnShowAdd) {
-        btnShowAdd.onclick = () => {
-            resetInvModal();
-            modal.classList.add('active');
-        };
-    }
+    if (btnShowAdd) btnShowAdd.onclick = () => { resetInvModal(); modal.classList.add('active'); };
+    if (closeBtn) closeBtn.onclick = () => modal.classList.remove('active');
+    if (btnSave) btnSave.onclick = saveInventoryItem;
 
-    if (closeBtn) {
-        closeBtn.onclick = () => modal.classList.remove('active');
-    }
-
-    if (btnSave) {
-        btnSave.onclick = saveInventoryItem;
-    }
-
-    // Localize [data-i18n] elements in the inventory tab
     localize(document.getElementById('tab-inventory'));
-
-    // Initialize inventory feature toggles
     initInventoryToggles();
     attachInventoryShortcuts();
 }
@@ -50,14 +33,10 @@ export function loadInventory() {
     if (!state.currentOutlet) return;
     cleanupInventory();
 
-    // Show skeleton while data loads
     const tbody = document.getElementById('inventoryTableBody');
     if (tbody) tbody.innerHTML = getSkeletonRows(5, 4);
 
-    // Re-hydrate per-outlet feature toggles if outlet changed
-    if (_togglesBound && _togglesOutlet !== state.currentOutlet) {
-        refreshInventoryTogglesForOutlet();
-    }
+    if (_togglesBound && _togglesOutlet !== state.currentOutlet) refreshInventoryTogglesForOutlet();
     _togglesOutlet = state.currentOutlet;
 
     const invRef = Outlet.ref('inventory');
@@ -85,10 +64,7 @@ export function refreshInventoryTogglesForOutlet() {
 }
 
 export function cleanupInventory() {
-    if (inventoryListener) {
-        inventoryListener();
-        inventoryListener = null;
-    }
+    if (inventoryListener) { inventoryListener(); inventoryListener = null; }
     document.removeEventListener('keydown', _invKeyHandler);
     _shortcutsAttached = false;
     cleanupInventoryToggles();
@@ -96,10 +72,7 @@ export function cleanupInventory() {
 
 function cleanupInventoryToggles() {
     _togglesBound = false;
-    if (_toggleWriteTimer) {
-        clearTimeout(_toggleWriteTimer);
-        _toggleWriteTimer = null;
-    }
+    if (_toggleWriteTimer) { clearTimeout(_toggleWriteTimer); _toggleWriteTimer = null; }
 }
 
 let _shortcutsAttached = false;
@@ -117,9 +90,7 @@ function _invKeyHandler(e) {
     if (e.key === 'n' || e.key === 'N') {
         const modal = document.getElementById('inventoryModal');
         if (modal && !modal.classList.contains('active')) {
-            e.preventDefault();
-            resetInvModal();
-            modal.classList.add('active');
+            e.preventDefault(); resetInvModal(); modal.classList.add('active');
             setTimeout(() => document.getElementById('invItemName')?.focus(), 50);
         }
     } else if (e.key === '?') {
@@ -128,154 +99,154 @@ function _invKeyHandler(e) {
     }
 }
 
-function renderInventoryTable(data) {
-    const tableBody = document.getElementById('inventoryTableBody');
-    if (!tableBody) return;
+function buildGrid() {
+    const el = document.getElementById('inventoryTableBody');
+    if (!el) return;
+    el.innerHTML = '';
 
+    _grid = new Tabulator("#inventoryTableBody", {
+        ...GRID_DEFAULTS,
+        ...PAGINATION_DEFAULTS,
+        paginationSize: 30,
+        placeholder: '<div style="padding:40px; color:#94a3b8;">📦 No items found. Click "Add Item" to start tracking.</div>',
+        columns: [
+            { formatter: "rownum", hozAlign: "center", width: 45, headerSort: false },
+            {
+                title: "Product Item",
+                field: "name",
+                width: 280,
+                formatter: function(cell) {
+                    const d = cell.getRow().getData();
+                    const threshold = d.threshold || 0;
+                    const isLow = d.stock <= threshold;
+                    const isReorder = !isLow && d.stock > threshold && d.stock <= threshold * 1.5;
+                    const detailParts = [];
+                    if (d.sku) detailParts.push(`SKU: ${d.sku}`);
+                    if (d.unit) detailParts.push(`Unit: ${d.unit}`);
+                    if (d.supplier) detailParts.push(`Supplier: ${d.supplier}`);
+                    if (d.cost) detailParts.push(`Cost: ₹${d.cost}`);
+                    const title = detailParts.length ? detailParts.join(' · ') : '';
+                    let html = `<div style="display:flex;flex-direction:column;gap:2px;"><span style="font-weight:800;font-size:15px;" title="${escapeHtml(title)}">${escapeHtml(d.name)}</span>`;
+                    if (isLow) html += `<span class="stock-status-badge low" style="font-size:10px;">${t('inv.lowStockBadge', 'Low Stock')}</span>`;
+                    else if (isReorder) html += `<span class="reorder-badge" style="font-size:10px;">${t('inv.reorderSoon', 'Reorder Soon')}</span>`;
+                    html += '</div>';
+                    return html;
+                }
+            },
+            {
+                title: "Stock",
+                field: "stock",
+                width: 150,
+                hozAlign: "center",
+                formatter: function(cell) {
+                    const val = parseInt(cell.getValue()) || 0;
+                    const d = cell.getRow().getData();
+                    const threshold = d.threshold || 0;
+                    const el = cell.getElement();
+                    if (val === 0) el.classList.add('cell-stock-out');
+                    else if (val <= threshold) el.classList.add('cell-stock-low');
+                    else el.classList.add('cell-stock-ok');
+                    return `<div class="grid-stock-control">
+                        <button class="grid-stock-btn grid-stock-btn-minus" data-action="adjustStock" data-id="${escapeHtml(d.id)}" data-delta="-1">−</button>
+                        <span class="grid-stock-value">${val}</span>
+                        <button class="grid-stock-btn grid-stock-btn-plus" data-action="adjustStock" data-id="${escapeHtml(d.id)}" data-delta="1">+</button>
+                    </div>`;
+                },
+                cellClick: function(e, cell) {
+                    const btn = e.target.closest('[data-action="adjustStock"]');
+                    if (!btn) return;
+                    const id = btn.dataset.id;
+                    const delta = parseInt(btn.dataset.delta, 10);
+                    if (id && delta) adjustStock(id, delta);
+                },
+                sorter: "number"
+            },
+            {
+                title: "Threshold",
+                field: "threshold",
+                width: 100,
+                hozAlign: "center",
+                formatter: function(cell) {
+                    return `<span style="font-size:12px;color:#64748b;">Min: ${cell.getValue() || 0}</span>`;
+                }
+            },
+            {
+                title: "Actions",
+                width: 130,
+                hozAlign: "center",
+                headerSort: false,
+                formatter: function(cell) {
+                    const d = cell.getRow().getData();
+                    return `<div style="display:flex;gap:6px;justify-content:center;">
+                        <button class="grid-btn grid-btn-outline" data-action="viewStockHistory" data-id="${escapeHtml(d.id)}" data-name="${escapeHtml(d.name)}" title="History">📋</button>
+                        <button class="grid-btn grid-btn-primary" data-action="editInventoryItem" data-id="${escapeHtml(d.id)}" title="Edit">✏️</button>
+                        <button class="grid-btn grid-btn-danger" data-action="deleteInventoryItem" data-id="${escapeHtml(d.id)}" title="Delete">🗑️</button>
+                    </div>`;
+                },
+                cellClick: function(e, cell) {
+                    const btn = e.target.closest('[data-action]');
+                    if (!btn) return;
+                    const action = btn.dataset.action;
+                    const id = btn.dataset.id;
+                    if (action === 'viewStockHistory') viewStockHistory(id, btn.dataset.name);
+                    else if (action === 'editInventoryItem') editInventoryItem(id);
+                    else if (action === 'deleteInventoryItem') deleteInventoryItem(id);
+                }
+            }
+        ]
+    });
+}
+
+function renderInventoryTable(data) {
     if (!data) {
-        _invAllRows = [];
-        tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-40 text-muted">${t('inv.empty', 'No items found. Click \'Add Item\' to start tracking.')}</td></tr>`;
-        initPagination('inventoryPagination', 0, INV_PAGE_SIZE, (p) => { _invPage = p; renderInventoryTable(); });
+        if (_grid) updateGridData(_grid, []);
+        else buildGrid();
         return;
     }
 
-    const sorted = Object.entries(data).sort((a, b) => a[1].name.localeCompare(b[1].name));
-    _invAllRows = sorted.map(([id, item]) => ({ id, item }));
+    const sorted = Object.entries(data).sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''));
+    const items = sorted.map(([id, item]) => ({ id, ...item }));
 
-    paintTable();
-}
-
-function paintTable() {
-    const tableBody = document.getElementById('inventoryTableBody');
-    if (!tableBody) return;
-
-    const term = _invSearch.trim().toLowerCase();
-    const filtered = term
-        ? _invAllRows.filter(({ item }) => (item.name || '').toLowerCase().includes(term))
-        : _invAllRows;
-
-    if (filtered.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-40 text-muted">${term ? t('inv.noMatch', 'No items match "{term}"', { term: escapeHtml(_invSearch) }) : t('inv.empty', 'No items found. Click \'Add Item\' to start tracking.')}</td></tr>`;
-    } else {
-        const start = (_invPage - 1) * INV_PAGE_SIZE;
-        const pageRows = filtered.slice(start, start + INV_PAGE_SIZE);
-        const html = pageRows.map(({ id, item }) => {
-            const threshold = item.threshold || 0;
-            const isLow = item.stock <= threshold;
-            const isReorder = !isLow && item.stock > threshold && item.stock <= threshold * 1.5;
-            const detailParts = [];
-            if (item.sku) detailParts.push(`SKU: ${item.sku}`);
-            if (item.unit) detailParts.push(`Unit: ${item.unit}`);
-            if (item.supplier) detailParts.push(`Supplier: ${item.supplier}`);
-            if (item.cost) detailParts.push(`Cost: ₹${item.cost}`);
-            const titleAttr = detailParts.length ? ` title="${escapeHtml(detailParts.join(' · '))}"` : '';
-            return `
-            <tr class="${isLow ? 'row-alert' : ''}">
-                <td class="p-l-25">
-                    <div class="flex-column">
-                        <span class="font-800 fs-15"${titleAttr}>${escapeHtml(item.name)}</span>
-                        ${isLow ? `<span class="stock-status-badge low">${t('inv.lowStockBadge', 'Low Stock')}</span>` : ''}
-                        ${isReorder ? `<span class="reorder-badge">${t('inv.reorderSoon', 'Reorder Soon')}</span>` : ''}
-                    </div>
-                </td>
-                <td class="text-center">
-                    <div class="stock-control-group">
-                        <button class="stock-adjust-btn minus" data-action="adjustStock" data-id="${escapeHtml(id)}" data-delta="-1" aria-label="Decrease stock for ${escapeHtml(item.name)}">-</button>
-                        <div class="stock-val-display" aria-live="polite">${item.stock}</div>
-                        <button class="stock-adjust-btn plus" data-action="adjustStock" data-id="${escapeHtml(id)}" data-delta="1" aria-label="Increase stock for ${escapeHtml(item.name)}">+</button>
-                    </div>
-                </td>
-                <td>
-                    <span class="badge-outline">Min: ${item.threshold || 0}</span>
-                </td>
-                <td class="p-r-25 text-right">
-                    <div class="flex-row flex-end flex-gap-8">
-                        <button class="btn-icon-v4" data-action="viewStockHistory" data-id="${escapeHtml(id)}" data-name="${escapeHtml(item.name)}" title="View history" aria-label="View stock history for ${escapeHtml(item.name)}">
-                            <i data-lucide="history"></i>
-                        </button>
-                        <button class="btn-icon-v4" data-action="editInventoryItem" data-id="${escapeHtml(id)}" title="Edit Item" aria-label="Edit ${escapeHtml(item.name)}">
-                            <i data-lucide="edit-2"></i>
-                        </button>
-                        <button class="btn-icon-v4 danger" data-action="deleteInventoryItem" data-id="${escapeHtml(id)}" title="Delete" aria-label="Delete ${escapeHtml(item.name)}">
-                            <i data-lucide="trash-2"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
-        }).join('');
-
-        tableBody.innerHTML = html;
-        if (window.lucide) window.lucide.createIcons();
-    }
-
-    initPagination('inventoryPagination', filtered.length, INV_PAGE_SIZE, (p) => { _invPage = p; paintTable(); });
+    if (!_grid) buildGrid();
+    if (_grid) updateGridData(_grid, items);
 }
 
 export function setInventorySearch(term) {
     _invSearch = term || '';
-    _invPage = 1;
-    paintTable();
+    if (!_grid) return;
+    if (!term) { _grid.clearFilter(); return; }
+    _grid.setFilter({ field: "name", type: "like", value: term });
 }
 
-/**
- * HIGH-SPEED STOCK ADJUSTMENT
- * Uses transactions to ensure atomic updates across multiple admins.
- * Big deltas (|delta| >= 10) require user confirmation.
- * Every change is recorded to inventory-log for audit.
- */
 export async function adjustStock(id, delta) {
     if (!state.currentOutlet || !id) return;
-
     if (Math.abs(delta) >= 10) {
         const itemSnap = await get(Outlet.ref(`inventory/${id}`));
         const item = itemSnap.val();
         if (!item) return;
         const direction = delta > 0 ? 'increase' : 'decrease';
         const ok = await showConfirm(
-            t('inv.confirmLargeMsg', `Apply {direction} of {n} to {name}? Current: {current}`, {
-                direction,
-                n: Math.abs(delta),
-                name: item.name,
-                current: item.stock || 0
-            }),
+            t('inv.confirmLargeMsg', `Apply ${direction} of ${Math.abs(delta)} to ${item.name}? Current: ${item.stock || 0}`),
             t('inv.confirmLarge', 'Confirm Large Adjustment')
         );
         if (!ok) return;
     }
 
     const itemRef = Outlet.ref(`inventory/${id}/stock`);
-    let prevStock = 0;
-    let nextStock = 0;
-
+    let prevStock = 0, nextStock = 0;
     try {
         const result = await runTransaction(itemRef, (currentStock) => {
             prevStock = currentStock || 0;
             nextStock = Math.max(0, prevStock + delta);
             return nextStock;
         });
-
         if (result.committed) {
-            pushLog({
-                itemId: id,
-                delta,
-                prevStock,
-                newStock: nextStock,
-                user: auth.currentUser?.email || 'unknown'
-            });
+            pushLog({ itemId: id, delta, prevStock, newStock: nextStock, user: auth.currentUser?.email || 'unknown' });
             try {
                 const itemSnap = await get(Outlet.ref(`inventory/${id}`));
                 const item = itemSnap.val();
-                if (item) {
-                    maybeNotifyLowStock({
-                        itemId: id,
-                        itemName: item.name,
-                        prevStock,
-                        newStock: nextStock,
-                        threshold: item.threshold || 0
-                    });
-                }
-            } catch (_) { /* notification is best-effort */ }
+                if (item) maybeNotifyLowStock({ itemId: id, itemName: item.name, prevStock, newStock: nextStock, threshold: item.threshold || 0 });
+            } catch (_) {}
         }
     } catch (error) {
         console.error("[Inventory] Adjustment Error:", error);
@@ -283,47 +254,28 @@ export async function adjustStock(id, delta) {
     }
 }
 
-/**
- * AUTO-DEDUCT STOCK ON SALE
- * Prefers dishId match (stable across renames) with name match as fallback.
- * Backfills missing dishId on legacy items so future deductions use the fast path.
- */
 export async function autoDeductStock(items) {
     if (!state.currentOutlet || !items || items.length === 0) return;
-
     try {
         const snapshot = await get(Outlet.ref("inventory"));
         const inventory = snapshot.val() || {};
-
         for (const item of items) {
             const itemName = (item.name || "").toLowerCase();
             let invEntry = null;
-
-            if (item.id) {
-                invEntry = Object.entries(inventory).find(([, data]) => data.dishId === item.id) || null;
-            }
-
+            if (item.id) invEntry = Object.entries(inventory).find(([, data]) => data.dishId === item.id) || null;
             if (!invEntry) {
                 invEntry = Object.entries(inventory).find(([, data]) => (data.name || "").toLowerCase() === itemName) || null;
-
                 if (invEntry && item.id) {
                     const [matchId, matchData] = invEntry;
-                    if (!matchData.dishId) {
-                        update(Outlet.ref(`inventory/${matchId}`), { dishId: item.id }).catch(() => {});
-                    }
+                    if (!matchData.dishId) update(Outlet.ref(`inventory/${matchId}`), { dishId: item.id }).catch(() => {});
                 }
             }
-
             if (invEntry) {
-                const [id, data] = invEntry;
-                const qty = item.qty || 1;
-
-                await adjustStock(id, -qty);
+                const [id] = invEntry;
+                await adjustStock(id, -(item.qty || 1));
             }
         }
-    } catch (e) {
-        console.error("[Inventory] Auto-Deduct Error:", e);
-    }
+    } catch (e) { console.error("[Inventory] Auto-Deduct Error:", e); }
 }
 
 async function saveInventoryItem() {
@@ -336,10 +288,7 @@ async function saveInventoryItem() {
     const cost = parseFloat(document.getElementById('invItemCost').value) || 0;
     const id = document.getElementById('inventoryModal').dataset.editId;
 
-    if (!name) {
-        showToast(t('inv.nameRequired', 'Item name is required'), "warning");
-        return;
-    }
+    if (!name) { showToast(t('inv.nameRequired', 'Item name is required'), "warning"); return; }
 
     try {
         const existingSnap = await get(Outlet.ref('inventory'));
@@ -347,41 +296,20 @@ async function saveInventoryItem() {
         const nameLower = name.toLowerCase();
         const skuLower = sku.toLowerCase();
 
-        const dupName = Object.entries(existing).find(([k, v]) =>
-            k !== id && (v.name || '').toLowerCase() === nameLower
-        );
-        if (dupName) {
-            showToast(t('inv.dupName', '📦 Item name already tracked'), "warning");
-            return;
-        }
+        const dupName = Object.entries(existing).find(([k, v]) => k !== id && (v.name || '').toLowerCase() === nameLower);
+        if (dupName) { showToast(t('inv.dupName', '📦 Item name already tracked'), "warning"); return; }
         if (skuLower) {
-            const dupSku = Object.entries(existing).find(([k, v]) =>
-                k !== id && (v.sku || '').toLowerCase() === skuLower
-            );
-            if (dupSku) {
-                showToast(t('inv.dupSku', '📦 SKU already in use'), "warning");
-                return;
-            }
+            const dupSku = Object.entries(existing).find(([k, v]) => k !== id && (v.sku || '').toLowerCase() === skuLower);
+            if (dupSku) { showToast(t('inv.dupSku', '📦 SKU already in use'), "warning"); return; }
         }
 
-        const itemData = {
-            name,
-            stock,
-            threshold,
-            sku,
-            unit,
-            supplier,
-            cost,
-            updatedAt: serverTimestamp()
-        };
+        const itemData = { name, stock, threshold, sku, unit, supplier, cost, updatedAt: serverTimestamp() };
 
         if (id) {
             const existingItem = existing[id];
             if (existingItem && !existingItem.dishId) {
                 const matchingDish = await findDishByName(existingItem.name);
-                if (matchingDish) {
-                    itemData.dishId = matchingDish;
-                }
+                if (matchingDish) itemData.dishId = matchingDish;
             }
             await update(Outlet.ref(`inventory/${id}`), itemData);
             showToast(t('inv.updated', '📦 Item Updated'));
@@ -390,12 +318,9 @@ async function saveInventoryItem() {
             await set(newRef, itemData);
             showToast(t('inv.saved', '📦 Item Added'));
         }
-
         document.getElementById('inventoryModal').classList.remove('active');
         resetInvModal();
-    } catch (error) {
-        showToast(t('inv.saveFailed', '📦 Save Failed'), "error");
-    }
+    } catch (error) { showToast(t('inv.saveFailed', '📦 Save Failed'), "error"); }
 }
 
 async function findDishByName(dishName) {
@@ -405,9 +330,7 @@ async function findDishByName(dishName) {
         const target = (dishName || '').toLowerCase();
         const match = Object.entries(dishes).find(([, d]) => (d.name || '').toLowerCase() === target);
         return match ? match[0] : null;
-    } catch (e) {
-        return null;
-    }
+    } catch (e) { return null; }
 }
 
 function resetInvModal() {
@@ -427,7 +350,6 @@ export async function editInventoryItem(id) {
     const snapshot = await get(invRef);
     const item = snapshot.val();
     if (!item) return;
-
     document.getElementById('invModalTitle').innerText = t('inv.modal.editTitle', 'Edit Product Tracking');
     document.getElementById('invItemName').value = item.name;
     document.getElementById('invItemStock').value = item.stock;
@@ -442,28 +364,26 @@ export async function editInventoryItem(id) {
 
 export async function deleteInventoryItem(id) {
     if (!(await showDeleteConfirm("this inventory item", "This item will be removed from the inventory list."))) return;
-
     try {
         await remove(Outlet.ref(`inventory/${id}`));
         showToast(t('inv.removed', '📦 Tracking stopped'));
-    } catch (error) {
-        showToast(t('inv.removeFailed', '📦 Failed to remove'), "error");
-    }
-};
+    } catch (error) { showToast(t('inv.removeFailed', '📦 Failed to remove'), "error"); }
+}
+
+function viewStockHistory(id, name) {
+    showToast(`Viewing history for: ${name}`, 'info');
+}
 
 function updateInventoryKPIs(data) {
     const totalEl = document.getElementById('invTotalItems');
     const lowEl = document.getElementById('invLowStock');
-    
     if (!data) {
         if (totalEl) totalEl.innerText = '0';
         if (lowEl) lowEl.innerText = '0';
         return;
     }
-
     const items = Object.values(data);
     const lowCount = items.filter(item => item.stock <= (item.threshold || 0)).length;
-
     if (totalEl) totalEl.innerText = items.length;
     if (lowEl) lowEl.innerText = lowCount;
 }
@@ -481,23 +401,19 @@ export function initInventoryToggles() {
     const toggleStock = document.getElementById('toggleStockTracking');
     const availInfo = document.getElementById('availabilityInfo');
     const stockInfo = document.getElementById('stockTrackingInfo');
-
     if (!toggleAvail || !toggleStock) return;
     if (_togglesBound) return;
     _togglesBound = true;
-
     hydrateToggles(toggleAvail, toggleStock).then(() => {
         updateInfoPanel(toggleAvail, availInfo);
         updateInfoPanel(toggleStock, stockInfo);
         updateMenuVisibility();
-
         toggleAvail.addEventListener('change', () => {
             localStorage.setItem('inv_availability', toggleAvail.checked);
             updateInfoPanel(toggleAvail, availInfo);
             updateMenuVisibility();
             scheduleTogglePersist(toggleAvail, toggleStock);
         });
-
         toggleStock.addEventListener('change', () => {
             localStorage.setItem('inv_stockTracking', toggleStock.checked);
             updateInfoPanel(toggleStock, stockInfo);
@@ -524,13 +440,9 @@ async function hydrateToggles(toggleAvail, toggleStock) {
         } else {
             toggleAvail.checked = localStorage.getItem('inv_availability') === 'true';
             toggleStock.checked = localStorage.getItem('inv_stockTracking') === 'true';
-            await set(Outlet.ref('settings/inventory'), {
-                availability: toggleAvail.checked,
-                stockTracking: toggleStock.checked
-            });
+            await set(Outlet.ref('settings/inventory'), { availability: toggleAvail.checked, stockTracking: toggleStock.checked });
         }
     } catch (e) {
-        console.warn('[Inventory] Toggle hydrate failed, using localStorage', e);
         toggleAvail.checked = localStorage.getItem('inv_availability') === 'true';
         toggleStock.checked = localStorage.getItem('inv_stockTracking') === 'true';
     }
@@ -540,10 +452,7 @@ function scheduleTogglePersist(toggleAvail, toggleStock) {
     clearTimeout(_toggleWriteTimer);
     _toggleWriteTimer = setTimeout(() => {
         if (!state.currentOutlet) return;
-        set(Outlet.ref('settings/inventory'), {
-            availability: toggleAvail.checked,
-            stockTracking: toggleStock.checked
-        }).catch(err => console.warn('[Inventory] Toggle persist failed', err));
+        set(Outlet.ref('settings/inventory'), { availability: toggleAvail.checked, stockTracking: toggleStock.checked }).catch(err => console.warn('[Inventory] Toggle persist failed', err));
     }, 500);
 }
 
@@ -555,8 +464,7 @@ function updateInfoPanel(toggle, infoPanel) {
 function updateMenuVisibility() {
     const menuSection = document.getElementById('inventoryMenuSection');
     if (!menuSection) return;
-    const anyEnabled = document.getElementById('toggleAvailability')?.checked ||
-                       document.getElementById('toggleStockTracking')?.checked;
+    const anyEnabled = document.getElementById('toggleAvailability')?.checked || document.getElementById('toggleStockTracking')?.checked;
     menuSection.style.display = anyEnabled ? 'block' : 'none';
     if (anyEnabled) loadInventoryMenu();
 }
@@ -564,10 +472,8 @@ function updateMenuVisibility() {
 export async function loadInventoryMenu() {
     const container = document.getElementById('inventoryMenuGrid');
     if (!container) return;
-
     const showAvailability = document.getElementById('toggleAvailability')?.checked;
     const showStock = document.getElementById('toggleStockTracking')?.checked;
-
     container.innerHTML = '<div class="text-center p-20 text-muted">Loading menu...</div>';
 
     try {
@@ -575,21 +481,15 @@ export async function loadInventoryMenu() {
             get(Outlet.ref('dishes')),
             get(Outlet.ref('inventory'))
         ]);
-
         const inventoryMap = {};
         inventorySnap.forEach(child => {
             const inv = child.val();
-            inventoryMap[(inv.name || '').toLowerCase()] = {
-                id: child.key,
-                stock: inv.stock || 0,
-                threshold: inv.threshold || 5
-            };
+            inventoryMap[(inv.name || '').toLowerCase()] = { id: child.key, stock: inv.stock || 0, threshold: inv.threshold || 5 };
         });
 
         if (dishesSnap.numChildren() === 0) {
             _menuAllRows = [];
-            container.innerHTML = '<div class="text-center p-40 text-muted">No dishes found. Add dishes in the Menu tab first.</div>';
-            initPagination('inventoryMenuPagination', 0, MENU_PAGE_SIZE, () => {});
+            container.innerHTML = '<div class="text-center p-40 text-muted">No dishes found.</div>';
             return;
         }
 
@@ -598,66 +498,30 @@ export async function loadInventoryMenu() {
             const dish = child.val();
             const dishId = child.key;
             const inv = inventoryMap[(dish.name || '').toLowerCase()];
-
             let controlsHtml = '';
             let reorderBadge = '';
 
             if (showAvailability) {
-                controlsHtml += `
-                    <div class="inventory-avail-row">
-                        <span class="avail-label">Available</span>
-                        <label class="toggle-switch-sm">
-                            <input type="checkbox" ${dish.stock !== false ? 'checked' : ''}
-                                data-action="toggleDish" data-id="${dishId}">
-                            <span class="toggle-slider-sm"></span>
-                        </label>
-                    </div>`;
+                controlsHtml += `<div class="inventory-avail-row"><span class="avail-label">Available</span><label class="toggle-switch-sm"><input type="checkbox" ${dish.stock !== false ? 'checked' : ''} data-action="toggleDish" data-id="${dishId}"><span class="toggle-slider-sm"></span></label></div>`;
             }
-
             if (showStock) {
                 if (inv) {
                     const threshold = inv.threshold || 0;
                     const isLow = inv.stock <= threshold;
                     const isReorder = !isLow && inv.stock > threshold && inv.stock <= threshold * 1.5;
                     if (isReorder) reorderBadge = '<span class="reorder-badge">Reorder Soon</span>';
-                    controlsHtml += `
-                        <div class="inventory-stock-row">
-                            <span class="stock-label flex-row flex-gap-6 flex-center ${isLow ? 'text-danger' : ''}"><span>Stock: ${inv.stock}</span>${reorderBadge}</span>
-                            <div class="stock-control-group">
-                                <button class="stock-adjust-btn minus" data-inventory-id="${inv.id}" data-delta="-1" aria-label="Decrease stock for ${escapeHtml(dish.name)}">−</button>
-                                <span class="stock-val-display" aria-live="polite">${inv.stock}</span>
-                                <button class="stock-adjust-btn plus" data-inventory-id="${inv.id}" data-delta="1" aria-label="Increase stock for ${escapeHtml(dish.name)}">+</button>
-                            </div>
-                        </div>`;
+                    controlsHtml += `<div class="inventory-stock-row"><span class="stock-label flex-row flex-gap-6 flex-center ${isLow ? 'text-danger' : ''}"><span>Stock: ${inv.stock}</span>${reorderBadge}</span><div class="stock-control-group"><button class="stock-adjust-btn minus" data-inventory-id="${inv.id}" data-delta="-1">−</button><span class="stock-val-display">${inv.stock}</span><button class="stock-adjust-btn plus" data-inventory-id="${inv.id}" data-delta="1">+</button></div></div>`;
                 } else {
-                    controlsHtml += `
-                        <div class="inventory-stock-row">
-                            <span class="stock-label text-muted">Not tracked</span>
-                            <button class="btn-secondary btn-small track-dish-btn" data-dish-id="${dishId}" data-dish-name="${escapeHtml(dish.name)}" aria-label="Start tracking stock for ${escapeHtml(dish.name)}">
-                                + Track Stock
-                            </button>
-                        </div>`;
+                    controlsHtml += `<div class="inventory-stock-row"><span class="stock-label text-muted">Not tracked</span><button class="btn-secondary btn-small track-dish-btn" data-dish-id="${dishId}" data-dish-name="${escapeHtml(dish.name)}">+ Track Stock</button></div>`;
                 }
             }
-
-            rows.push(`
-                <div class="dish-card inventory-dish-card">
-                    <div class="dish-img-container">
-                        <img src="${dish.image || 'https://placehold.co/150'}" alt="${escapeHtml(dish.name)}" loading="lazy">
-                    </div>
-                    <div class="dish-info">
-                        <h4>${escapeHtml(dish.name)}</h4>
-                        <span class="dish-price-val">₹${dish.price || 0}</span>
-                        ${controlsHtml}
-                    </div>
-                </div>`);
+            rows.push(`<div class="dish-card inventory-dish-card"><div class="dish-img-container"><img src="${dish.image || 'https://placehold.co/150'}" alt="${escapeHtml(dish.name)}" loading="lazy"></div><div class="dish-info"><h4>${escapeHtml(dish.name)}</h4><span class="dish-price-val">₹${dish.price || 0}</span>${controlsHtml}</div></div>`);
         });
 
         _menuAllRows = rows;
         _menuPage = 1;
         paintMenuPage();
     } catch (e) {
-        console.error("[Inventory] Menu load error:", e);
         container.innerHTML = '<div class="text-center p-40 text-danger">Failed to load menu.</div>';
     }
 }
@@ -666,9 +530,7 @@ function paintMenuPage() {
     const container = document.getElementById('inventoryMenuGrid');
     if (!container) return;
     const start = (_menuPage - 1) * MENU_PAGE_SIZE;
-    const slice = _menuAllRows.slice(start, start + MENU_PAGE_SIZE);
-    container.innerHTML = slice.join('');
-    initPagination('inventoryMenuPagination', _menuAllRows.length, MENU_PAGE_SIZE, (p) => { _menuPage = p; paintMenuPage(); });
+    container.innerHTML = _menuAllRows.slice(start, start + MENU_PAGE_SIZE).join('');
     if (window.lucide) window.lucide.createIcons({ root: container });
     attachInventoryMenuListeners(container);
 }
@@ -678,26 +540,16 @@ function attachInventoryMenuListeners(container) {
         btn.addEventListener('click', async () => {
             const invId = btn.dataset.inventoryId;
             const delta = parseInt(btn.dataset.delta, 10);
-            if (invId && delta) {
-                await adjustStock(invId, delta);
-                loadInventoryMenu();
-            }
+            if (invId && delta) { await adjustStock(invId, delta); loadInventoryMenu(); }
         });
     });
-
     container.querySelectorAll('.track-dish-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
             const dishName = btn.dataset.dishName;
             const dishId = btn.dataset.dishId;
             if (!dishName) return;
-            await push(Outlet.ref('inventory'), {
-                name: dishName,
-                dishId: dishId,
-                stock: 0,
-                threshold: 5,
-                updatedAt: serverTimestamp()
-            });
-            showToast(t('inv.nowTracking', 'Now tracking stock for {name}', { name: dishName }), "success");
+            await push(Outlet.ref('inventory'), { name: dishName, dishId, stock: 0, threshold: 5, updatedAt: serverTimestamp() });
+            showToast(t('inv.nowTracking', 'Now tracking stock for ' + dishName), "success");
             loadInventoryMenu();
         });
     });

@@ -7923,3 +7923,253 @@ body.pos-selection-mode .walkin-picker {
 .chip { background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer; color: #6366f1; transition: all 0.2s; }
 .chip:hover { background: rgba(99, 102, 241, 0.16); }
 .divider-top { border-top: 1px dashed rgba(0,0,0,0.08); padding-top: 12px; }
+
+/* =============================
+   TABULATOR EXCEL-LIKE GRID THEME
+   ============================= */
+
+/* --- Global Tabulator Overrides --- */
+.tabulator {
+    border: 1px solid #d4d8dd !important;
+    border-radius: 8px !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-size: 13px !important;
+    background: #fff !important;
+    overflow: hidden;
+}
+.tabulator .tabulator-header {
+    background: #4472C4 !important;
+    border-bottom: 2px solid #3560a8 !important;
+}
+.tabulator .tabulator-header .tabulator-col {
+    background: #4472C4 !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    border-right: 1px solid rgba(255,255,255,0.15) !important;
+}
+.tabulator .tabulator-header .tabulator-col .tabulator-col-content {
+    padding: 8px 10px !important;
+}
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable:hover {
+    background: #3560a8 !important;
+}
+.tabulator .tabulator-header .tabulator-col .tabulator-arrow {
+    border-bottom-color: rgba(255,255,255,0.7) !important;
+}
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable.tabulator-col-sorter-element .tabulator-arrow {
+    border-bottom-color: #fff !important;
+}
+
+/* --- Cells --- */
+.tabulator .tabulator-cell {
+    border-right: 1px solid #e8e8e8 !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    padding: 6px 10px !important;
+    color: #1e293b !important;
+}
+.tabulator .tabulator-cell:last-child {
+    border-right: none !important;
+}
+
+/* --- Row Styling --- */
+.tabulator-row {
+    background: #fff !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    min-height: 42px !important;
+}
+.tabulator-row:nth-child(even) {
+    background: #fafbfc !important;
+}
+
+/* --- Row Hover --- */
+.tabulator-row:hover {
+    background: #f0f4ff !important;
+    transition: background 0.15s ease;
+}
+
+/* --- Row Selected / Clicked --- */
+.tabulator-row.tabulator-selected {
+    background: #dbeafe !important;
+    border-left: 3px solid #4472C4 !important;
+}
+
+/* --- Pagination --- */
+.tabulator-footer {
+    border-top: 1px solid #e8e8e8 !important;
+    background: #f8fafc !important;
+    padding: 8px 12px !important;
+}
+.tabulator-footer .tabulator-page {
+    border: 1px solid #d4d8dd !important;
+    border-radius: 4px !important;
+    padding: 4px 10px !important;
+    font-size: 12px !important;
+    color: #475569 !important;
+    background: #fff !important;
+    margin: 0 2px !important;
+}
+.tabulator-footer .tabulator-page.tabulator-page-active {
+    background: #4472C4 !important;
+    color: #fff !important;
+    border-color: #4472C4 !important;
+}
+.tabulator-footer .tabulator-page:hover:not(.tabulator-page-active) {
+    background: #f0f4ff !important;
+}
+
+/* --- Header Filter Inputs --- */
+.tabulator .tabulator-header .tabulator-col .tabulator-header-filter input {
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    background: rgba(255,255,255,0.15) !important;
+    color: #fff !important;
+    border-radius: 4px !important;
+    padding: 3px 6px !important;
+    font-size: 11px !important;
+}
+.tabulator .tabulator-header .tabulator-col .tabulator-header-filter input::placeholder {
+    color: rgba(255,255,255,0.6) !important;
+}
+.tabulator .tabulator-header .tabulator-col .tabulator-header-filter input:focus {
+    background: rgba(255,255,255,0.25) !important;
+    border-color: rgba(255,255,255,0.5) !important;
+    outline: none !important;
+}
+
+/* =============================
+   STATUS CELL COLORS
+   ============================= */
+
+/* Orders / Payments Status */
+.cell-status-pending,
+.cell-status-ordered       { background: #fff3cd !important; color: #856404 !important; font-weight: 600; }
+.cell-status-confirmed     { background: #cce5ff !important; color: #004085 !important; font-weight: 600; }
+.cell-status-preparing     { background: #ffeaa7 !important; color: #856404 !important; font-weight: 600; }
+.cell-status-ready-for-pickup,
+.cell-status-out-for-delivery { background: #b8daff !important; color: #004085 !important; font-weight: 600; }
+.cell-status-delivered     { background: #d4edda !important; color: #155724 !important; font-weight: 600; }
+.cell-status-cancelled     { background: #f8d7da !important; color: #721c24 !important; font-weight: 600; }
+.cell-status-failed        { background: #f8d7da !important; color: #721c24 !important; font-weight: 600; }
+.cell-status-refunded      { background: #e2d9f3 !important; color: #4a1d91 !important; font-weight: 600; }
+
+/* Rider Status */
+.cell-status-online        { background: #d4edda !important; color: #155724 !important; font-weight: 600; }
+.cell-status-on-delivery   { background: #ffeaa7 !important; color: #856404 !important; font-weight: 600; }
+.cell-status-offline       { background: #e2e8f0 !important; color: #495057 !important; font-weight: 500; }
+
+/* =============================
+   VALUE-BASED CELL COLORS
+   ============================= */
+
+/* Stock Levels */
+.cell-stock-out {
+    background: #f8d7da !important;
+    color: #721c24 !important;
+    font-weight: 700;
+    text-align: center;
+}
+.cell-stock-low {
+    background: #ffeaa7 !important;
+    color: #856404 !important;
+    font-weight: 600;
+    text-align: center;
+}
+.cell-stock-ok {
+    background: #d4edda !important;
+    color: #155724 !important;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Rating Levels */
+.cell-rating-low  { background: #f8d7da !important; color: #721c24 !important; font-weight: 600; }
+.cell-rating-mid  { background: #fff3cd !important; color: #856404 !important; font-weight: 600; }
+.cell-rating-high { background: #d4edda !important; color: #155724 !important; font-weight: 600; }
+
+/* Lost Sale Value */
+.cell-value-high { background: #f8d7da !important; color: #721c24 !important; font-weight: 700; }
+.cell-value-mid  { background: #ffeaa7 !important; color: #856404 !important; font-weight: 600; }
+.cell-value-low  { background: #e2e8f0 !important; color: #495057 !important; }
+
+/* =============================
+   GRID UTILITY CLASSES
+   ============================= */
+
+.grid-link {
+    color: #2563eb !important;
+    text-decoration: none !important;
+    font-weight: 600;
+    font-size: 12px;
+}
+.grid-link:hover {
+    text-decoration: underline !important;
+    color: #1d4ed8 !important;
+}
+
+.grid-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.grid-btn {
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.15s ease;
+    margin-right: 4px;
+}
+.grid-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.grid-btn-primary { background: #4472C4; color: #fff; }
+.grid-btn-success { background: #28a745; color: #fff; }
+.grid-btn-danger  { background: #dc3545; color: #fff; }
+.grid-btn-warning { background: #ffc107; color: #333; }
+.grid-btn-outline { background: transparent; border: 1px solid #d4d8dd; color: #475569; }
+
+/* Stock adjuster in grid */
+.grid-stock-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 2px 4px;
+}
+.grid-stock-btn {
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+.grid-stock-btn:hover {
+    transform: scale(1.1);
+}
+.grid-stock-btn-minus { background: #fee2e2; color: #dc2626; }
+.grid-stock-btn-plus  { background: #dcfce7; color: #16a34a; }
+.grid-stock-value {
+    min-width: 32px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: #1e293b;
+}

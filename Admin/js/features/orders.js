@@ -11,6 +11,7 @@ import { showPaymentPicker } from '../ui-utils.js';
 import { autoDeductStock } from './inventory.js';
 import { sendToRider } from '../fcm-sender.js';
 import { logger } from '../utils/logger.js';
+import { renderPayments } from './payments.js';
 
 const RIDER_STALE_MS = 5 * 60 * 1000;
 function isRiderFresh(r) {
@@ -397,6 +398,13 @@ export function renderOrders(snap) {
         renderTopItems(snapshotOrders);
         renderTopCustomers(snapshotOrders);
     }
+
+    // PAYMENTS TAB: Delegate to Tabulator grid module
+    if (activeTab === 'payments') {
+        renderPayments(sortedOrders);
+        return;
+    }
+
     // Clear active container only
     if (containers[activeTab]) containers[activeTab].innerHTML = "";
 

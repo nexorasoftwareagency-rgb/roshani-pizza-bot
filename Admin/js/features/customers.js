@@ -1,112 +1,143 @@
 import { Outlet, get } from '../firebase.js';
-import {
-    escapeHtml,
-    initPagination,
-    getSkeletonRows
-} from '../utils.js';
+import { escapeHtml, getSkeletonRows } from '../utils.js';
 import { logger } from '../utils/logger.js';
+import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
 
-const CUSTOMERS_PAGE_SIZE = 25;
-let _customersData = [];
+let _grid = null;
 
-function renderCustomersPage(page) {
-    const table = document.getElementById("customersTableBody") || document.getElementById("customersTable");
-    if (!table) return;
-    const start = (page - 1) * CUSTOMERS_PAGE_SIZE;
-    const pageItems = _customersData.slice(start, start + CUSTOMERS_PAGE_SIZE);
-    table.innerHTML = pageItems.map(item => `
-        <tr class="premium-row-v4">
-            <td data-label="Customer">
-                <div class="identity-chip-v4">
-                    <div class="kpi-icon-box glass" style="width:32px; height:32px; font-size:14px;">
-                        <i data-lucide="user"></i>
-                    </div>
-                    <div class="identity-info-v4">
-                        <span class="name">${escapeHtml(item.name)}</span>
-                        <span class="sub">Joined: ${item.joined}</span>
-                    </div>
-                </div>
-            </td>
-            <td data-label="WhatsApp">
-                <div class="identity-info-v4">
-                    <a href="https://wa.me/91${item.phoneClean}" target="_blank" rel="noopener noreferrer" class="link-premium font-bold" style="display:flex; align-items:center; gap:5px;">
-                         <i data-lucide="message-square" style="width:12px;"></i> ${escapeHtml(item.displayPhone)}
-                    </a>
-                </div>
-            </td>
-            <td data-label="Address">
-                <div class="identity-info-v4">
-                    <span class="sub" title="${escapeHtml(item.addressFull)}">${escapeHtml(item.address)}</span>
-                    ${item.locationLink ? `<a href="${escapeHtml(item.locationLink)}" target="_blank" rel="noopener noreferrer" class="link-premium fs-10 font-bold"> VIEW MAP</a>` : ""}
-                </div>
-            </td>
-            <td data-label="Orders">
-                <div class="flex-col">
-                    <span class="font-bold color-primary">${item.orderCount}</span>
-                    <span class="text-muted-small">Purchases</span>
-                </div>
-            </td>
-            <td data-label="Value" class="text-right">
-                <div class="flex-col pr-15">
-                    <span class="font-bold fs-15">₹${item.ltv.toLocaleString()}</span>
-                    <span class="text-muted-small">LTV</span>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-    if (window.lucide) window.lucide.createIcons({ root: table });
+function buildGrid() {
+    const el = document.getElementById("customersTableBody");
+    if (!el) return;
+    el.innerHTML = '';
+
+    _grid = new Tabulator("#customersTableBody", {
+        ...GRID_DEFAULTS,
+        ...PAGINATION_DEFAULTS,
+        paginationSize: 25,
+        placeholder: '<div style="padding:40px; color:#94a3b8;">👥 No customers found</div>',
+        columns: [
+            { formatter: "rownum", hozAlign: "center", width: 45, headerSort: false },
+            {
+                title: "Customer",
+                field: "name",
+                width: 200,
+                formatter: function(cell) {
+                    const d = cell.getRow().getData();
+                    return `<div style="display:flex;align-items:center;gap:8px;">
+                        <div style="width:30px;height:30px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:13px;">👤</div>
+                        <div><div style="font-weight:600;">${escapeHtml(d.name)}</div><div style="font-size:11px;color:#94a3b8;">Joined: ${escapeHtml(d.joined)}</div></div>
+                    </div>`;
+                }
+            },
+            {
+                title: "WhatsApp",
+                field: "displayPhone",
+                width: 140,
+                formatter: function(cell) {
+                    const phone = cell.getRow().getData().phoneClean;
+                    if (!phone || phone.length < 10) return '—';
+                    return `<a href="https://wa.me/91${phone}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:none;font-weight:600;font-size:12px;">📱 ${escapeHtml(cell.getValue())}</a>`;
+                }
+            },
+            {
+                title: "Address",
+                field: "address",
+                width: 220,
+                formatter: function(cell) {
+                    const d = cell.getRow().getData();
+                    const full = d.addressFull || '';
+                    const display = d.address || '—';
+                    let html = `<span title="${escapeHtml(full)}" style="color:#475569;font-size:12px;">${escapeHtml(display)}</span>`;
+                    if (d.locationLink) {
+                        html += ` <a href="${escapeHtml(d.locationLink)}" target="_blank" rel="noopener" style="color:#2563eb;font-size:10px;font-weight:700;">VIEW MAP</a>`;
+                    }
+                    return html;
+                }
+            },
+            {
+                title: "Orders",
+                field: "orderCount",
+                width: 90,
+                hozAlign: "center",
+                formatter: function(cell) {
+                    const val = cell.getValue();
+                    return `<div style="text-align:center;"><div style="font-weight:700;color:#4472C4;">${val}</div><div style="font-size:10px;color:#94a3b8;">Purchases</div></div>`;
+                },
+                sorter: "number"
+            },
+            {
+                title: "Value (₹)",
+                field: "ltv",
+                width: 120,
+                hozAlign: "right",
+                formatter: function(cell) {
+                    return `<div style="text-align:right;"><div style="font-weight:700;font-size:14px;">₹${Number(cell.getValue()).toLocaleString()}</div><div style="font-size:10px;color:#94a3b8;">LTV</div></div>`;
+                },
+                sorter: "number"
+            }
+        ]
+    });
 }
 
 export async function loadCustomers() {
-    const table = document.getElementById("customersTableBody") || document.getElementById("customersTable");
-    if (!table) {
+    const el = document.getElementById("customersTableBody");
+    if (!el) {
         logger.warn('CUSTOMERS', 'Customers table not found, skipping load');
         return;
     }
 
-    table.innerHTML = getSkeletonRows(5, 5);
+    el.innerHTML = getSkeletonRows(5, 5);
     logger.info('CUSTOMERS', 'Loading customers from Firebase...');
 
-    const [custSnap, orderSnap] = await Promise.all([
-        get(Outlet.ref("customers")),
-        get(Outlet.ref("orders"))
-    ]);
-    const orders = [];
-    orderSnap.forEach(o => { orders.push(o.val()); });
+    try {
+        const [custSnap, orderSnap] = await Promise.all([
+            get(Outlet.ref("customers")),
+            get(Outlet.ref("orders"))
+        ]);
+        const orders = [];
+        orderSnap.forEach(o => { orders.push(o.val()); });
 
-    _customersData = [];
-    custSnap.forEach(child => {
-        const c = child.val();
-        const phone = child.key;
-        const myOrders = orders.filter(o => o.phone === phone);
-        const orderCount = myOrders.length;
-        const ltv = myOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
-        _customersData.push({
-            name: c.name || 'Anonymous',
-            joined: c.registeredAt ? new Date(c.registeredAt).toLocaleDateString() : 'N/A',
-            displayPhone: phone,
-            phoneClean: phone.replace(/\D/g, "").slice(-10),
-            address: c.address ? (c.address.length > 30 ? c.address.substring(0, 30) + "..." : c.address) : "Counter Sale / Guest",
-            addressFull: c.address || '',
-            locationLink: c.locationLink || '',
-            orderCount, ltv
+        const customers = [];
+        custSnap.forEach(child => {
+            const c = child.val();
+            const phone = child.key;
+            const myOrders = orders.filter(o => o.phone === phone);
+            const orderCount = myOrders.length;
+            const ltv = myOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+            customers.push({
+                name: c.name || 'Anonymous',
+                joined: c.registeredAt ? new Date(c.registeredAt).toLocaleDateString() : 'N/A',
+                displayPhone: phone,
+                phoneClean: phone.replace(/\D/g, "").slice(-10),
+                address: c.address ? (c.address.length > 30 ? c.address.substring(0, 30) + "..." : c.address) : "Counter Sale / Guest",
+                addressFull: c.address || '',
+                locationLink: c.locationLink || '',
+                orderCount, ltv
+            });
         });
-    });
-    renderCustomersPage(1);
-    initPagination('customersPagination', _customersData.length, CUSTOMERS_PAGE_SIZE, renderCustomersPage);
-    logger.success('CUSTOMERS', `Loaded ${_customersData.length} customers`);
+
+        if (!_grid) buildGrid();
+        if (_grid) {
+            updateGridData(_grid, customers);
+        }
+
+        logger.success('CUSTOMERS', `Loaded ${customers.length} customers`);
+    } catch (e) {
+        console.error('[Customers] Load error:', e);
+        el.innerHTML = `<div style="padding:40px; text-align:center; color:#ef4444;">⚠️ Error loading customers</div>`;
+    }
 }
 
 export function filterCustomers(searchTerm) {
-    const term = (searchTerm || '').toLowerCase().trim();
-    const rows = document.querySelectorAll('#customersTableBody tr');
-
-    rows.forEach(row => {
-        if (!term) {
-            row.style.display = '';
-            return;
-        }
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(term) ? '' : 'none';
-    });
+    if (!_grid) return;
+    const term = (searchTerm || '').trim();
+    if (!term) {
+        _grid.clearFilter();
+    } else {
+        _grid.setFilter([
+            { field: "name", type: "like", value: term },
+            { field: "displayPhone", type: "like", value: term },
+            { field: "address", type: "like", value: term }
+        ]);
+    }
 }

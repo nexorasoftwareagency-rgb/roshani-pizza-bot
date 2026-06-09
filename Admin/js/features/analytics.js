@@ -1,17 +1,13 @@
 import { Outlet, get, query, orderByChild, startAt, endAt } from '../firebase.js';
 import { ui } from '../ui.js';
-import {
-    showToast,
-    escapeHtml,
-    formatDate,
-    getISTDateString,
-    getSkeletonRows
-} from '../utils.js';
+import { showToast, escapeHtml, formatDate, getISTDateString, getSkeletonRows } from '../utils.js';
+import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
 
 let salesData = [];
 let revenueChart = null;
 let _isLoading = false;
 let _currentStatusFilter = 'delivered';
+let _grid = null;
 
 const STATUS_OPTIONS = {
     delivered: { label: 'Delivered Only', match: (o) => o.status === 'Delivered' },
@@ -26,9 +22,7 @@ export function setStatusFilter(value) {
     if (salesData.length > 0) renderFromCache();
 }
 
-export function getStatusFilter() {
-    return _currentStatusFilter;
-}
+export function getStatusFilter() { return _currentStatusFilter; }
 
 export function loadReports() {
     const today = new Date();
@@ -48,6 +42,79 @@ export function loadReports() {
     generateCustomReport();
 }
 
+function buildGrid() {
+    const el = document.getElementById('reportTableBody');
+    if (!el) return;
+    el.innerHTML = '';
+
+    _grid = new Tabulator("#reportTableBody", {
+        ...GRID_DEFAULTS,
+        pagination: false,
+        placeholder: '<div style="padding:40px; color:#94a3b8;">📊 No orders found for this range</div>',
+        columns: [
+            { formatter: "rownum", hozAlign: "center", width: 45, headerSort: false },
+            {
+                title: "Date & Time",
+                field: "createdAt",
+                width: 160,
+                formatter: function(cell) {
+                    const d = cell.getRow().getData();
+                    return `<div><div style="font-weight:600;">${formatDate(d.createdAt)}</div><div style="font-size:11px;color:#94a3b8;">#${escapeHtml(d.orderId || (d.id ? d.id.slice(-5) : 'N/A'))}</div></div>`;
+                }
+            },
+            {
+                title: "Customer",
+                field: "customerName",
+                width: 160,
+                formatter: function(cell) {
+                    const d = cell.getRow().getData();
+                    return `<div><div style="font-weight:600;">${escapeHtml(d.customerName || 'Guest')}</div><div style="font-size:11px;color:#94a3b8;">${escapeHtml(d.phone || '')}</div></div>`;
+                }
+            },
+            {
+                title: "Order Type",
+                field: "type",
+                width: 110,
+                formatter: function(cell) {
+                    const val = cell.getValue() || 'Online';
+                    const cls = val.toLowerCase().replace(/[- ]/g, '');
+                    return `<span class="badge-type badge-${cls}">${escapeHtml(val)}</span>`;
+                }
+            },
+            {
+                title: "Payment",
+                field: "paymentMethod",
+                width: 100,
+                formatter: function(cell) {
+                    const val = cell.getValue() || 'COD';
+                    return `<span class="badge-payment" data-method="${val.toLowerCase()}">${escapeHtml(val)}</span>`;
+                }
+            },
+            {
+                title: "Items",
+                field: "itemsStr",
+                width: 250,
+                formatter: function(cell) {
+                    const val = cell.getValue() || 'No items';
+                    const truncated = val.length > 40 ? val.substring(0, 40) + '…' : val;
+                    return `<span title="${escapeHtml(val)}" style="color:#475569;font-size:12px;">${escapeHtml(truncated)}</span>`;
+                }
+            },
+            {
+                title: "Total (₹)",
+                field: "total",
+                width: 120,
+                hozAlign: "right",
+                formatter: function(cell) {
+                    const val = Number(cell.getValue() || 0);
+                    return `<span style="font-weight:700;font-size:14px;">₹${val.toLocaleString()}</span>`;
+                },
+                sorter: "number"
+            }
+        ]
+    });
+}
+
 export async function generateCustomReport() {
     if (_isLoading) return;
 
@@ -60,7 +127,7 @@ export async function generateCustomReport() {
 
     if (!from || !to) {
         ui.showToast('Please select both start and end dates for filtering', 'warning');
-        tableBody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:30px; color:var(--text-muted);'>Please select a date range to view reports.</td></tr>";
+        tableBody.innerHTML = "<div style='text-align:center; padding:30px; color:#94a3b8;'>Please select a date range to view reports.</div>";
         return;
     }
 
@@ -77,9 +144,6 @@ export async function generateCustomReport() {
 
     _isLoading = true;
     tableBody.innerHTML = getSkeletonRows(5, 6);
-
-    const ordersRef = Outlet.ref('orders');
-    console.log(`[Reports] Generating report from path: ${ordersRef.toString()}`);
 
     try {
         const dFrom = new Date(from); dFrom.setDate(dFrom.getDate() - 1);
@@ -98,11 +162,15 @@ export async function generateCustomReport() {
             if (!o) return;
             const dateStr = getISTDateString(o.createdAt);
             if (dateStr >= from && dateStr <= to) {
-                salesData.push({ id: child.key, ...o, dateStr });
+                const rawItems = o.cart || o.items || {};
+                const itemsList = Array.isArray(rawItems) ? rawItems : Object.values(rawItems);
+                const finalItems = itemsList.length ? itemsList : (o.item ? [{ name: o.item, qty: 1 }] : []);
+                const itemsStr = finalItems.length
+                    ? finalItems.map(i => `${i.name || i.item || 'Item'} x${i.qty || i.quantity || 1}`).join(', ')
+                    : 'No items';
+                salesData.push({ id: child.key, ...o, dateStr, itemsStr });
             }
         });
-
-        console.log(`[Report] Processed ${salesData.length} orders matching range.`);
 
         salesData.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
 
@@ -115,7 +183,7 @@ export async function generateCustomReport() {
     } catch (e) {
         console.error('[Reports] Generation Error:', e);
         showToast('Error generating report', 'error');
-        tableBody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:30px; color:var(--danger);'>⚠️ Failed to load report data.</td></tr>";
+        tableBody.innerHTML = "<div style='text-align:center; padding:30px; color:#ef4444;'>⚠️ Failed to load report data.</div>";
     } finally {
         _isLoading = false;
     }
@@ -140,50 +208,8 @@ function renderFromCache() {
     if (ordEl) ordEl.innerText = totalOrd;
     if (avgEl) avgEl.innerText = '₹' + (totalOrd > 0 ? Math.round(totalRev / totalOrd) : 0);
 
-    tableBody.innerHTML = filtered.map(o => {
-        const orderType = escapeHtml(o.type || o.orderType || 'Online');
-        const paymentMethod = escapeHtml(o.paymentMethod || 'COD');
-        const orderId = o.orderId || (o.id ? o.id.slice(-5) : 'N/A');
-        const rawItems = o.cart || o.items || {};
-        const itemsList = Array.isArray(rawItems) ? rawItems : Object.values(rawItems);
-        const finalItems = itemsList.length ? itemsList : (o.item ? [{ name: o.item, qty: 1 }] : []);
-        const displayStr = finalItems.length
-            ? finalItems.map(i => `${escapeHtml(i.name || i.item || 'Item')} x${i.qty || i.quantity || 1}`).join(', ')
-            : 'No items';
-        const total = Number(o.total || 0);
-        const statusClass = (o.status || '').toLowerCase();
-
-        return `
-            <tr class="premium-row-v4" data-order-id="${escapeHtml(o.id || '')}">
-                <td data-label="Date">
-                    <div class="identity-info-v4">
-                        <span class="name">${formatDate(o.createdAt)}</span>
-                        <span class="sub">#${escapeHtml(orderId)}</span>
-                    </div>
-                </td>
-                <td data-label="Customer">
-                    <div class="identity-info-v4">
-                        <span class="name">${escapeHtml(o.customerName || 'Guest')}</span>
-                        <span class="sub">${escapeHtml(o.phone || '')}</span>
-                    </div>
-                </td>
-                <td data-label="Order Type">
-                    <span class="badge-type badge-${orderType.toLowerCase().replace(/[- ]/g, '')}">${orderType}</span>
-                </td>
-                <td data-label="Payment">
-                    <span class="badge-payment" data-method="${paymentMethod.toLowerCase()}">${paymentMethod}</span>
-                </td>
-                <td data-label="Items">
-                    <div class="text-muted-small text-truncate mobile-items-cell" title="${displayStr}">${displayStr}</div>
-                </td>
-                <td data-label="Total" class="text-right">
-                    <div class="flex-col flex-align-end">
-                        <span class="font-bold text-orange">₹${total.toLocaleString()}</span>
-                        <span class="text-muted-small mobile-only mobile-status-tag status-tag-${statusClass}">${escapeHtml(o.status || '')}</span>
-                    </div>
-                </td>
-            </tr>`;
-    }).join('') || "<tr><td colspan='6' class='report-cell text-center py-30 text-muted'>No orders found for this range</td></tr>";
+    if (!_grid) buildGrid();
+    if (_grid) updateGridData(_grid, filtered);
 
     renderRevenueChart(filtered);
 }
@@ -200,10 +226,7 @@ export function renderRevenueChart(data) {
     const labels = Object.keys(dailyData).sort();
     const values = labels.map(l => dailyData[l]);
 
-    if (revenueChart) {
-        revenueChart.destroy();
-        revenueChart = null;
-    }
+    if (revenueChart) { revenueChart.destroy(); revenueChart = null; }
 
     if (labels.length === 0) {
         ctx.style.display = 'none';
@@ -245,15 +268,8 @@ export function renderRevenueChart(data) {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: gridColor },
-                        ticks: { color: tickColor, font: { size: 10 } }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: tickColor, font: { size: 10 } }
-                    }
+                    y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 } } },
+                    x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 10 } } }
                 },
                 plugins: { legend: { display: false } }
             }
@@ -262,18 +278,12 @@ export function renderRevenueChart(data) {
 }
 
 export function cleanupReports() {
-    if (revenueChart) {
-        revenueChart.destroy();
-        revenueChart = null;
-    }
+    if (revenueChart) { revenueChart.destroy(); revenueChart = null; }
 }
 
 export function downloadExcel() {
     const filtered = _filteredForExport();
-    if (filtered.length === 0) {
-        ui.showToast('No data to export.', 'info');
-        return;
-    }
+    if (filtered.length === 0) { ui.showToast('No data to export.', 'info'); return; }
 
     showToast('Generating Excel...', 'info');
 
@@ -286,11 +296,7 @@ export function downloadExcel() {
         Payment: o.paymentMethod || 'COD',
         Total: o.total || 0,
         Status: o.status,
-        Items: (() => {
-            const rawItems = o.cart || (Array.isArray(o.items) ? o.items : Object.values(o.items || {}));
-            const items = rawItems.length ? rawItems : (o.item ? [{ name: o.item, qty: 1 }] : []);
-            return items.map(i => `${i.name || i.item} x${i.qty || i.quantity || 1}`).join(', ');
-        })()
+        Items: o.itemsStr || ''
     }));
 
     if (typeof XLSX !== 'undefined') {
@@ -307,22 +313,12 @@ export function downloadExcel() {
 
 export function downloadPDF() {
     const filtered = _filteredForExport();
-    if (filtered.length === 0) {
-        ui.showToast('No data available to export. Generate a report first.', 'warning');
-        return;
-    }
+    if (filtered.length === 0) { ui.showToast('No data available to export. Generate a report first.', 'warning'); return; }
+    if (!window.jspdf) { ui.showToast('PDF export library not ready. Please refresh and try again.', 'error'); return; }
 
-    if (!window.jspdf) {
-        ui.showToast('PDF export library not ready. Please refresh and try again.', 'error');
-        return;
-    }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-
-    if (typeof doc.autoTable !== 'function') {
-        ui.showToast('PDF table plugin not ready. Please refresh and try again.', 'error');
-        return;
-    }
+    if (typeof doc.autoTable !== 'function') { ui.showToast('PDF table plugin not ready.', 'error'); return; }
 
     showToast('Generating PDF...', 'info');
 
@@ -343,11 +339,7 @@ export function downloadPDF() {
         o.type || o.orderType || 'Online',
         o.paymentMethod || 'COD',
         `Rs.${o.total}`,
-        (() => {
-            const rawItems = o.cart || (Array.isArray(o.items) ? o.items : Object.values(o.items || {}));
-            const items = rawItems.length ? rawItems : (o.item ? [{ name: o.item, qty: 1 }] : []);
-            return items.map(i => `${i.name || i.item} x${i.qty || i.quantity || 1}`).join(', ');
-        })()
+        o.itemsStr || ''
     ]);
 
     doc.autoTable({
