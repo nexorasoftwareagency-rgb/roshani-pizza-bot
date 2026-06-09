@@ -35,6 +35,7 @@ export function loadInventory() {
 
     const tbody = document.getElementById('inventoryTableBody');
     if (tbody) tbody.innerHTML = getSkeletonRows(5, 4);
+    if (_grid) { _grid.destroy(); _grid = null; }
 
     if (_togglesBound && _togglesOutlet !== state.currentOutlet) refreshInventoryTogglesForOutlet();
     _togglesOutlet = state.currentOutlet;

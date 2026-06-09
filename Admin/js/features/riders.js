@@ -15,6 +15,7 @@ export function loadRiders() {
     cleanupRiders();
     const ridersTbody = document.getElementById('ridersTable');
     if (ridersTbody) ridersTbody.innerHTML = getSkeletonRows(5, 6);
+    if (_grid) { _grid.destroy(); _grid = null; }
 
     const ridersRef = ref(db, "riders");
     const statsRef = Outlet.ref("riderStats");

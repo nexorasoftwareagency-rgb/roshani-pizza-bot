@@ -149,6 +149,7 @@ export async function generateRiderPerformanceReport() {
 
     const raTbody = document.getElementById('riderAnalyticsTableBody');
     if (raTbody) raTbody.innerHTML = getSkeletonRows(5, 5);
+    if (_grid) { _grid.destroy(); _grid = null; }
 
     try {
         const ordersSnap = await get(query(Outlet.ref("orders"), orderByChild("riderId"), equalTo(riderId)));

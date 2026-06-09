@@ -155,6 +155,7 @@ export async function generateCustomReport() {
 
     _isLoading = true;
     tableBody.innerHTML = getSkeletonRows(5, 6);
+    if (_grid) { _grid.destroy(); _grid = null; }
 
     try {
         const dFrom = new Date(from); dFrom.setDate(dFrom.getDate() - 1);

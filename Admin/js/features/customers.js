@@ -98,6 +98,7 @@ export async function loadCustomers() {
     }
 
     el.innerHTML = getSkeletonRows(5, 5);
+    if (_grid) { _grid.destroy(); _grid = null; }
     logger.info('CUSTOMERS', 'Loading customers from Firebase...');
 
     try {

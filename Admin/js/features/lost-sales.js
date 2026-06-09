@@ -142,6 +142,7 @@ export async function loadLostSales() {
     if (!tbody) return;
 
     tbody.innerHTML = getSkeletonRows(5, 9);
+    if (_grid) { _grid.destroy(); _grid = null; }
 
     try {
         const lostRef = Outlet.ref('logs/lostSales');

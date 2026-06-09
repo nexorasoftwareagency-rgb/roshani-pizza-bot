@@ -103,6 +103,7 @@ export function loadFeedbacks() {
     if (!tableBody) return;
 
     tableBody.innerHTML = getSkeletonRows(5, 5);
+    if (_grid) { _grid.destroy(); _grid = null; }
     cleanupFeedbacks();
 
     _feedbackUnsub = onValue(Outlet.ref("feedbacks"), snap => {
