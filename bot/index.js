@@ -1410,26 +1410,56 @@ async function startBot() {
                         return sendCartView(sock, sender, user);
                     }
                     if (text === "2") {
-                        // Record Lost Sale
+                        // Record Lost Sale — complete data for analytics
                         const lostId = "L-" + Date.now();
                         const { lines, subtotal } = formatCartSummary(user.cart);
+                        const deliveryFee = user.deliveryFee || 0;
+                        const total = subtotal + deliveryFee - (user.discount || 0);
                         const lostData = {
-                            timestamp: new Date().toISOString(),
-                            customer: user.name || "Anonymous",
+                            cancelledAt: new Date().toISOString(),
+                            customerName: user.name || "Anonymous",
                             phone: user.phone || "N/A",
-                            total: subtotal, // Changed subtotal to total for report compatibility
-                            subtotal: subtotal,
+                            address: user.address || "",
+                            location: user.location || null,
+                            total,
+                            subtotal,
+                            deliveryFee,
+                            discount: user.discount || 0,
+                            discountLabel: user.discountLabel || null,
+                            cart: user.cart || [],
+                            sourceStep: "CONFIRM_PAY",
                             reason: "Cancelled at final invoice step",
-                            outlet: user.outlet || "pizza"
+                            outlet: user.outlet || "pizza",
+                            channel: "whatsapp"
                         };
 
                         await setData(`logs/lostSales/${lostId}`, lostData);
+
+                        // Save lost-sale customer to customer database for follow-up
+                        if (user.phone) {
+                            const cleanPhone = String(user.phone).replace(/\D/g, '').slice(-10);
+                            const custRef = db.ref(`${user.outlet}/customers/${cleanPhone}`);
+                            custRef.transaction((existing) => {
+                                const base = existing || {};
+                                return {
+                                    ...base,
+                                    name: user.name || base.name,
+                                    phone: cleanPhone,
+                                    address: user.address || base.address || "",
+                                    location: user.location || base.location || null,
+                                    lastSeen: Date.now(),
+                                    lostSaleCount: (base.lostSaleCount || 0) + 1,
+                                    lastLostSaleAt: new Date().toISOString(),
+                                    promotionalConsent: base.promotionalConsent ?? true
+                                };
+                            }).catch(() => {});
+                        }
 
                         // Notify Admin
                         await notifyAdmin(sock, lostId, {
                             customerName: user.name || "Anonymous",
                             phone: user.phone || "N/A",
-                            total: subtotal,
+                            total,
                             outlet: user.outlet || "pizza"
                         }, 'CANCELLED');
 

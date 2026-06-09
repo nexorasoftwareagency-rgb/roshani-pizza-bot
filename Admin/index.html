@@ -186,15 +186,15 @@
 
     <!-- Dynamic Branding Engine -->
 
-    <script src="branding.js?v=5.3.2"></script>
+    <script src="branding.js?v=5.3.3"></script>
 
-    <script src="firebase-config.js?v=5.3.2"></script>
+    <script src="firebase-config.js?v=5.3.3"></script>
 
 
 
-    <link rel="stylesheet" href="style.css?v=5.3.2">
+    <link rel="stylesheet" href="style.css?v=5.3.3">
 
-    <link rel="stylesheet" href="mobile-overrides.css?v=5.3.2">
+    <link rel="stylesheet" href="mobile-overrides.css?v=5.3.3">
 
     <link rel="manifest" href="manifest.json?v=3">
 
@@ -238,7 +238,7 @@
 
     <!-- Global bot-status listener (ES module, deferred — loads after firebase.js is ready) -->
 
-    <script type="module" src="js/bot-status.js?v=5.3.2"></script>
+    <script type="module" src="js/bot-status.js?v=5.3.3"></script>
 
 </head>
 
@@ -1820,6 +1820,12 @@
 
                         <div class="flex-row flex-gap-12 flex-center">
 
+                            <select id="lostSalesOutletFilter" class="form-select" style="height:38px; font-size:12px; padding:4px 10px;">
+                                <option value="all">All Outlets</option>
+                                <option value="pizza">🍕 Pizza</option>
+                                <option value="cake">🎂 Cake</option>
+                            </select>
+
                             <div class="notif-time-badge-premium revenue-badge-lost" id="lostSalesTotalRevenue">
 
                                 <small class="revenue-badge-sub">Potential Revenue Lost</small>
@@ -1828,9 +1834,12 @@
 
                             </div>
 
-                            <button id="btnClearLostSales" class="btn-secondary btn-lost-sales-clear">🗑ï¸ Clear
+                            <div class="notif-time-badge-premium" style="background:rgba(239,68,68,0.08); color:#ef4444; border:1px solid rgba(239,68,68,0.15); padding:8px 15px; border-radius:12px;">
+                                <small class="revenue-badge-sub">Total Lost Sales</small>
+                                <span class="revenue-badge-val" id="lostSalesCount">0</span>
+                            </div>
 
-                                Logs</button>
+                            <button id="btnClearLostSales" class="btn-secondary btn-lost-sales-clear">🗑️ Clear Logs</button>
 
                         </div>
 
@@ -1850,11 +1859,19 @@
 
                                         <th class="p-l-25">Date & Time</th>
 
-                                        <th>Customer Detail</th>
+                                        <th>Customer</th>
 
-                                        <th>Abandonment Step</th>
+                                        <th>Phone</th>
 
-                                        <th>Items Summary</th>
+                                        <th>Outlet</th>
+
+                                        <th>Items</th>
+
+                                        <th>Subtotal</th>
+
+                                        <th>Delivery</th>
+
+                                        <th>Discount</th>
 
                                         <th class="p-r-25 text-right">Potential Value</th>
 
@@ -1866,7 +1883,7 @@
 
                                     <tr>
 
-                                        <td colspan="5" class="text-center p-60 text-muted">
+                                        <td colspan="9" class="text-center p-60 text-muted">
 
                                             <div class="loading-spinner mb-14 m-auto"></div>
 
@@ -5777,9 +5794,9 @@
 
 
 
-    <script src="receipt-templates.js?v=5.3.2"></script>
+    <script src="receipt-templates.js?v=5.3.3"></script>
 
-    <script type="module" src="js/main.js?v=5.3.2"></script>
+    <script type="module" src="js/main.js?v=5.3.3"></script>
 
 </body>
 
