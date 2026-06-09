@@ -268,7 +268,10 @@ export function initAuth() {
         setupCapacitorFCM(user.uid);
         setupAdminFCM(user.uid);
         initNewOrderNotifications();
-        
+        document.addEventListener('switchOutlet', () => {
+            initNewOrderNotifications();
+        });
+
         // Initial Tab Navigation (Respect Hash or Default to Dashboard)
         const initialTab = window.location.hash.replace('#', '') || 'dashboard';
         ui.switchTab(initialTab, true);

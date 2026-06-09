@@ -77,6 +77,9 @@ export const Outlet = {
             finalPath = `${this.current}/${cleanPath}`;
         }
         return ref(db, finalPath);
+    },
+    multiUpdate(updates) {
+        return update(ref(db, this.current), updates);
     }
 };
 

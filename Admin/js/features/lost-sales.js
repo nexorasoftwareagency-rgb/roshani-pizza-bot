@@ -190,9 +190,20 @@ export async function clearLostSales() {
     if (!(await showBulkDeleteConfirm('Lost Sales'))) return;
     haptic(20);
     try {
-        await remove(Outlet.ref('logs/lostSales'));
+        const outlet = (window.currentOutlet || 'pizza').toLowerCase();
+        const lostSnap = await get(Outlet.ref('logs/lostSales'));
+        const updates = {};
+        lostSnap.forEach(child => {
+            const record = child.val();
+            if ((record.outlet || 'pizza') === outlet) {
+                updates[child.key] = null;
+            }
+        });
+        if (Object.keys(updates).length > 0) {
+            await remove(Outlet.ref('logs/lostSales'));
+        }
         _allLostSales = [];
-        logAudit('Maintenance', 'Cleared All Lost Sales Logs', 'Global');
+        logAudit('Maintenance', `Cleared Lost Sales Logs for ${outlet}`, outlet);
         showToast('Logs cleared successfully', 'success');
         loadLostSales();
     } catch (e) {

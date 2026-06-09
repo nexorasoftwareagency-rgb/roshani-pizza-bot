@@ -172,7 +172,7 @@ export async function deleteCategory(id) {
                 }
             });
 
-            await update(Outlet.ref(''), updates);
+            await Outlet.multiUpdate(updates);
 
             imagesToDelete.forEach(img => {
                 deleteImage(img).catch(err => console.warn("[Catalog] Image deletion failed:", img, err));
@@ -640,7 +640,7 @@ export async function migrateAddonsToCategories() {
             });
 
             if (Object.keys(updates).length > 0) {
-                await update(Outlet.ref(''), updates);
+                await Outlet.multiUpdate(updates);
                 logAudit("Maintenance", "Migrated Dish Add-ons to Categories", "Global");
                 showToast("Success: Add-ons migrated to categories!", "success");
             } else {
@@ -697,7 +697,7 @@ export async function runImageMigration() {
             }
 
             if (Object.keys(updates).length > 0) {
-                await update(Outlet.ref(''), updates);
+                await Outlet.multiUpdate(updates);
                 logAudit("Maintenance", "Converted legacy images to DataURIs", "Global");
                 showToast("Success: All images migrated!", "success");
                 location.reload();

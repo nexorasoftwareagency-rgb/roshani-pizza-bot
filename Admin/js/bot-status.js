@@ -24,7 +24,7 @@ if (!window.__botStatusInit) {
 
   function _attachListener() {
     if (typeof _statusListener === 'function') { try { _statusListener(); } catch (e) {} _statusListener = null; }
-    const outlet = window.state?.currentOutlet || 'pizza';
+    const outlet = Outlet.current;
     try {
       const statusRef = Outlet.ref(`bot/${outlet}/status`);
       if (!statusRef || typeof statusRef.toString !== 'function') {

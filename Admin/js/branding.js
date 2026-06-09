@@ -26,6 +26,8 @@ export function clearStateForOutletSwitch() {
     state.lastDishesSnap = null;
     state.ridersList = [];
     state.riderStatsData = {};
+    state.notifications = [];
+    state.unacknowledgedOrders.clear();
 
     const containers = [
         'categoryList', 'menuGrid', 'walkinDishGrid', 'walkinCategoryTabs',
@@ -89,6 +91,8 @@ export function switchOutlet(val) {
     ui.switchTab(activeTabId);
 
     console.log("[Branding] Admin switched outlet to:", val);
+
+    document.dispatchEvent(new CustomEvent('switchOutlet', { detail: { outlet: val } }));
 }
 
 export function openOutletInNewTab() {
