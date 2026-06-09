@@ -1,6 +1,6 @@
 import { Outlet, get, remove } from '../firebase.js';
 import { ui } from '../ui.js';
-import { showToast, logAudit, escapeHtml, formatDate, haptic, getSkeletonRows } from '../utils.js';
+import { showToast, logAudit, escapeHtml, formatDate, haptic, getSkeletonDivs } from '../utils.js';
 import { showBulkDeleteConfirm } from '../ui-utils.js';
 import { createGrid, updateGridData, GRID_DEFAULTS } from '../tabulator-setup.js';
 
@@ -143,7 +143,7 @@ export async function loadLostSales() {
     if (!tbody) return;
 
     if (_grid) { _grid.destroy(); _grid = null; }
-    tbody.innerHTML = getSkeletonRows(5, 9);
+    tbody.innerHTML = getSkeletonDivs(5);
 
     try {
         const lostRef = Outlet.ref('logs/lostSales');

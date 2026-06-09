@@ -4,7 +4,7 @@
  */
 
 import { Outlet, onValue } from '../firebase.js';
-import { escapeHtml, getSkeletonRows } from '../utils.js';
+import { escapeHtml, getSkeletonDivs } from '../utils.js';
 import { createGrid, updateGridData, GRID_DEFAULTS } from '../tabulator-setup.js';
 
 let _feedbackUnsub = null;
@@ -104,7 +104,7 @@ export function loadFeedbacks() {
     if (!tableBody) return;
 
     if (_grid) { _grid.destroy(); _grid = null; }
-    tableBody.innerHTML = getSkeletonRows(5, 5);
+    tableBody.innerHTML = getSkeletonDivs(5);
     cleanupFeedbacks();
 
     _feedbackUnsub = onValue(Outlet.ref("feedbacks"), snap => {

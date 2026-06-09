@@ -296,3 +296,9 @@ export function getSkeletonRows(count = 5, colspan = 7) {
         `<tr class="skeleton-row"><td colspan="${colspan}"><div class="skeleton" style="height:44px;width:100%;border-radius:6px;margin:3px 0"></div></td></tr>`
     ).join('');
 }
+
+export function getSkeletonDivs(count = 5) {
+    return Array.from({ length: count }, () =>
+        `<div class="skeleton" style="height:44px;width:100%;border-radius:6px;margin:3px 0"></div>`
+    ).join('');
+}

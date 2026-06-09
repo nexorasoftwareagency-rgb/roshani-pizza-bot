@@ -1,7 +1,7 @@
 import { db, auth, secondaryAuth, secondaryAuthAvailable, Outlet, serverTimestamp, ref, get, set, push, update, runTransaction, remove, query, orderByChild, equalTo, onValue, signOut, sendPasswordResetEmail, createUserWithEmailAndPassword } from '../firebase.js';
 import { state } from '../state.js';
 import { showDeleteConfirm } from '../ui-utils.js';
-import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm, addRiderNotification, getSkeletonRows } from '../utils.js';
+import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm, addRiderNotification, getSkeletonDivs } from '../utils.js';
 import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
 
 let _ridersUnsub = null;
@@ -15,7 +15,7 @@ export function loadRiders() {
     cleanupRiders();
     const ridersTbody = document.getElementById('ridersTable');
     if (_grid) { _grid.destroy(); _grid = null; }
-    if (ridersTbody) ridersTbody.innerHTML = getSkeletonRows(5, 6);
+    if (ridersTbody) ridersTbody.innerHTML = getSkeletonDivs(5);
 
     const ridersRef = ref(db, "riders");
     const statsRef = Outlet.ref("riderStats");

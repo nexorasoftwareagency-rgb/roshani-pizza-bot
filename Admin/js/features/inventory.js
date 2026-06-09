@@ -1,7 +1,7 @@
 import { db, auth, Outlet, serverTimestamp, get, set, update, remove, push, onValue, runTransaction } from '../firebase.js';
 import { state } from '../state.js';
 import { showDeleteConfirm, showConfirm } from '../ui-utils.js';
-import { logAudit, showToast, escapeHtml, getSkeletonRows } from '../utils.js';
+import { logAudit, showToast, escapeHtml, getSkeletonDivs } from '../utils.js';
 import { pushLog, maybeNotifyLowStock } from './inventory-extras.js';
 import { t, localize } from '../l10n.js';
 import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
@@ -35,7 +35,7 @@ export function loadInventory() {
 
     const tbody = document.getElementById('inventoryTableBody');
     if (_grid) { _grid.destroy(); _grid = null; }
-    if (tbody) tbody.innerHTML = getSkeletonRows(5, 4);
+    if (tbody) tbody.innerHTML = getSkeletonDivs(5);
 
     if (_togglesBound && _togglesOutlet !== state.currentOutlet) refreshInventoryTogglesForOutlet();
     _togglesOutlet = state.currentOutlet;

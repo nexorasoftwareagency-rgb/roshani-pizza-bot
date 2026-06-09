@@ -5,7 +5,7 @@
 
 import { Outlet, get, query, orderByChild, equalTo } from '../firebase.js';
 import { state } from '../state.js';
-import { escapeHtml, showToast, formatDate, getISTDateString, getSkeletonRows } from '../utils.js';
+import { escapeHtml, showToast, formatDate, getISTDateString, getSkeletonDivs } from '../utils.js';
 import { settleRiderWallet } from './riders.js';
 import { createGrid, updateGridData, GRID_DEFAULTS } from '../tabulator-setup.js';
 
@@ -150,7 +150,7 @@ export async function generateRiderPerformanceReport() {
 
     const raTbody = document.getElementById('riderAnalyticsTableBody');
     if (_grid) { _grid.destroy(); _grid = null; }
-    if (raTbody) raTbody.innerHTML = getSkeletonRows(5, 5);
+    if (raTbody) raTbody.innerHTML = getSkeletonDivs(5);
 
     try {
         const ordersSnap = await get(query(Outlet.ref("orders"), orderByChild("riderId"), equalTo(riderId)));

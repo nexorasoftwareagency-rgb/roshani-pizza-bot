@@ -1,5 +1,5 @@
 import { Outlet, get } from '../firebase.js';
-import { escapeHtml, getSkeletonRows } from '../utils.js';
+import { escapeHtml, getSkeletonDivs } from '../utils.js';
 import { logger } from '../utils/logger.js';
 import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
 
@@ -99,7 +99,7 @@ export async function loadCustomers() {
     }
 
     if (_grid) { _grid.destroy(); _grid = null; }
-    el.innerHTML = getSkeletonRows(5, 5);
+    el.innerHTML = getSkeletonDivs(5);
     logger.info('CUSTOMERS', 'Loading customers from Firebase...');
 
     try {

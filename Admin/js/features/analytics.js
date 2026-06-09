@@ -1,6 +1,6 @@
 import { Outlet, get, query, orderByChild, startAt, endAt } from '../firebase.js';
 import { ui } from '../ui.js';
-import { showToast, escapeHtml, formatDate, getISTDateString, getSkeletonRows } from '../utils.js';
+import { showToast, escapeHtml, formatDate, getISTDateString, getSkeletonDivs } from '../utils.js';
 import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
 
 let salesData = [];
@@ -156,7 +156,7 @@ export async function generateCustomReport() {
 
     _isLoading = true;
     if (_grid) { _grid.destroy(); _grid = null; }
-    tableBody.innerHTML = getSkeletonRows(5, 6);
+    tableBody.innerHTML = getSkeletonDivs(5);
 
     try {
         const dFrom = new Date(from); dFrom.setDate(dFrom.getDate() - 1);
