@@ -153,8 +153,10 @@ export const switchTab = async (tabId, skipHistory = false) => {
     });
 
     const target = document.getElementById(`tab-${tabId}`);
+    console.log(`[SWITCH] target=${!!target}, id=tab-${tabId}`);
     if (target) {
         target.classList.remove('hidden');
+        console.log(`[SWITCH] removed hidden, classes="${target.className}", display=${getComputedStyle(target).display}, height=${target.offsetHeight}`);
 
         const mainEl = document.querySelector('.main');
         if (mainEl) mainEl.scrollTop = 0;
@@ -173,6 +175,7 @@ export const switchTab = async (tabId, skipHistory = false) => {
         if (tabId !== 'discounts') cleanupTasks.push(mod('discounts').then(m => m.cleanupDiscounts?.()));
         if (tabId !== 'discounts') cleanupTasks.push(mod('discountsReports').then(m => m.closeDiscountsReports?.()));
         await Promise.allSettled(cleanupTasks);
+        console.log(`[SWITCH] cleanup done for ${tabId}`);
 
         // --- PHASE 3.25: DATA REFRESH ---
         window.__adminLogger?.data('TAB', `Loading data for: ${tabId}`);
@@ -269,6 +272,7 @@ export const switchTab = async (tabId, skipHistory = false) => {
 
         applyDataLabels();
 
+        console.log(`[SWITCH] DONE: tab=${tabId}, height=${target.offsetHeight}, childCount=${target.children.length}`);
         window.__adminLogger?.success('TAB', `Tab loaded: ${tabId}`);
     } else {
         window.__adminLogger?.warn('TAB', `Tab target not found: tab-${tabId}`);

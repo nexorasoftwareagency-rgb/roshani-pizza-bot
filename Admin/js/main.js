@@ -64,6 +64,238 @@ document.addEventListener('DOMContentLoaded', async () => {
         rTo.value = toVal;
     }
 
+    // Click handler registered BEFORE awaits — ensures clicks work even if Firebase hangs
+    document.addEventListener('click', async (e) => {
+        try {
+            const el = e.target.closest('[data-action], [data-tab]');
+            if (!el) return;
+
+            if (window.innerWidth <= 1024) {
+                const sidebar = document.getElementById('sidebarNav');
+                if (sidebar && sidebar.classList.contains('active')) {
+                    const isToggleBtn = el.getAttribute('data-action') === 'toggleSidebar' || el.closest('#mobileHamburger');
+                    if (!isToggleBtn) {
+                        import('./ui.js').then(u => u.closeSidebar());
+                    }
+                }
+            }
+
+            const action = el.getAttribute('data-action');
+            const tab = el.getAttribute('data-tab');
+            const id = el.getAttribute('data-id');
+            const val = el.getAttribute('data-val');
+            const name = el.getAttribute('data-name');
+            const price = el.getAttribute('data-price');
+            const tag = el.getAttribute('data-tag');
+
+            const elLabel = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40) || el.id || el.className.split(' ')[0] || 'unknown';
+            const ctx = { tag: el.tagName, id: el.id || null, action, tab, dataId: id, dataVal: val, dataName: name, text: elLabel };
+            logger.action('CLICK', `→ ${action || 'switchTab:' + tab} (${elLabel})`, ctx);
+
+            if (tab) {
+                logger.nav('TAB', `Switching to tab: ${tab}`);
+                switchTab(tab);
+                return;
+            }
+
+            if (!action) return;
+
+            switch (action) {
+
+                case 'updateStatusFromDrawer': logger.info('ORDERS', `Update status from drawer: ${id} → ${val}`); (await useMod('orders')).updateStatus(id, val); break;
+                case 'closeOrderDrawer': logger.info('ORDERS', 'Closing order drawer'); (await useMod('orders')).closeOrderDrawer(); break;
+                case 'chatOnWhatsapp': {
+                    const phone = el.getAttribute('data-phone');
+                    logger.info('CHAT', `Opening WhatsApp chat: ${phone}`);
+                    if (phone) window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}`, '_blank');
+                    break;
+                }
+                case 'printReceiptById': logger.info('PRINT', `Print receipt: ${id}`); (await useMod('orders')).closeOrderDrawer(); (await useMod('printing')).printReceiptById(id); break;
+                case 'closeReceiptPreview': logger.info('PRINT', 'Close receipt preview'); (await useMod('printing')).closeReceiptPreview(); break;
+                case 'printReceiptFromPreview': logger.info('PRINT', 'Print from preview'); (await useMod('printing')).printReceiptFromPreview(); break;
+                case 'updateStatus': logger.info('ORDERS', `Update status: ${id} → ${val}`); (await useMod('orders')).updateStatus(id, val); break;
+                case 'assignRider': logger.info('ORDERS', `Assign rider: ${id} → ${val}`); (await useMod('orders')).assignRider(id, val); break;
+                case 'openOrderDrawer': logger.info('ORDERS', `Open order drawer: ${id}`); (await useMod('orders')).openOrderDrawer(id); break;
+                case 'markAsPaid': logger.info('ORDERS', `Mark paid: ${id}`); (await useMod('orders')).markAsPaid(id); break;
+                case 'deleteCategory': logger.info('CATALOG', `Delete category: ${id}`); (await useMod('catalog')).deleteCategory(id); break;
+                case 'removeParent': logger.info('UI', 'Remove parent element'); el.parentElement.remove(); break;
+                case 'removeGrandparent': logger.info('UI', 'Remove grandparent element'); el.parentElement.parentElement.remove(); break;
+                case 'editRider': logger.info('RIDERS', `Edit rider: ${id}`); (await useMod('riders')).editRider(id); break;
+                case 'resetRiderPassword': logger.info('RIDERS', `Reset rider password: ${el.getAttribute('data-email')}`); (await useMod('riders')).resetRiderPassword(el.getAttribute('data-email')); break;
+                case 'deleteRider': logger.info('RIDERS', `Delete rider: ${id}`); (await useMod('riders')).deleteRider(id); break;
+                case 'settleRider': logger.info('RIDERS', `Settle rider wallet: ${id} (${name})`); (await useMod('riders')).settleRiderWallet(id, name); break;
+                case 'saveSettings': logger.info('SETTINGS', 'Save store settings'); (await useMod('settings')).saveStoreSettings(); break;
+                case 'saveDeliveredOrder': logger.info('ORDERS', `Save delivered order: ${id} = ${val}`); (await useMod('orders')).saveDeliveredOrder(id, val); break;
+                case 'openPOSSelectionModal': logger.info('POS', `Open selection modal: ${id}`); (await useMod('pos')).openPOSSelectionModal(id); break;
+                case 'hidePOSSelectionModal': logger.info('POS', 'Hide selection modal'); (await useMod('pos')).hidePOSSelectionModal(); break;
+                case 'addToWalkinCartFromModal': logger.info('POS', 'Add to cart from modal'); (await useMod('pos')).addToWalkinCartFromModal(); break;
+                case 'adjustPOSModalQty': logger.info('POS', `Adjust modal qty: ${val}`); (await useMod('pos')).adjustPOSModalQty(parseInt(val, 10)); break;
+                case 'openCartAddonPicker': logger.info('POS', `Open cart addon picker: ${id}`); (await useMod('pos')).openCartAddonPicker(id); break;
+                case 'walkinQtyChange': logger.info('POS', `Cart qty change: ${id} (${val})`); (await useMod('pos')).walkinQtyChange(id, parseInt(val, 10)); break;
+                case 'walkinRemoveItem': logger.info('POS', `Remove from cart: ${id}`); (await useMod('pos')).removeFromWalkinCart(id); break;
+                case 'filterWalkinByCategory': logger.info('POS', `Filter by category: ${val}`); (await useMod('pos')).filterWalkinByCategory(val, el); break;
+                case 'selectPOSSize': logger.info('POS', `Select size: ${name} (₹${price})`); (await useMod('pos')).selectPOSSize(name, parseFloat(price), el); break;
+                case 'togglePOSAddon': logger.info('POS', `Toggle addon: ${name} (₹${price})`); (await useMod('pos')).togglePOSAddon(name, parseFloat(price), el); break;
+                case 'triggerClick': {
+                    logger.info('UI', `Trigger click: ${val}`);
+                    const target = document.getElementById(val);
+                    if (target) target.click();
+                    break;
+                }
+                case 'markDelivered': logger.info('ORDERS', `Mark delivered: ${id}`); (await useMod('orders')).updateStatus(id, 'Delivered'); break;
+                case 'editDish': logger.info('CATALOG', `Edit dish: ${id}`); (await useMod('catalog')).editDish(id); break;
+                case 'deleteDish': logger.info('CATALOG', `Delete dish: ${id}`); (await useMod('catalog')).deleteDish(id); break;
+                case 'editCategory': logger.info('CATALOG', `Edit category: ${id}`); (await useMod('catalog')).editCategory(id); break;
+                case 'adjustStock': logger.info('INVENTORY', `Adjust stock: ${id} (${val})`); (await useMod('inventory')).adjustStock(id, parseInt(val, 10)); break;
+                case 'editInventoryItem': logger.info('INVENTORY', `Edit item: ${id}`); (await useMod('inventory')).editInventoryItem(id); break;
+                case 'deleteInventoryItem': logger.info('INVENTORY', `Delete item: ${id}`); (await useMod('inventory')).deleteInventoryItem(id); break;
+                case 'viewStockHistory': {
+                    logger.info('INVENTORY', `View stock history: ${id}`);
+                    const extras = await useMod('inventory-extras');
+                    extras.viewStockHistory(id, el.getAttribute('data-name'));
+                    break;
+                }
+                case 'exportInventoryCSV': logger.info('INVENTORY', 'Export CSV'); (await useMod('inventory-extras')).exportInventoryCSV(); break;
+                case 'triggerInventoryImport': logger.info('INVENTORY', 'Trigger CSV import'); (await useMod('inventory-extras')).triggerInventoryImport(); break;
+                case 'showRiderModal':
+                case 'showAddRiderModal': logger.info('RIDERS', 'Open add rider modal'); (await useMod('riders')).showRiderModal(); break;
+                case 'closeModal':
+                case 'hideReauthModal':
+                case 'hideInventoryModal': {
+                    const modal = el.closest('.modal');
+                    logger.info('MODAL', `Close modal: ${modal?.id || 'unknown'}`);
+                    if (modal) {
+                        modal.classList.add('hidden');
+                        modal.classList.remove('active', 'flex');
+                    }
+                    break;
+                }
+                case 'completeSiteRefresh': logger.warn('SYSTEM', 'Nuclear refresh triggered'); completeSiteRefresh(); break;
+                case 'toggleNotificationSheet': logger.info('NOTIF', 'Toggle notification sheet'); (await useMod('notifications')).toggleNotificationSheet(); break;
+                case 'toggleSidebar': logger.info('UI', 'Toggle sidebar'); toggleSidebar(); break;
+                case 'toggleMobileCart': {
+                    logger.info('POS', 'Toggle mobile cart');
+                    toggleMobileCart(true);
+                    break;
+                }
+                case 'openOutletInNewTab': logger.info('OUTLET', 'Open outlet in new tab'); openOutletInNewTab(); break;
+
+                case 'userLogout': logger.warn('AUTH', 'User logout'); userLogout(); break;
+                case 'installPWA': logger.info('PWA', 'Install PWA'); installPWA(); break;
+                case 'removeRow': logger.info('UI', 'Remove row'); el.closest('tr').remove(); break;
+                case 'addFeeSlab': logger.info('SETTINGS', 'Add delivery fee slab'); (await useMod('settings')).addFeeSlab(); break;
+                case 'migrateAddons': logger.warn('CATALOG', 'Migrate addons to categories'); (await useMod('catalog')).migrateAddonsToCategories(); break;
+                case 'runImageMigration': logger.warn('CATALOG', 'Run image migration'); (await useMod('catalog')).runImageMigration(); break;
+                case 'clearWalkinCart': logger.info('POS', 'Clear walkin cart'); (await useMod('pos')).clearWalkinCart(); break;
+                case 'submitWalkinSale': logger.info('POS', 'Submit walkin sale'); (await useMod('pos')).submitWalkinSale(); break;
+                case 'addCategory': logger.info('CATALOG', 'Add category'); (await useMod('catalog')).addCategory(); break;
+
+                case 'openPromotionsGuide': {
+                    logger.info('PROMO', 'Open promotions guide');
+                    const { renderPromotionsGuide } = await useMod('promotions-guide');
+                    renderPromotionsGuide(document.getElementById('promotionsGuideBody'));
+                    document.getElementById('promotionsGuideModal')?.classList.add('active');
+                    break;
+                }
+                case 'closePromotionsGuide': logger.info('PROMO', 'Close promotions guide'); document.getElementById('promotionsGuideModal')?.classList.remove('active'); break;
+                case 'openPageGuide': {
+                    logger.info('HELP', 'Open page guide');
+                    const { renderPageGuide } = await useMod('page-guide');
+                    renderPageGuide(document.getElementById('pageGuideBody'));
+                    document.getElementById('pageGuideModal')?.classList.add('active');
+                    break;
+                }
+                case 'closePageGuide': logger.info('HELP', 'Close page guide'); document.getElementById('pageGuideModal')?.classList.remove('active'); break;
+                case 'openActivityLog': renderActivityLog(); document.getElementById('activityLogModal')?.classList.add('active'); break;
+                case 'closeActivityLog': document.getElementById('activityLogModal')?.classList.remove('active'); break;
+                case 'clearActivityLog': logger.clear(); renderActivityLog(); break;
+                case 'copyActivityLog': {
+                    const text = logger.history().map(e => `[${e.ts}] ${e.level.toUpperCase()} ${e.category}: ${e.message}`).join('\n');
+                    navigator.clipboard?.writeText(text).then(() => showToast('Logs copied to clipboard', 'success'));
+                    break;
+                }
+                case 'pickPromoTemplate': {
+                    logger.info('PROMO', 'Open template picker');
+                    const { renderTemplatePicker } = await useMod('promotions-templates');
+                    renderTemplatePicker(document.getElementById('promoTemplatePickerBody'));
+                    document.getElementById('promoTemplatePickerModal')?.classList.add('active');
+                    break;
+                }
+                case 'closePromoTemplatePicker': logger.info('PROMO', 'Close template picker'); document.getElementById('promoTemplatePickerModal')?.classList.remove('active'); break;
+                case 'newDiscount': logger.info('DISCOUNT', 'New discount'); window.__discounts?.openEditor(null); break;
+                case 'editDiscount': logger.info('DISCOUNT', `Edit discount: ${el.dataset.id}`); window.__discounts?.openEditor(el.dataset.id); break;
+                case 'closeDiscountEditor': logger.info('DISCOUNT', 'Close editor'); window.__discounts?.closeEditor(); break;
+                case 'saveDiscount': logger.info('DISCOUNT', 'Save discount'); window.__discounts?.save(); break;
+                case 'deleteDiscount': logger.info('DISCOUNT', `Delete discount: ${el.dataset.id}`); window.__discounts?.remove(el.dataset.id); break;
+                case 'openDiscountsReports': logger.info('DISCOUNT', 'Open discount reports'); (await useMod('discountsReports')).openDiscountsReports?.(); break;
+                case 'closeDiscountsReports': logger.info('DISCOUNT', 'Close discount reports'); (await useMod('discountsReports')).closeDiscountsReports?.(); break;
+                case 'setDiscountReportRange': logger.info('DISCOUNT', 'Set report range'); (await useMod('discountsReports')).setDiscountReportRange?.(el); break;
+                case 'refreshDiscountsReport': logger.info('DISCOUNT', 'Refresh report'); (await useMod('discountsReports')).refreshDiscountsReport?.(); break;
+                case 'exportDiscountsReport': logger.info('DISCOUNT', 'Export report'); (await useMod('discountsReports')).exportDiscountsReport?.(); break;
+                case 'viewCodeUses': {
+                    const discId = el.getAttribute('data-discount-id');
+                    logger.info('DISCOUNT', `View code uses: ${discId}`);
+                    (await useMod('discountsReports')).openCodeUses?.(discId);
+                    break;
+                }
+                case 'closeCodeUsesPanel':
+                    logger.info('DISCOUNT', 'Close code uses panel');
+                    (await useMod('discountsReports')).closeCodeUsesPanel?.();
+                    break;
+                case 'generateCouponCode': {
+                    logger.info('DISCOUNT', 'Generate coupon code');
+                    const prefix = (document.getElementById('discCouponPrefix')?.value || '').trim().toUpperCase();
+                    const code = (await useMod('discountsReports')).generateCouponCode?.(prefix);
+                    const input = document.getElementById('discCouponCode');
+                    if (input && code) input.value = code;
+                    break;
+                }
+                case 'addSizeField': logger.info('CATALOG', 'Add size field'); (await useMod('catalog')).addSizeField(); break;
+                case 'addDishAddonField': logger.info('CATALOG', 'Add dish addon field'); (await useMod('catalog')).addDishAddonField(); break;
+                case 'addCategoryAddonField': logger.info('CATALOG', 'Add category addon field'); (await useMod('catalog')).addCategoryAddonField(); break;
+                case 'saveRiderAccount': logger.info('RIDERS', 'Save rider account'); (await useMod('riders')).saveRiderAccount(); break;
+                case 'applyWalkinDiscount': {
+                    const amt = el.getAttribute('data-amount');
+                    const pct = el.getAttribute('data-pct');
+                    logger.info('POS', `Apply discount: ${amt ? '₹' + amt : pct + '%'}`);
+                    const p = await useMod('pos');
+                    if (amt) p.setDiscount(parseFloat(amt));
+                    else if (pct) p.setDiscountPct(parseFloat(pct));
+                    break;
+                }
+                case 'applyWalkinCoupon': {
+                    const couponVal = document.getElementById('walkinCouponCode')?.value;
+                    logger.info('POS', `Apply coupon: ${couponVal}`);
+                    (await useMod('pos')).applyWalkinCoupon();
+                    break;
+                }
+                case 'clearWalkinCoupon': {
+                    logger.info('POS', 'Clear coupon');
+                    (await useMod('pos')).clearWalkinCoupon();
+                    break;
+                }
+                case 'loadMoreOrders': logger.info('ORDERS', 'Load more orders'); (await useMod('orders')).loadMoreOrders(); break;
+                case 'selectWalkinPayment': {
+                    const method = el.getAttribute('data-method');
+                    logger.info('POS', `Select payment: ${method}`);
+                    (await useMod('pos')).selectWalkinPayment(method, el);
+                    break;
+                }
+                case 'previewPromo':
+                    (await useMod('promotions'))._preview?.();
+                    break;
+                case 'sendTestPromo':
+                    (await useMod('promotions'))._sendTest?.();
+                    break;
+                default:
+                    logger.warn('CLICK', `Unhandled action: ${action}`, { el: el.outerHTML.slice(0, 200) });
+            }
+        } catch (err) {
+            logger.error('CLICK', `Click handler error: ${err.message}`, err);
+            showToast("An error occurred: " + err.message, "error");
+        }
+    });
+
     initAuth();
     (await useMod('rider-analytics')).initRiderAnalytics();
     (await useMod('inventory')).initInventory();
@@ -271,243 +503,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
     setupStaticListeners();
-
-    document.addEventListener('click', async (e) => {
-        try {
-            const el = e.target.closest('[data-action], [data-tab]');
-            if (!el) return;
-
-            if (window.innerWidth <= 1024) {
-                const sidebar = document.getElementById('sidebarNav');
-                if (sidebar && sidebar.classList.contains('active')) {
-                    const isToggleBtn = el.getAttribute('data-action') === 'toggleSidebar' || el.closest('#mobileHamburger');
-                    if (!isToggleBtn) {
-                        import('./ui.js').then(u => u.closeSidebar());
-                    }
-                }
-            }
-
-            const action = el.getAttribute('data-action');
-            const tab = el.getAttribute('data-tab');
-            const id = el.getAttribute('data-id');
-            const val = el.getAttribute('data-val');
-            const name = el.getAttribute('data-name');
-            const price = el.getAttribute('data-price');
-            const tag = el.getAttribute('data-tag');
-
-            const elLabel = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40) || el.id || el.className.split(' ')[0] || 'unknown';
-            const ctx = { tag: el.tagName, id: el.id || null, action, tab, dataId: id, dataVal: val, dataName: name, text: elLabel };
-            logger.action('CLICK', `→ ${action || 'switchTab:' + tab} (${elLabel})`, ctx);
-
-            if (tab) {
-                logger.nav('TAB', `Switching to tab: ${tab}`);
-                switchTab(tab);
-                return;
-            }
-
-            if (!action) return;
-
-            switch (action) {
-
-                case 'updateStatusFromDrawer': logger.info('ORDERS', `Update status from drawer: ${id} → ${val}`); (await useMod('orders')).updateStatus(id, val); break;
-                case 'closeOrderDrawer': logger.info('ORDERS', 'Closing order drawer'); (await useMod('orders')).closeOrderDrawer(); break;
-                case 'chatOnWhatsapp': {
-                    const phone = el.getAttribute('data-phone');
-                    logger.info('CHAT', `Opening WhatsApp chat: ${phone}`);
-                    if (phone) window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}`, '_blank');
-                    break;
-                }
-                case 'printReceiptById': logger.info('PRINT', `Print receipt: ${id}`); (await useMod('orders')).closeOrderDrawer(); (await useMod('printing')).printReceiptById(id); break;
-                case 'closeReceiptPreview': logger.info('PRINT', 'Close receipt preview'); (await useMod('printing')).closeReceiptPreview(); break;
-                case 'printReceiptFromPreview': logger.info('PRINT', 'Print from preview'); (await useMod('printing')).printReceiptFromPreview(); break;
-                case 'updateStatus': logger.info('ORDERS', `Update status: ${id} → ${val}`); (await useMod('orders')).updateStatus(id, val); break;
-                case 'assignRider': logger.info('ORDERS', `Assign rider: ${id} → ${val}`); (await useMod('orders')).assignRider(id, val); break;
-                case 'openOrderDrawer': logger.info('ORDERS', `Open order drawer: ${id}`); (await useMod('orders')).openOrderDrawer(id); break;
-                case 'markAsPaid': logger.info('ORDERS', `Mark paid: ${id}`); (await useMod('orders')).markAsPaid(id); break;
-                case 'deleteCategory': logger.info('CATALOG', `Delete category: ${id}`); (await useMod('catalog')).deleteCategory(id); break;
-                case 'removeParent': logger.info('UI', 'Remove parent element'); el.parentElement.remove(); break;
-                case 'removeGrandparent': logger.info('UI', 'Remove grandparent element'); el.parentElement.parentElement.remove(); break;
-                case 'editRider': logger.info('RIDERS', `Edit rider: ${id}`); (await useMod('riders')).editRider(id); break;
-                case 'resetRiderPassword': logger.info('RIDERS', `Reset rider password: ${el.getAttribute('data-email')}`); (await useMod('riders')).resetRiderPassword(el.getAttribute('data-email')); break;
-                case 'deleteRider': logger.info('RIDERS', `Delete rider: ${id}`); (await useMod('riders')).deleteRider(id); break;
-                case 'settleRider': logger.info('RIDERS', `Settle rider wallet: ${id} (${name})`); (await useMod('riders')).settleRiderWallet(id, name); break;
-                case 'saveSettings': logger.info('SETTINGS', 'Save store settings'); (await useMod('settings')).saveStoreSettings(); break;
-                case 'saveDeliveredOrder': logger.info('ORDERS', `Save delivered order: ${id} = ${val}`); (await useMod('orders')).saveDeliveredOrder(id, val); break;
-                case 'openPOSSelectionModal': logger.info('POS', `Open selection modal: ${id}`); (await useMod('pos')).openPOSSelectionModal(id); break;
-                case 'hidePOSSelectionModal': logger.info('POS', 'Hide selection modal'); (await useMod('pos')).hidePOSSelectionModal(); break;
-                case 'addToWalkinCartFromModal': logger.info('POS', 'Add to cart from modal'); (await useMod('pos')).addToWalkinCartFromModal(); break;
-                case 'adjustPOSModalQty': logger.info('POS', `Adjust modal qty: ${val}`); (await useMod('pos')).adjustPOSModalQty(parseInt(val, 10)); break;
-                case 'openCartAddonPicker': logger.info('POS', `Open cart addon picker: ${id}`); (await useMod('pos')).openCartAddonPicker(id); break;
-                case 'walkinQtyChange': logger.info('POS', `Cart qty change: ${id} (${val})`); (await useMod('pos')).walkinQtyChange(id, parseInt(val, 10)); break;
-                case 'walkinRemoveItem': logger.info('POS', `Remove from cart: ${id}`); (await useMod('pos')).removeFromWalkinCart(id); break;
-                case 'filterWalkinByCategory': logger.info('POS', `Filter by category: ${val}`); (await useMod('pos')).filterWalkinByCategory(val, el); break;
-                case 'selectPOSSize': logger.info('POS', `Select size: ${name} (₹${price})`); (await useMod('pos')).selectPOSSize(name, parseFloat(price), el); break;
-                case 'togglePOSAddon': logger.info('POS', `Toggle addon: ${name} (₹${price})`); (await useMod('pos')).togglePOSAddon(name, parseFloat(price), el); break;
-                case 'triggerClick': {
-                    logger.info('UI', `Trigger click: ${val}`);
-                    const target = document.getElementById(val);
-                    if (target) target.click();
-                    break;
-                }
-                case 'markDelivered': logger.info('ORDERS', `Mark delivered: ${id}`); (await useMod('orders')).updateStatus(id, 'Delivered'); break;
-                case 'editDish': logger.info('CATALOG', `Edit dish: ${id}`); (await useMod('catalog')).editDish(id); break;
-                case 'deleteDish': logger.info('CATALOG', `Delete dish: ${id}`); (await useMod('catalog')).deleteDish(id); break;
-                case 'editCategory': logger.info('CATALOG', `Edit category: ${id}`); (await useMod('catalog')).editCategory(id); break;
-                case 'adjustStock': logger.info('INVENTORY', `Adjust stock: ${id} (${val})`); (await useMod('inventory')).adjustStock(id, parseInt(val, 10)); break;
-                case 'editInventoryItem': logger.info('INVENTORY', `Edit item: ${id}`); (await useMod('inventory')).editInventoryItem(id); break;
-                case 'deleteInventoryItem': logger.info('INVENTORY', `Delete item: ${id}`); (await useMod('inventory')).deleteInventoryItem(id); break;
-                case 'viewStockHistory': {
-                    logger.info('INVENTORY', `View stock history: ${id}`);
-                    const extras = await useMod('inventory-extras');
-                    extras.viewStockHistory(id, el.getAttribute('data-name'));
-                    break;
-                }
-                case 'exportInventoryCSV': logger.info('INVENTORY', 'Export CSV'); (await useMod('inventory-extras')).exportInventoryCSV(); break;
-                case 'triggerInventoryImport': logger.info('INVENTORY', 'Trigger CSV import'); (await useMod('inventory-extras')).triggerInventoryImport(); break;
-                case 'showRiderModal':
-                case 'showAddRiderModal': logger.info('RIDERS', 'Open add rider modal'); (await useMod('riders')).showRiderModal(); break;
-                case 'closeModal':
-                case 'hideReauthModal':
-                case 'hideInventoryModal': {
-                    const modal = el.closest('.modal');
-                    logger.info('MODAL', `Close modal: ${modal?.id || 'unknown'}`);
-                    if (modal) {
-                        modal.classList.add('hidden');
-                        modal.classList.remove('active', 'flex');
-                    }
-                    break;
-                }
-                case 'completeSiteRefresh': logger.warn('SYSTEM', 'Nuclear refresh triggered'); completeSiteRefresh(); break;
-                case 'toggleNotificationSheet': logger.info('NOTIF', 'Toggle notification sheet'); (await useMod('notifications')).toggleNotificationSheet(); break;
-                case 'toggleSidebar': logger.info('UI', 'Toggle sidebar'); toggleSidebar(); break;
-                case 'toggleMobileCart': {
-                    logger.info('POS', 'Toggle mobile cart');
-                    toggleMobileCart(true);
-                    break;
-                }
-                case 'openOutletInNewTab': logger.info('OUTLET', 'Open outlet in new tab'); openOutletInNewTab(); break;
-
-                case 'userLogout': logger.warn('AUTH', 'User logout'); userLogout(); break;
-                case 'installPWA': logger.info('PWA', 'Install PWA'); installPWA(); break;
-                case 'removeRow': logger.info('UI', 'Remove row'); el.closest('tr').remove(); break;
-                case 'addFeeSlab': logger.info('SETTINGS', 'Add delivery fee slab'); (await useMod('settings')).addFeeSlab(); break;
-                case 'migrateAddons': logger.warn('CATALOG', 'Migrate addons to categories'); (await useMod('catalog')).migrateAddonsToCategories(); break;
-                case 'runImageMigration': logger.warn('CATALOG', 'Run image migration'); (await useMod('catalog')).runImageMigration(); break;
-                case 'clearWalkinCart': logger.info('POS', 'Clear walkin cart'); (await useMod('pos')).clearWalkinCart(); break;
-                case 'submitWalkinSale': logger.info('POS', 'Submit walkin sale'); (await useMod('pos')).submitWalkinSale(); break;
-                case 'addCategory': logger.info('CATALOG', 'Add category'); (await useMod('catalog')).addCategory(); break;
-
-                // Promotions — all UI events are wired directly by
-                // loadPromotions → _wireActions (onclick bindings on
-                // static buttons, plus delegated pane handlers). The
-                // document-level catch below is only for openPromotionsGuide
-                // and closePromotionsGuide; all other promo actions are
-                // handled entirely inside the promotions module itself.
-                case 'openPromotionsGuide': {
-                    logger.info('PROMO', 'Open promotions guide');
-                    const { renderPromotionsGuide } = await useMod('promotions-guide');
-                    renderPromotionsGuide(document.getElementById('promotionsGuideBody'));
-                    document.getElementById('promotionsGuideModal')?.classList.add('active');
-                    break;
-                }
-                case 'closePromotionsGuide': logger.info('PROMO', 'Close promotions guide'); document.getElementById('promotionsGuideModal')?.classList.remove('active'); break;
-                case 'openPageGuide': {
-                    logger.info('HELP', 'Open page guide');
-                    const { renderPageGuide } = await useMod('page-guide');
-                    renderPageGuide(document.getElementById('pageGuideBody'));
-                    document.getElementById('pageGuideModal')?.classList.add('active');
-                    break;
-                }
-                case 'closePageGuide': logger.info('HELP', 'Close page guide'); document.getElementById('pageGuideModal')?.classList.remove('active'); break;
-                case 'openActivityLog': renderActivityLog(); document.getElementById('activityLogModal')?.classList.add('active'); break;
-                case 'closeActivityLog': document.getElementById('activityLogModal')?.classList.remove('active'); break;
-                case 'clearActivityLog': logger.clear(); renderActivityLog(); break;
-                case 'copyActivityLog': {
-                    const text = logger.history().map(e => `[${e.ts}] ${e.level.toUpperCase()} ${e.category}: ${e.message}`).join('\n');
-                    navigator.clipboard?.writeText(text).then(() => showToast('Logs copied to clipboard', 'success'));
-                    break;
-                }
-                case 'pickPromoTemplate': {
-                    logger.info('PROMO', 'Open template picker');
-                    const { renderTemplatePicker } = await useMod('promotions-templates');
-                    renderTemplatePicker(document.getElementById('promoTemplatePickerBody'));
-                    document.getElementById('promoTemplatePickerModal')?.classList.add('active');
-                    break;
-                }
-                case 'closePromoTemplatePicker': logger.info('PROMO', 'Close template picker'); document.getElementById('promoTemplatePickerModal')?.classList.remove('active'); break;
-                case 'newDiscount': logger.info('DISCOUNT', 'New discount'); window.__discounts?.openEditor(null); break;
-                case 'editDiscount': logger.info('DISCOUNT', `Edit discount: ${el.dataset.id}`); window.__discounts?.openEditor(el.dataset.id); break;
-                case 'closeDiscountEditor': logger.info('DISCOUNT', 'Close editor'); window.__discounts?.closeEditor(); break;
-                case 'saveDiscount': logger.info('DISCOUNT', 'Save discount'); window.__discounts?.save(); break;
-                case 'deleteDiscount': logger.info('DISCOUNT', `Delete discount: ${el.dataset.id}`); window.__discounts?.remove(el.dataset.id); break;
-                case 'openDiscountsReports': logger.info('DISCOUNT', 'Open discount reports'); (await useMod('discountsReports')).openDiscountsReports?.(); break;
-                case 'closeDiscountsReports': logger.info('DISCOUNT', 'Close discount reports'); (await useMod('discountsReports')).closeDiscountsReports?.(); break;
-                case 'setDiscountReportRange': logger.info('DISCOUNT', 'Set report range'); (await useMod('discountsReports')).setDiscountReportRange?.(el); break;
-                case 'refreshDiscountsReport': logger.info('DISCOUNT', 'Refresh report'); (await useMod('discountsReports')).refreshDiscountsReport?.(); break;
-                case 'exportDiscountsReport': logger.info('DISCOUNT', 'Export report'); (await useMod('discountsReports')).exportDiscountsReport?.(); break;
-                case 'viewCodeUses': {
-                    const discId = el.getAttribute('data-discount-id');
-                    logger.info('DISCOUNT', `View code uses: ${discId}`);
-                    (await useMod('discountsReports')).openCodeUses?.(discId);
-                    break;
-                }
-                case 'closeCodeUsesPanel':
-                    logger.info('DISCOUNT', 'Close code uses panel');
-                    (await useMod('discountsReports')).closeCodeUsesPanel?.();
-                    break;
-                case 'generateCouponCode': {
-                    logger.info('DISCOUNT', 'Generate coupon code');
-                    const prefix = (document.getElementById('discCouponPrefix')?.value || '').trim().toUpperCase();
-                    const code = (await useMod('discountsReports')).generateCouponCode?.(prefix);
-                    const input = document.getElementById('discCouponCode');
-                    if (input && code) input.value = code;
-                    break;
-                }
-                case 'addSizeField': logger.info('CATALOG', 'Add size field'); (await useMod('catalog')).addSizeField(); break;
-                case 'addDishAddonField': logger.info('CATALOG', 'Add dish addon field'); (await useMod('catalog')).addDishAddonField(); break;
-                case 'addCategoryAddonField': logger.info('CATALOG', 'Add category addon field'); (await useMod('catalog')).addCategoryAddonField(); break;
-                case 'saveRiderAccount': logger.info('RIDERS', 'Save rider account'); (await useMod('riders')).saveRiderAccount(); break;
-                case 'applyWalkinDiscount': {
-                    const amt = el.getAttribute('data-amount');
-                    const pct = el.getAttribute('data-pct');
-                    logger.info('POS', `Apply discount: ${amt ? '₹' + amt : pct + '%'}`);
-                    const p = await useMod('pos');
-                    if (amt) p.setDiscount(parseFloat(amt));
-                    else if (pct) p.setDiscountPct(parseFloat(pct));
-                    break;
-                }
-                case 'applyWalkinCoupon': {
-                    const couponVal = document.getElementById('walkinCouponCode')?.value;
-                    logger.info('POS', `Apply coupon: ${couponVal}`);
-                    (await useMod('pos')).applyWalkinCoupon();
-                    break;
-                }
-                case 'clearWalkinCoupon': {
-                    logger.info('POS', 'Clear coupon');
-                    (await useMod('pos')).clearWalkinCoupon();
-                    break;
-                }
-                case 'loadMoreOrders': logger.info('ORDERS', 'Load more orders'); (await useMod('orders')).loadMoreOrders(); break;
-                case 'selectWalkinPayment': {
-                    const method = el.getAttribute('data-method');
-                    logger.info('POS', `Select payment: ${method}`);
-                    (await useMod('pos')).selectWalkinPayment(method, el);
-                    break;
-                }
-                case 'previewPromo':
-                    (await useMod('promotions'))._preview?.();
-                    break;
-                case 'sendTestPromo':
-                    (await useMod('promotions'))._sendTest?.();
-                    break;
-                default:
-                    logger.warn('CLICK', `Unhandled action: ${action}`, { el: el.outerHTML.slice(0, 200) });
-            }
-        } catch (err) {
-            logger.error('CLICK', `Click handler error: ${err.message}`, err);
-            showToast("An error occurred: " + err.message, "error");
-        }
-    });
 
     document.addEventListener('change', async (e) => {
         try {
