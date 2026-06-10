@@ -156,139 +156,117 @@ export const switchTab = async (tabId, skipHistory = false) => {
     if (target) {
         target.classList.remove('hidden');
 
-        // Reset scroll position to top — robust against layout shift and
-        // nested scrollable containers. Otherwise the user is left at the
-        // previous tab's offset, which can land them at the bottom of a
-        // short tab like Promotions.
-        const _resetScroll = () => {
-            const mainEl = document.querySelector('.main');
-            if (mainEl) mainEl.scrollTop = 0;
-            if (document.documentElement) document.documentElement.scrollTop = 0;
-            if (document.body) document.body.scrollTop = 0;
-            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-            // Also clear any nested scrollable container inside the target tab
-            if (target) {
-                target.querySelectorAll('*').forEach(el => {
-                    if (el.scrollHeight > el.clientHeight && el !== mainEl) {
-                        el.scrollTop = 0;
-                    }
-                });
-            }
-        };
-        _resetScroll();
-        // Re-apply after the browser has a chance to lay out the new tab content
-        requestAnimationFrame(_resetScroll);
-        setTimeout(_resetScroll, 0);
-        setTimeout(_resetScroll, 50);
+        const mainEl = document.querySelector('.main');
+        if (mainEl) mainEl.scrollTop = 0;
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
 
-        // --- PHASE 3.25: PERFORMANCE ORCHESTRATION ---
-        // 1. Cleanup all persistent background listeners (except Orders which stays active for alerts)
-        if (tabId !== 'catalog' && tabId !== 'categories') (await mod('catalog')).cleanupCatalog();
-        if (tabId !== 'riders' && tabId !== 'dashboard' && tabId !== 'live') (await mod('riders')).cleanupRiders();
-        if (tabId !== 'feedback') (await mod('feedback')).cleanupFeedbacks();
-        if (tabId !== 'liveTracker') {
-            (await mod('tracker')).stopRiderLocationListener();
-            (await mod('tracker')).cleanupLiveRiderTracker();
-        }
-        if (tabId !== 'inventory') (await mod('inventory')).cleanupInventory();
-        if (tabId !== 'reports') (await mod('analytics')).cleanupReports();
-        if (tabId !== 'promotions') (await mod('promotions')).cleanupPromotions();
-        if (tabId !== 'discounts') (await mod('discounts')).cleanupDiscounts();
-        if (tabId !== 'discounts') (await mod('discountsReports')).closeDiscountsReports?.();
+        // --- PHASE 3.25: PARALLEL CLEANUP (error-isolated) ---
+        const cleanupTasks = [];
+        if (tabId !== 'catalog' && tabId !== 'categories') cleanupTasks.push(mod('catalog').then(m => m.cleanupCatalog?.()));
+        if (tabId !== 'riders' && tabId !== 'dashboard' && tabId !== 'live') cleanupTasks.push(mod('riders').then(m => m.cleanupRiders?.()));
+        if (tabId !== 'feedback') cleanupTasks.push(mod('feedback').then(m => m.cleanupFeedbacks?.()));
+        if (tabId !== 'liveTracker') cleanupTasks.push(mod('tracker').then(m => { m.stopRiderLocationListener?.(); m.cleanupLiveRiderTracker?.(); }));
+        if (tabId !== 'inventory') cleanupTasks.push(mod('inventory').then(m => m.cleanupInventory?.()));
+        if (tabId !== 'reports') cleanupTasks.push(mod('analytics').then(m => m.cleanupReports?.()));
+        if (tabId !== 'promotions') cleanupTasks.push(mod('promotions').then(m => m.cleanupPromotions?.()));
+        if (tabId !== 'discounts') cleanupTasks.push(mod('discounts').then(m => m.cleanupDiscounts?.()));
+        if (tabId !== 'discounts') cleanupTasks.push(mod('discountsReports').then(m => m.closeDiscountsReports?.()));
+        await Promise.allSettled(cleanupTasks);
 
         // --- PHASE 3.25: DATA REFRESH ---
-        // Refresh appropriate data based on the tab
         window.__adminLogger?.data('TAB', `Loading data for: ${tabId}`);
-        switch (tabId) {
-            case 'dashboard':
-            case 'orders':
-            case 'live': {
-                const [{ loadRiders: lr }, { renderOrders, loadOrdersPage }] = await Promise.all([
-                    mod('riders'), mod('orders')
-                ]);
-                lr();
-                renderOrders(state.lastOrdersSnap);
-                if (tabId === 'orders') loadOrdersPage(true);
-                break;
+        try {
+            switch (tabId) {
+                case 'dashboard':
+                case 'orders':
+                case 'live': {
+                    const [{ loadRiders: lr }, { renderOrders, loadOrdersPage }] = await Promise.all([
+                        mod('riders'), mod('orders')
+                    ]);
+                    lr();
+                    renderOrders(state.lastOrdersSnap);
+                    if (tabId === 'orders') loadOrdersPage(true);
+                    break;
+                }
+                case 'liveTracker': {
+                    const { initLiveRiderTracker } = await mod('tracker');
+                    initLiveRiderTracker();
+                    break;
+                }
+                case 'catalog':
+                case 'categories':
+                case 'menu': {
+                    const { loadCategories, loadMenu } = await mod('catalog');
+                    loadCategories();
+                    loadMenu();
+                    break;
+                }
+                case 'riders': {
+                    const { loadRiders } = await mod('riders');
+                    loadRiders();
+                    break;
+                }
+                case 'feedback': {
+                    const { loadFeedbacks } = await mod('feedback');
+                    loadFeedbacks();
+                    break;
+                }
+                case 'walkin': {
+                    const { loadWalkinMenu } = await mod('pos');
+                    loadWalkinMenu();
+                    break;
+                }
+                case 'settings': {
+                    const { loadStoreSettings } = await mod('settings');
+                    loadStoreSettings();
+                    break;
+                }
+                case 'customers': {
+                    const { loadCustomers } = await mod('customers');
+                    loadCustomers();
+                    break;
+                }
+                case 'reports': {
+                    const { loadReports } = await mod('analytics');
+                    loadReports();
+                    break;
+                }
+                case 'lostSales': {
+                    const { loadLostSales } = await mod('lost-sales');
+                    loadLostSales();
+                    break;
+                }
+                case 'inventory': {
+                    const { loadInventory } = await mod('inventory');
+                    loadInventory();
+                    break;
+                }
+                case 'riderAnalytics': {
+                    const { initRiderAnalytics } = await mod('rider-analytics');
+                    initRiderAnalytics();
+                    break;
+                }
+                case 'payments': {
+                    break;
+                }
+                case 'promotions': {
+                    const { loadPromotions } = await mod('promotions');
+                    loadPromotions();
+                    break;
+                }
+                case 'discounts': {
+                    const { loadDiscounts } = await mod('discounts');
+                    loadDiscounts();
+                    break;
+                }
             }
-            case 'liveTracker': {
-                const { initLiveRiderTracker } = await mod('tracker');
-                initLiveRiderTracker();
-                break;
-            }
-            case 'catalog':
-            case 'categories':
-            case 'menu': {
-                const { loadCategories, loadMenu } = await mod('catalog');
-                loadCategories();
-                loadMenu();
-                break;
-            }
-            case 'riders': {
-                const { loadRiders } = await mod('riders');
-                loadRiders();
-                break;
-            }
-            case 'feedback': {
-                const { loadFeedbacks } = await mod('feedback');
-                loadFeedbacks();
-                break;
-            }
-            case 'walkin': {
-                const { loadWalkinMenu } = await mod('pos');
-                loadWalkinMenu();
-                break;
-            }
-            case 'settings': {
-                const { loadStoreSettings } = await mod('settings');
-                loadStoreSettings();
-                break;
-            }
-            case 'customers': {
-                const { loadCustomers } = await mod('customers');
-                loadCustomers();
-                break;
-            }
-            case 'reports': {
-                const { loadReports } = await mod('analytics');
-                loadReports();
-                break;
-            }
-            case 'lostSales': {
-                const { loadLostSales } = await mod('lost-sales');
-                loadLostSales();
-                break;
-            }
-            case 'inventory': {
-                const { loadInventory } = await mod('inventory');
-                loadInventory();
-                break;
-            }
-            case 'riderAnalytics': {
-                const { initRiderAnalytics } = await mod('rider-analytics');
-                initRiderAnalytics();
-                break;
-            }
-            case 'payments': {
-                break;
-            }
-            case 'promotions': {
-                const { loadPromotions } = await mod('promotions');
-                loadPromotions();
-                break;
-            }
-            case 'discounts': {
-                const { loadDiscounts } = await mod('discounts');
-                loadDiscounts();
-                break;
-            }
+        } catch (loadErr) {
+            window.__adminLogger?.error('TAB', `Load error for ${tabId}: ${loadErr.message}`, loadErr);
         }
 
-        // --- PHASE 3.5: ICON SYNCHRONIZATION ---
-        // Ensure all dynamic icons in the target tab are properly rendered
         if (window.lucide) window.lucide.createIcons({ root: target });
 
-        // --- PHASE 3.6: MOBILE TABLE LABELS ---
         applyDataLabels();
 
         window.__adminLogger?.success('TAB', `Tab loaded: ${tabId}`);
@@ -316,7 +294,11 @@ export const applyDataLabels = () => {
     });
 };
 
-const tableObserver = new MutationObserver(() => applyDataLabels());
+let _dataLabelTimer = null;
+const tableObserver = new MutationObserver(() => {
+    if (_dataLabelTimer) cancelAnimationFrame(_dataLabelTimer);
+    _dataLabelTimer = requestAnimationFrame(() => { _dataLabelTimer = null; applyDataLabels(); });
+});
 const observerTarget = document.getElementById('main-content') || document.body;
 tableObserver.observe(observerTarget, { childList: true, subtree: true });
 
