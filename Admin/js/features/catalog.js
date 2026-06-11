@@ -143,15 +143,14 @@ export async function addCategory() {
 }
 
 export async function deleteCategory(id) {
-    requireAdminReauth(async () => {
-        const catSnap = await get(Outlet.ref('categories/' + id));
-        const category = catSnap.val();
-        if (!category) return showToast("Category not found", "error");
+    const catSnap = await get(Outlet.ref('categories/' + id));
+    const category = catSnap.val();
+    if (!category) return showToast("Category not found", "error");
 
-        const catName = category.name;
-        if (!(await showDeleteConfirm(`${catName} and ALL associated dishes`, "Delete this category and ALL associated dishes? This cannot be undone."))) return;
+    const catName = category.name;
+    if (!(await showDeleteConfirm(`${catName} and ALL associated dishes`, "Delete this category and ALL associated dishes? This cannot be undone."))) return;
 
-        try {
+    try {
             const catImage = category.image;
 
             const dishesSnap = await get(Outlet.ref('dishes'));
@@ -184,7 +183,6 @@ export async function deleteCategory(id) {
             console.error("[Catalog] Delete failed:", err);
             showToast("Operation failed: " + err.message, "error");
         }
-    });
 }
 
 
@@ -385,23 +383,21 @@ export async function saveDish() {
 }
 
 export async function deleteDish(dishId) {
-    requireAdminReauth(async () => {
-        const snap = await get(Outlet.ref(`dishes/${dishId}`));
-        const d = snap.val();
-        const dishName = d?.name || "Unknown";
+    const snap = await get(Outlet.ref(`dishes/${dishId}`));
+    const d = snap.val();
+    const dishName = d?.name || "Unknown";
 
-        if (!(await showDeleteConfirm(dishName))) return;
+    if (!(await showDeleteConfirm(dishName))) return;
 
-        try {
-            const img = d?.image;
-            if (img) await deleteImage(img);
-            await remove(Outlet.ref(`dishes/${dishId}`));
-            logAudit("Catalog", `Deleted Dish: ${dishName}`, dishId);
-            showToast('Dish deleted', 'success');
-        } catch (e) {
-            showToast('Delete failed: ' + e.message, 'error');
-        }
-    });
+    try {
+        const img = d?.image;
+        if (img) await deleteImage(img);
+        await remove(Outlet.ref(`dishes/${dishId}`));
+        logAudit("Catalog", `Deleted Dish: ${dishName}`, dishId);
+        showToast('Dish deleted', 'success');
+    } catch (e) {
+        showToast('Delete failed: ' + e.message, 'error');
+    }
 }
 
 

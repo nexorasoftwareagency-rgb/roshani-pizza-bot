@@ -8,7 +8,6 @@ let _ridersUnsub = null;
 let _statsUnsub = null;
 let _grid = null;
 import { uploadImage } from '../firebase.js';
-import { requireAdminReauth } from '../auth.js';
 import { populateRiderSelect } from './rider-analytics.js';
 
 export function loadRiders() {
@@ -352,18 +351,16 @@ export async function saveRiderAccount() {
     }
 }
 
-export function deleteRider(id) {
-    requireAdminReauth(async () => {
-        const snap = await get(ref(db, `riders/${id}`));
-        const riderName = snap.val()?.name || "Unknown";
-        if (!(await showDeleteConfirm(riderName))) return;
-        haptic();
-        try {
-            await remove(ref(db, `riders/${id}`));
-            logAudit("Riders", `Deleted Rider: ${riderName}`, id);
-            showToast("Rider removed successfully.", "success");
-        } catch (error) { showToast("Failed to delete rider.", "error"); }
-    });
+export async function deleteRider(id) {
+    const snap = await get(ref(db, `riders/${id}`));
+    const riderName = snap.val()?.name || "Unknown";
+    if (!(await showDeleteConfirm(riderName))) return;
+    haptic();
+    try {
+        await remove(ref(db, `riders/${id}`));
+        logAudit("Riders", `Deleted Rider: ${riderName}`, id);
+        showToast("Rider removed successfully.", "success");
+    } catch (error) { showToast("Failed to delete rider.", "error"); }
 }
 
 export async function resetRiderPassword(email) {
