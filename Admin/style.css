@@ -325,7 +325,6 @@ html, body {
     max-width: 1600px;
     margin: 0 auto;
     padding: 24px;
-    animation: fadeIn 0.3s ease-out;
 }
 
 .dashboard-grid {
@@ -7929,6 +7928,11 @@ body.pos-selection-mode .walkin-picker {
 .btn-text-danger { background: none; border: none; color: var(--danger, #ef4444); cursor: pointer; font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 6px; transition: background 0.2s; }
 .btn-text-danger:hover { background: rgba(239, 68, 68, 0.08); }
 .menu-loading-placeholder { color: var(--text-muted, #94a3b8); text-align: center; padding: 32px 16px; font-size: 14px; }
+
+.offline-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center; color: var(--text-muted, #94a3b8); }
+.offline-placeholder .offline-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.6; }
+.offline-placeholder h4 { margin: 0 0 8px; font-size: 16px; color: var(--text-color, #e2e8f0); }
+.offline-placeholder p { margin: 0; font-size: 13px; line-height: 1.5; max-width: 360px; }
 .discount-presets { display: flex; gap: 6px; align-items: center; }
 .chip { background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer; color: #6366f1; transition: all 0.2s; }
 .chip:hover { background: rgba(99, 102, 241, 0.16); }

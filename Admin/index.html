@@ -138,17 +138,6 @@
 
 
 
-        // Suppress debug console.log/info in production (keep error/warn)
-
-        if (localStorage.getItem('DEBUG_MODE') !== 'true') {
-
-            console.log = function(){};
-
-            console.info = function(){};
-
-        }
-
-
 
         // L8: Hide PWA install button if already installed
 
@@ -3368,8 +3357,6 @@
                         </div>
 
                         <div class="table-responsive">
-
-                            <table class="premium-table-v4">
 
                                 <div id="inventoryTableBody"></div>
 

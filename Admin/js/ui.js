@@ -1,4 +1,4 @@
-import { haptic } from './utils.js';
+﻿import { haptic } from './utils.js';
 import { showToast, showConfirm } from './ui-utils.js';
 import { state } from './state.js';
 import { toggleNotificationSheet, updateNotificationUI, updateNotificationSettingsUI } from './features/notifications.js';
@@ -67,7 +67,7 @@ export const switchTab = async (tabId, skipHistory = false) => {
 
     const previousTab = state.currentActiveTab;
     state.currentActiveTab = tabId;
-    window.__adminLogger?.nav('TAB', `Switching: ${previousTab || '(none)'} → ${tabId}`);
+    window.__adminLogger?.nav('TAB', `Switching: ${previousTab || '(none)'} â†’ ${tabId}`);
 
     if (!skipHistory) {
         history.pushState({ tabId }, "", `#${tabId}`);
@@ -250,9 +250,7 @@ export const switchTab = async (tabId, skipHistory = false) => {
                     initRiderAnalytics();
                     break;
                 }
-                case 'payments': {
-                    break;
-                }
+                case 'payments': { const { renderOrders } = await mod('orders'); renderOrders(state.lastOrdersSnap); break; }
                 case 'promotions': {
                     const { loadPromotions } = await mod('promotions');
                     loadPromotions();

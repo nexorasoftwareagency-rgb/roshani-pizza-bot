@@ -4,7 +4,7 @@
  */
 
 import { state } from '../state.js';
-import { db, auth, Outlet, serverTimestamp, get, set, runTransaction, ref } from '../firebase.js';
+import { db, auth, Outlet, serverTimestamp, get, set, runTransaction, ref, isConnected, onConnectionChange } from '../firebase.js';
 import { standardizeOrderData, haptic, escapeHtml, playSuccessSound, logAudit } from '../utils.js';
 import { autoDeductStock } from './inventory.js';
 import { ui } from '../ui.js';
@@ -13,6 +13,8 @@ import { t } from '../l10n.js';
 import { evaluateDiscount, recordDiscountUsage, clearDiscountCache } from './discount-evaluator.js';
 import { logger } from '../utils/logger.js';
 
+let _connUnsub = null;
+
 /**
  * Loads the menu for the Walk-in POS view
  */
@@ -20,6 +22,18 @@ export async function loadWalkinMenu() {
     const grid = document.getElementById("walkinDishGrid");
     if (!grid) {
         logger.warn('POS', 'walkinDishGrid not found, skipping load');
+        return;
+    }
+
+    if (_connUnsub) { _connUnsub(); _connUnsub = null; }
+
+    if (!isConnected()) {
+        grid.innerHTML = '<div class="offline-placeholder"><div class="offline-icon">📡</div><h4>Waiting for connection</h4><p>The POS menu will load automatically when the connection is restored.</p></div>';
+        if (!_connUnsub) _connUnsub = onConnectionChange(function _retryPos(online) {
+            if (!online) return;
+            if (_connUnsub) { _connUnsub(); _connUnsub = null; }
+            loadWalkinMenu();
+        });
         return;
     }
 

@@ -3,12 +3,13 @@
  * Handles customer feedback retrieval and rendering.
  */
 
-import { Outlet, onValue } from '../firebase.js';
+import { Outlet, onValue, isConnected, onConnectionChange } from '../firebase.js';
 import { escapeHtml, getSkeletonDivs } from '../utils.js';
 import { createGrid, updateGridData, GRID_DEFAULTS } from '../tabulator-setup.js';
 
 let _feedbackUnsub = null;
 let _grid = null;
+let _connUnsub = null;
 
 function buildGrid(data) {
     const el = document.getElementById('feedbackTableBody');
@@ -19,7 +20,7 @@ function buildGrid(data) {
         data: data || [],
         ...GRID_DEFAULTS,
         pagination: false,
-        placeholder: '<div style="padding:40px; color:#94a3b8;">💬 No feedback received yet.</div>',
+        placeholder: '<div style="padding:40px; color:#94a3b8;">ðŸ’¬ No feedback received yet.</div>',
         columns: [
             { formatter: "rownum", hozAlign: "center", width: 45, headerSort: false },
             {
@@ -65,7 +66,7 @@ function buildGrid(data) {
                     if (val <= 2) el.classList.add('cell-rating-low');
                     else if (val <= 3) el.classList.add('cell-rating-mid');
                     else el.classList.add('cell-rating-high');
-                    return `<div style="text-align:center;"><div style="font-size:14px;">${'⭐'.repeat(val)}</div><div style="font-size:11px;color:#475569;">${val}/5 Score</div></div>`;
+                    return `<div style="text-align:center;"><div style="font-size:14px;">${'â­'.repeat(val)}</div><div style="font-size:11px;color:#475569;">${val}/5 Score</div></div>`;
                 },
                 sorter: "number"
             },
@@ -93,8 +94,21 @@ export function loadFeedbacks() {
     if (!tableBody) return;
 
     if (_grid) { _grid.destroy(); _grid = null; }
-    tableBody.innerHTML = getSkeletonDivs(5);
+    if (_connUnsub) { _connUnsub(); _connUnsub = null; }
     cleanupFeedbacks();
+
+    if (!isConnected()) {
+        tableBody.innerHTML = '<div class="offline-placeholder"><div class="offline-icon">📡</div><h4>Waiting for connection</h4><p>Feedback data will load automatically when the connection is restored.</p></div>';
+        if (!_connUnsub) _connUnsub = onConnectionChange(function _retryFb(online) {
+            if (!online) return;
+            if (_connUnsub) { _connUnsub(); _connUnsub = null; }
+            cleanupFeedbacks();
+            loadFeedbacks();
+        });
+        return;
+    }
+
+    tableBody.innerHTML = getSkeletonDivs(5);
 
     _feedbackUnsub = onValue(Outlet.ref("feedbacks"), snap => {
         const feedbacks = [];
@@ -108,8 +122,18 @@ export function loadFeedbacks() {
             return dateB - dateA;
         });
 
-        if (!_grid) buildGrid(feedbacks);
-        else _grid.replaceData(feedbacks);
+        try {
+            if (!_grid) buildGrid(feedbacks);
+            else _grid.replaceData(feedbacks);
+        } catch (gridErr) {
+            console.error('[Feedback] Grid error:', gridErr);
+            const tb = document.getElementById('feedbackTableBody');
+            if (tb) tb.innerHTML = '<div style=padding:40px;text-align:center;color:#ef4444;>Error loading feedback grid</div>';
+        }
+    }, (error) => {
+        console.error('[Feedback] Firebase read error:', error);
+        const tb = document.getElementById('feedbackTableBody');
+        if (tb) tb.innerHTML = '<div style=padding:40px;text-align:center;color:#ef4444;>Failed to load feedback data</div>';
     });
 }
 
@@ -119,4 +143,5 @@ export function cleanupFeedbacks() {
         _feedbackUnsub();
         _feedbackUnsub = null;
     }
+    if (_connUnsub) { _connUnsub(); _connUnsub = null; }
 }

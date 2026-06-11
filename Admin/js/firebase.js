@@ -30,9 +30,13 @@ if (window.reCaptchaSiteKey) {
     }
 }
 
+let _fbConnected = false;
+const _connWatchers = [];
+
 const connectedRef = ref(db, '.info/connected');
 onValue(connectedRef, (snap) => {
     const connected = snap.val() === true;
+    _fbConnected = connected;
     const indicator = document.getElementById('syncStatus');
     if (indicator) {
         if (connected) {
@@ -56,7 +60,20 @@ onValue(connectedRef, (snap) => {
     } else {
         console.log('[Firebase] Connection restored.');
     }
+    _connWatchers.slice().forEach(fn => { try { fn(connected); } catch (e) { console.error('[FB] conn watcher error', e); } });
 });
+
+export function isConnected() {
+    return _fbConnected;
+}
+
+export function onConnectionChange(fn) {
+    _connWatchers.push(fn);
+    return () => {
+        const i = _connWatchers.indexOf(fn);
+        if (i >= 0) _connWatchers.splice(i, 1);
+    };
+}
 
 export const Outlet = {
     get current() {

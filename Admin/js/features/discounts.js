@@ -3,7 +3,7 @@
  * CRUD UI for /discounts/* — global, category, firstOrder, coupon types.
  */
 
-import { Outlet, ref, get, onValue, set, update, remove, push, runTransaction } from '../firebase.js';
+import { Outlet, ref, get, onValue, set, update, remove, push, runTransaction, isConnected, onConnectionChange } from '../firebase.js';
 import { state } from '../state.js';
 import { showToast, showConfirm } from '../ui-utils.js';
 import { haptic } from '../utils.js';
@@ -15,6 +15,7 @@ let _listener = null;
 let _allDiscountsSnap = {};
 let _categoriesSnap = [];
 let _editingId = null;
+let _connUnsub = null;
 
 function _outlet() { return state.currentOutlet || 'pizza'; }
 function _ref(path) { return Outlet.ref(path); }
@@ -325,24 +326,50 @@ function _attachListener() {
     _listener = onValue(_ref('discounts'), (snap) => {
         _allDiscountsSnap = snap.val() || {};
         _renderList();
+    }, (err) => {
+        console.error('[Discounts] Read error:', err);
+        ['discountListActive','discountListScheduled','discountListExpired'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '<div class="offline-placeholder"><div class="offline-icon">⚠️</div><h4>Permission denied</h4><p>Could not load discount data. Try refreshing the page.</p></div>';
+        });
     });
 }
 
 export function cleanupDiscounts() {
     if (_listener) { _listener(); _listener = null; }
+    if (_connUnsub) { _connUnsub(); _connUnsub = null; }
 }
 
 export function loadDiscounts() {
     console.log('[Discounts] Loading tab…');
-    _attachListener();
+    if (_connUnsub) { _connUnsub(); _connUnsub = null; }
     _loadCategories();
     _renderList();
     _switchList('active');
+    if (isConnected()) {
+        _attachListener();
+    } else {
+        ['discountListActive','discountListScheduled','discountListExpired'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '<div class="offline-placeholder"><div class="offline-icon">📡</div><h4>Waiting for connection</h4><p>Discount data will load automatically when the connection is restored.</p></div>';
+        });
+        if (!_connUnsub) _connUnsub = onConnectionChange(function _retryDisc(online) {
+            if (!online) return;
+            if (_connUnsub) { _connUnsub(); _connUnsub = null; }
+            cleanupDiscounts();
+            loadDiscounts();
+        });
+    }
 
     // Tab switching
-    document.querySelectorAll('#tab-discounts .promo-mode-tab').forEach(tab => {
-        tab.addEventListener('click', () => _switchList(tab.dataset.mode));
-    });
+    const _dc = document.getElementById('tab-discounts');
+    if (_dc && !_dc.__discWired) {
+        _dc.__discWired = true;
+        _dc.addEventListener('click', (e) => {
+            const tab = e.target.closest('.promo-mode-tab');
+            if (tab) _switchList(tab.dataset.mode);
+        });
+    }
 
     // Toggle (event-delegated since cards re-render)
     const list = document.getElementById('tab-discounts');
@@ -355,9 +382,7 @@ export function loadDiscounts() {
     }
 
     // Editor field reactivity
-    document.getElementById('discType')?.addEventListener('change', _applyEditorVisibility);
-    document.getElementById('discMode')?.addEventListener('change', _applyEditorVisibility);
-    document.getElementById('discNoEnd')?.addEventListener('change', _applyEditorVisibility);
+    ['discType','discMode','discNoEnd'].forEach(id => { const el = document.getElementById(id); if (el) { el.removeEventListener('change', _applyEditorVisibility); el.addEventListener('change', _applyEditorVisibility); } });
 }
 
 window.__discounts = { openEditor: _openEditor, closeEditor: _closeEditor, save: _save, toggle: _toggle, remove: _delete, applyVisibility: _applyEditorVisibility, switchList: _switchList };
