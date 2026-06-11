@@ -298,6 +298,7 @@ export function requireAdminReauth(onSuccess) {
     }
 
     modal.classList.remove('hidden');
+    modal.classList.add('active');
     passInput.value = "";
     passInput.focus();
 

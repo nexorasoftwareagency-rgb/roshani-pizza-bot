@@ -45,7 +45,7 @@ function _isActiveNow(d, now = Date.now()) {
 export async function openDiscountsReports() {
     const modal = document.getElementById('discountsReportsModal');
     if (!modal) return;
-    modal.classList.add('show');
+    modal.classList.add('active');
     modal.setAttribute('aria-hidden', 'false');
     setTimeout(() => { if (window.lucide) window.lucide.createIcons({ root: modal }); }, 0);
     await refreshDiscountsReport();
@@ -54,7 +54,7 @@ export async function openDiscountsReports() {
 export function closeDiscountsReports() {
     const modal = document.getElementById('discountsReportsModal');
     if (!modal) return;
-    modal.classList.remove('show');
+    modal.classList.remove('active');
     modal.setAttribute('aria-hidden', 'true');
 }
 
