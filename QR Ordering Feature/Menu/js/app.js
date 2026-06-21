@@ -49,7 +49,7 @@ async function boot() {
 
     // Branding + dine-in settings (tax %, etc.)
     const [brandSnap, dineSettingsSnap] = await Promise.all([
-        get(outletRef('settings/storeName')),
+        get(outletRef('settings/Store/storeName')),
         get(outletRef('dineinSettings'))
     ]);
     if (brandSnap.exists()) document.getElementById('welcomeBrandName').textContent = brandSnap.val();
@@ -75,7 +75,7 @@ async function boot() {
         offersEl.classList.remove('hidden');
     }
 
-    const bgSnap = await get(outletRef('settings/customerMenuBgImage'));
+    const bgSnap = await get(outletRef('settings/Store/customerMenuBgImage'));
     if (bgSnap.exists() && bgSnap.val()) {
         const welcomeEl = document.getElementById('screenWelcome');
         const img = new Image();
@@ -341,6 +341,54 @@ document.querySelectorAll('[data-request]').forEach(btn => {
         }
     });
 });
+
+// ---------------------------------------------------------------
+// BOTTOM NAVIGATION (Menu / Cart / Status / History / Promos)
+// ---------------------------------------------------------------
+document.querySelectorAll('#bottomNav .bottom-nav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+        haptic(10);
+        const target = btn.dataset.bottomTab;
+        if (target === 'screenCart') renderCartScreen();
+        if (target === 'screenTracking') renderTrackingOrEmptyState();
+        if (target === 'screenHistory') renderHistoryScreen();
+        if (target === 'screenPromotions') renderPromotionsScreen();
+        UI.showScreen(target);
+    });
+});
+
+function renderTrackingOrEmptyState() {
+    if (M.currentOrderId) return;
+    const hasSessionOrders = Session.session && (Session.session.orders || []).length > 0;
+    if (hasSessionOrders) {
+        const lastOrderId = Session.session.orders[Session.session.orders.length - 1];
+        watchOrder(lastOrderId);
+        return;
+    }
+    document.getElementById('trackingOrderId').textContent = '';
+    document.getElementById('trackingTableLabel').textContent = 'No orders yet';
+    document.getElementById('trackerStepsContainer').innerHTML = `<div class="history-empty">Nothing to track yet.<br>Place an order from the menu first.</div>`;
+    document.getElementById('trackingThanksCard').innerHTML = '';
+    document.getElementById('sessionBillCard')?.classList.add('hidden');
+}
+
+function renderHistoryScreen() {
+    const orderIds = Session.session?.orders || [];
+    Promise.all(orderIds.map(oid => M.ordersCache[oid]
+        ? Promise.resolve()
+        : new Promise(resolve => onValue(outletRef(`orders/${oid}`), (snap) => { M.ordersCache[oid] = snap.val(); resolve(); }, { onlyOnce: true }))
+    )).then(() => UI.renderHistoryList(orderIds, M.ordersCache));
+    UI.renderHistoryList(orderIds, M.ordersCache);
+}
+
+let _storeSettingsCache = null;
+async function renderPromotionsScreen() {
+    if (!_storeSettingsCache) {
+        const snap = await get(outletRef('settings/Store'));
+        _storeSettingsCache = snap.val() || {};
+    }
+    UI.renderPromotionsLinks(_storeSettingsCache);
+}
 
 // Boot
 boot();

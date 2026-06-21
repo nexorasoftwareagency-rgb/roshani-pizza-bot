@@ -101,6 +101,47 @@ function _dineInOrders() {
         .sort((a, b) => _ms(b.createdAt) - _ms(a.createdAt));
 }
 
+const _customerSyncedOrderIds = new Set();
+
+function _syncCustomersFromOrders(orders) {
+    Object.entries(orders).forEach(([id, o]) => {
+        if (_customerSyncedOrderIds.has(id)) return;
+        if (o.type !== 'Dine-in' || o.source !== 'QR') return;
+        const phone = String(o.customerPhone || '').replace(/[^\d]/g, '');
+        if (phone.length < 10) return;
+        _customerSyncedOrderIds.add(id);
+        _syncCustomerFromOrder({ ...o, customerPhone: phone, id });
+    });
+}
+
+async function _syncCustomerFromOrder(o) {
+    const phone = o.customerPhone;
+    const name = (o.customerName || '').trim();
+    const total = Number(o.total || 0);
+    const tableLabel = `QR Dine-In — Table ${o.table || ''}`.trim();
+    const custRef = Outlet.ref(`customers/${phone}`);
+    try {
+        await runTransaction(custRef, (c) => {
+            if (!c) {
+                return { name, phone, orderCount: 1, totalSpent: total, lastSeen: _nowMs(), lastAddress: tableLabel };
+            }
+            return {
+                ...c,
+                name: name || c.name,
+                address: c.address || 'Walk-in',
+                mapsLink: c.mapsLink || '',
+                promotionalConsent: c.promotionalConsent !== undefined ? c.promotionalConsent : true,
+                orderCount: (c.orderCount || 0) + 1,
+                totalSpent: (c.totalSpent || 0) + total,
+                lastSeen: _nowMs(),
+                lastAddress: tableLabel
+            };
+        });
+    } catch (e) {
+        console.warn('[Tables] Customer sync failed for order', o.id, e?.message || e);
+    }
+}
+
 function _sessionElapsedMinutes(sess) {
     if (!sess?.openedAt) return 0;
     return Math.floor((_nowMs() - sess.openedAt) / 60000);
@@ -902,6 +943,7 @@ function _attachListeners() {
     // not assume orders.js's listener is currently active when this tab opens.
     _ordersListener = onValue(_ordersRef(), (snap) => {
         _orders = snap.val() || {};
+        _syncCustomersFromOrders(_orders);
         _renderAll();
     });
 

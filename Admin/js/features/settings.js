@@ -127,7 +127,10 @@ export async function loadStoreSettings() {
         document.getElementById('settingWifiPass').value = s.wifiPass || '';
         document.getElementById('settingInstagram').value = s.instagram || '';
         document.getElementById('settingFacebook').value = s.facebook || '';
+        document.getElementById('settingGoogleReviewLink').value = s.googleReviewLink || '';
+        document.getElementById('settingWhatsappNumber').value = s.whatsappNumber || '';
         document.getElementById('settingReviewUrl').value = s.reviewUrl || '';
+        document.getElementById('settingCustomerMenuBgImage').value = s.customerMenuBgImage || '';
         
         document.getElementById('settingLat').value = s.lat || '25.887444';
         document.getElementById('settingLng').value = s.lng || '85.026889';
@@ -272,7 +275,10 @@ export async function saveStoreSettings() {
             wifiPass: document.getElementById('settingWifiPass').value,
             instagram: document.getElementById('settingInstagram').value,
             facebook: document.getElementById('settingFacebook').value,
+            googleReviewLink: document.getElementById('settingGoogleReviewLink').value,
+            whatsappNumber: document.getElementById('settingWhatsappNumber').value,
             reviewUrl: document.getElementById('settingReviewUrl').value,
+            customerMenuBgImage: document.getElementById('settingCustomerMenuBgImage').value,
             lat, lng,
             paymentQR: document.getElementById('settingQRUrl').value,
             updatedAt: new Date().toISOString()

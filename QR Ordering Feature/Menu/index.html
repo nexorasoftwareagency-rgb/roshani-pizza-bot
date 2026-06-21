@@ -278,6 +278,52 @@
         </div>
     </div>
 
+    <!-- ============== SCREEN: ORDER HISTORY (this visit) ============== -->
+    <div id="screenHistory" class="screen">
+        <div class="topbar">
+            <span class="topbar-logo" style="margin:0 auto;">Roshani</span>
+        </div>
+        <div style="padding:14px 16px 0; font-size:15px; font-weight:800;">Your Orders This Visit</div>
+        <div id="historyListContainer" class="history-list"></div>
+    </div>
+
+    <!-- ============== SCREEN: PROMOTIONS ============== -->
+    <div id="screenPromotions" class="screen">
+        <div class="topbar">
+            <span class="topbar-logo" style="margin:0 auto;">Roshani</span>
+        </div>
+        <div style="padding:14px 16px 0; font-size:15px; font-weight:800;">Stay Connected</div>
+        <div style="padding:2px 16px 12px; font-size:12px; color:var(--text-sub);">Loved the food? Let others know, and stay in touch with us.</div>
+        <div id="promotionsLinksContainer" class="promotions-links"></div>
+    </div>
+
+    <!-- ============== BOTTOM NAVIGATION ============== -->
+    <nav id="bottomNav" class="bottom-nav hidden">
+        <button class="bottom-nav-item" data-bottom-tab="screenMenu">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+            <span>Menu</span>
+        </button>
+        <button class="bottom-nav-item" data-bottom-tab="screenCart">
+            <span class="bottom-nav-icon-wrap">
+                <svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                <span class="bottom-nav-badge hidden" id="bottomNavCartCount">0</span>
+            </span>
+            <span>Cart</span>
+        </button>
+        <button class="bottom-nav-item" data-bottom-tab="screenTracking">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span>Status</span>
+        </button>
+        <button class="bottom-nav-item" data-bottom-tab="screenHistory">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+            <span>History</span>
+        </button>
+        <button class="bottom-nav-item" data-bottom-tab="screenPromotions">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+            <span>Promos</span>
+        </button>
+    </nav>
+
 </div>
 
 <div id="toast" class="toast"></div>

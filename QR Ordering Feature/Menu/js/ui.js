@@ -31,10 +31,23 @@ export function updateGreeting(name) {
     }
 }
 
+const BOTTOM_NAV_SCREENS = {
+    screenMenu: 'screenMenu', screenCart: 'screenCart', screenTracking: 'screenTracking',
+    screenHistory: 'screenHistory', screenPromotions: 'screenPromotions'
+};
+
 export function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id)?.classList.add('active');
     window.scrollTo(0, 0);
+
+    const nav = document.getElementById('bottomNav');
+    if (!nav) return;
+    const isBottomNavScreen = id in BOTTOM_NAV_SCREENS;
+    nav.classList.toggle('hidden', !isBottomNavScreen);
+    nav.querySelectorAll('.bottom-nav-item').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.bottomTab === id);
+    });
 }
 
 export function showToast(msg) {
@@ -53,6 +66,11 @@ export function updateCartBadges(count) {
         el.textContent = String(count);
         el.classList.toggle('hidden', count === 0);
     });
+    const bottomBadge = document.getElementById('bottomNavCartCount');
+    if (bottomBadge) {
+        bottomBadge.textContent = String(count);
+        bottomBadge.classList.toggle('hidden', count === 0);
+    }
 }
 
 export function updateCartBar(count, total) {
@@ -309,4 +327,83 @@ export function renderSessionBillCard(session, ordersMap, taxName, taxPercent, t
     document.getElementById('sessionBillSC').textContent = fmtMoney(totalSC);
 
     document.getElementById('sessionBillTotal').textContent = fmtMoney(session.grandTotal || session.runningTotal || 0);
+}
+
+const HISTORY_STATUS_LABEL = { Placed: 'Placed', Confirmed: 'Confirmed', Preparing: 'Preparing', Ready: 'Ready', Delivered: 'Delivered', Cancelled: 'Cancelled' };
+
+export function renderHistoryList(orderIds, ordersMap) {
+    const list = document.getElementById('historyListContainer');
+    if (!list) return;
+
+    if (!orderIds || orderIds.length === 0) {
+        list.innerHTML = `<div class="history-empty">No orders yet this visit.<br>Head to the menu to get started!</div>`;
+        return;
+    }
+
+    const rows = [...orderIds].reverse().map((oid, i) => {
+        const o = ordersMap[oid];
+        if (!o) return `<div class="history-order-card"><div class="history-order-items">Loading…</div></div>`;
+        const itemCount = Object.keys(o.items || {}).length;
+        const itemNames = Object.values(o.items || {}).slice(0, 3).map(it => `${it.qty || 1}× ${esc(it.name || 'Item')}`).join(', ');
+        const statusKey = (o.status || 'Placed').toLowerCase();
+        const time = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+        return `
+        <div class="history-order-card">
+            <div class="history-order-head">
+                <span class="history-order-id">Order ${orderIds.length - i}</span>
+                <span class="history-status-pill history-status-${statusKey}">${esc(HISTORY_STATUS_LABEL[o.status] || o.status || 'Placed')}</span>
+            </div>
+            <div class="history-order-items">${esc(itemNames)}${itemCount > 3 ? ` +${itemCount - 3} more` : ''}</div>
+            <div class="history-order-foot">
+                <span style="font-size:11px;color:var(--text-tertiary);">${esc(time)}</span>
+                <span class="history-order-total">${fmtMoney(o.total || 0)}</span>
+            </div>
+        </div>`;
+    }).join('');
+
+    list.innerHTML = rows;
+}
+
+function buildInstagramUrl(handle) {
+    if (!handle) return null;
+    if (/^https?:\/\//i.test(handle)) return handle;
+    return `https://instagram.com/${handle.replace(/^@/, '').trim()}`;
+}
+function buildWhatsappUrl(number) {
+    if (!number) return null;
+    const clean = String(number).replace(/[^\d]/g, '');
+    if (!clean) return null;
+    return `https://wa.me/${clean}?text=${encodeURIComponent('Hi! I just dined at Roshani Pizza 🍕')}`;
+}
+
+export function renderPromotionsLinks(store) {
+    const wrap = document.getElementById('promotionsLinksContainer');
+    if (!wrap) return;
+    const s = store || {};
+
+    const links = [
+        { key: 'google', title: 'Rate us on Google', sub: 'Leave a review — it helps a lot!', url: s.googleReviewLink, cls: 'promo-link-google',
+          icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18 21l-6-4.4L6 21l2.2-7.1L2 9.4h7.6z"/></svg>' },
+        { key: 'instagram', title: 'Follow on Instagram', sub: 'See our latest dishes & offers', url: buildInstagramUrl(s.instagram), cls: 'promo-link-instagram',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>' },
+        { key: 'facebook', title: 'Like us on Facebook', sub: 'Stay updated with news & events', url: s.facebook, cls: 'promo-link-facebook',
+          icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 2h-3a5 5 0 0 0-5 5v3H6v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>' },
+        { key: 'whatsapp', title: 'Chat on WhatsApp', sub: 'Questions or feedback? Message us', url: buildWhatsappUrl(s.whatsappNumber), cls: 'promo-link-whatsapp',
+          icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3.5A11 11 0 0 0 2.1 17.6L1 23l5.5-1.4A11 11 0 1 0 20.5 3.5zM12 20.9a9 9 0 0 1-4.6-1.3l-.3-.2-3.4.9.9-3.3-.2-.3A9 9 0 1 1 12 20.9z"/></svg>' }
+    ].filter(l => l.url);
+
+    if (links.length === 0) {
+        wrap.innerHTML = `<div class="promotions-empty">No promotion links have been set up yet. Check back soon!</div>`;
+        return;
+    }
+
+    wrap.innerHTML = links.map(l => `
+        <a class="promo-link-card" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">
+            <span class="promo-link-icon ${l.cls}">${l.icon}</span>
+            <span class="promo-link-body">
+                <span class="promo-link-title">${esc(l.title)}</span>
+                <span class="promo-link-sub">${esc(l.sub)}</span>
+            </span>
+            <svg class="promo-link-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+        </a>`).join('');
 }
