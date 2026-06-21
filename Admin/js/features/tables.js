@@ -30,6 +30,7 @@
 import { Outlet, ref, get, onValue, set, update, remove, push, runTransaction, isConnected, onConnectionChange } from '../firebase.js';
 import { state } from '../state.js';
 import { showToast, showConfirm, showDeleteConfirm, showPaymentPicker } from '../ui-utils.js';
+import { printOrderReceipt } from './printing.js';
 import { haptic } from '../utils.js';
 
 // ---------------------------------------------------------------------
@@ -684,56 +685,43 @@ function _printTableKOT(tableId) {
     w.document.close();
 }
 
-function _printSessionBill(tableId) {
-    try {
-        const t = _tables[tableId];
-        const sess = _sessionForTable(tableId);
-        if (!t || !sess) { showToast('No active session to print', 'warning'); return; }
+async function _printSessionBill(tableId) {
+    const t = _tables[tableId];
+    const sess = _sessionForTable(tableId);
+    if (!t || !sess) { showToast('No active session to print', 'warning'); return; }
 
-        const orders = _ordersForSession(sess.sessionId || t.currentSession);
-        if (!orders.length) { showToast('No orders to bill', 'warning'); return; }
+    const orders = _ordersForSession(sess.sessionId || t.currentSession);
+    if (!orders.length) { showToast('No orders to bill', 'warning'); return; }
 
-        let subtotal = 0;
-        const allRows = [];
-        orders.forEach(o => {
-            Object.values(o.items || {}).forEach(it => {
-                const lineTotal = Number(it.price || 0) * Number(it.qty || 1);
-                subtotal += lineTotal;
-                allRows.push(`<div class="bill-item-row"><span>${it.qty || 1} × ${_esc(it.name || 'Item')}</span><span>₹${lineTotal.toFixed(2)}</span></div>`);
-            });
+    let subtotal = 0;
+    const allItems = [];
+    orders.forEach(o => {
+        Object.values(o.items || {}).forEach(it => {
+            const qty = Number(it.qty || 1);
+            const price = Number(it.price || 0);
+            allItems.push({ name: it.name || 'Item', qty, price, size: it.size || '', addon: it.addon || '' });
+            subtotal += price * qty;
         });
+    });
 
-        const tax = Number(sess.tax ?? 0) || Math.round(subtotal * 0.05 * 100) / 100;
-        const grandTotal = Number(sess.grandTotal ?? (subtotal + tax));
+    const tax = Number(sess.tax ?? 0) || Math.round(subtotal * 0.05 * 100) / 100;
+    const grandTotal = Number(sess.grandTotal ?? (subtotal + tax));
 
-        const w = window.open('', '_blank', 'width=400,height=620');
-        if (!w) { showToast('Popup blocked. Please allow popups for this site.', 'warning'); return; }
-        w.document.write(`<html><head><title>Bill — Table ${_esc(t.number)}</title><style>
-            body{font-family:'Courier New',monospace;padding:20px;width:300px;color:#111;}
-            h2{text-align:center;margin-bottom:2px;font-size:18px;}
-            .sub{text-align:center;font-size:11px;color:#555;margin-bottom:14px;border-bottom:1px dashed #000;padding-bottom:10px;}
-            .bill-item-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:4px 0;border-bottom:1px dotted #ccc;}
-            .bill-totals{margin-top:10px;border-top:1px dashed #000;padding-top:8px;}
-            .bill-totals-row{display:flex;justify-content:space-between;font-size:13px;padding:2px 0;}
-            .bill-grand{font-size:16px;font-weight:700;border-top:1px solid #000;margin-top:6px;padding-top:6px;}
-            .foot{margin-top:16px;font-size:11px;text-align:center;color:#777;}
-            </style></head><body>
-            <h2>ROSHANI PIZZA</h2>
-            <div class="sub">TABLE ${_esc(t.number)} · ${orders.length} Order${orders.length !== 1 ? 's' : ''} · ${new Date().toLocaleString('en-IN')}</div>
-            ${allRows.join('') || '<p>No items</p>'}
-            <div class="bill-totals">
-                <div class="bill-totals-row"><span>Subtotal</span><span>₹${subtotal.toFixed(2)}</span></div>
-                <div class="bill-totals-row"><span>Tax</span><span>₹${tax.toFixed(2)}</span></div>
-                <div class="bill-totals-row bill-grand"><span>TOTAL</span><span>₹${grandTotal.toFixed(2)}</span></div>
-            </div>
-            <div class="foot">Thank you for dining with us!</div>
-            </body></html>`);
-        w.document.close();
-        setTimeout(() => { w.focus(); w.print(); }, 300);
-    } catch (err) {
-        console.error('[Tables] printSessionBill error:', err);
-        showToast('Failed to print bill: ' + err.message, 'error');
-    }
+    const combinedOrder = {
+        orderId: `TABLE-${t.number}`,
+        type: 'Dine-in',
+        items: allItems,
+        total: grandTotal,
+        subtotal,
+        discount: 0,
+        deliveryFee: 0,
+        createdAt: sess.openedAt || Date.now(),
+        paymentMethod: 'Cash',
+        status: 'Delivered',
+        customerName: `Table ${t.number}`
+    };
+
+    await printOrderReceipt(combinedOrder, true);
 }
 
 // ---------------------------------------------------------------------
