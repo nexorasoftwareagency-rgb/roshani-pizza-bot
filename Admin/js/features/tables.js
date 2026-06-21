@@ -727,8 +727,9 @@ function _printSessionBill(tableId) {
                 <div class="bill-totals-row bill-grand"><span>TOTAL</span><span>₹${grandTotal.toFixed(2)}</span></div>
             </div>
             <div class="foot">Thank you for dining with us!</div>
-            <script>window.onload=function(){window.print();};</script></body></html>`);
+            </body></html>`);
         w.document.close();
+        setTimeout(() => { w.focus(); w.print(); }, 300);
     } catch (err) {
         console.error('[Tables] printSessionBill error:', err);
         showToast('Failed to print bill: ' + err.message, 'error');
