@@ -28,7 +28,7 @@ import { Cart, clearCart } from './cart.js';
 
 function round2(n) { return Math.round(n * 100) / 100; }
 
-export async function placeOrder({ taxPercent = 5, customerName = '', customerPhone = '' } = {}) {
+export async function placeOrder({ taxPercent = 5, taxEnabled = true, serviceChargeEnabled = false, serviceChargeRate = 0, customerName = '', customerPhone = '' } = {}) {
     if (Object.keys(Cart.lines).length === 0) throw new Error('Cart is empty');
 
     const items = {};
@@ -43,14 +43,15 @@ export async function placeOrder({ taxPercent = 5, customerName = '', customerPh
     });
 
     const subtotal = round2(Object.values(Cart.lines).reduce((s, l) => s + l.unitPrice * l.qty, 0));
-    const tax = round2(subtotal * (taxPercent / 100));
-    const total = round2(subtotal + tax);
+    const tax = taxEnabled ? round2(subtotal * (taxPercent / 100)) : 0;
+    const serviceCharge = serviceChargeEnabled ? round2(subtotal * (serviceChargeRate / 100)) : 0;
+    const total = round2(subtotal + tax + serviceCharge);
 
     const orderPayload = {
         // --- Standard fields every existing order has ---
         status: 'Placed',
         items,
-        subtotal, tax, total,
+        subtotal, tax, serviceCharge, total,
         paymentStatus: 'Pending',
         createdAt: new Date().toISOString(),
         updatedAt: Date.now(),
@@ -73,7 +74,7 @@ export async function placeOrder({ taxPercent = 5, customerName = '', customerPh
     await set(newOrderRef, orderPayload);
 
     // Fold this order's totals into the session's running bill
-    await attachOrderToSession(newOrderRef.key, { subtotal, tax, total });
+    await attachOrderToSession(newOrderRef.key, { subtotal, tax, serviceCharge, total });
 
     clearCart();
     return { orderId: newOrderRef.key, ...orderPayload };

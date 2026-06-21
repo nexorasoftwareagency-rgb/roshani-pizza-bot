@@ -17,7 +17,8 @@ const M = {
     categories: [], dishes: [],
     activeCategory: 'all',
     draftDish: null, draftSize: null, draftAddons: [], draftQty: 1,
-    taxPercent: 5,
+    taxEnabled: true, taxName: 'GST', taxPercent: 5,
+    serviceChargeEnabled: false, serviceChargeName: 'Service Charge', serviceChargeRate: 0,
     ordersCache: {},     // local cache of orders belonging to this session, for the bill summary
     currentOrderId: null,
     _orderUnsub: null,
@@ -46,7 +47,12 @@ async function boot() {
     ]);
     if (brandSnap.exists()) document.getElementById('welcomeBrandName').textContent = brandSnap.val();
     const dineSettings = dineSettingsSnap.val() || {};
-    M.taxPercent = typeof dineSettings.taxPercent === 'number' ? dineSettings.taxPercent : 5;
+    M.taxEnabled = dineSettings.taxEnabled !== false;
+    M.taxName = dineSettings.taxName || 'GST';
+    M.taxPercent = typeof dineSettings.taxRate === 'number' ? dineSettings.taxRate : 5;
+    M.serviceChargeEnabled = dineSettings.serviceChargeEnabled === true;
+    M.serviceChargeName = dineSettings.serviceChargeName || 'Service Charge';
+    M.serviceChargeRate = typeof dineSettings.serviceChargeRate === 'number' ? dineSettings.serviceChargeRate : 0;
 
     const bgSnap = await get(outletRef('settings/customerMenuBgImage'));
     if (bgSnap.exists() && bgSnap.val()) {
@@ -207,7 +213,7 @@ document.getElementById('btnAddToOrder')?.addEventListener('click', () => {
 // ---------------------------------------------------------------
 function renderCartScreen() {
     UI.renderCartList(Cart.lines, { onStep: (id, delta) => { haptic(10); setQty(id, (Cart.lines[id]?.qty || 0) + delta); } });
-    UI.updateCartTotals(cartSubtotal(), M.taxPercent);
+    UI.updateCartTotals(cartSubtotal(), M.taxPercent, M.taxName, M.taxEnabled, M.serviceChargeEnabled, M.serviceChargeName, M.serviceChargeRate);
     UI.updateSessionNoteInCart(Session.session);
 }
 
@@ -231,7 +237,7 @@ document.getElementById('btnPlaceOrder')?.addEventListener('click', async () => 
     try {
         await saveCheckoutContact(name, phone);
 
-        const { orderId } = await placeOrder({ taxPercent: M.taxPercent, customerName: name, customerPhone: phone });
+        const { orderId } = await placeOrder({ taxPercent: M.taxPercent, taxEnabled: M.taxEnabled, serviceChargeEnabled: M.serviceChargeEnabled, serviceChargeRate: M.serviceChargeRate, customerName: name, customerPhone: phone });
         watchOrder(orderId);
         UI.showScreen('screenTracking');
     } catch (e) {

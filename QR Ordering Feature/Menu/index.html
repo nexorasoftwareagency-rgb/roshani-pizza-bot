@@ -148,7 +148,8 @@
 
         <div class="cart-summary" id="cartSummaryWrap">
             <div class="cart-summary-row"><span>This Order</span><span id="cartSubtotal">₹0</span></div>
-            <div class="cart-summary-row"><span>Tax (<span id="cartTaxPct">5</span>%)</span><span id="cartTax">₹0</span></div>
+            <div class="cart-summary-row" id="cartTaxRow"><span><span id="cartTaxName">Tax</span> (<span id="cartTaxPct">5</span>%)</span><span id="cartTax">₹0</span></div>
+            <div class="cart-summary-row hidden" id="cartServiceChargeRow"><span><span id="cartServiceChargeName">Service Charge</span> (<span id="cartServiceChargePct">10</span>%)</span><span id="cartServiceCharge">₹0</span></div>
             <div class="cart-summary-row cart-summary-total"><span>Total</span><span id="cartTotal">₹0</span></div>
             <div id="cartSessionNote" class="cart-session-note hidden"></div>
             <button class="btn-place-order" id="btnPlaceOrder">PLACE ORDER</button>

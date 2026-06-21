@@ -143,6 +143,16 @@ export async function loadStoreSettings() {
         // Render Fee Slabs
         renderFeeSlabs(d.slabs || []);
 
+        // 2b. Dine-In Settings (tax, service charge)
+        const dineSnap = await get(Outlet.ref('dineinSettings'));
+        const dine = dineSnap.val() || {};
+        document.getElementById('dineinTaxEnabled').checked = dine.taxEnabled !== false;
+        document.getElementById('dineinTaxName').value = dine.taxName || 'GST';
+        document.getElementById('dineinTaxRate').value = typeof dine.taxRate === 'number' ? dine.taxRate : 5;
+        document.getElementById('dineinServiceChargeEnabled').checked = dine.serviceChargeEnabled === true;
+        document.getElementById('dineinServiceChargeName').value = dine.serviceChargeName || 'Service Charge';
+        document.getElementById('dineinServiceChargeRate').value = typeof dine.serviceChargeRate === 'number' ? dine.serviceChargeRate : 10;
+
         // 3. Bot Aesthetics & Marketing
         const b = bot || {};
         const botPreviews = {
@@ -306,6 +316,15 @@ export async function saveStoreSettings() {
         updates[`${Outlet.current}/settings/Delivery`] = deliveryData;
         updates[`${Outlet.current}/settings/Bot`] = botData;
         updates[`${Outlet.current}/settings/Display`] = displayData;
+        updates[`${Outlet.current}/dineinSettings`] = {
+            qrBaseUrl: (await get(Outlet.ref('dineinSettings'))).val()?.qrBaseUrl || '',
+            taxEnabled: document.getElementById('dineinTaxEnabled').checked,
+            taxName: document.getElementById('dineinTaxName').value.trim() || 'GST',
+            taxRate: parseFloat(document.getElementById('dineinTaxRate').value) || 0,
+            serviceChargeEnabled: document.getElementById('dineinServiceChargeEnabled').checked,
+            serviceChargeName: document.getElementById('dineinServiceChargeName').value.trim() || 'Service Charge',
+            serviceChargeRate: parseFloat(document.getElementById('dineinServiceChargeRate').value) || 0
+        };
         await update(ref(db), updates);
 
         showToast("Settings saved successfully!", "success");

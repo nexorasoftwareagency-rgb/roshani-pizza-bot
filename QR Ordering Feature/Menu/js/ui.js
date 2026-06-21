@@ -174,13 +174,31 @@ export function renderCartList(lines, { onStep }) {
     });
 }
 
-export function updateCartTotals(subtotal, taxPercent) {
-    const tax = Math.round(subtotal * (taxPercent / 100) * 100) / 100;
+export function updateCartTotals(subtotal, taxPercent, taxName, taxEnabled, serviceChargeEnabled, serviceChargeName, serviceChargeRate) {
+    const taxRow = document.getElementById('cartTaxRow');
+    const taxEnabledVal = taxEnabled !== false;
+    const tax = taxEnabledVal ? Math.round(subtotal * (taxPercent / 100) * 100) / 100 : 0;
+    const scEnabled = serviceChargeEnabled === true;
+    const scRate = typeof serviceChargeRate === 'number' ? serviceChargeRate : 0;
+    const sc = scEnabled ? Math.round(subtotal * (scRate / 100) * 100) / 100 : 0;
+
     document.getElementById('cartSubtotal').textContent = fmtMoney(subtotal);
+
+    // Tax row
+    if (taxRow) taxRow.classList.toggle('hidden', !taxEnabledVal);
+    document.getElementById('cartTaxName').textContent = taxName || 'Tax';
     document.getElementById('cartTaxPct').textContent = String(taxPercent);
     document.getElementById('cartTax').textContent = fmtMoney(tax);
-    document.getElementById('cartTotal').textContent = fmtMoney(subtotal + tax);
-    return { tax, total: subtotal + tax };
+
+    // Service charge row
+    const scRow = document.getElementById('cartServiceChargeRow');
+    if (scRow) scRow.classList.toggle('hidden', !scEnabled);
+    document.getElementById('cartServiceChargeName').textContent = serviceChargeName || 'Service Charge';
+    document.getElementById('cartServiceChargePct').textContent = String(scRate);
+    document.getElementById('cartServiceCharge').textContent = fmtMoney(sc);
+
+    document.getElementById('cartTotal').textContent = fmtMoney(subtotal + tax + sc);
+    return { tax, serviceCharge: sc, total: subtotal + tax + sc };
 }
 
 export function updateSessionNoteInCart(session) {

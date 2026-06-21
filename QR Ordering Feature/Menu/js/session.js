@@ -161,6 +161,7 @@ export async function attachOrderToSession(orderId, orderTotals) {
         sess.orders.push(orderId);
         sess.runningTotal = (sess.runningTotal || 0) + (orderTotals.subtotal || 0);
         sess.tax = (sess.tax || 0) + (orderTotals.tax || 0);
+        sess.serviceCharge = (sess.serviceCharge || 0) + (orderTotals.serviceCharge || 0);
         sess.grandTotal = (sess.grandTotal || 0) + (orderTotals.total || 0);
         return sess;
     });
