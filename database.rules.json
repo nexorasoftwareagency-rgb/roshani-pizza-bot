@@ -220,8 +220,7 @@
         ".read": "true",
         ".write": "auth != null",
         "$tableId": {
-          ".write": "auth != null || (data.exists() && newData.child('number').val() == data.child('number').val() && newData.child('capacity').val() == data.child('capacity').val() && newData.child('token').val() == data.child('token').val() && newData.child('active').val() == data.child('active').val() && ((data.child('status').val() == 'free' && newData.child('status').val() == 'free' && !data.child('currentSession').exists() && newData.child('currentSession').exists()) || (data.child('status').val() == 'free' && newData.child('status').val() == 'occupied' && newData.child('currentSession').val() == data.child('currentSession').val()) || (data.child('status').val() == 'occupied' && newData.child('status').val() == 'billing' && newData.child('currentSession').val() == data.child('currentSession').val())))",
-          ".validate": "newData.hasChildren(['number','capacity','status','token'])"
+          ".write": "auth != null || (data.exists() && newData.child('number').val() == data.child('number').val() && newData.child('capacity').val() == data.child('capacity').val() && newData.child('token').val() == data.child('token').val() && newData.child('active').val() == data.child('active').val() && ((data.child('status').val() == 'free' && newData.child('status').val() == 'free' && !data.child('currentSession').exists() && newData.child('currentSession').exists()) || (data.child('status').val() == 'free' && newData.child('status').val() == 'occupied' && newData.child('currentSession').val() == data.child('currentSession').val()) || (data.child('status').val() == 'occupied' && newData.child('status').val() == 'billing' && newData.child('currentSession').val() == data.child('currentSession').val())))"
         }
       },
       "tableSessions": {
