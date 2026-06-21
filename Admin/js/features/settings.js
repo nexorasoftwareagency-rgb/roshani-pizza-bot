@@ -202,6 +202,9 @@ export async function loadStoreSettings() {
             document.getElementById('settingQRUrl').value = s.paymentQR;
         }
 
+        // 7. Today's Offers
+        _renderOffers(dine.offers || []);
+
         if (window.updateOutletStatusIndicator) window.updateOutletStatusIndicator(s.shopStatus || 'AUTO');
         
         state.settingsDirty = false;
@@ -323,7 +326,8 @@ export async function saveStoreSettings() {
             taxRate: parseFloat(document.getElementById('dineinTaxRate').value) || 0,
             serviceChargeEnabled: document.getElementById('dineinServiceChargeEnabled').checked,
             serviceChargeName: document.getElementById('dineinServiceChargeName').value.trim() || 'Service Charge',
-            serviceChargeRate: parseFloat(document.getElementById('dineinServiceChargeRate').value) || 0
+            serviceChargeRate: parseFloat(document.getElementById('dineinServiceChargeRate').value) || 0,
+            offers: _getOffers()
         };
         await update(ref(db), updates);
 
@@ -514,3 +518,62 @@ document.addEventListener('input', (e) => {
         }
     }
 });
+
+// -------------------------------------------------------------------
+// OFFERS MANAGEMENT
+// -------------------------------------------------------------------
+let _offers = [];
+
+function _renderOffers(offers) {
+    _offers = Array.isArray(offers) ? [...offers] : [];
+    const list = document.getElementById('offersList');
+    const noMsg = document.getElementById('noOffersMsg');
+    if (!list) return;
+
+    if (_offers.length === 0) {
+        list.innerHTML = '';
+        if (noMsg) noMsg.classList.remove('hidden');
+        return;
+    }
+    if (noMsg) noMsg.classList.add('hidden');
+
+    list.innerHTML = _offers.map((o, i) => `
+        <div class="offer-row" style="display:flex; gap:8px; align-items:start; padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--bg);">
+            <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                <input type="text" class="offer-title-input" data-offer-idx="${i}" data-field="title" value="${(o.title || '').replace(/"/g, '&quot;')}" placeholder="Offer title" style="border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:13px; font-weight:700;">
+                <input type="text" class="offer-desc-input" data-offer-idx="${i}" data-field="description" value="${(o.description || '').replace(/"/g, '&quot;')}" placeholder="Description (optional)" style="border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12px;">
+                <input type="text" class="offer-code-input" data-offer-idx="${i}" data-field="code" value="${(o.code || '').replace(/"/g, '&quot;')}" placeholder="Promo code (optional)" style="border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12px; max-width:160px;">
+            </div>
+            <button class="btn-icon offer-remove-btn" data-offer-idx="${i}" title="Remove" style="color:var(--error); font-size:18px; padding:4px;">✕</button>
+        </div>`).join('');
+
+    // Bind input changes
+    list.querySelectorAll('[data-field]').forEach(el => {
+        el.addEventListener('input', () => {
+            const idx = Number(el.dataset.offerIdx);
+            const field = el.dataset.field;
+            if (_offers[idx]) { _offers[idx][field] = el.value; state.settingsDirty = true; }
+        });
+    });
+
+    // Bind remove buttons
+    list.querySelectorAll('.offer-remove-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            _offers.splice(Number(btn.dataset.offerIdx), 1);
+            _renderOffers(_offers);
+            state.settingsDirty = true;
+        });
+    });
+}
+
+document.getElementById('btnAddOffer')?.addEventListener('click', () => {
+    _offers.push({ title: '', description: '', code: '' });
+    _renderOffers(_offers);
+    state.settingsDirty = true;
+    // Focus the new title input
+    const list = document.getElementById('offersList');
+    const lastTitle = list?.querySelector('.offer-title-input:last-of-type');
+    if (lastTitle) lastTitle.focus();
+});
+
+function _getOffers() { return _offers.filter(o => o.title && o.title.trim()); }

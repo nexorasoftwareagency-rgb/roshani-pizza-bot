@@ -233,6 +233,12 @@ export function renderTracking(orderId, order, tableNumber) {
         return `<div class="tracker-step ${cls}"><div class="tracker-dot">${dotContent}</div><div><div class="tracker-label">${esc(step.label)}</div><div class="tracker-time">${time}</div></div></div>`;
     }).join('');
 
+    // Show estimate only while order is in progress (not delivered/cancelled)
+    const estimateEl = document.getElementById('trackingEstimate');
+    if (estimateEl) {
+        estimateEl.classList.toggle('hidden', order.status === 'Delivered' || order.status === 'Cancelled');
+    }
+
     const thanksCard = document.getElementById('trackingThanksCard');
     if (order.status === 'Delivered') {
         thanksCard.innerHTML = '<strong>Order served!</strong><p style="font-size:12px;color:var(--text-sub);margin-top:4px;">Enjoy your meal. Tap "Call Waiter" → "Request Bill" when ready to pay.</p>';
@@ -243,7 +249,7 @@ export function renderTracking(orderId, order, tableNumber) {
     }
 }
 
-export function renderSessionBillCard(session, ordersMap) {
+export function renderSessionBillCard(session, ordersMap, taxName, taxPercent, taxEnabled, serviceChargeEnabled, serviceChargeName, serviceChargeRate) {
     const card = document.getElementById('sessionBillCard');
     if (!card) return;
     const orderIds = session?.orders || [];
@@ -251,11 +257,56 @@ export function renderSessionBillCard(session, ordersMap) {
     if (orderIds.length <= 1) return;
 
     document.getElementById('sessionBillOrderCount').textContent = `${orderIds.length} orders`;
+
+    // Order-level summary lines
     const linesWrap = document.getElementById('sessionBillLines');
     linesWrap.innerHTML = orderIds.map((oid, i) => {
         const o = ordersMap[oid];
-        const itemCount = o ? Object.keys(o.items || {}).length : 0;
+        const itemCount = o ? Object.values(o.items || {}).reduce((s, it) => s + (it.qty || 1), 0) : 0;
         return `<div class="session-bill-line"><span>Order ${i + 1} (${itemCount} item${itemCount !== 1 ? 's' : ''})</span><span>${fmtMoney(o?.total || 0)}</span></div>`;
     }).join('');
+
+    // Itemized details per order
+    const itemsWrap = document.getElementById('sessionBillItems');
+    itemsWrap.innerHTML = orderIds.map((oid, i) => {
+        const o = ordersMap[oid];
+        if (!o) return '';
+        const items = Object.values(o.items || {});
+        if (items.length === 0) return '';
+        const itemRows = items.map(it => {
+            const name = it.name || 'Item';
+            const qty = it.qty || 1;
+            const price = it.price || 0;
+            return `<div class="session-bill-item"><span class="session-bill-item-name">${esc(name)}</span><span class="session-bill-item-qty">x${qty}</span><span class="session-bill-item-price">${fmtMoney(price * qty)}</span></div>`;
+        }).join('');
+        return `<div class="session-bill-order-section"><div class="session-bill-order-title">Order ${i + 1}</div>${itemRows}</div>`;
+    }).join('');
+
+    // Compute totals from session
+    let subtotal = 0, totalTax = 0, totalSC = 0;
+    orderIds.forEach(oid => {
+        const o = ordersMap[oid];
+        if (!o) return;
+        subtotal += Number(o.subtotal || 0);
+        totalTax += Number(o.tax || 0);
+        totalSC += Number(o.serviceCharge || 0);
+    });
+
+    const tEnabled = taxEnabled !== false;
+    const scEnabled = serviceChargeEnabled === true;
+    const scRate = typeof serviceChargeRate === 'number' ? serviceChargeRate : 0;
+
+    document.getElementById('sessionBillSubtotal').textContent = fmtMoney(subtotal);
+
+    const taxRow = document.getElementById('sessionBillTaxRow');
+    if (taxRow) taxRow.classList.toggle('hidden', !tEnabled);
+    document.getElementById('sessionBillTaxLabel').textContent = `${taxName || 'Tax'} (${taxPercent || 5}%)`;
+    document.getElementById('sessionBillTax').textContent = fmtMoney(totalTax);
+
+    const scRow = document.getElementById('sessionBillSCRow');
+    if (scRow) scRow.classList.toggle('hidden', !scEnabled);
+    document.getElementById('sessionBillSCLabel').textContent = `${serviceChargeName || 'Service Charge'} (${scRate}%)`;
+    document.getElementById('sessionBillSC').textContent = fmtMoney(totalSC);
+
     document.getElementById('sessionBillTotal').textContent = fmtMoney(session.grandTotal || session.runningTotal || 0);
 }

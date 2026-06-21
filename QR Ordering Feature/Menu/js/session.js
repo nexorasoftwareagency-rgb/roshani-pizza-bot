@@ -90,6 +90,7 @@ async function joinOrCreateSession(table) {
             customerName: '',
             customerPhone: '',
             guestCount: 1,
+            specialNote: '',
             orders: [],
             runningTotal: 0,
             discount: 0,
@@ -174,10 +175,13 @@ export async function requestBill() {
     await update(outletRef(`tables/${Session.tableId}`), { status: 'billing', updatedAt: Date.now() });
 }
 
-/** Saves customer name and phone on the session record. */
-export async function saveCheckoutContact(name, phone) {
+/** Saves customer name, phone, guest count, and special note on the session record. */
+export async function saveCheckoutContact(name, phone, guestCount, specialNote) {
     if (!Session.sessionId) return;
-    await update(outletRef(`tableSessions/${Session.sessionId}`), { customerName: name || '', customerPhone: phone || '' });
+    const updates = { customerName: name || '', customerPhone: phone || '' };
+    if (typeof guestCount === 'number' && guestCount > 0) updates.guestCount = guestCount;
+    if (specialNote) updates.specialNote = specialNote;
+    await update(outletRef(`tableSessions/${Session.sessionId}`), updates);
 }
 
 export function cleanupSession() {

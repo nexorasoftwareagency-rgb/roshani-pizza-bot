@@ -25,6 +25,7 @@
             <div class="welcome-title">Welcome to</div>
             <div class="welcome-brand" id="welcomeBrandName">Roshani Pizza</div>
             <div class="welcome-sub">Dine In Ordering</div>
+            <div id="welcomeOffers" class="welcome-offers hidden"></div>
             <button class="btn-start" id="btnStartOrdering">START ORDERING</button>
         </div>
     </div>
@@ -144,6 +145,18 @@
                 <label>Mobile Number <span style="color:var(--error)">*</span></label>
                 <input type="tel" id="checkoutPhone" placeholder="e.g. 98765 43210" maxlength="10" inputmode="numeric" required>
             </div>
+            <div class="form-group-mini">
+                <label>Guests</label>
+                <div class="guest-stepper">
+                    <button class="qty-btn" id="btnGuestMinus">−</button>
+                    <span class="qty-val" id="guestCountVal">1</span>
+                    <button class="qty-btn" id="btnGuestPlus">+</button>
+                </div>
+            </div>
+            <div class="form-group-mini">
+                <label>Special Note (Optional)</label>
+                <textarea id="checkoutNote" placeholder="e.g. Birthday celebration, allergens…" rows="2" maxlength="200"></textarea>
+            </div>
         </div>
 
         <div class="cart-summary" id="cartSummaryWrap">
@@ -171,6 +184,11 @@
 
             <div id="trackerStepsContainer"></div>
 
+            <div class="tracking-estimate hidden" id="trackingEstimate">
+                <svg class="icon" style="width:14px;height:14px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <span>Estimated: <strong id="trackingEstimateTime">15–25 min</strong></span>
+            </div>
+
             <div class="tracking-thanks-card" id="trackingThanksCard">
                 <strong>Thank you!</strong>
                 <p style="font-size:12px;color:var(--text-sub);margin-top:4px;">We will serve your order shortly.</p>
@@ -183,6 +201,13 @@
                     <span id="sessionBillOrderCount">0 orders</span>
                 </div>
                 <div id="sessionBillLines"></div>
+                <div id="sessionBillItems" class="session-bill-items"></div>
+                <div class="session-bill-divider"></div>
+                <div class="session-bill-summary">
+                    <div class="session-bill-summary-row"><span>Subtotal</span><span id="sessionBillSubtotal">₹0</span></div>
+                    <div class="session-bill-summary-row" id="sessionBillTaxRow"><span id="sessionBillTaxLabel">Tax (5%)</span><span id="sessionBillTax">₹0</span></div>
+                    <div class="session-bill-summary-row hidden" id="sessionBillSCRow"><span id="sessionBillSCLabel">Service Charge (10%)</span><span id="sessionBillSC">₹0</span></div>
+                </div>
                 <div class="session-bill-total-row">
                     <span>Total So Far</span><span id="sessionBillTotal">₹0</span>
                 </div>
@@ -238,6 +263,18 @@
             <svg class="icon" style="width:48px;height:48px;color:var(--error);" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
             <h3>This QR code is invalid</h3>
             <p>The table link could not be verified, or this table is no longer available. Please ask a staff member for assistance.</p>
+        </div>
+    </div>
+
+    <!-- ============== SCREEN 7: BILL GENERATED CONFIRMATION ============== -->
+    <div id="screenBillGenerated" class="screen">
+        <div class="bill-generated-body">
+            <div class="bill-generated-icon">✓</div>
+            <div class="bill-generated-title">Bill Generated</div>
+            <div class="bill-generated-sub" id="billGenTable">Table 07</div>
+            <div class="bill-generated-amount" id="billGenAmount">₹0</div>
+            <div class="bill-generated-note">Our team will bring your bill shortly.<br>Thank you for dining with us!</div>
+            <button class="btn-start" id="btnBackToMenuFromBill">BACK TO MENU</button>
         </div>
     </div>
 

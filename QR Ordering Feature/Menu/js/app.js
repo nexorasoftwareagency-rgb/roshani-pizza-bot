@@ -22,6 +22,7 @@ const M = {
     ordersCache: {},     // local cache of orders belonging to this session, for the bill summary
     currentOrderId: null,
     _orderUnsub: null,
+    guestCount: 1,
 };
 
 // ---------------------------------------------------------------
@@ -53,6 +54,19 @@ async function boot() {
     M.serviceChargeEnabled = dineSettings.serviceChargeEnabled === true;
     M.serviceChargeName = dineSettings.serviceChargeName || 'Service Charge';
     M.serviceChargeRate = typeof dineSettings.serviceChargeRate === 'number' ? dineSettings.serviceChargeRate : 0;
+
+    // Render today's offers on welcome screen
+    const offers = dineSettings.offers;
+    if (Array.isArray(offers) && offers.length > 0) {
+        const offersEl = document.getElementById('welcomeOffers');
+        offersEl.innerHTML = offers.slice(0, 3).map(o => `
+            <div class="welcome-offer-card">
+                <div class="welcome-offer-title">${UI.esc(o.title || '')}</div>
+                ${o.description ? `<div class="welcome-offer-desc">${UI.esc(o.description)}</div>` : ''}
+                ${o.code ? `<span class="welcome-offer-code">${UI.esc(o.code)}</span>` : ''}
+            </div>`).join('');
+        offersEl.classList.remove('hidden');
+    }
 
     const bgSnap = await get(outletRef('settings/customerMenuBgImage'));
     if (bgSnap.exists() && bgSnap.val()) {
@@ -95,16 +109,25 @@ function onSessionUpdated(session) {
         if (nameInput && !nameInput.value) nameInput.value = session.customerName;
         if (phoneInput && !phoneInput.value) phoneInput.value = session.customerPhone || '';
     }
+    // Pre-fill guest count from session
+    if (session.guestCount && session.guestCount > 0) {
+        M.guestCount = session.guestCount;
+        const gcEl = document.getElementById('guestCountVal');
+        if (gcEl) gcEl.textContent = String(M.guestCount);
+    }
+    // Pre-fill special note from session
+    const noteInput = document.getElementById('checkoutNote');
+    if (noteInput && session.specialNote && !noteInput.value) noteInput.value = session.specialNote;
     // Keep local orders cache fresh for the bill summary
     (session.orders || []).forEach(oid => {
         if (!M.ordersCache[oid]) {
             onValue(outletRef(`orders/${oid}`), (snap) => {
                 M.ordersCache[oid] = snap.val();
-                UI.renderSessionBillCard(session, M.ordersCache);
+                UI.renderSessionBillCard(session, M.ordersCache, M.taxName, M.taxPercent, M.taxEnabled, M.serviceChargeEnabled, M.serviceChargeName, M.serviceChargeRate);
             }, { onlyOnce: true });
         }
     });
-    UI.renderSessionBillCard(session, M.ordersCache);
+    UI.renderSessionBillCard(session, M.ordersCache, M.taxName, M.taxPercent, M.taxEnabled, M.serviceChargeEnabled, M.serviceChargeName, M.serviceChargeRate);
 }
 
 function onCartChanged() {
@@ -223,6 +246,10 @@ function renderCartScreen() {
 document.getElementById('btnBackFromCart')?.addEventListener('click', () => UI.showScreen('screenMenu'));
 document.getElementById('btnBackFromCustomize')?.addEventListener('click', () => UI.showScreen('screenMenu'));
 
+// Guest count stepper
+document.getElementById('btnGuestMinus')?.addEventListener('click', () => { haptic(10); M.guestCount = Math.max(1, M.guestCount - 1); document.getElementById('guestCountVal').textContent = String(M.guestCount); });
+document.getElementById('btnGuestPlus')?.addEventListener('click', () => { haptic(10); M.guestCount = Math.min(20, M.guestCount + 1); document.getElementById('guestCountVal').textContent = String(M.guestCount); });
+
 document.getElementById('btnPlaceOrder')?.addEventListener('click', async () => {
     if (cartIsEmpty()) { UI.showToast('Your cart is empty'); return; }
     haptic([20, 50, 20]);
@@ -235,7 +262,8 @@ document.getElementById('btnPlaceOrder')?.addEventListener('click', async () => 
     btn.textContent = 'Placing order…';
 
     try {
-        await saveCheckoutContact(name, phone);
+        const note = document.getElementById('checkoutNote')?.value.trim() || '';
+        await saveCheckoutContact(name, phone, M.guestCount, note);
 
         const { orderId } = await placeOrder({ taxPercent: M.taxPercent, taxEnabled: M.taxEnabled, serviceChargeEnabled: M.serviceChargeEnabled, serviceChargeRate: M.serviceChargeRate, customerName: name, customerPhone: phone });
         watchOrder(orderId);
@@ -270,11 +298,16 @@ document.getElementById('btnRequestBillFromTracking')?.addEventListener('click',
     haptic(20);
     try {
         await requestBill();
-        UI.showToast('Bill requested — thank you!');
+        // Show bill generated confirmation screen
+        document.getElementById('billGenTable').textContent = `Table ${String(Session.table.number).padStart(2, '0')}`;
+        document.getElementById('billGenAmount').textContent = UI.fmtMoney(Session.session?.grandTotal || Session.session?.runningTotal || 0);
+        UI.showScreen('screenBillGenerated');
     } catch (e) {
         UI.showToast('Could not request bill. Please try again.');
     }
 });
+
+document.getElementById('btnBackToMenuFromBill')?.addEventListener('click', () => UI.showScreen('screenMenu'));
 
 // ---------------------------------------------------------------
 // CALL WAITER
