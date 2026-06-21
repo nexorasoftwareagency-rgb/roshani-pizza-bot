@@ -1756,9 +1756,8 @@ onValue(ref(db, '.info/connected'), (snap) => {
 });
 
 window.initGlobalSlider();
-window.updateRiderPerformanceUI = () => { }; 
 
-// LEGACY COMPATIBILITY SHIMS (Prevents crashes in cached environments)
-window.initPingCheck = window.initPingCheck || (() => console.log("[System] initPingCheck shim executed"));
-window.initSlideToActions = window.initSlideToActions || (() => console.log("[System] initSlideToActions shim executed"));
+// Legacy compatibility no-ops (for cached environments)
+window.initPingCheck = window.initPingCheck || (() => {});
+window.initSlideToActions = window.initSlideToActions || (() => {});
 

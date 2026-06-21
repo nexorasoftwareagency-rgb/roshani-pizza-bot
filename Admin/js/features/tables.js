@@ -161,6 +161,7 @@ function _renderRequestsBanner() {
 async function _resolveTableRequest(reqId) {
     try {
         await update(_reqRef(reqId), { status: 'resolved', resolvedAt: _nowMs() });
+        showToast('Request resolved', 'danger');
         haptic(15);
     } catch (e) {
         showToast('Could not resolve request: ' + (e?.message || e), 'error');

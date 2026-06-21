@@ -70,7 +70,7 @@ function buildPopup(r) {
     return `
         <div class="tracker-popup">
             <div class="tracker-popup-head">
-                <img src="${profileImg}" class="tracker-popup-avatar" alt="">
+                <img src="${profileImg}" class="tracker-popup-avatar" alt="" onerror="this.style.display='none'">
                 <div class="tracker-popup-id">
                     <span class="tracker-popup-name">${escapeHtml(r.name || 'Rider')}</span>
                     <span class="rider-status-pill-v4 ${cls}"><span class="rider-dot-v4"></span>${label}</span>
@@ -100,7 +100,7 @@ function buildSidebarCard(r, id) {
     return `
         <div class="tracker-card tracker-card-${cls}" data-rider-id="${id}" ${r.location ? 'role="button" tabindex="0"' : ''} onclick="${onClick}" onkeydown="if(event.key==='Enter'||event.key===' '){${onClick};event.preventDefault();}">
             <div class="tracker-card-avatar">
-                <img src="${profileImg}" alt="">
+                <img src="${profileImg}" alt="" onerror="this.style.display='none'">
                 <span class="tracker-card-dot tracker-card-dot-${cls}"></span>
             </div>
             <div class="tracker-card-body">

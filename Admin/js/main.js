@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         document.addEventListener('click', (e) => {
-            if (e.target.closest('.close-btn, .cancel-dish-btn, .cancel-cat-btn, .btn-hide-modal')) {
+            if (e.target.closest('.close-btn, .cancel-dish-btn, .btn-hide-modal')) {
                 const modal = e.target.closest('.modal');
                 if (modal) {
                     modal.classList.remove('active', 'flex');
@@ -365,9 +365,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             previewImage(e.target, 'catPreview');
         });
 
-        document.getElementById('btnShowRiderModal')?.addEventListener('click', async () => {
-            (await useMod('riders')).showRiderModal();
-        });
         bindClickTo('btnUploadRiderPhoto', 'riderPhotoInput');
         document.getElementById('riderPhotoInput')?.addEventListener('change', (e) => {
             previewImage(e.target, 'riderProfilePreview');

@@ -151,7 +151,10 @@ function openCustomize(dishId) {
     M.draftAddons = [];
     M.draftQty = 1;
 
-    document.getElementById('customHeroImg').src = dish.image || '';
+    const heroImg = document.getElementById('customHeroImg');
+    heroImg.src = dish.image || '';
+    heroImg.onerror = () => { heroImg.style.display = 'none'; };
+    heroImg.alt = dish.name || 'Dish image';
     document.getElementById('customDishName').textContent = dish.name;
     document.getElementById('draftQtyVal').textContent = '1';
     renderCustomizeSections();

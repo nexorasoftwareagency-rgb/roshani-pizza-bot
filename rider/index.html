@@ -438,9 +438,9 @@
     <audio id="pingAudio" src="assets/sounds/alert.mp3" preload="auto"></audio>
 
     <script>
-        // Emergency Shims for cached sessions
-        window.initPingCheck = function() { console.warn("Legacy initPingCheck called and shimmed."); };
-        window.initSlideToActions = function() { console.warn("Legacy initSlideToActions called and shimmed."); };
+        // Legacy no-ops for cached sessions
+        window.initPingCheck = window.initPingCheck || (() => {});
+        window.initSlideToActions = window.initSlideToActions || (() => {});
     </script>
     <!-- SETTLEMENT HISTORY MODAL -->
     <div id="settlementModal" class="modal-premium">

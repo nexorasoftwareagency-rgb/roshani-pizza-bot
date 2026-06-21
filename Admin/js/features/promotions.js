@@ -286,26 +286,11 @@ function _attachCampaignListener() {
         if (el) el.innerHTML = '<div class="offline-placeholder"><div class="offline-icon">⚠️</div><h4>Permission denied</h4><p>Could not load campaign data. Try refreshing the page.</p></div>';
     };
     _campaignListener = onValue(_promoRef('campaigns'), (snap) => {
-        console.warn('[PROMO DEBUG] campaigns onValue FIRED, exists:', snap.exists());
         const val = snap.val() || {};
         _allCampaignsSnap = val;
         _renderActivePane();
         _renderHistoryPane();
         _switchMode('active');
-        setTimeout(() => {
-            const t = document.getElementById('tab-promotions');
-            if (!t) return;
-            const cs = getComputedStyle(t);
-            const firstChild = t.firstElementChild;
-            console.warn('[PROMO DEBUG] vp=' + window.innerWidth + 'x' + window.innerHeight +
-                ' disp=' + cs.display + ' vis=' + cs.visibility + ' op=' + cs.opacity +
-                ' anim=' + cs.animationName + ' pos=' + cs.position +
-                ' isConn=' + t.isConnected + ' chCount=' + t.childElementCount +
-                ' offsParent=' + (t.offsetParent ? t.offsetParent.tagName : 'null') +
-                ' scrollH=' + t.scrollHeight + ' offsH=' + t.offsetHeight +
-                ' box=' + cs.boxSizing + ' pad=' + cs.padding + ' mH=' + cs.minHeight + ' xH=' + cs.maxHeight +
-                ' first=' + (firstChild ? firstChild.id || firstChild.className : 'none'));
-        }, 1000);
     }, _promoErr('campaigns'));
     _killSwitchListener = onValue(_promoRef('killSwitch'), (snap) => {
         _setKillSwitchUi(snap.val() === true);

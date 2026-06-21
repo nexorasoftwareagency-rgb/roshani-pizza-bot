@@ -3907,6 +3907,16 @@ body {
     border-left-color: var(--danger);
 }
 
+.toast-info {
+    border-left-color: var(--info, #3b82f6);
+}
+
+.toast-danger {
+    border-left-color: var(--error, #b91c1c);
+    background: #fef2f2;
+    font-weight: 700;
+}
+
 @keyframes slideInRight {
     from {
         transform: translateX(100%);

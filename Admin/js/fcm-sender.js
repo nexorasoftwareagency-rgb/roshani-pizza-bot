@@ -2,8 +2,15 @@ import { db, ref, get } from './firebase.js';
 
 const FCM_SERVER_KEY = window.firebaseConfig?.fcmServerKey || '';
 
+if (!FCM_SERVER_KEY) {
+    console.warn('[FCM] fcmServerKey not configured in firebase-config.js — push notifications disabled. Add fcmServerKey to enable.');
+}
+
 export async function sendFCM(token, title, body, data = {}) {
-    if (!FCM_SERVER_KEY || !token) return;
+    if (!FCM_SERVER_KEY || !token) {
+        if (!token) console.warn('[FCM] No token provided — skipping push.');
+        return;
+    }
     try {
         const res = await fetch('https://fcm.googleapis.com/fcm/send', {
             method: 'POST',
