@@ -726,6 +726,7 @@ async function _printSessionBill(tableId) {
         serviceChargeName: dine.serviceChargeName || 'Service Charge',
         discount: 0,
         deliveryFee: 0,
+        tableNo: String(t.number),
         createdAt: sess.openedAt || Date.now(),
         paymentMethod: 'Cash',
         status: 'Delivered',

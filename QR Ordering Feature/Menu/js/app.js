@@ -23,6 +23,7 @@ const M = {
     currentOrderId: null,
     _orderUnsub: null,
     guestCount: 1,
+    _guestCountDirty: false,
 };
 
 // ---------------------------------------------------------------
@@ -110,8 +111,8 @@ function onSessionUpdated(session) {
         if (nameInput && !nameInput.value) nameInput.value = session.customerName;
         if (phoneInput && !phoneInput.value) phoneInput.value = session.customerPhone || '';
     }
-    // Pre-fill guest count from session
-    if (session.guestCount && session.guestCount > 0) {
+    // Pre-fill guest count from session (only if user hasn't manually changed it)
+    if (!M._guestCountDirty && session.guestCount && session.guestCount > 0) {
         M.guestCount = session.guestCount;
         const gcEl = document.getElementById('guestCountVal');
         if (gcEl) gcEl.textContent = String(M.guestCount);
@@ -248,8 +249,8 @@ document.getElementById('btnBackFromCart')?.addEventListener('click', () => UI.s
 document.getElementById('btnBackFromCustomize')?.addEventListener('click', () => UI.showScreen('screenMenu'));
 
 // Guest count stepper
-document.getElementById('btnGuestMinus')?.addEventListener('click', () => { haptic(10); M.guestCount = Math.max(1, M.guestCount - 1); document.getElementById('guestCountVal').textContent = String(M.guestCount); });
-document.getElementById('btnGuestPlus')?.addEventListener('click', () => { haptic(10); M.guestCount = Math.min(20, M.guestCount + 1); document.getElementById('guestCountVal').textContent = String(M.guestCount); });
+document.getElementById('btnGuestMinus')?.addEventListener('click', () => { haptic(10); M.guestCount = Math.max(1, M.guestCount - 1); M._guestCountDirty = true; document.getElementById('guestCountVal').textContent = String(M.guestCount); });
+document.getElementById('btnGuestPlus')?.addEventListener('click', () => { haptic(10); M.guestCount = Math.min(20, M.guestCount + 1); M._guestCountDirty = true; document.getElementById('guestCountVal').textContent = String(M.guestCount); });
 
 document.getElementById('btnPlaceOrder')?.addEventListener('click', async () => {
     if (cartIsEmpty()) { UI.showToast('Your cart is empty'); return; }
