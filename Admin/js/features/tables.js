@@ -706,10 +706,12 @@ async function _printSessionBill(tableId) {
 
     const dineSnap = await get(_settingsRef());
     const dine = dineSnap.val() || {};
+    const taxEnabled = dine.taxEnabled !== false;
+    const scEnabled = dine.serviceChargeEnabled === true;
     const taxRate = typeof dine.taxRate === 'number' ? dine.taxRate : 5;
     const scRate = typeof dine.serviceChargeRate === 'number' ? dine.serviceChargeRate : 0;
-    const tax = Number(sess.tax ?? 0) || Math.round(subtotal * (taxRate / 100) * 100) / 100;
-    const serviceCharge = Number(sess.serviceCharge ?? 0) || (dine.serviceChargeEnabled ? Math.round(subtotal * (scRate / 100) * 100) / 100 : 0);
+    const tax = Number(sess.tax ?? 0) || (taxEnabled ? Math.round(subtotal * (taxRate / 100) * 100) / 100 : 0);
+    const serviceCharge = Number(sess.serviceCharge ?? 0) || (scEnabled ? Math.round(subtotal * (scRate / 100) * 100) / 100 : 0);
     const grandTotal = Number(sess.grandTotal ?? (subtotal + tax + serviceCharge));
 
     const combinedOrder = {
@@ -718,6 +720,10 @@ async function _printSessionBill(tableId) {
         items: allItems,
         total: grandTotal,
         subtotal,
+        tax,
+        taxName: dine.taxName || 'Tax',
+        serviceCharge,
+        serviceChargeName: dine.serviceChargeName || 'Service Charge',
         discount: 0,
         deliveryFee: 0,
         createdAt: sess.openedAt || Date.now(),
