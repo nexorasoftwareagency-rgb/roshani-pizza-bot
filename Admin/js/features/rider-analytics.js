@@ -254,8 +254,8 @@ function renderRiderEarningsChart(orders) {
                 datasets: [{
                     label: 'Earnings (₹)',
                     data: values,
-                    backgroundColor: 'rgba(243, 107, 33, 0.6)',
-                    borderColor: '#f36b21',
+                    backgroundColor: 'rgba(232, 73, 8, 0.6)',
+                    borderColor: '#E84908',
                     borderWidth: 1,
                     borderRadius: 8
                 }]
@@ -329,7 +329,7 @@ export async function exportRiderReport(type) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             doc.setFontSize(20);
-            doc.setTextColor(243, 107, 33);
+            doc.setTextColor(232, 73, 8);
             doc.text("Rider Performance Report", 14, 22);
             doc.setFontSize(11);
             doc.setTextColor(100);
@@ -342,7 +342,7 @@ export async function exportRiderReport(type) {
                 body: tableRows,
                 startY: 45,
                 theme: 'grid',
-                headStyles: { fillColor: [243, 107, 33] }
+                headStyles: { fillColor: [232, 73, 8] }
             });
             doc.save(`Rider_Report_${riderName.replace(/\s+/g, '_')}.pdf`);
             showToast("PDF report downloaded", "success");

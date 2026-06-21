@@ -18,7 +18,7 @@ let _sidebarCollapsed = false;
 
 function avatarSvg(name) {
     const initial = encodeURIComponent((name || 'R').charAt(0).toUpperCase());
-    return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='20' fill='%23f36b21'/%3E%3Ctext x='20' y='26' font-size='18' fill='white' text-anchor='middle' font-family='sans-serif'%3E${initial}%3C/text%3E%3C/svg%3E`;
+    return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='20' fill='%23E84908'/%3E%3Ctext x='20' y='26' font-size='18' fill='white' text-anchor='middle' font-family='sans-serif'%3E${initial}%3C/text%3E%3C/svg%3E`;
 }
 
 function formatTime(ts) {

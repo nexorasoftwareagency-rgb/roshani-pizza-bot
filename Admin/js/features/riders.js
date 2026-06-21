@@ -75,7 +75,7 @@ function buildGrid(data) {
                 width: 220,
                 formatter: function(cell) {
                     const d = cell.getRow().getData();
-                    const profileImg = d.photoUrl || d.profilePhoto || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='20' fill='%23f36b21'/%3E%3Ctext x='20' y='26' font-size='18' fill='white' text-anchor='middle'%3E" + encodeURIComponent((d.name || '?').charAt(0).toUpperCase()) + "%3C/text%3E%3C/svg%3E";
+                    const profileImg = d.photoUrl || d.profilePhoto || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='20' fill='%23E84908'/%3E%3Ctext x='20' y='26' font-size='18' fill='white' text-anchor='middle'%3E" + encodeURIComponent((d.name || '?').charAt(0).toUpperCase()) + "%3C/text%3E%3C/svg%3E";
                     const maskedPhone = d.phone ? '******' + escapeHtml(d.phone.slice(-4)) : 'N/A';
                     return `<div style="display:flex;align-items:center;gap:10px;">
                         <img src="${escapeHtml(profileImg)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" onerror="this.src='https://placehold.co/36'">
@@ -204,7 +204,7 @@ export function renderRiders(searchTerm = "") {
         // Dashboard cards
         if (activeDashboard) {
             if (!state.showAllRiders && displayStatus === "Offline") return;
-            const profileImg = r.photoUrl || r.profilePhoto || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='20' fill='%23f36b21'/%3E%3Ctext x='20' y='26' font-size='18' fill='white' text-anchor='middle'%3E" + encodeURIComponent((r.name || '?').charAt(0).toUpperCase()) + "%3C/text%3E%3C/svg%3E";
+            const profileImg = r.photoUrl || r.profilePhoto || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='20' fill='%23E84908'/%3E%3Ctext x='20' y='26' font-size='18' fill='white' text-anchor='middle'%3E" + encodeURIComponent((r.name || '?').charAt(0).toUpperCase()) + "%3C/text%3E%3C/svg%3E";
             const card = document.createElement('div');
             card.className = `rider-status-card-v4 ${displayStatus.toLowerCase().replace(/\s+/g, '-')} premium-shadow-v4`;
             if (state.showAllRiders && displayStatus === "Offline") card.classList.add('greyed-out');

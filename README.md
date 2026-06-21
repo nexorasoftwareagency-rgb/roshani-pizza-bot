@@ -136,6 +136,7 @@ A full-stack ERP system for **Roshani Pizza** and **Roshani Cake** outlets. Cust
 | `logs/` | Audit trail entries |
 | `discounts/{id}` | Discount/coupon configuration |
 | `discountsUsage/{id}` | Discount redemption tracking |
+| `tableRequests/{id}` | Object | Dine-in table requests (waiter call, bill request) — `tableNumber`, `type`, `status`, `createdAt` |
 
 ### Order Document Structure
 
@@ -333,12 +334,12 @@ When an order is placed, `deductInventoryStock()` matches item names against `{o
 **Tech:** Vanilla JS ES Modules + Firebase Realtime Database
 **Auth:** Firebase Auth (email/password) — 3 tiers: Supreme, Super, Regular
 **PWA:** Installable on desktop/mobile via service worker
-**Entry Point:** `Admin/index.html` (5533 lines)
+**Entry Point:** `Admin/index.html`
 **Module Loader:** Lazy dynamic imports via `useMod(name)`
 
 ### Admin Sidebar Navigator
 
-The sidebar is organized into 5 groups with 19 navigation items:
+The sidebar is organized into 5 groups with 20 navigation items:
 
 #### Operations
 | Menu Item | Tab Target | Icon | Description |
@@ -347,6 +348,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 | Orders | `orders` | `shopping-cart` | Full order history with filters |
 | Live Ops | `live` | `activity` | Real-time kitchen display with live badge |
 | POS Control | `walkin` | `monitor` | Walk-in / dine-in point-of-sale |
+| Tables | `tables` | `grid-3x3` | Dine-in table management with floor grid, KDS, session billing |
 
 #### Marketing
 | Menu Item | Tab Target | Icon | Description |
@@ -480,7 +482,34 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 5. Menu Management (`tab-menu`)
+### 5. Tables (`tab-tables`)
+
+**Data loaded on switch:** tables, sessions, orders, tableRequests (3 real-time listeners)
+
+**Components:**
+- **KPI Row** — Active Tables (`#tblKpiActive`), Occupied (`#tblKpiOccupied`), Reserved (`#tblKpiReserved`), Avg Session Time (`#tblKpiAvgTime`), Pending Requests (`#tblKpiRequests`)
+- **Requests Banner** (`#tableRequestsBanner`) — Dismissible chips for waiter call / bill request / other
+- **Floor Grid** (`#tableManagementGrid`) — Visual grid of table cards with status, capacity, session info
+- **Live Orders Sidebar** (`#liveOrdersSidebar`) — Real-time kitchen display of active dine-in orders
+- **Order Drawer** — Right-slide panel showing order details, items, pricing, status progression
+- **Table Drawer** — Right-slide panel: table info, session details, orders, action buttons
+
+**Table Drawer Actions:**
+- Print KOT (kitchen order ticket)
+- Print Bill (customer bill with items, tax, total)
+- Generate Bill / Request Bill
+- Close Table (Paid) / Cancel Session
+- Enable/Disable Table
+- View QR
+- Order action buttons: Accept Order, Mark Ready, Mark Served, Cancel
+
+**Functions:** `loadTableManagement()`, `_attachListeners()`, `_renderAll()`, `_renderKpis()`, `_renderFloorGrid()`, `_renderLiveOrdersList()`, `_renderKDS()`, `_renderTableDrawer()`, `_renderRequestsBanner()`, `_resolveTableRequest()`, `_printTableKOT()`, `_printSessionBill()`, `_advanceOrder()`, `cleanupTables()`
+
+**Lazy module:** Dynamically imported when tab is first accessed. Three-listener architecture (tables + sessions + orders) — never one-per-table.
+
+---
+
+### 6. Menu Management (`tab-menu`)
 
 **Data loaded on switch:** dishes (real-time listener)
 
@@ -495,7 +524,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 6. Categories (`tab-categories`)
+### 7. Categories (`tab-categories`)
 
 **Data loaded on switch:** categories (real-time listener)
 
@@ -515,7 +544,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 7. Rider Management (`tab-riders`)
+### 8. Rider Management (`tab-riders`)
 
 **Data loaded on switch:** riders + riderStats (real-time listeners)
 
@@ -533,7 +562,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 8. Customers (`tab-customers`)
+### 9. Customers (`tab-customers`)
 
 **Data loaded on switch:** customers + orders
 
@@ -545,7 +574,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 9. Lost Sales (`tab-lostSales`)
+### 10. Lost Sales (`tab-lostSales`)
 
 **Data loaded on switch:** orders filtered for lost sales
 
@@ -560,7 +589,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 10. Analytics / Reports (`tab-reports`)
+### 11. Analytics / Reports (`tab-reports`)
 
 **Data loaded on switch:** date-range report data
 
@@ -578,7 +607,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 11. Rider Insights (`tab-riderAnalytics`)
+### 12. Rider Insights (`tab-riderAnalytics`)
 
 **Data loaded on switch:** riders + stats
 
@@ -597,7 +626,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 12. Feedback (`tab-feedback`)
+### 13. Feedback (`tab-feedback`)
 
 **Data loaded on switch:** feedbacks (real-time listener)
 
@@ -608,7 +637,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 13. Live Tracker (`tab-liveTracker`)
+### 14. Live Tracker (`tab-liveTracker`)
 
 **Data loaded on switch:** riders location (real-time listener)
 
@@ -628,7 +657,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 14. Notifications (`tab-notifications`)
+### 15. Notifications (`tab-notifications`)
 
 **Data loaded on switch:** notification state
 
@@ -642,7 +671,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 15. Inventory (`tab-inventory`)
+### 16. Inventory (`tab-inventory`)
 
 **Data loaded on switch:** inventory items (real-time)
 
@@ -662,7 +691,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 16. Payments (`tab-payments`)
+### 17. Payments (`tab-payments`)
 
 **Data loaded on switch:** orders (all)
 
@@ -673,7 +702,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 17. Promotions (`tab-promotions`)
+### 18. Promotions (`tab-promotions`)
 
 **Data loaded on switch:** promotions module
 
@@ -711,7 +740,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 18. Discounts (`tab-discounts`)
+### 19. Discounts (`tab-discounts`)
 
 **Data loaded on switch:** discounts module
 
@@ -734,7 +763,7 @@ The sidebar is organized into 5 groups with 19 navigation items:
 
 ---
 
-### 19. Settings (`tab-settings`)
+### 20. Settings (`tab-settings`)
 
 **Data loaded on switch:** Store, Delivery, Bot, Display settings (fetched in parallel)
 
@@ -1177,7 +1206,10 @@ firebase deploy --only hosting:admin
 # Deploy rider portal
 firebase deploy --only hosting:rider
 
-# Deploy both
+# Deploy QR menu app
+firebase deploy --only hosting:menu
+
+# Deploy all hosting targets
 firebase deploy --only hosting
 ```
 
@@ -1314,7 +1346,7 @@ npx http-server -p 8080 -c-1
 ```
 Prasant-Pizza-ERP/
 ├── Admin/                     # Admin Dashboard (Firebase Hosting: admin)
-│   ├── index.html             # SPA shell with 19 tab sections
+│   ├── index.html             # SPA shell with 20 tab sections
 │   ├── init.js                # Firebase init + global helpers
 │   ├── branding.js            # Multi-outlet CSS theming
 │   ├── receipt-templates.js   # Thermal receipt HTML templates
@@ -1335,6 +1367,7 @@ Prasant-Pizza-ERP/
 │       ├── pwa.js             # PWA install, nuclear refresh
 │       └── features/
 │           ├── orders.js      # Order management (listeners, pagination, status, rider assign)
+│           ├── tables.js      # Dine-in table management (floor grid, KDS, session billing, requests)
 │           ├── catalog.js     # Dishes + Categories CRUD (listeners, modals, migrations)
 │           ├── riders.js      # Rider management (Tabulator grid, CRUD, wallet settle)
 │           ├── pos.js         # Walk-in POS (cart, discounts, coupons, checkout)
@@ -1396,6 +1429,17 @@ Prasant-Pizza-ERP/
 ├── Cake-bot/                  # Cake outlet bot variant
 ├── capacitor-admin/           # Capacitor native wrapper for Admin
 ├── capacitor-rider/           # Capacitor native wrapper for Rider
+├── QR Ordering Feature/       # QR Menu App (Firebase Hosting: menu)
+│   └── Menu/
+│       ├── index.html         # QR customer menu entry point
+│       ├── css/app.css        # Menu app styles
+│       └── js/
+│           ├── app.js         # Menu app logic (boot, cart, order flow)
+│           ├── ui.js          # Rendering helpers
+│           ├── firebase.js    # Firebase SDK exports
+│           ├── session.js     # Dine-in session management
+│           ├── cart.js        # Cart state management
+│           └── order.js       # Order placement
 ├── assets/                    # Static assets
 ├── scripts/                   # Build/deployment scripts
 └── Plans/                     # Planning documents

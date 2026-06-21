@@ -24,7 +24,7 @@ export function showAlert(data, type = 'info') {
         div.onclick = () => div.remove();
     } else {
         const order = data;
-        const orderKey = order.orderId || order.id;
+        const orderKey = order.orderId || order.id || '----';
         const outletIcon = order.outlet === 'cake' ? '🎂' : '🍕';
         
         // Calculate item count from any format (cart, items, or single item)

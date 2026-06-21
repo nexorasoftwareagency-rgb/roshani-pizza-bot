@@ -1750,7 +1750,7 @@
         transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
     #tab-dashboard .recent-section .premium-row-v4 {
-        -webkit-tap-highlight-color: rgba(243,107,33,0.15);
+        -webkit-tap-highlight-color: rgba(232,73,8,0.15);
     }
     #tab-dashboard .recent-section .premium-row-v4:active {
         transform: scale(0.98);
@@ -1897,7 +1897,7 @@
         transition: transform 0.15s ease;
     }
     #tab-reports .premium-row-v4 {
-        -webkit-tap-highlight-color: rgba(243,107,33,0.15);
+        -webkit-tap-highlight-color: rgba(232,73,8,0.15);
     }
     #tab-reports .premium-row-v4:active {
         transform: scale(0.98);
@@ -2094,7 +2094,7 @@
 }
 
 #reportStatusFilter:focus {
-    outline: 2px solid var(--primary, #f36b21);
+    outline: 2px solid var(--primary, #E84908);
     outline-offset: 1px;
 }
 
@@ -2114,7 +2114,7 @@
 .status-tag-cancelled { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
 .status-tag-ready,
 .status-tag-confirmed,
-.status-tag-placed { background: rgba(243, 107, 33, 0.12); color: #ea580c; }
+.status-tag-placed { background: rgba(232, 73, 8, 0.12); color: #c43d00; }
 .status-tag-outfordelivery,
 .status-tag-reacheddroplocation { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
 

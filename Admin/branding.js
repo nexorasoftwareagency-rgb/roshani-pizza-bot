@@ -1,8 +1,8 @@
 (function () {
-    const primaryColor = '#f36b21';
+    const primaryColor = '#E84908';
     const root = document.documentElement;
     root.style.setProperty('--primary', primaryColor);
-    root.style.setProperty('--primary-rgb', '243, 107, 33');
+    root.style.setProperty('--primary-rgb', '232, 73, 8');
 
     const updateHeadElements = () => {
         let themeMeta = document.querySelector('meta[name="theme-color"]');

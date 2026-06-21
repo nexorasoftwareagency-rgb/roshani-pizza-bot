@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'printReceiptById': logger.info('PRINT', `Print receipt: ${id}`); (await useMod('orders')).closeOrderDrawer(); (await useMod('printing')).printReceiptById(id); break;
                 case 'closeReceiptPreview': logger.info('PRINT', 'Close receipt preview'); (await useMod('printing')).closeReceiptPreview(); break;
                 case 'printReceiptFromPreview': logger.info('PRINT', 'Print from preview'); (await useMod('printing')).printReceiptFromPreview(); break;
-                case 'updateStatus': logger.info('ORDERS', `Update status: ${id} → ${val}`); (await useMod('orders')).updateStatus(id, val); break;
+                case 'updateStatus': { const v = val || (el.tagName === 'SELECT' ? el.value : null); logger.info('ORDERS', `Update status: ${id} → ${v}`); (await useMod('orders')).updateStatus(id, v); break; }
                 case 'assignRider': logger.info('ORDERS', `Assign rider: ${id} → ${val}`); (await useMod('orders')).assignRider(id, val); break;
                 case 'openOrderDrawer': logger.info('ORDERS', `Open order drawer: ${id}`); (await useMod('orders')).openOrderDrawer(id); break;
                 case 'markAsPaid': logger.info('ORDERS', `Mark paid: ${id}`); (await useMod('orders')).markAsPaid(id); break;
@@ -287,6 +287,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'sendTestPromo':
                     (await useMod('promotions'))._sendTest?.();
                     break;
+                case 'openTableDrawerByOrder': logger.info('TABLES', 'Open table drawer by order'); window.__tables?.openDrawerByOrder?.(el.getAttribute('data-order-id') || id); break;
+                case 'openTableDrawer': logger.info('TABLES', 'Open table drawer'); window.__tables?.openDrawer?.(id); break;
+                case 'requestBillForTable': logger.info('TABLES', 'Request bill'); window.__tables?.requestBill?.(id); break;
+                case 'printTableKOT': logger.info('TABLES', 'Print KOT'); window.__tables?.printKOT?.(id); break;
+                case 'jumpToOrderInOrdersTab': logger.info('TABLES', 'Jump to order'); window.__tables?.jumpToOrder?.(id); break;
+                case 'openTableQr': logger.info('TABLES', 'Open table QR'); window.__tables?.openQr?.(id); break;
+                case 'closeSessionForTable': logger.info('TABLES', 'Close session'); window.__tables?.closeSession?.(id); break;
+                case 'cancelSessionForTable': logger.info('TABLES', 'Cancel session'); window.__tables?.cancelSession?.(id); break;
                 default:
                     logger.warn('CLICK', `Unhandled action: ${action}`, { el: el.outerHTML.slice(0, 200) });
             }

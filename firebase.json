@@ -175,6 +175,19 @@
           ]
         }
       ]
+    },
+    {
+      "target": "menu",
+      "public": "QR Ordering Feature\\Menu",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "!.well-known/**",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {"source": "**", "destination": "/index.html"}
+      ]
     }
   ]
 }

@@ -81,8 +81,6 @@ export const switchTab = async (tabId, skipHistory = false) => {
     if (orderDrawer) orderDrawer.classList.remove('active');
     if (orderOverlay) orderOverlay.classList.remove('active');
     
-    window.__tables?.closeDrawer?.();
-    
     toggleNotificationSheet(false);
 
     if (tabId === 'notifications') {

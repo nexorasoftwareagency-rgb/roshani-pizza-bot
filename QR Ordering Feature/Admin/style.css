@@ -2,15 +2,15 @@
     /* VIBRANT ELECTRIC PALETTE (ZOMATO STYLE) */
     --primary: #E84908;           /* Premium Roshani Orange */
     --primary-rgb: 232, 73, 8;
-    --primary-dark: #c43d00;      /* Deep Orange */
-    --primary-darker: #a03200;    /* For deep accents */
-    --primary-light: #fef0e8;     /* Soft peach tint */
+    --primary-dark: #d95a1a;      /* Deep Orange */
+    --primary-darker: #bf4d14;    /* For deep accents */
+    --primary-light: #fff5ed;     /* Soft peach tint */
     --primary-lighter: rgba(232, 73, 8, 0.1);
     --primary-glow: rgba(232, 73, 8, 0.2);
     
     /* Enhanced Outlet Colors */
     --primary: #E84908;
-    --primary-dark: #c43d00;
+    --primary-dark: #d95a1a;
     --action-green: #10b981;      /* Missing Emerald Green */
     
     /* MODERN SEMANTIC COLORS (Matching Image) */
@@ -57,7 +57,7 @@
     --bg-primary: #FFFFFF;
     --bg-secondary: #f1f5f9;      /* Clean slate background */
     --sidebar-bg: #FFFFFF;
-    --sidebar-accent: rgba(232, 73, 8, 0.08);
+    --sidebar-accent: rgba(255, 107, 53, 0.08);
     --white: #FFFFFF;
     --danger: var(--error);
 
@@ -78,7 +78,7 @@
     --border-color: rgba(232, 73, 8, 0.12);
     --border-premium: 1.5px solid rgba(232, 73, 8, 0.2);
     --radius-premium: 24px;
-    --grad-primary: linear-gradient(135deg, #E84908 0%, #f97316 100%);
+    --grad-primary: linear-gradient(135deg, #E84908 0%, #fb923c 100%);
 }
 
 /* --- ICON PERFORMANCE OPTIMIZATION --- */
@@ -4328,7 +4328,7 @@ body {
 .btn-primary {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
-  box-shadow: 0 4px 15px rgba(232, 73, 8, 0.3);
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
   cursor: pointer;
@@ -4336,7 +4336,7 @@ body {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(232, 73, 8, 0.4);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
 }
 
 
@@ -8187,9 +8187,21 @@ body.pos-selection-mode .walkin-picker {
     font-size: 14px;
     color: #1e293b;
 }
-
 /* ================================================================
-   TABLE MANAGEMENT � Dine-In QR Ordering (appended by integration)
+   TABLE MANAGEMENT — CSS
+   Paste at the end of style.css.
+
+   Uses the EXISTING CSS variable system in :root — --primary,
+   --success, --error, --warning, --info, --neutral-50..900,
+   --text-primary/secondary/tertiary, --border-color, --glass-bg.
+   All fallback values are LIGHT-MODE correct (see audit CSS-04/NF-07
+   findings — dark fallback values caused invisible text in past tabs).
+
+   The Table Drawer reuses the EXISTING .drawer-overlay / .drawer-content
+   classes already defined for the Order Detail view (~line 5034 of
+   style.css) so it animates identically (same 0.45s cubic-bezier
+   slide, same z-index 6000, same backdrop blur) — only the WIDTH
+   and internal layout are overridden below via .table-drawer-content.
    ================================================================ */
 
 /* ---------- Panel header ---------- */
@@ -8203,7 +8215,7 @@ body.pos-selection-mode .walkin-picker {
 }
 #tab-tables .panel-subtitle { font-size: 12px; color: var(--text-secondary, #64748b); margin-top: 2px; }
 
-/* ---------- KPI cards ---------- */
+/* ---------- KPI cards (7 tiles) ---------- */
 .table-kpi-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -8280,7 +8292,7 @@ body.pos-selection-mode .walkin-picker {
 .legend-billing { background: #1d4ed8; }
 .legend-disabled { background: #64748b; }
 
-/* ---------- Bottom row: Live Orders + KDS ---------- */
+/* ---------- Bottom row: Live Orders + KDS, side by side ---------- */
 .table-mgmt-bottom-row {
     display: grid;
     grid-template-columns: 1fr 1.6fr;
@@ -8288,7 +8300,7 @@ body.pos-selection-mode .walkin-picker {
 }
 @media (max-width: 1100px) { .table-mgmt-bottom-row { grid-template-columns: 1fr; } }
 
-/* Live Orders */
+/* ---------- Live Orders (Dine-In) list ---------- */
 .table-live-orders-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
 .live-order-row {
     display: flex; flex-direction: column; gap: 4px; padding: 10px 12px;
@@ -8302,7 +8314,7 @@ body.pos-selection-mode .walkin-picker {
 .live-order-time { font-size: 11px; color: var(--text-tertiary, #94a3b8); margin-left: auto; }
 .live-order-row-items { font-size: 12px; color: var(--text-secondary, #64748b); }
 
-/* KDS */
+/* ---------- Kitchen Display System (KDS) ---------- */
 .kds-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 @media (max-width: 900px) { .kds-columns { grid-template-columns: 1fr; } }
 .kds-column { background: var(--neutral-50, #f8fafc); border-radius: 12px; border: 1px solid var(--border-color, #e2e8f0); overflow: hidden; display: flex; flex-direction: column; }
@@ -8313,7 +8325,7 @@ body.pos-selection-mode .walkin-picker {
 .kds-count { background: rgba(0,0,0,.08); padding: 1px 7px; border-radius: 8px; font-size: 10px; }
 .kds-column-body { padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 80px; max-height: 320px; overflow-y: auto; }
 .kds-empty { text-align: center; padding: 16px 8px; }
-.kds-card { background: #fff; border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+.kds-card { background: #fff; border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.05); transition: border-color .2s ease; }
 .kds-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .kds-card-table { font-size: 12px; font-weight: 800; color: var(--text-primary, #0f172a); }
 .kds-card-id { font-size: 10px; color: var(--text-tertiary, #94a3b8); }
@@ -8329,7 +8341,13 @@ body.pos-selection-mode .walkin-picker {
 @keyframes kdsUrgentPulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .kds-card-urgent .kds-card-footer { animation: none; } }
 
-/* ---------- Table Drawer ---------- */
+/* ---------- Table Drawer (uses existing .drawer-overlay / .drawer-content) ----------
+   Base .drawer-content is `inset:0` (full-page) with `transform:translateX(100%)`.
+   On desktop we narrow it to a right-anchored panel by overriding `left` to push
+   the panel's left edge inward, while keeping `right:0` from the base rule intact
+   so it still slides in from the right edge correctly. Mobile (≤1024px, see
+   mobile-overrides.css) already forces .drawer-content back to full-page width,
+   which is the correct behaviour for a phone screen — no override needed there. */
 @media (min-width: 1025px) {
     .table-drawer-content {
         left: calc(100% - 460px);
@@ -8378,9 +8396,10 @@ body.pos-selection-mode .walkin-picker {
 .table-drawer-actions { display: flex; flex-direction: column; gap: 8px; }
 .table-drawer-actions .btn-small { width: 100%; justify-content: center; }
 
+/* ---------- Order Details mini rows (reused styling for drawer order items) ---------- */
 .order-details-item-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary, #64748b); padding: 3px 0; }
 
-/* Action button colours */
+/* ---------- Action button colour variants ---------- */
 .btn-action-green, .btn-action-orange, .btn-action-blue {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 9px 14px; border-radius: 10px; font-weight: 700; font-size: 13px;
@@ -8390,44 +8409,17 @@ body.pos-selection-mode .walkin-picker {
 .btn-action-orange { background: #f59e0b; } .btn-action-orange:hover { background: #d97706; }
 .btn-action-blue { background: #2563eb; } .btn-action-blue:hover { background: #1d4ed8; }
 
-/* Table requests banner */
-.table-requests-banner {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px;
-    padding: 10px 16px; margin-bottom: 14px;
-}
-.table-requests-banner.hidden { display: none; }
-.table-request-chip {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: #fff; border: 1px solid #fca5a5; border-radius: 20px;
-    padding: 4px 12px 4px 8px; font-size: 12px; font-weight: 600; color: #991b1b;
-    cursor: pointer; transition: background .15s ease;
-}
-.table-request-chip:hover { background: #fee2e2; }
-.table-request-chip .chip-icon { width: 16px; height: 16px; }
-.table-request-chip .chip-close { margin-left: 4px; cursor: pointer; opacity: .5; }
-.table-request-chip .chip-close:hover { opacity: 1; }
-.table-kpi-card-alert { box-shadow: 0 0 0 2px #ef4444; }
-#tblKpiRequestsCard { transition: box-shadow .3s ease; }
-
-/* Order action buttons in table drawer */
-.drawer-order-actions {
-    display: flex; gap: 6px; flex-wrap: wrap;
-    margin: 6px 0 4px;
-}
-.drawer-order-actions .btn-small { font-size: 11px; padding: 5px 10px; }
-.drawer-order-actions .btn-action-blue,
-.drawer-order-actions .btn-action-orange,
-.drawer-order-actions .btn-action-green { color: #fff; }
-
-/* QR modal preview */
+/* ---------- QR modal preview ---------- */
 .table-qr-preview-wrap {
     display: flex; justify-content: center; padding: 16px;
     background: #fff; border-radius: 14px; border: 1px solid var(--border-color, #e2e8f0);
 }
 .table-qr-preview-wrap img { width: 220px; height: 220px; image-rendering: pixelated; }
 
-/* Dark mode support */
+/* ---------- Dark mode pre-emptive support ----------
+   Takes effect once [data-theme="dark"] is added to style.css (CSS-02
+   recommendation from the audit). Included here so Table Management
+   doesn't repeat that same light/dark gap on day one. */
 [data-theme="dark"] .table-grid-card,
 [data-theme="dark"] .live-order-row,
 [data-theme="dark"] .kds-column,
@@ -8438,4 +8430,4 @@ body.pos-selection-mode .walkin-picker {
     border-color: var(--border-color, rgba(255,255,255,.1));
 }
 [data-theme="dark"] .kds-card { background: var(--neutral-200, #2A2A2A); }
-[data-theme="dark"] .table-qr-preview-wrap { background: #fff; }
+[data-theme="dark"] .table-qr-preview-wrap { background: #fff; } /* QR must stay scannable black/white */

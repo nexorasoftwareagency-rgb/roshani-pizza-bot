@@ -579,7 +579,7 @@ export function renderOrders(snap) {
                         </div>
                         <div class="identity-info-v4">
                             <span class="name">#${safeOrderId}</span>
-                            <span class="sub">${escapeHtml(o.outlet.toUpperCase())}</span>
+                            <span class="sub">${escapeHtml((o.outlet || 'pizza').toUpperCase())}</span>
                         </div>
                     </div>
                 </td>

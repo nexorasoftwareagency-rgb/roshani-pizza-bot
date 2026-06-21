@@ -1,0 +1,237 @@
+<!-- ============================================================ -->
+<!-- 1) SIDEBAR ENTRY                                              -->
+<!-- Paste inside the "Operations" nav-group-label group (after    -->
+<!-- the existing #menu-walkin <li>, before the next                -->
+<!-- nav-group-label) in index.html                                -->
+<!-- ============================================================ -->
+
+<li id="menu-tables" title="Manage Dine-In Tables, Sessions, QR Codes &amp; Kitchen Display">
+    <button data-action="switchTab" data-tab="tables" class="nav-btn">
+        <i data-lucide="layout-grid"></i> <span>Tables</span>
+        <span id="badge-tables" class="nav-badge count hidden">0</span>
+    </button>
+</li>
+
+
+<!-- ============================================================ -->
+<!-- 2) MOBILE BOTTOM NAV ENTRY (optional)                        -->
+<!-- ============================================================ -->
+
+<button class="nav-item" data-action="switchTab" data-tab="tables">
+    <i data-lucide="layout-grid"></i>
+    <span>Tables</span>
+</button>
+
+
+<!-- ============================================================ -->
+<!-- 3) TAB CONTENT — paste as a sibling of the other               -->
+<!-- <div id="tab-...">  blocks inside .main                       -->
+<!-- ============================================================ -->
+
+<div id="tab-tables" class="tab-content hidden">
+
+    <div class="panel-header">
+        <div>
+            <h3><i data-lucide="layout-grid" class="icon-18"></i> Tables Management</h3>
+            <p class="panel-subtitle">Live view of all tables, their status and running orders</p>
+        </div>
+        <div class="flex-row flex-gap-10">
+            <button class="btn-secondary btn-small" data-action="exportTables">
+                <i data-lucide="download" class="icon-14"></i> Export
+            </button>
+            <button class="btn-secondary btn-small" data-action="bulkQrPrint">
+                <i data-lucide="printer" class="icon-14"></i> Bulk QR Print
+            </button>
+            <button class="btn-primary btn-small" data-action="openAddTable">
+                <i data-lucide="plus" class="icon-14"></i> Add Table
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI cards — 7 tiles matching the architecture's "Top KPI Cards" spec -->
+    <div class="table-kpi-grid">
+        <div class="table-kpi-card">
+            <i data-lucide="armchair" class="icon-20" style="color:var(--success)"></i>
+            <div><span class="table-kpi-num" id="tblKpiFree" style="color:var(--success)">0</span><span class="table-kpi-label">Free Tables</span></div>
+        </div>
+        <div class="table-kpi-card">
+            <i data-lucide="armchair" class="icon-20" style="color:var(--warning)"></i>
+            <div><span class="table-kpi-num" id="tblKpiOccupied" style="color:var(--warning)">0</span><span class="table-kpi-label">Occupied Tables</span></div>
+        </div>
+        <div class="table-kpi-card">
+            <i data-lucide="receipt" class="icon-20" style="color:var(--info)"></i>
+            <div><span class="table-kpi-num" id="tblKpiBilling" style="color:var(--info)">0</span><span class="table-kpi-label">Billing Tables</span></div>
+        </div>
+        <div class="table-kpi-card">
+            <i data-lucide="clipboard-list" class="icon-20" style="color:var(--primary)"></i>
+            <div><span class="table-kpi-num" id="tblKpiSessions">0</span><span class="table-kpi-label">Active Sessions</span></div>
+        </div>
+        <div class="table-kpi-card">
+            <i data-lucide="users" class="icon-20" style="color:var(--primary)"></i>
+            <div><span class="table-kpi-num" id="tblKpiGuests">0</span><span class="table-kpi-label">Current Guests</span></div>
+        </div>
+        <div class="table-kpi-card">
+            <i data-lucide="indian-rupee" class="icon-20" style="color:var(--success)"></i>
+            <div><span class="table-kpi-num" id="tblKpiRevenue">₹0</span><span class="table-kpi-label">Revenue Today</span></div>
+        </div>
+        <div class="table-kpi-card">
+            <i data-lucide="clock" class="icon-20" style="color:var(--text-secondary)"></i>
+            <div><span class="table-kpi-num" id="tblKpiAvgTime">0 min</span><span class="table-kpi-label">Avg. Session Time</span></div>
+        </div>
+    </div>
+
+    <!-- Restaurant Floor Plan -->
+    <div class="glass-card mb-16">
+        <div class="flex-between flex-center mb-10">
+            <div>
+                <h4 class="section-card-heading" style="margin-bottom:2px;"><i data-lucide="grid-3x3" class="icon-14"></i> Restaurant Floor Plan</h4>
+                <p class="text-muted-small" style="margin:0;">Click on any table to view details and take actions</p>
+            </div>
+            <div class="table-legend">
+                <span><i class="legend-dot legend-free"></i> Free</span>
+                <span><i class="legend-dot legend-occupied"></i> Occupied</span>
+                <span><i class="legend-dot legend-billing"></i> Billing</span>
+                <span><i class="legend-dot legend-disabled"></i> Disabled</span>
+            </div>
+        </div>
+        <div id="tableManagementGrid" class="table-grid">
+            <div class="empty-state"><i data-lucide="loader" class="icon-32 text-muted"></i><p>Loading tables…</p></div>
+        </div>
+    </div>
+
+    <!-- Live Orders + Kitchen Display (below the floor plan, full width) -->
+    <div class="table-mgmt-bottom-row">
+        <div class="glass-card">
+            <div class="flex-between flex-center mb-10">
+                <h4 class="section-card-heading" style="margin-bottom:0;"><i data-lucide="clipboard-list" class="icon-14"></i> Live Orders (Dine In)</h4>
+                <span class="nav-badge count" id="tableLiveOrdersCount">0</span>
+            </div>
+            <div id="tableLiveOrdersList" class="table-live-orders-list">
+                <p class="text-muted-small">Loading…</p>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <h4 class="section-card-heading"><i data-lucide="chef-hat" class="icon-14"></i> Kitchen Display (KDS)</h4>
+            <div class="kds-columns">
+                <div class="kds-column">
+                    <div class="kds-column-header kds-header-new"><span>New Orders</span> <span id="kdsCountNew" class="kds-count">0</span></div>
+                    <div id="kdsColumnNew" class="kds-column-body"></div>
+                </div>
+                <div class="kds-column">
+                    <div class="kds-column-header kds-header-preparing"><span>Preparing</span> <span id="kdsCountPreparing" class="kds-count">0</span></div>
+                    <div id="kdsColumnPreparing" class="kds-column-body"></div>
+                </div>
+                <div class="kds-column">
+                    <div class="kds-column-header kds-header-ready"><span>Ready to Serve</span> <span id="kdsCountReady" class="kds-count">0</span></div>
+                    <div id="kdsColumnReady" class="kds-column-body"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- 4) TABLE DRAWER — slide-over panel from the right, matching   -->
+<!-- the existing .order-drawer / .pos-side-panel pattern.         -->
+<!-- Paste as a direct child of <body>, sibling to #orderDrawer.    -->
+<!-- ============================================================ -->
+
+<div id="tableDrawerOverlay" class="drawer-overlay"></div>
+<div id="tableDrawer" class="drawer-content table-drawer-content">
+    <div class="table-drawer-header">
+        <div>
+            <h3 id="tableDrawerTitle">Table —</h3>
+            <div class="flex-row flex-gap-8 flex-center">
+                <span id="tableDrawerStatusBadge" class="table-drawer-status-badge">—</span>
+                <span class="text-muted-small" id="tableDrawerSessionState">—</span>
+            </div>
+        </div>
+        <button class="close-btn" id="tableDrawerCloseBtn" aria-label="Close table details">
+            <i data-lucide="x"></i>
+        </button>
+    </div>
+
+    <div class="table-drawer-body">
+        <div class="table-drawer-meta-grid">
+            <div><i data-lucide="users" class="icon-14"></i><span class="text-muted-small">Capacity</span><strong id="tableDrawerCapacity">—</strong></div>
+            <div><i data-lucide="clock" class="icon-14"></i><span class="text-muted-small">Session Started</span><strong id="tableDrawerSessionStarted">—</strong></div>
+            <div><i data-lucide="timer" class="icon-14"></i><span class="text-muted-small">Running Time</span><strong id="tableDrawerRunningTime">—</strong></div>
+        </div>
+
+        <div id="tableDrawerOrders" class="mt-16"></div>
+        <div id="tableDrawerTotalCard" class="mt-14"></div>
+        <div id="tableDrawerActions" class="table-drawer-actions mt-16"></div>
+
+        <div class="mt-20">
+            <h5 class="text-muted-small mb-8"><i data-lucide="qr-code" class="icon-14"></i> Table QR Code</h5>
+            <p class="text-muted-small">Customers scan this code to order from this table. Use "View QR" above to print or copy the link.</p>
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- 5) MODAL — Add / Edit Table                                  -->
+<!-- Direct child of <body>, sibling to #dishModal                 -->
+<!-- ============================================================ -->
+
+<div id="tableEditorModal" class="modal">
+    <div class="modal-content" style="max-width:380px;">
+        <div class="modal-header">
+            <h2 id="tableEditorTitle" class="modal-title">Add Table</h2>
+            <button class="close-btn" id="tableEditorCloseBtn" aria-label="Close dialog">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Table Number <span class="required-star">*</span></label>
+                <input type="text" id="tblNumber" class="form-input" placeholder="e.g. 07">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Capacity (Seats)</label>
+                <input type="number" id="tblCapacity" class="form-input" min="1" placeholder="e.g. 4">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" id="tableEditorCancelBtn">Cancel</button>
+            <button class="btn-primary" id="tableEditorSaveBtn">
+                <i data-lucide="save" class="icon-16"></i>
+                <span class="btn-text">Save Table</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- 6) MODAL — QR Code Display (single table)                     -->
+<!-- ============================================================ -->
+
+<div id="tableQrModal" class="modal">
+    <div class="modal-content" style="max-width:340px; text-align:center;">
+        <div class="modal-header">
+            <h2 id="tableQrModalTitle" class="modal-title">Table QR Code</h2>
+            <button class="close-btn" id="tableQrCloseBtn" aria-label="Close dialog">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="modal-body" style="padding-top:4px;">
+            <div class="table-qr-preview-wrap">
+                <img id="tableQrModalImage" alt="QR code" width="220" height="220">
+            </div>
+            <p class="text-muted-small mt-10" id="tableQrModalUrl" style="word-break:break-all;"></p>
+            <button class="btn-secondary btn-small mt-8" id="tableQrCopyLinkBtn" style="width:100%;">
+                <i data-lucide="link" class="icon-14"></i> Copy Link
+            </button>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="document.getElementById('tableQrModal').classList.remove('active')">Close</button>
+            <button class="btn-primary" id="tableQrPrintBtn">
+                <i data-lucide="printer" class="icon-16"></i> Print QR Card
+            </button>
+        </div>
+    </div>
+</div>

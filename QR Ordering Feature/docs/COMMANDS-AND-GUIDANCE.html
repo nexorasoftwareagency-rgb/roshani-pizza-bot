@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Table Management + QR Dine-In — Commands &amp; Guidance</title>
+<style>
+:root{--or:#E84908;--gr:#22c55e;--rd:#ef4444;--am:#f59e0b;--bl:#3b82f6;--pu:#a855f7;--bg:#f8fafc;--bdr:#e2e8f0;--txt:#0f172a;--sub:#64748b;--mono:'Courier New',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--txt);line-height:1.65;font-size:14px}
+.wrap{max-width:980px;margin:0 auto;padding:28px 18px}
+.hero{background:linear-gradient(135deg,#fff7ed,#f0fdf4,#eff6ff);border:1px solid #fed7aa;border-left:6px solid var(--or);border-radius:18px;padding:26px 28px;margin-bottom:22px}
+.hero h1{font-size:22px;font-weight:900;margin-bottom:6px}
+.hero p{font-size:13px;color:var(--sub);line-height:1.8}
+.toc{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+.toc a{font-size:11px;padding:5px 12px;border-radius:20px;font-weight:800;background:#fff;border:1px solid var(--bdr);color:var(--sub);text-decoration:none}
+.sec{margin-bottom:32px;}
+.sech{font-size:16px;font-weight:900;color:var(--txt);margin-bottom:6px;padding-bottom:8px;border-bottom:2px solid var(--bdr);display:flex;align-items:center;gap:8px;scroll-margin-top:20px}
+.sech .n{font-size:11px;background:var(--or);color:#fff;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:900}
+.subh{font-size:13px;font-weight:800;margin:18px 0 8px;color:var(--txt)}
+p{margin-bottom:10px;color:var(--sub)}
+pre{background:#0f172a;color:#e2e8f0;padding:14px 16px;font-size:12px;font-family:var(--mono);overflow-x:auto;line-height:1.7;border-radius:10px;margin:10px 0}
+code{font-family:var(--mono);font-size:12px;background:#f1f5f9;color:#1e293b;padding:1px 6px;border-radius:4px}
+.box{border-radius:12px;padding:14px 16px;margin:12px 0;font-size:13px;line-height:1.65}
+.box-info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+.box-warn{background:#fef3c7;border:1px solid #fde68a;color:#92400e}
+.box-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d}
+.box-crit{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c}
+ul,ol{margin:8px 0 14px 22px;color:var(--sub)}
+li{margin-bottom:6px}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0}
+th{background:#f8fafc;padding:8px 10px;text-align:left;font-weight:800;color:var(--sub);border-bottom:2px solid var(--bdr)}
+td{padding:8px 10px;border-bottom:1px solid var(--bdr);vertical-align:top}
+.file-tree{font-family:var(--mono);font-size:12px;background:#0f172a;color:#cbd5e1;padding:16px;border-radius:10px;line-height:1.8}
+.file-tree .new{color:#86efac}
+.file-tree .mod{color:#fde047}
+.badge-step{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--or);color:#fff;font-size:11px;font-weight:900;margin-right:8px;flex-shrink:0}
+.step-row{display:flex;align-items:flex-start;gap:0;padding:10px 0;border-bottom:1px solid var(--bdr)}
+.step-row:last-child{border-bottom:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <h1>📘 Table Management + QR Dine-In — Commands &amp; Guidance</h1>
+  <p>Step-by-step integration instructions for the complete session-based Table Management feature, built to the architecture specified in your final spec document. Covers Firebase Security Rules, file placement, ui.js wiring, compatibility notes, and a testing checklist.</p>
+  <div class="toc">
+    <a href="#s1">1. File Manifest</a>
+    <a href="#s2">2. Firebase Rules</a>
+    <a href="#s3">3. Admin Integration</a>
+    <a href="#s4">4. Customer App Deploy</a>
+    <a href="#s5">5. Compatibility Notes</a>
+    <a href="#s6">6. dineinSettings Seed</a>
+    <a href="#s7">7. Testing Checklist</a>
+    <a href="#s8">8. Known Limitations</a>
+  </div>
+</div>
+
+<!-- ============ 1. FILE MANIFEST ============ -->
+<div class="sec" id="s1">
+  <div class="sech"><span class="n">1</span> File Manifest — What Was Built</div>
+  <p>Every file below matches the "Files to Create" / "Files to Modify" lists in your architecture spec.</p>
+
+  <div class="file-tree">
+Admin/<br>
+&nbsp;&nbsp;js/features/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="new">tables.js</span> — NEW · Table CRUD, sessions, KDS, drawer, QR<br>
+&nbsp;&nbsp;<span class="mod">index.html</span> — MODIFY · sidebar entry + tab + drawer + 2 modals<br>
+&nbsp;&nbsp;<span class="mod">js/ui.js</span> — MODIFY · 2-line patch (see ui.js.PATCH.txt)<br>
+&nbsp;&nbsp;<span class="mod">js/features/printing.js</span> — MODIFY (optional) · printKOT() export<br>
+&nbsp;&nbsp;<span class="mod">style.css</span> — MODIFY · append table-management.css contents<br>
+<br>
+Menu/  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>(new standalone public app — separate deploy target)</i><br>
+&nbsp;&nbsp;<span class="new">index.html</span><br>
+&nbsp;&nbsp;css/<span class="new">app.css</span><br>
+&nbsp;&nbsp;js/<span class="new">firebase.js</span><br>
+&nbsp;&nbsp;js/<span class="new">app.js</span><br>
+&nbsp;&nbsp;js/<span class="new">cart.js</span><br>
+&nbsp;&nbsp;js/<span class="new">order.js</span><br>
+&nbsp;&nbsp;js/<span class="new">session.js</span><br>
+&nbsp;&nbsp;js/<span class="new">ui.js</span>
+  </div>
+
+  <table>
+    <tr><th>Deliverable</th><th>Purpose</th></tr>
+    <tr><td><code>tables.js</code></td><td>Admin module — floor grid, KPI cards, table drawer, KDS, session lifecycle, QR generation</td></tr>
+    <tr><td><code>table-management-html-snippets.html</code></td><td>Exact HTML to paste: sidebar &lt;li&gt;, tab content, drawer, 2 modals</td></tr>
+    <tr><td><code>table-management.css</code></td><td>All styling — append to style.css</td></tr>
+    <tr><td><code>ui.js.PATCH.txt</code></td><td>2-line patch instructions for the existing switchTab() function</td></tr>
+    <tr><td><code>printing.js.PATCH.txt</code></td><td>Optional printKOT() export, consolidates KOT printing into existing infra</td></tr>
+    <tr><td><code>customer-menu/</code> folder</td><td>Complete standalone customer-facing ordering SPA</td></tr>
+  </table>
+</div>
+
+<!-- ============ 2. FIREBASE RULES ============ -->
+<div class="sec" id="s2">
+  <div class="sech"><span class="n">2</span> Firebase Realtime Database Security Rules</div>
+  <div class="box box-crit"><strong>Critical — do this before deploying the customer app.</strong> The customer menu has NO authentication wall by design (per the spec's UX decision to minimize friction). Every protection against abuse must live in these rules, not in client-side JavaScript.</div>
+
+  <p>Add this under each outlet node (replace <code>pizza</code> with your actual outlet key, repeat for every outlet):</p>
+
+<pre>{
+  "rules": {
+    "pizza": {
+
+      "tables": {
+        ".read": true,
+        ".write": "auth != null",
+        "$tableId": {
+          ".validate": "newData.hasChildren(['number','capacity','status','token'])"
+        }
+      },
+
+      "tableSessions": {
+        ".read": true,
+        "$sessionId": {
+          ".write": "auth != null || (!data.exists() || data.child('status').val() === 'active')",
+          "orders": {
+            ".write": "auth != null || (data.parent().child('status').val() !== 'closed')"
+          },
+          "runningTotal": { ".write": true },
+          "tax": { ".write": true },
+          "grandTotal": { ".write": true },
+          "status": {
+            ".write": "auth != null || newData.val() === 'billing'"
+          }
+        }
+      },
+
+      "orders": {
+        ".read": "auth != null",
+        "$orderId": {
+          ".write": "auth != null || (!data.exists() && newData.child('source').val() === 'QR')",
+          ".validate": "newData.hasChildren(['status','items','total','createdAt'])"
+        }
+      },
+
+      "tableRequests": {
+        ".read": "auth != null",
+        ".write": true,
+        "$reqId": {
+          ".validate": "!data.exists() && newData.hasChildren(['tableId','type','createdAt'])"
+        }
+      },
+
+      "tableAnalytics": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      },
+
+      "dineinSettings": {
+        ".read": true,
+        ".write": "auth != null"
+      },
+
+      "categories": { ".read": true },
+      "dishes": { ".read": true },
+      "settings": {
+        "storeName": { ".read": true },
+        "customerMenuBgImage": { ".read": true }
+      }
+    }
+  }
+}</pre>
+
+  <div class="box box-warn">
+    <strong>What these rules enforce:</strong>
+    <ul>
+      <li><strong>tables:</strong> public read (needed to validate the QR token client-side), write requires admin auth only — customers never write directly to a table record</li>
+      <li><strong>tableSessions:</strong> public read for the running-bill UI; a session can only be created while it doesn't already exist or is still active, preventing a customer from reopening a closed/billed session</li>
+      <li><strong>orders:</strong> a non-authenticated client can only CREATE a new order (never update/delete an existing one), and only if it's tagged <code>source:"QR"</code> — status changes, cancellations, etc. require admin auth</li>
+      <li><strong>tableRequests:</strong> create-only, no read — customers can't see other tables' call-waiter history</li>
+      <li><strong>categories / dishes:</strong> public read only — menu browsing needs no auth</li>
+    </ul>
+  </div>
+
+  <p>If your existing rules file already has top-level rules for <code>orders</code>, <code>categories</code>, etc. (very likely, since this is an existing ERP), <strong>merge</strong> the rules above into your existing structure rather than overwriting it — the new <code>tables</code>, <code>tableSessions</code>, <code>tableRequests</code>, <code>tableAnalytics</code>, and <code>dineinSettings</code> nodes are additions; your existing rules for <code>orders</code>/<code>dishes</code>/<code>categories</code> should be combined with the conditions shown above (use <code>||</code> to OR your existing condition with the new QR-specific one).</p>
+</div>
+
+<!-- ============ 3. ADMIN INTEGRATION ============ -->
+<div class="sec" id="s3">
+  <div class="sech"><span class="n">3</span> Admin Panel Integration Steps</div>
+
+  <div class="step-row"><span class="badge-step">1</span><div><strong>Drop the new module file.</strong> Copy <code>tables.js</code> into <code>Admin/js/features/tables.js</code>. No changes needed to the file itself.</div></div>
+  <div class="step-row"><span class="badge-step">2</span><div><strong>Paste the sidebar entry.</strong> Open <code>table-management-html-snippets.html</code> section 1 and paste the <code>&lt;li id="menu-tables"&gt;</code> block into the <strong>Operations</strong> nav-group in <code>index.html</code>, right after the existing <code>#menu-walkin</code> item.</div></div>
+  <div class="step-row"><span class="badge-step">3</span><div><strong>Paste the tab content.</strong> Section 3 of the same file — paste as a sibling <code>&lt;div id="tab-tables"&gt;</code> alongside your other <code>tab-*</code> divs inside <code>.main</code>.</div></div>
+  <div class="step-row"><span class="badge-step">4</span><div><strong>Paste the Table Drawer.</strong> Section 4 — paste as a direct child of <code>&lt;body&gt;</code>, sibling to your existing <code>#orderDrawer</code>. It reuses the existing <code>.drawer-overlay</code> / <code>.drawer-content</code> classes so it animates identically to your current Order Detail view.</div></div>
+  <div class="step-row"><span class="badge-step">5</span><div><strong>Paste the 2 modals.</strong> Sections 5 and 6 — <code>#tableEditorModal</code> and <code>#tableQrModal</code>, as siblings to your existing <code>#dishModal</code>.</div></div>
+  <div class="step-row"><span class="badge-step">6</span><div><strong>Append the CSS.</strong> Copy the entire contents of <code>table-management.css</code> to the end of <code>style.css</code>.</div></div>
+  <div class="step-row"><span class="badge-step">7</span><div><strong>Patch ui.js.</strong> Open <code>ui.js.PATCH.txt</code> and make the 2 small edits inside the existing <code>switchTab()</code> function — one line added to the cleanup array, one new <code>case 'tables':</code> block in the switch statement.</div></div>
+  <div class="step-row"><span class="badge-step">8</span><div><strong>(Optional) Patch printing.js.</strong> Only if you want KOT printing to share the existing iframe-print infrastructure instead of tables.js's self-contained popup. See <code>printing.js.PATCH.txt</code> — this step can be skipped entirely; the feature works without it.</div></div>
+  <div class="step-row"><span class="badge-step">9</span><div><strong>Deploy the Firebase rules</strong> from Section 2 above before testing anything that writes data.</div></div>
+  <div class="step-row"><span class="badge-step">10</span><div><strong>Seed <code>dineinSettings</code></strong> — see Section 6 below — then hard-refresh the admin panel and click <strong>Tables</strong> in the sidebar.</div></div>
+</div>
+
+<!-- ============ 4. CUSTOMER APP DEPLOY ============ -->
+<div class="sec" id="s4">
+  <div class="sech"><span class="n">4</span> Deploying the Customer-Facing Menu App</div>
+  <p>The <code>customer-menu/</code> folder is a complete, independent static site — it does not get bundled into the Admin panel's build. Deploy it separately (e.g. as a second Firebase Hosting site, a Vercel/Netlify project, or a subfolder of your existing hosting under <code>/menu/</code>).</p>
+
+  <div class="subh">Step-by-step:</div>
+  <ol>
+    <li>Rename the folder structure as needed for your host (the files are already organized as <code>index.html</code>, <code>css/app.css</code>, <code>js/*.js</code> — most static hosts accept this as-is).</li>
+    <li>Open <code>Menu/js/firebase.js</code> and paste in the <strong>same</strong> <code>firebaseConfig</code> values used in <code>Admin/firebase-config.js</code>. This is safe to expose publicly.</li>
+    <li>Decide your URL shape. The app reads the outlet from the URL path (<code>pathParts[0]</code>) and the token from <code>?t=</code>. Example: <code>https://menu.roshanipizza.com/pizza/?t=7YH8K2P4X9F6M2A</code>. If you only ever serve one outlet, you can hardcode <code>OUTLET</code> in <code>firebase.js</code> instead.</li>
+    <li>Set <code>pizza/dineinSettings/qrBaseUrl</code> in Firebase to match wherever you deployed this (e.g. <code>https://menu.roshanipizza.com/pizza/</code>) — <code>tables.js</code> reads this value when generating QR codes, so it always points at the live customer app.</li>
+    <li>Deploy. Test by adding one table in the admin, opening its QR modal, and scanning it with a phone.</li>
+  </ol>
+
+  <div class="box box-info">The customer app uses the <code>qrcode.js</code> CDN library (cdnjs.cloudflare.com, MIT licensed) loaded on-demand only when a QR needs generating — it is never loaded for the customer-facing ordering flow itself, keeping that bundle small.</div>
+</div>
+
+<!-- ============ 5. COMPATIBILITY NOTES ============ -->
+<div class="sec" id="s5">
+  <div class="sech"><span class="n">5</span> Compatibility Notes — Where This Implementation Deviates From the Literal Spec Text</div>
+  <div class="box box-warn">There is exactly <strong>one</strong> intentional deviation from your architecture document, made to avoid breaking existing code. Everything else follows the spec precisely.</div>
+
+  <div class="subh">type: "Dine-in" instead of "DineIn"</div>
+  <p>Your spec's order structure example uses <code>"type":"DineIn"</code> (no hyphen). The <strong>existing</strong> <code>Admin/js/features/orders.js</code> already defines:</p>
+  <pre>STATUS_SEQUENCES['Dine-in'] = ["Confirmed", "Ready", "Delivered"]</pre>
+  <p>and <code>getStatusOptions()</code> branches on that exact literal string (with the hyphen). If new orders were written with <code>type:"DineIn"</code>, they would silently fall through to the default/Online status pipeline — breaking status progression, KDS grouping, and printing for every QR order, with no error thrown anywhere.</p>
+  <p><code>Menu/js/order.js</code> therefore writes <code>type:"Dine-in"</code> (matching the pre-existing constant exactly) and adds <code>source:"QR"</code> as a separate field so you can still distinguish a QR-originated dine-in order from one a staff member keys in at the counter via POS. <code>tables.js</code> filters on <code>o.type === 'Dine-in'</code> throughout.</p>
+
+  <div class="subh">If you'd rather standardize on "DineIn"</div>
+  <p>This is a 10-minute change if you prefer the no-hyphen spelling project-wide: rename the key in <code>STATUS_SEQUENCES</code> inside <code>orders.js</code> from <code>'Dine-in'</code> to <code>'DineIn'</code>, update every place that checks <code>o.type === 'Dine-in'</code> (in <code>orders.js</code> itself, and in the new <code>tables.js</code>), and update <code>Menu/js/order.js</code>'s payload accordingly. Just make sure all three are changed together in the same deploy.</p>
+
+  <div class="subh">Everything else matches the spec exactly</div>
+  <ul>
+    <li>✅ No <code>dineinOrders</code>, <code>qrOrders</code>, <code>tableOrders</code>, or any parallel node — orders reuse the single existing <code>/orders</code> path</li>
+    <li>✅ Tables → Sessions → Orders → Items hierarchy implemented exactly as specified</li>
+    <li>✅ Session-based billing — multiple orders roll into one <code>tableSessions/{id}</code> record with a running <code>grandTotal</code></li>
+    <li>✅ Secure random tokens (<code>crypto.getRandomValues</code>), never a guessable <code>?table=07</code> parameter</li>
+    <li>✅ Table statuses limited to exactly 4 values: <code>free / occupied / billing / disabled</code> — order progress lives entirely in <code>/orders</code>, not duplicated onto the table</li>
+    <li>✅ Join-or-create session logic — a family scanning the same QR multiple times joins the same session, implemented via a Firebase transaction to avoid race conditions</li>
+    <li>✅ Customer name/phone collected only at checkout, never before browsing</li>
+    <li>✅ Exactly 3 Firebase listeners in the admin module (<code>tables</code>, <code>tableSessions</code>, <code>orders</code>) — never one-listener-per-table</li>
+    <li>✅ DocumentFragment-free but still batched rendering via single <code>innerHTML</code> writes per render pass, not per-row appends</li>
+    <li>✅ <code>tableAnalytics</code> node populated on session close, exactly as specified</li>
+  </ul>
+</div>
+
+<!-- ============ 6. SEED DATA ============ -->
+<div class="sec" id="s6">
+  <div class="sech"><span class="n">6</span> Seed <code>dineinSettings</code> Before First Use</div>
+  <p>Add this node once via the Firebase Console (or a one-time script) under each outlet:</p>
+<pre>pizza/dineinSettings: {
+  "enabled": true,
+  "enableSessions": true,
+  "enableRequestBill": true,
+  "showRunningBill": true,
+  "taxPercent": 5,
+  "serviceCharge": 0,
+  "autoCloseSession": false,
+  "qrBaseUrl": "https://menu.roshanipizza.com/pizza/"
+}</pre>
+  <p>The customer app reads <code>taxPercent</code> for its bill calculation and <code>qrBaseUrl</code> (via <code>tables.js</code>) for QR generation. If this node is missing entirely, both default to <code>5</code>% tax and <code>window.location.origin + '/menu/'</code> respectively — the feature still works, just with un-configured defaults.</p>
+</div>
+
+<!-- ============ 7. TESTING CHECKLIST ============ -->
+<div class="sec" id="s7">
+  <div class="sech"><span class="n">7</span> End-to-End Testing Checklist</div>
+  <ol>
+    <li>Open Admin → Tables. Click <strong>Add Table</strong>, create Table 07 with 4 seats. Confirm it appears in the floor grid as <em>Free</em>.</li>
+    <li>Click the table card → drawer opens from the right → click <strong>View / Print QR</strong> → confirm a QR image renders (requires internet for the qrcode.js CDN on first load only).</li>
+    <li>Copy the QR URL shown under the image. Open it in a phone browser (or a new incognito tab) — confirm the Welcome screen shows "TABLE 07".</li>
+    <li>Tap <strong>Start Ordering</strong> → browse categories → tap a dish → customize size/add-ons → <strong>Add to Order</strong> → confirm the cart badge updates.</li>
+    <li>Open the cart → confirm subtotal/tax/total are correct → tap <strong>Place Order</strong> (name/phone optional, leave blank to test the "no contact" path) → confirm it advances to Order Tracking with step 1 ("Order Received") active.</li>
+    <li>Back in Admin → Tables, confirm: the table card now shows <em>Occupied</em> with a running bill amount; the new order appears in <strong>Live Orders (Dine In)</strong>; the same order appears in the <strong>New Orders</strong> KDS column.</li>
+    <li>In the table drawer, click <strong>Accept Order</strong>-equivalent (the first action button shown matches the order's current status) → confirm the customer's tracking screen updates to "Preparing" within a few seconds (live Firebase listener, no refresh needed).</li>
+    <li>From the same phone, scan the <em>same</em> QR again (simulating a second guest at the table) → confirm it does NOT create a second session — it should land directly on the Order Tracking screen showing the existing order, not the Welcome screen again.</li>
+    <li>From the phone, order a second item (tap the "+ Order More Items" button) → place a second order → confirm in Admin that the table drawer's "Current Orders" count is now 2, and the running total is the SUM of both orders, not just the latest one.</li>
+    <li>From the phone's Call Waiter screen, tap <strong>Request Bill</strong> → confirm the table card in Admin flips to the <em>Billing</em> status color immediately.</li>
+    <li>In Admin, click <strong>Close Table (Paid)</strong> in the drawer → confirm: the table returns to <em>Free</em>, the drawer's order list clears, and (check Firebase directly) <code>pizza/tableAnalytics/{tableId}</code> now has incremented <code>totalOrders</code> and <code>totalRevenue</code>.</li>
+    <li>Test <strong>Bulk QR Print</strong> with 2–3 tables created — confirm a new browser tab opens with a print-ready grid of QR cards.</li>
+    <li>Test the offline path: disable network in devtools, reload the Tables tab — confirm the "Waiting for connection" placeholder appears, then re-enable network and confirm it auto-recovers without a manual refresh.</li>
+  </ol>
+</div>
+
+<!-- ============ 8. KNOWN LIMITATIONS ============ -->
+<div class="sec" id="s8">
+  <div class="sech"><span class="n">8</span> Known Limitations &amp; Intentional Scope Boundaries</div>
+  <ul>
+    <li><strong>Discounts/service charge</strong> fields exist on the session record (<code>discount</code>, and <code>serviceCharge</code> in <code>dineinSettings</code>) but are not yet wired into the bill calculation UI — <code>order.js</code> and <code>tables.js</code> currently compute totals as subtotal + tax only. Hooking in the existing Discounts module (<code>discounts.js</code>) for dine-in orders is straightforward since it already operates on the same <code>/orders</code> node, but wasn't explicitly requested.</li>
+    <li><strong>Table disable while occupied</strong> is blocked at the UI level (no disable button shown for a table with an active session) but not yet enforced by a Security Rule — add a <code>.validate</code> condition on <code>tables/$tableId/status</code> if you want server-side enforcement too.</li>
+    <li>The customer app's <strong>"Order Again"</strong> flow from the spec's customer flow diagram is implemented as the generic "+ Order More Items" button (returns to the menu) rather than a one-tap repeat of the previous order — repeat-order is a small additive feature on top of <code>cart.js</code> if wanted later.</li>
+  </ul>
+
+  <div class="box box-ok">
+    <strong>Resolved during review:</strong> each order inside the table drawer now has a working <strong>"Open in Orders tab"</strong> link. Since the existing <code>orders.js</code> render doesn't currently surface a table number in row text, it switches to the Orders tab and searches by the order's own ID (using the existing <code>#orderSearch</code> input, which already supports "Search ID or name") rather than filtering by table — this avoids touching <code>orders.js</code>'s render logic while still getting the admin to the right order in two clicks.
+  </div>
+</div>
+
+</div>
+</body>
+</html>

@@ -267,8 +267,8 @@ window.initActiveMap = (order) => {
     if (window.riderLocation) {
         if (riderMarker) activeMap.removeLayer(riderMarker);
         riderMarker = L.circleMarker([window.riderLocation.lat, window.riderLocation.lng], {
-            color: '#f36b21',
-            fillColor: '#f36b21',
+            color: '#E84908',
+            fillColor: '#E84908',
             fillOpacity: 0.8,
             radius: 8
         }).addTo(activeMap).bindPopup("You are here");
@@ -293,8 +293,8 @@ window.initDefaultMap = () => {
 
     if (window.riderLocation) {
         riderMarker = L.circleMarker([window.riderLocation.lat, window.riderLocation.lng], {
-            color: '#f36b21',
-            fillColor: '#f36b21',
+            color: '#E84908',
+            fillColor: '#E84908',
             fillOpacity: 0.8,
             radius: 8
         }).addTo(activeMap).bindPopup("You are here");
@@ -474,7 +474,7 @@ window.finalizeDeliverySequence = async (orderPath, matchesFallback, order, paym
             particleCount: 150,
             spread: 70,
             origin: { y: 0.6 },
-            colors: ['#f36b21', '#FF7A00', '#22C55E']
+            colors: ['#E84908', '#FF7A00', '#22C55E']
         });
     }
 
