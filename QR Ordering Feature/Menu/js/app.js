@@ -260,6 +260,15 @@ document.getElementById('btnMenuFromTracking')?.addEventListener('click', () => 
 document.getElementById('btnOrderMore')?.addEventListener('click', () => UI.showScreen('screenMenu'));
 document.getElementById('btnGotoCallWaiter')?.addEventListener('click', () => UI.showScreen('screenWaiter'));
 document.getElementById('btnStartOrdering')?.addEventListener('click', () => UI.showScreen('screenMenu'));
+document.getElementById('btnRequestBillFromTracking')?.addEventListener('click', async () => {
+    haptic(20);
+    try {
+        await requestBill();
+        UI.showToast('Bill requested — thank you!');
+    } catch (e) {
+        UI.showToast('Could not request bill. Please try again.');
+    }
+});
 
 // ---------------------------------------------------------------
 // CALL WAITER

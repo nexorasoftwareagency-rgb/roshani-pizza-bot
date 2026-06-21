@@ -42,14 +42,14 @@ img{max-width:100%; display:block;}
         radial-gradient(circle at 20% 15%, rgba(232,73,8,.35), transparent 45%),
         radial-gradient(circle at 85% 75%, rgba(232,73,8,.18), transparent 50%),
         linear-gradient(160deg,#1a1a1a,#2a2a2a);
-    color:#fff; justify-content:flex-end; padding:0;
+    color:#fff; justify-content:center; align-items:center; padding:0;
     background-size:cover; background-position:center;
     position:relative; overflow:hidden;
 }
 .welcome-screen.has-photo{ animation: heroPhotoFadeIn .6s ease both; }
 @keyframes heroPhotoFadeIn{ from{ filter:brightness(.7) saturate(.8); } to{ filter:brightness(1) saturate(1); } }
 @media (prefers-reduced-motion: reduce){ .welcome-screen.has-photo{ animation:none; } }
-.welcome-overlay{ background:linear-gradient(to top, rgba(0,0,0,.88) 8%, rgba(0,0,0,.35) 55%, rgba(0,0,0,.05) 100%); padding:32px 24px calc(32px + var(--safe-bottom)); position:relative; z-index:1; }
+.welcome-overlay{ background:rgba(0,0,0,.55); padding:40px 24px; position:relative; z-index:1; width:100%; text-align:center; }
 .welcome-table-pill{ display:inline-block; font-size:13px; font-weight:700; letter-spacing:.05em; color:#fcd9c2; margin-bottom:4px; }
 .welcome-table-num{font-size:38px; font-weight:900; line-height:1; margin-bottom:14px; text-shadow:0 2px 12px rgba(0,0,0,.4);}
 .welcome-title{font-size:13px; opacity:.85; margin-bottom:2px;}
@@ -165,6 +165,8 @@ img{max-width:100%; display:block;}
 .session-bill-total-row{ display:flex; justify-content:space-between; font-size:15px; font-weight:900; padding-top:10px; margin-top:6px; border-top:1px solid var(--border); }
 
 .btn-order-more{ display:block; width:100%; text-align:center; background:rgba(232,73,8,.08); color:var(--primary); border:1.5px solid rgba(232,73,8,.3); padding:13px; border-radius:14px; font-weight:800; font-size:14px; margin-top:18px; }
+.btn-request-bill{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; background:var(--error); color:#fff; padding:14px; border-radius:14px; font-weight:800; font-size:14px; margin-top:12px; }
+.btn-request-bill:active{background:#dc2626;}
 .tracking-call-waiter-link{ display:block; text-align:center; margin-top:14px; font-size:13px; font-weight:700; color:var(--text-sub); }
 
 /* ---------- Screen 6: Call Waiter ---------- */
