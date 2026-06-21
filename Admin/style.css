@@ -972,7 +972,7 @@ html, body {
     padding: 20px;
     position: fixed;
     width: 100%;
-    z-index: 4000;
+    z-index: 8000;
     transition: opacity .25s ease, visibility .25s ease;
 }
 
