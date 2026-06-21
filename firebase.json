@@ -178,7 +178,7 @@
     },
     {
       "target": "menu",
-      "public": "QR Ordering Feature\\Menu",
+      "public": "menu",
       "ignore": [
         "firebase.json",
         "**/.*",
