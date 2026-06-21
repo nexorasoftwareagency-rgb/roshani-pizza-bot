@@ -994,5 +994,6 @@ window.__tables = {
     openDrawerByOrder: _openTableDrawerByOrder, requestBill: _requestBillForTable,
     printKOT: _printTableKOT, jumpToOrder: _jumpToOrderInOrdersTab,
     closeSession: _closeSessionForTable, cancelSession: _cancelSessionForTable,
-    printSessionBill: _printSessionBill
+    printSessionBill: _printSessionBill,
+    editTable: _openTableEditor, setTableEnabled: _setTableEnabled
 };

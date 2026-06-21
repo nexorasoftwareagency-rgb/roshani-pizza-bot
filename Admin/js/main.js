@@ -289,6 +289,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     break;
                 case 'openTableDrawerByOrder': logger.info('TABLES', 'Open table drawer by order'); window.__tables?.openDrawerByOrder?.(el.getAttribute('data-order-id') || id); break;
                 case 'openTableDrawer': logger.info('TABLES', 'Open table drawer'); window.__tables?.openDrawer?.(id); break;
+                case 'editTable': logger.info('TABLES', 'Edit table'); window.__tables?.openEditor?.(id); break;
+                case 'deleteTable': logger.info('TABLES', 'Delete table'); window.__tables?.delete?.(id); break;
+                case 'enableTable': logger.info('TABLES', 'Enable table'); window.__tables?.setTableEnabled?.(id, true); break;
+                case 'disableTable': logger.info('TABLES', 'Disable table'); window.__tables?.setTableEnabled?.(id, false); break;
                 case 'requestBillForTable': logger.info('TABLES', 'Request bill'); window.__tables?.requestBill?.(id); break;
                 case 'printTableKOT': logger.info('TABLES', 'Print KOT'); window.__tables?.printKOT?.(id); break;
                 case 'printSessionBill': logger.info('TABLES', 'Print session bill'); window.__tables?.printSessionBill?.(id); break;
