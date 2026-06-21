@@ -291,6 +291,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'openTableDrawer': logger.info('TABLES', 'Open table drawer'); window.__tables?.openDrawer?.(id); break;
                 case 'requestBillForTable': logger.info('TABLES', 'Request bill'); window.__tables?.requestBill?.(id); break;
                 case 'printTableKOT': logger.info('TABLES', 'Print KOT'); window.__tables?.printKOT?.(id); break;
+                case 'printSessionBill': logger.info('TABLES', 'Print session bill'); window.__tables?.printSessionBill?.(id); break;
                 case 'jumpToOrderInOrdersTab': logger.info('TABLES', 'Jump to order'); window.__tables?.jumpToOrder?.(id); break;
                 case 'openTableQr': logger.info('TABLES', 'Open table QR'); window.__tables?.openQr?.(id); break;
                 case 'closeSessionForTable': logger.info('TABLES', 'Close session'); window.__tables?.closeSession?.(id); break;
