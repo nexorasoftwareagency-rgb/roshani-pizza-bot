@@ -525,7 +525,8 @@ document.addEventListener('input', (e) => {
 let _offers = [];
 
 function _renderOffers(offers) {
-    _offers = Array.isArray(offers) ? [...offers] : [];
+    const arr = Array.isArray(offers) ? offers : (offers && typeof offers === 'object' ? Object.values(offers) : []);
+    _offers = arr.map(o => ({ ...o }));
     const list = document.getElementById('offersList');
     const noMsg = document.getElementById('noOffersMsg');
     if (!list) return;

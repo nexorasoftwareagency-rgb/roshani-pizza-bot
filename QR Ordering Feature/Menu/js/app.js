@@ -56,8 +56,9 @@ async function boot() {
     M.serviceChargeRate = typeof dineSettings.serviceChargeRate === 'number' ? dineSettings.serviceChargeRate : 0;
 
     // Render today's offers on welcome screen
-    const offers = dineSettings.offers;
-    if (Array.isArray(offers) && offers.length > 0) {
+    const offersRaw = dineSettings.offers;
+    const offers = Array.isArray(offersRaw) ? offersRaw : (offersRaw ? Object.values(offersRaw) : []);
+    if (offers.length > 0) {
         const offersEl = document.getElementById('welcomeOffers');
         offersEl.innerHTML = offers.slice(0, 3).map(o => `
             <div class="welcome-offer-card">
@@ -321,6 +322,9 @@ document.querySelectorAll('[data-request]').forEach(btn => {
         try {
             if (type === 'bill') {
                 await requestBill();
+                document.getElementById('billGenTable').textContent = `Table ${String(Session.table.number).padStart(2, '0')}`;
+                document.getElementById('billGenAmount').textContent = UI.fmtMoney(Session.session?.grandTotal || Session.session?.runningTotal || 0);
+                UI.showScreen('screenBillGenerated');
             } else {
                 const { push, set } = await import('./firebase.js');
                 await set(push(outletRef('tableRequests')), {
