@@ -54,14 +54,13 @@ export async function placeOrder({ taxPercent = 5, taxEnabled = true, serviceCha
         subtotal, tax, serviceCharge, total,
         paymentStatus: 'Pending',
         createdAt: new Date().toISOString(),
-        updatedAt: Date.now(),
+        updatedAt: new Date().toISOString(),
 
         // --- Dine-in / QR specific fields (additive only) ---
         type: 'Dine-in',              // see compatibility note above
         source: 'QR',
         table: String(Session.table.number),
         tableId: Session.tableId,
-        tableToken: Session.table.token,
         sessionId: Session.sessionId,
 
         // --- Optional contact, collected at checkout only ---

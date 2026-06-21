@@ -31,7 +31,7 @@ import { Outlet, ref, get, onValue, set, update, remove, push, runTransaction, i
 import { state } from '../state.js';
 import { showToast, showConfirm, showDeleteConfirm, showPaymentPicker } from '../ui-utils.js';
 import { printOrderReceipt } from './printing.js';
-import { haptic } from '../utils.js';
+import { haptic, escapeHtml } from '../utils.js';
 
 // ---------------------------------------------------------------------
 // Module-level cache
@@ -59,7 +59,6 @@ function _ordersRef(sub) { return Outlet.ref(`orders${sub ? '/' + sub : ''}`); }
 function _settingsRef(sub) { return Outlet.ref(`dineinSettings${sub ? '/' + sub : ''}`); }
 function _reqRef(sub) { return Outlet.ref(`tableRequests${sub ? '/' + sub : ''}`); }
 function _nowMs() { return Date.now(); }
-function _esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function _pad2(n) { return String(n).padStart(2, '0'); }
 
 // Secure token generator — NEVER a sequential/guessable value (Decision #6)
@@ -125,10 +124,10 @@ function _requestChip(r) {
     const meta = REQUEST_TYPE_META[r.type] || { label: r.type || 'Request', icon: 'bell' };
     const mins = Math.max(0, Math.floor((_nowMs() - (r.createdAt || _nowMs())) / 60000));
     return `
-    <div class="table-request-chip" data-id="${_esc(r.id)}">
+    <div class="table-request-chip" data-id="${escapeHtml(r.id)}">
         <i data-lucide="${meta.icon}" class="icon-14"></i>
-        <span class="table-request-text"><strong>Table ${_esc(r.tableNumber || '')}</strong> · ${_esc(meta.label)} · ${mins} min ago</span>
-        <button class="btn-text btn-small" data-action="resolveTableRequest" data-id="${_esc(r.id)}">Resolve</button>
+        <span class="table-request-text"><strong>Table ${escapeHtml(r.tableNumber || '')}</strong> · ${escapeHtml(meta.label)} · ${mins} min ago</span>
+        <button class="btn-text btn-small" data-action="resolveTableRequest" data-id="${escapeHtml(r.id)}">Resolve</button>
     </div>`;
 }
 
@@ -209,9 +208,9 @@ function _tableCard(t) {
     }
     const disabledAttr = t.status === 'disabled' ? 'disabled' : '';
     return `
-    <button type="button" class="table-grid-card ${meta.cls}" data-action="openTableDrawer" data-id="${_esc(t.id)}" ${disabledAttr} title="Table ${_esc(t.number)} — ${meta.label}">
+    <button type="button" class="table-grid-card ${meta.cls}" data-action="openTableDrawer" data-id="${escapeHtml(t.id)}" ${disabledAttr} title="Table ${escapeHtml(t.number)} — ${meta.label}">
         <div class="table-card-top">
-            <span class="table-card-number">${_esc(t.number)}</span>
+            <span class="table-card-number">${escapeHtml(t.number)}</span>
         </div>
         <div class="table-card-seats">${t.capacity || 0} Seats</div>
         ${metaLine || `<span class="table-card-status-pill"><i data-lucide="${meta.icon}" class="icon-12"></i> ${meta.label}</span>`}
@@ -241,18 +240,18 @@ function _statusPillClass(status) {
 
 function _orderListRow(o) {
     const t = _tables[o.tableId];
-    const tNum = t ? _esc(t.number) : (o.table || '--');
-    const itemsLine = Object.values(o.items || {}).slice(0, 2).map(it => `${it.qty || 1} × ${_esc(it.name || 'Item')}`).join(', ');
+    const tNum = t ? escapeHtml(t.number) : (o.table || '--');
+    const itemsLine = Object.values(o.items || {}).slice(0, 2).map(it => `${it.qty || 1} × ${escapeHtml(it.name || 'Item')}`).join(', ');
     const isNew = (_nowMs() - _ms(o.createdAt)) < 120000;
     return `
-    <div class="live-order-row" data-action="openTableDrawerByOrder" data-order-id="${_esc(o.id)}">
+    <div class="live-order-row" data-action="openTableDrawerByOrder" data-order-id="${escapeHtml(o.id)}">
         <div class="live-order-row-main">
             <span class="live-order-table-chip">Table ${tNum}</span>
-            <span class="live-order-id">#${_esc(String(o.id).slice(-6).toUpperCase())}</span>
+            <span class="live-order-id">#${escapeHtml(String(o.id).slice(-6).toUpperCase())}</span>
             <span class="live-order-time">${new Date(o.createdAt || _nowMs()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
         <div class="live-order-row-items">${itemsLine || 'No items'}</div>
-        <span class="badge ${_statusPillClass(o.status)}">${isNew ? 'NEW' : _esc(o.status || 'Placed')}</span>
+        <span class="badge ${_statusPillClass(o.status)}">${isNew ? 'NEW' : escapeHtml(o.status || 'Placed')}</span>
     </div>`;
 }
 
@@ -278,15 +277,15 @@ function _elapsedLabel(createdAt) {
 
 function _kdsCard(o) {
     const t = _tables[o.tableId];
-    const tNum = t ? _esc(t.number) : (o.table || '--');
-    const itemsLines = Object.values(o.items || {}).map(it => `<div class="kds-item-line">${it.qty || 1} × ${_esc(it.name || 'Item')}</div>`).join('');
+    const tNum = t ? escapeHtml(t.number) : (o.table || '--');
+    const itemsLines = Object.values(o.items || {}).map(it => `<div class="kds-item-line">${it.qty || 1} × ${escapeHtml(it.name || 'Item')}</div>`).join('');
     const mins = Math.floor((_nowMs() - _ms(o.createdAt)) / 60000);
     const urgentCls = mins >= 15 ? 'kds-card-urgent' : (mins >= 8 ? 'kds-card-warn' : '');
     return `
-    <div class="kds-card ${urgentCls}" data-order-id="${_esc(o.id)}">
+    <div class="kds-card ${urgentCls}" data-order-id="${escapeHtml(o.id)}">
         <div class="kds-card-top">
             <span class="kds-card-table">Table ${tNum}</span>
-            <span class="kds-card-id">#${_esc(String(o.id).slice(-6).toUpperCase())}</span>
+            <span class="kds-card-id">#${escapeHtml(String(o.id).slice(-6).toUpperCase())}</span>
         </div>
         <div class="kds-card-items">${itemsLines}</div>
         <div class="kds-card-footer">
@@ -345,7 +344,7 @@ function _renderDrawerSessionMeta() {
 }
 
 function _orderActionButtons(o) {
-    const id = _esc(o.id);
+    const id = escapeHtml(o.id);
     if (o.status === 'Placed' || !o.status) {
         return `<button class="btn-action-blue btn-small" data-action="advanceTableOrder" data-id="${id}" data-next="Confirmed">
                     <i data-lucide="check" class="icon-12"></i> Accept Order
@@ -368,16 +367,16 @@ function _orderActionButtons(o) {
 
 function _orderCardInDrawer(o) {
     const items = Object.values(o.items || {});
-    const itemLines = items.map(it => `<div class="order-details-item-row"><span>${it.qty || 1} × ${_esc(it.name || 'Item')}</span><span>₹${Number((it.price || 0) * (it.qty || 1)).toFixed(0)}</span></div>`).join('');
+    const itemLines = items.map(it => `<div class="order-details-item-row"><span>${it.qty || 1} × ${escapeHtml(it.name || 'Item')}</span><span>₹${Number((it.price || 0) * (it.qty || 1)).toFixed(0)}</span></div>`).join('');
     return `
     <div class="drawer-order-block">
         <div class="drawer-order-block-head">
-            <span>#${_esc(String(o.id).slice(-6).toUpperCase())}</span>
-            <span class="badge ${_statusPillClass(o.status)}">${_esc(o.status || 'Placed')}</span>
+            <span>#${escapeHtml(String(o.id).slice(-6).toUpperCase())}</span>
+            <span class="badge ${_statusPillClass(o.status)}">${escapeHtml(o.status || 'Placed')}</span>
         </div>
         ${itemLines}
         <div class="drawer-order-actions">${_orderActionButtons(o)}</div>
-        <button class="btn-text btn-small drawer-order-jump" data-action="jumpToOrderInOrdersTab" data-id="${_esc(o.id)}">
+        <button class="btn-text btn-small drawer-order-jump" data-action="jumpToOrderInOrdersTab" data-id="${escapeHtml(o.id)}">
             <i data-lucide="external-link" class="icon-12"></i> Open in Orders tab
         </button>
     </div>`;
@@ -421,12 +420,12 @@ function _renderTableDrawer() {
         ordersWrap.innerHTML = `<p class="text-muted-small">No active session for this table.</p>`;
         totalWrap.innerHTML = '';
         actionsWrap.innerHTML = `
-            <button class="btn-secondary btn-small" data-action="openTableQr" data-id="${_esc(t.id)}"><i data-lucide="qr-code" class="icon-14"></i> View / Print QR</button>
-            <button class="btn-secondary btn-small" data-action="editTable" data-id="${_esc(t.id)}"><i data-lucide="pencil" class="icon-14"></i> Edit Table</button>
+            <button class="btn-secondary btn-small" data-action="openTableQr" data-id="${escapeHtml(t.id)}"><i data-lucide="qr-code" class="icon-14"></i> View / Print QR</button>
+            <button class="btn-secondary btn-small" data-action="editTable" data-id="${escapeHtml(t.id)}"><i data-lucide="pencil" class="icon-14"></i> Edit Table</button>
             ${t.status === 'disabled'
-                ? `<button class="btn-action-green btn-small" data-action="enableTable" data-id="${_esc(t.id)}"><i data-lucide="check" class="icon-14"></i> Enable Table</button>`
-                : `<button class="btn-text text-danger btn-small" data-action="disableTable" data-id="${_esc(t.id)}"><i data-lucide="ban" class="icon-14"></i> Disable Table</button>`}
-            <button class="btn-text text-danger btn-small" data-action="deleteTable" data-id="${_esc(t.id)}"><i data-lucide="trash-2" class="icon-14"></i> Delete Table</button>`;
+                ? `<button class="btn-action-green btn-small" data-action="enableTable" data-id="${escapeHtml(t.id)}"><i data-lucide="check" class="icon-14"></i> Enable Table</button>`
+                : `<button class="btn-text text-danger btn-small" data-action="disableTable" data-id="${escapeHtml(t.id)}"><i data-lucide="ban" class="icon-14"></i> Disable Table</button>`}
+            <button class="btn-text text-danger btn-small" data-action="deleteTable" data-id="${escapeHtml(t.id)}"><i data-lucide="trash-2" class="icon-14"></i> Delete Table</button>`;
         if (window.lucide) window.lucide.createIcons({ root: drawer });
         return;
     }
@@ -445,14 +444,14 @@ function _renderTableDrawer() {
 
     const btns = [];
     if (sess.status !== 'billing') {
-        btns.push(`<button class="btn-action-orange btn-small" data-action="requestBillForTable" data-id="${_esc(t.id)}"><i data-lucide="receipt" class="icon-14"></i> Generate Bill</button>`);
+        btns.push(`<button class="btn-action-orange btn-small" data-action="requestBillForTable" data-id="${escapeHtml(t.id)}"><i data-lucide="receipt" class="icon-14"></i> Generate Bill</button>`);
     } else {
-        btns.push(`<button class="btn-action-green btn-small" data-action="closeSessionForTable" data-id="${_esc(t.id)}"><i data-lucide="check-check" class="icon-14"></i> Close Table (Paid)</button>`);
+        btns.push(`<button class="btn-action-green btn-small" data-action="closeSessionForTable" data-id="${escapeHtml(t.id)}"><i data-lucide="check-check" class="icon-14"></i> Close Table (Paid)</button>`);
     }
-    btns.push(`<button class="btn-secondary btn-small" data-action="printTableKOT" data-id="${_esc(t.id)}"><i data-lucide="printer" class="icon-14"></i> Print KOT</button>`);
-    btns.push(`<button class="btn-secondary btn-small" data-action="printSessionBill" data-id="${_esc(t.id)}"><i data-lucide="receipt-text" class="icon-14"></i> Print Bill</button>`);
-    btns.push(`<button class="btn-secondary btn-small" data-action="openTableQr" data-id="${_esc(t.id)}"><i data-lucide="qr-code" class="icon-14"></i> View QR</button>`);
-    btns.push(`<button class="btn-text text-danger btn-small" data-action="cancelSessionForTable" data-id="${_esc(t.id)}"><i data-lucide="x-circle" class="icon-14"></i> Cancel / Free Table</button>`);
+    btns.push(`<button class="btn-secondary btn-small" data-action="printTableKOT" data-id="${escapeHtml(t.id)}"><i data-lucide="printer" class="icon-14"></i> Print KOT</button>`);
+    btns.push(`<button class="btn-secondary btn-small" data-action="printSessionBill" data-id="${escapeHtml(t.id)}"><i data-lucide="receipt-text" class="icon-14"></i> Print Bill</button>`);
+    btns.push(`<button class="btn-secondary btn-small" data-action="openTableQr" data-id="${escapeHtml(t.id)}"><i data-lucide="qr-code" class="icon-14"></i> View QR</button>`);
+    btns.push(`<button class="btn-text text-danger btn-small" data-action="cancelSessionForTable" data-id="${escapeHtml(t.id)}"><i data-lucide="x-circle" class="icon-14"></i> Cancel / Free Table</button>`);
     actionsWrap.innerHTML = btns.join('');
 
     if (window.lucide) window.lucide.createIcons({ root: drawer });
@@ -667,9 +666,9 @@ function _printTableKOT(tableId) {
     const allItems = [];
     orders.forEach(o => Object.values(o.items || {}).forEach(it => allItems.push(it)));
 
-    const itemRows = allItems.map(it => `<div class="kot-item-row"><span>${it.qty || 1} ×</span><span>${_esc(it.name || 'Item')}</span></div>`).join('');
+    const itemRows = allItems.map(it => `<div class="kot-item-row"><span>${it.qty || 1} ×</span><span>${escapeHtml(it.name || 'Item')}</span></div>`).join('');
     const w = window.open('', '_blank', 'width=380,height=600');
-    w.document.write(`<html><head><title>KOT — Table ${_esc(t.number)}</title><style>
+    w.document.write(`<html><head><title>KOT — Table ${escapeHtml(t.number)}</title><style>
         body{font-family:'Courier New',monospace;padding:16px;width:280px;}
         h2{text-align:center;margin-bottom:2px;font-size:18px;}
         .sub{text-align:center;font-size:11px;color:#555;margin-bottom:14px;border-bottom:1px dashed #000;padding-bottom:10px;}
@@ -677,8 +676,8 @@ function _printTableKOT(tableId) {
         .kot-item-row span:first-child{font-weight:700;min-width:30px;}
         .foot{margin-top:14px;font-size:11px;text-align:center;color:#777;}
         </style></head><body>
-        <h2>KOT — TABLE ${_esc(t.number)}</h2>
-        <div class="sub">${new Date().toLocaleString('en-IN')} · Session ${_esc(sess.sessionId || '')}</div>
+        <h2>KOT — TABLE ${escapeHtml(t.number)}</h2>
+        <div class="sub">${new Date().toLocaleString('en-IN')} · Session ${escapeHtml(sess.sessionId || '')}</div>
         ${itemRows || '<p>No items</p>'}
         <div class="foot">Roshani Pizza — Kitchen Copy</div>
         <script>window.onload=function(){window.print();};</script></body></html>`);
@@ -811,11 +810,11 @@ function _printSingleQr() {
     const title = document.getElementById('tableQrModalTitle')?.textContent || 'Table QR';
     if (!img?.src) return;
     const w = window.open('', '_blank', 'width=400,height=560');
-    w.document.write(`<html><head><title>${_esc(title)}</title><style>
+    w.document.write(`<html><head><title>${escapeHtml(title)}</title><style>
         body{font-family:sans-serif;text-align:center;padding:24px;}
         h2{margin-bottom:4px;} .sub{color:#777;margin-bottom:18px;font-size:13px;}
         img{width:240px;height:240px;} .foot{margin-top:14px;font-size:12px;color:#999;}
-        </style></head><body><h2>${_esc(title)}</h2><div class="sub">Scan to order</div>
+        </style></head><body><h2>${escapeHtml(title)}</h2><div class="sub">Scan to order</div>
         <img src="${img.src}"><div class="foot">Roshani Pizza — Thank You!</div>
         <script>window.onload=function(){window.print();};</script></body></html>`);
     w.document.close();
@@ -838,7 +837,7 @@ async function _bulkQrPrint() {
     const cardsHtml = cards.map(({ t, dataUri }) => `
         <div class="qr-card">
             <div class="qr-card-label">TABLE</div>
-            <div class="qr-card-number">${_esc(t.number)}</div>
+            <div class="qr-card-number">${escapeHtml(t.number)}</div>
             <div class="qr-card-scan">SCAN TO ORDER</div>
             ${dataUri ? `<img src="${dataUri}">` : '<p>QR failed</p>'}
             <div class="qr-card-thanks">Thank You!</div>

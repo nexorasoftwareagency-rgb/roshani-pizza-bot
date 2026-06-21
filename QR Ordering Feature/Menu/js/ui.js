@@ -162,7 +162,7 @@ export function renderCartList(lines, { onStep }) {
             <img class="cart-item-img" src="${esc(l.img || '')}" alt="" onerror="this.style.visibility='hidden'">
             <div class="cart-item-info">
                 <div class="cart-item-name">${esc(l.name)}</div>
-                <div class="cart-item-variant">${esc(l.size)}${l.addons.length ? ' · ' + esc(l.addons.join(', ')) : ''}</div>
+                <div class="cart-item-variant">${esc(l.size)}${(l.addons || []).length ? ' · ' + esc((l.addons || []).join(', ')) : ''}</div>
             </div>
             <div class="qty-stepper"><button class="qty-btn" data-step="-1">−</button><span class="qty-val">${l.qty}</span><button class="qty-btn" data-step="1">+</button></div>
             <span class="cart-item-price">${fmtMoney(l.unitPrice * l.qty)}</span>

@@ -37,6 +37,11 @@ async function boot() {
         return;
     }
 
+    // Register event listeners immediately after session init
+    // so the first session:updated event from watchSession() is captured
+    window.addEventListener('session:updated', (e) => onSessionUpdated(e.detail));
+    window.addEventListener('cart:changed', onCartChanged);
+
     const t = Session.table;
     document.getElementById('welcomeTableNum').textContent = String(t.number).padStart(2, '0');
     document.querySelectorAll('#menuTableChip').forEach(el => el.textContent = `TABLE ${String(t.number).padStart(2, '0')}`);
@@ -82,9 +87,6 @@ async function boot() {
     }
 
     await loadMenu();
-
-    window.addEventListener('session:updated', (e) => onSessionUpdated(e.detail));
-    window.addEventListener('cart:changed', onCartChanged);
 
     document.getElementById('loadingOverlay').style.display = 'none';
 
