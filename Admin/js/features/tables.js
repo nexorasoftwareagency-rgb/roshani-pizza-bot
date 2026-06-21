@@ -704,8 +704,13 @@ async function _printSessionBill(tableId) {
         });
     });
 
-    const tax = Number(sess.tax ?? 0) || Math.round(subtotal * 0.05 * 100) / 100;
-    const grandTotal = Number(sess.grandTotal ?? (subtotal + tax));
+    const dineSnap = await get(_settingsRef());
+    const dine = dineSnap.val() || {};
+    const taxRate = typeof dine.taxRate === 'number' ? dine.taxRate : 5;
+    const scRate = typeof dine.serviceChargeRate === 'number' ? dine.serviceChargeRate : 0;
+    const tax = Number(sess.tax ?? 0) || Math.round(subtotal * (taxRate / 100) * 100) / 100;
+    const serviceCharge = Number(sess.serviceCharge ?? 0) || (dine.serviceChargeEnabled ? Math.round(subtotal * (scRate / 100) * 100) / 100 : 0);
+    const grandTotal = Number(sess.grandTotal ?? (subtotal + tax + serviceCharge));
 
     const combinedOrder = {
         orderId: `TABLE-${t.number}`,
