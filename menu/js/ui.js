@@ -89,8 +89,10 @@ export function updateRunningBillStrip(session) {
     const hasOrders = session && (session.orders || []).length > 0 && session.status !== 'closed';
     strip.classList.toggle('hidden', !hasOrders);
     if (hasOrders) {
-        document.getElementById('runningBillOrderCount').textContent = `${session.orders.length} order${session.orders.length !== 1 ? 's' : ''} this session`;
-        document.getElementById('runningBillAmount').textContent = fmtMoney(session.grandTotal || session.runningTotal || 0);
+        const countEl = document.getElementById('runningBillOrderCount');
+        const amountEl = document.getElementById('runningBillAmount');
+        if (countEl) countEl.textContent = `${session.orders.length} order${session.orders.length !== 1 ? 's' : ''} this session`;
+        if (amountEl) amountEl.textContent = fmtMoney(session.grandTotal || session.runningTotal || 0);
     }
 }
 
@@ -136,7 +138,8 @@ export function renderDishList(dishes, { searchTerm, activeCategoryName }, onOpe
 export function renderSizeOptions(sizes, selectedLabel, onSelect) {
     const wrap = document.getElementById('sizeOptionsRow');
     if (!wrap) return;
-    document.getElementById('sizeSection').style.display = sizes.length > 1 ? '' : 'none';
+    const sizeSection = document.getElementById('sizeSection');
+    if (sizeSection) sizeSection.style.display = sizes.length > 1 ? '' : 'none';
     wrap.innerHTML = sizes.map((s, i) => `
         <button class="size-opt ${s.label === selectedLabel ? 'selected' : ''}" data-size-idx="${i}">
             <div class="size-opt-label">${esc(s.label)}</div>
@@ -148,7 +151,8 @@ export function renderSizeOptions(sizes, selectedLabel, onSelect) {
 export function renderAddonRows(addons, selectedIdxs, onToggle) {
     const wrap = document.getElementById('addonRows');
     if (!wrap) return;
-    document.getElementById('addonSection').style.display = addons.length ? '' : 'none';
+    const addonSection = document.getElementById('addonSection');
+    if (addonSection) addonSection.style.display = addons.length ? '' : 'none';
     wrap.innerHTML = addons.map((a, i) => {
         const checked = selectedIdxs.includes(i);
         return `<div class="addon-row" data-addon-idx="${i}">
@@ -168,12 +172,12 @@ export function renderCartList(lines, { onStep }) {
 
     if (entries.length === 0) {
         list.innerHTML = '<div class="empty-cart">Your cart is empty.<br>Add some delicious items!</div>';
-        summaryWrap.style.display = 'none';
-        checkoutWrap.classList.add('hidden');
+        if (summaryWrap) summaryWrap.style.display = 'none';
+        if (checkoutWrap) checkoutWrap.classList.add('hidden');
         return;
     }
-    summaryWrap.style.display = '';
-    checkoutWrap.classList.remove('hidden');
+    if (summaryWrap) summaryWrap.style.display = '';
+    if (checkoutWrap) checkoutWrap.classList.remove('hidden');
 
     list.innerHTML = entries.map(([id, l]) => `
         <div class="cart-item-row" data-line-id="${esc(id)}">
@@ -200,22 +204,23 @@ export function updateCartTotals(subtotal, taxPercent, taxName, taxEnabled, serv
     const scRate = typeof serviceChargeRate === 'number' ? serviceChargeRate : 0;
     const sc = scEnabled ? Math.round(subtotal * (scRate / 100) * 100) / 100 : 0;
 
-    document.getElementById('cartSubtotal').textContent = fmtMoney(subtotal);
+    const el = (id) => document.getElementById(id);
+    if (el('cartSubtotal')) el('cartSubtotal').textContent = fmtMoney(subtotal);
 
     // Tax row
     if (taxRow) taxRow.classList.toggle('hidden', !taxEnabledVal);
-    document.getElementById('cartTaxName').textContent = taxName || 'Tax';
-    document.getElementById('cartTaxPct').textContent = String(taxPercent);
-    document.getElementById('cartTax').textContent = fmtMoney(tax);
+    if (el('cartTaxName')) el('cartTaxName').textContent = taxName || 'Tax';
+    if (el('cartTaxPct')) el('cartTaxPct').textContent = String(taxPercent);
+    if (el('cartTax')) el('cartTax').textContent = fmtMoney(tax);
 
     // Service charge row
     const scRow = document.getElementById('cartServiceChargeRow');
     if (scRow) scRow.classList.toggle('hidden', !scEnabled);
-    document.getElementById('cartServiceChargeName').textContent = serviceChargeName || 'Service Charge';
-    document.getElementById('cartServiceChargePct').textContent = String(scRate);
-    document.getElementById('cartServiceCharge').textContent = fmtMoney(sc);
+    if (el('cartServiceChargeName')) el('cartServiceChargeName').textContent = serviceChargeName || 'Service Charge';
+    if (el('cartServiceChargePct')) el('cartServiceChargePct').textContent = String(scRate);
+    if (el('cartServiceCharge')) el('cartServiceCharge').textContent = fmtMoney(sc);
 
-    document.getElementById('cartTotal').textContent = fmtMoney(subtotal + tax + sc);
+    if (el('cartTotal')) el('cartTotal').textContent = fmtMoney(subtotal + tax + sc);
     return { tax, serviceCharge: sc, total: subtotal + tax + sc };
 }
 
@@ -239,11 +244,14 @@ function dineInStepIndex(status) {
 }
 
 export function renderTracking(orderId, order, tableNumber) {
-    document.getElementById('trackingOrderId').textContent = `#RP-T${String(tableNumber).padStart(2, '0')}-${String(orderId).slice(-3).toUpperCase()}`;
-    document.getElementById('trackingTableLabel').textContent = `Table ${String(tableNumber).padStart(2, '0')}`;
+    const orderIdEl = document.getElementById('trackingOrderId');
+    const tableLabelEl = document.getElementById('trackingTableLabel');
+    const container = document.getElementById('trackerStepsContainer');
+    if (!container) return;
+    if (orderIdEl) orderIdEl.textContent = `#RP-T${String(tableNumber).padStart(2, '0')}-${String(orderId).slice(-3).toUpperCase()}`;
+    if (tableLabelEl) tableLabelEl.textContent = `Table ${String(tableNumber).padStart(2, '0')}`;
 
     const currentIdx = dineInStepIndex(order.status);
-    const container = document.getElementById('trackerStepsContainer');
     container.innerHTML = DINE_IN_STEPS.map((step, i) => {
         const cls = i < currentIdx ? 'done' : (i === currentIdx ? 'active' : '');
         const time = i <= currentIdx ? new Date(order.updatedAt || order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '--:--';
@@ -258,6 +266,7 @@ export function renderTracking(orderId, order, tableNumber) {
     }
 
     const thanksCard = document.getElementById('trackingThanksCard');
+    if (!thanksCard) return;
     if (order.status === 'Delivered') {
         thanksCard.innerHTML = '<strong>Order served!</strong><p style="font-size:12px;color:var(--text-sub);margin-top:4px;">Enjoy your meal. Tap "Call Waiter" → "Request Bill" when ready to pay.</p>';
     } else if (order.status === 'Cancelled') {
@@ -274,11 +283,12 @@ export function renderSessionBillCard(session, ordersMap, taxName, taxPercent, t
     card.classList.toggle('hidden', orderIds.length <= 1);
     if (orderIds.length <= 1) return;
 
-    document.getElementById('sessionBillOrderCount').textContent = `${orderIds.length} orders`;
+    const orderCountEl = document.getElementById('sessionBillOrderCount');
+    if (orderCountEl) orderCountEl.textContent = `${orderIds.length} orders`;
 
     // Order-level summary lines
     const linesWrap = document.getElementById('sessionBillLines');
-    linesWrap.innerHTML = orderIds.map((oid, i) => {
+    if (linesWrap) linesWrap.innerHTML = orderIds.map((oid, i) => {
         const o = ordersMap[oid];
         const itemCount = o ? Object.values(o.items || {}).reduce((s, it) => s + (it.qty || 1), 0) : 0;
         return `<div class="session-bill-line"><span>Order ${i + 1} (${itemCount} item${itemCount !== 1 ? 's' : ''})</span><span>${fmtMoney(o?.total || 0)}</span></div>`;
@@ -286,7 +296,7 @@ export function renderSessionBillCard(session, ordersMap, taxName, taxPercent, t
 
     // Itemized details per order
     const itemsWrap = document.getElementById('sessionBillItems');
-    itemsWrap.innerHTML = orderIds.map((oid, i) => {
+    if (itemsWrap) itemsWrap.innerHTML = orderIds.map((oid, i) => {
         const o = ordersMap[oid];
         if (!o) return '';
         const items = Object.values(o.items || {});
@@ -314,19 +324,20 @@ export function renderSessionBillCard(session, ordersMap, taxName, taxPercent, t
     const scEnabled = serviceChargeEnabled === true;
     const scRate = typeof serviceChargeRate === 'number' ? serviceChargeRate : 0;
 
-    document.getElementById('sessionBillSubtotal').textContent = fmtMoney(subtotal);
+    const el = (id) => document.getElementById(id);
+    if (el('sessionBillSubtotal')) el('sessionBillSubtotal').textContent = fmtMoney(subtotal);
 
     const taxRow = document.getElementById('sessionBillTaxRow');
     if (taxRow) taxRow.classList.toggle('hidden', !tEnabled);
-    document.getElementById('sessionBillTaxLabel').textContent = `${taxName || 'Tax'} (${taxPercent || 5}%)`;
-    document.getElementById('sessionBillTax').textContent = fmtMoney(totalTax);
+    if (el('sessionBillTaxLabel')) el('sessionBillTaxLabel').textContent = `${taxName || 'Tax'} (${taxPercent || 5}%)`;
+    if (el('sessionBillTax')) el('sessionBillTax').textContent = fmtMoney(totalTax);
 
     const scRow = document.getElementById('sessionBillSCRow');
     if (scRow) scRow.classList.toggle('hidden', !scEnabled);
-    document.getElementById('sessionBillSCLabel').textContent = `${serviceChargeName || 'Service Charge'} (${scRate}%)`;
-    document.getElementById('sessionBillSC').textContent = fmtMoney(totalSC);
+    if (el('sessionBillSCLabel')) el('sessionBillSCLabel').textContent = `${serviceChargeName || 'Service Charge'} (${scRate}%)`;
+    if (el('sessionBillSC')) el('sessionBillSC').textContent = fmtMoney(totalSC);
 
-    document.getElementById('sessionBillTotal').textContent = fmtMoney(session.grandTotal || session.runningTotal || 0);
+    if (el('sessionBillTotal')) el('sessionBillTotal').textContent = fmtMoney(session.grandTotal || session.runningTotal || 0);
 }
 
 const HISTORY_STATUS_LABEL = { Placed: 'Placed', Confirmed: 'Confirmed', Preparing: 'Preparing', Ready: 'Ready', Delivered: 'Delivered', Cancelled: 'Cancelled' };
