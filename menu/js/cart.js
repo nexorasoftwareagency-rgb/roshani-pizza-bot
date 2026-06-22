@@ -13,7 +13,9 @@ export const Cart = {
 
 export function addLine(line) {
     const lineId = `${line.dishId}_${line.size}_${(line.addons || []).join('-')}_${Date.now()}`;
-    Cart.lines[lineId] = { ...line, qty: line.qty || 1 };
+    const unitPrice = typeof line.unitPrice === 'number' ? line.unitPrice : 0;
+    const qty = typeof line.qty === 'number' && line.qty > 0 ? line.qty : 1;
+    Cart.lines[lineId] = { ...line, unitPrice, qty };
     window.dispatchEvent(new CustomEvent('cart:changed'));
     return lineId;
 }
@@ -40,7 +42,7 @@ export function lineCount() {
 }
 
 export function subtotal() {
-    return Object.values(Cart.lines).reduce((s, l) => s + l.unitPrice * l.qty, 0);
+    return Object.values(Cart.lines).reduce((s, l) => s + (Number(l.unitPrice) || 0) * (Number(l.qty) || 0), 0);
 }
 
 export function isEmpty() {

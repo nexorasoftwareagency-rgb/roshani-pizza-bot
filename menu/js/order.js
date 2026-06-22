@@ -24,7 +24,7 @@
  */
 import { outletRef, push, set } from './firebase.js';
 import { Session, attachOrderToSession } from './session.js';
-import { Cart, clearCart } from './cart.js';
+import { Cart, clearCart, subtotal as cartSubtotal } from './cart.js';
 
 function round2(n) { return Math.round(n * 100) / 100; }
 
@@ -42,7 +42,7 @@ export async function placeOrder({ taxPercent = 5, taxEnabled = true, serviceCha
         };
     });
 
-    const subtotal = round2(Object.values(Cart.lines).reduce((s, l) => s + l.unitPrice * l.qty, 0));
+    const subtotal = round2(cartSubtotal());
     const tax = taxEnabled ? round2(subtotal * (taxPercent / 100)) : 0;
     const serviceCharge = serviceChargeEnabled ? round2(subtotal * (serviceChargeRate / 100)) : 0;
     const total = round2(subtotal + tax + serviceCharge);
