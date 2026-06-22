@@ -47,4 +47,4 @@ export function outletRef(path) {
     return ref(db, `${OUTLET}/${path}`);
 }
 
-export { get, onValue, set, push, update, runTransaction };
+export { ref, get, onValue, set, push, update, runTransaction };

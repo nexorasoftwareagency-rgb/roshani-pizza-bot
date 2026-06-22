@@ -9,8 +9,7 @@
  *       Scan QR → Read Token → Validate Token → Find Table →
  *       Load Active Session → (join or create) → Load Menu
  */
-import { db, outletRef, get, set, push, update, runTransaction } from './firebase.js';
-import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { db, OUTLET, outletRef, ref, get, onValue, set, push, update, runTransaction } from './firebase.js';
 
 export const Session = {
     table: null,      // { id, number, capacity, status, token, currentSession, ... }
@@ -71,7 +70,7 @@ async function joinOrCreateSession(table) {
     let createdSessionId = null;
     let createdSessionData = null;
 
-    await runTransaction(ref(db, `${table.__outlet}/tables/${table.id}/currentSession`), (current) => {
+    await runTransaction(outletRef(`tables/${table.id}/currentSession`), (current) => {
         if (current) {
             // Someone else's transaction already created a session —
             // abort this one (return undefined cancels the transaction).
@@ -124,7 +123,7 @@ export async function initSession() {
     const table = await validateToken(token);
     if (!table) return { ok: false, reason: 'invalid-token' };
 
-    table.__outlet = (await import('./firebase.js')).OUTLET;
+    table.__outlet = OUTLET;
     Session.table = table;
     Session.tableId = table.id;
 
@@ -158,7 +157,7 @@ function watchSession() {
  * orders" into "1 running bill" (Decision #4).
  */
 export async function attachOrderToSession(orderId, orderTotals) {
-    await runTransaction(ref(db, `${Session.table.__outlet}/tableSessions/${Session.sessionId}`), (sess) => {
+    await runTransaction(outletRef(`tableSessions/${Session.sessionId}`), (sess) => {
         if (!sess) return sess;
         sess.orders = Array.isArray(sess.orders) ? sess.orders : [];
         sess.orders.push(orderId);
