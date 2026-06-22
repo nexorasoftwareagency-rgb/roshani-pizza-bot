@@ -3,7 +3,7 @@
  * Wires together firebase.js, session.js, cart.js, order.js, ui.js.
  * This is the only file with top-level event listener registration.
  */
-import { outletRef, get, onValue } from './firebase.js';
+import { outletRef, get, onValue, push, set } from './firebase.js';
 import { initSession, Session, requestBill, saveCheckoutContact } from './session.js';
 import { Cart, addLine, setQty, clearCart, lineCount, subtotal as cartSubtotal, isEmpty as cartIsEmpty } from './cart.js';
 import { placeOrder } from './order.js';
@@ -24,6 +24,7 @@ const M = {
     _orderUnsub: null,
     guestCount: 1,
     _guestCountDirty: false,
+    _placing: false,
 };
 
 // ---------------------------------------------------------------
@@ -127,7 +128,7 @@ function onSessionUpdated(session) {
         if (!M.ordersCache[oid]) {
             onValue(outletRef(`orders/${oid}`), (snap) => {
                 M.ordersCache[oid] = snap.val();
-                UI.renderSessionBillCard(session, M.ordersCache, M.taxName, M.taxPercent, M.taxEnabled, M.serviceChargeEnabled, M.serviceChargeName, M.serviceChargeRate);
+                UI.renderSessionBillCard(Session.session, M.ordersCache, M.taxName, M.taxPercent, M.taxEnabled, M.serviceChargeEnabled, M.serviceChargeName, M.serviceChargeRate);
             }, { onlyOnce: true });
         }
     });
@@ -137,7 +138,7 @@ function onSessionUpdated(session) {
 function onCartChanged() {
     UI.updateCartBadges(lineCount());
     UI.updateCartBar(lineCount(), cartSubtotal());
-    if (document.getElementById('screenCart').classList.contains('active')) renderCartScreen();
+    if (document.getElementById('screenCart')?.classList.contains('active')) renderCartScreen();
 }
 
 // ---------------------------------------------------------------
@@ -332,7 +333,6 @@ document.querySelectorAll('[data-request]').forEach(btn => {
                 document.getElementById('billGenAmount').textContent = UI.fmtMoney(Session.session?.grandTotal || Session.session?.runningTotal || 0);
                 UI.showScreen('screenBillGenerated');
             } else {
-                const { push, set } = await import('./firebase.js');
                 await set(push(outletRef('tableRequests')), {
                     tableId: Session.tableId, tableNumber: Session.table.number,
                     type, status: 'pending', createdAt: Date.now()
@@ -377,11 +377,12 @@ function renderTrackingOrEmptyState() {
 
 function renderHistoryScreen() {
     const orderIds = Session.session?.orders || [];
+    UI.renderHistoryList(orderIds, M.ordersCache);
     Promise.all(orderIds.map(oid => M.ordersCache[oid]
         ? Promise.resolve()
         : new Promise(resolve => onValue(outletRef(`orders/${oid}`), (snap) => { M.ordersCache[oid] = snap.val(); resolve(); }, { onlyOnce: true }))
-    )).then(() => UI.renderHistoryList(orderIds, M.ordersCache));
-    UI.renderHistoryList(orderIds, M.ordersCache);
+    )).then(() => UI.renderHistoryList(orderIds, M.ordersCache))
+      .catch(() => UI.renderHistoryList(orderIds, M.ordersCache));
 }
 
 let _storeSettingsCache = null;
@@ -394,4 +395,8 @@ async function renderPromotionsScreen() {
 }
 
 // Boot
-boot();
+boot().catch(err => {
+    console.error('[Boot]', err);
+    document.getElementById('loadingOverlay').style.display = 'none';
+    UI.showScreen('screenInvalid');
+});

@@ -110,6 +110,7 @@ async function joinOrCreateSession(table) {
     // re-read the table to pick up the session it created.
     const freshSnap = await get(outletRef(`tables/${table.id}`));
     const freshTable = freshSnap.val();
+    if (!freshTable || !freshTable.currentSession) return null;
     const sessSnap = await get(outletRef(`tableSessions/${freshTable.currentSession}`));
     return { id: freshTable.currentSession, ...sessSnap.val() };
 }
@@ -128,6 +129,7 @@ export async function initSession() {
     Session.tableId = table.id;
 
     const session = await joinOrCreateSession(table);
+    if (!session) return { ok: false, reason: 'session-creation-failed' };
     Session.session = session;
     Session.sessionId = session.id;
 
