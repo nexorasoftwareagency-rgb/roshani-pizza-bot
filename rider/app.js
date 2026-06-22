@@ -1,5 +1,5 @@
 // ── Firebase (via rider/js/firebase.js) ────────────────────────────────────
-import { app, auth, db, dbStorage, messaging, onAuthStateChanged, signInWithEmailAndPassword, signOut, ref, onValue, get, set, update, runTransaction, query, orderByChild, equalTo, off, serverTimestamp, remove, limitToLast, push, getToken, onMessage, onDisconnect } from './js/firebase.js';
+import { app, auth, db, dbStorage, messaging, onAuthStateChanged, signInWithEmailAndPassword, signOut, ref, onValue, onChildChanged, get, set, update, runTransaction, query, orderByChild, equalTo, off, serverTimestamp, remove, limitToLast, push, getToken, onMessage, onDisconnect } from './js/firebase.js';
 
 // ── Extracted modules ──────────────────────────────────────────────────────
 import { initUI } from './js/ui.js';
@@ -125,6 +125,7 @@ window.activeOrderId = null;
 window.activeOrderOutlet = null;
 window.ignoredPings = new Set();
 window.orderCache = { pizza: {}, cake: {} };
+window._previousUnassignedIds = new Set();
 window.outletCoords = { pizza: { lat: 25.887944, lng: 85.026194 }, cake: { lat: 25.887472, lng: 85.026861 } };
 window.PICKUP_RADIUS_KM = 0.5; // 500m — rider must be within this distance to accept/pickup
 
@@ -580,15 +581,38 @@ window.startNavigation = async (id, outletId) => {
 
 
 window.pingTimerInterval = null;
-window.showPingModal = (id, outletId, order) => {
-    window.haptic([100, 50, 100, 50, 200]);
+window._pingSoundInterval = null;
+
+window.startPingSound = () => {
     try {
         const audio = document.getElementById('pingAudio');
-        if (audio) {
-            audio.currentTime = 0;
-            audio.play().catch(e => console.warn('Audio play blocked:', e));
-        }
+        if (!audio) return;
+        audio.currentTime = 0;
+        audio.play().catch(e => console.warn('Audio play blocked:', e));
+        if (window._pingSoundInterval) clearInterval(window._pingSoundInterval);
+        window._pingSoundInterval = setInterval(() => {
+            try {
+                const a = document.getElementById('pingAudio');
+                if (a) { a.currentTime = 0; a.play().catch(() => {}); }
+            } catch(e) {}
+        }, 2000);
     } catch(e) {}
+};
+
+window.stopPingSound = () => {
+    if (window._pingSoundInterval) {
+        clearInterval(window._pingSoundInterval);
+        window._pingSoundInterval = null;
+    }
+    try {
+        const audio = document.getElementById('pingAudio');
+        if (audio) { audio.pause(); audio.currentTime = 0; }
+    } catch(e) {}
+};
+
+window.showPingModal = (id, outletId, order) => {
+    window.haptic([100, 50, 100, 50, 200]);
+    window.startPingSound();
     
     const modal = document.getElementById('newOrderPingModal');
     if (!modal) return;
@@ -644,13 +668,7 @@ window.hidePingModal = () => {
         modal.classList.remove('active');
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
-    try {
-        const audio = document.getElementById('pingAudio');
-        if (audio) {
-            audio.pause();
-            audio.currentTime = 0;
-        }
-    } catch(e) {}
+    window.stopPingSound();
     
     if (window.pingTimerInterval) {
         clearInterval(window.pingTimerInterval);
@@ -662,6 +680,7 @@ window.hidePingModal = () => {
 window._activeListeners = window._activeListeners || [];
 window.clearAllListeners = () => {
     console.log("[Sync] Clearing all listeners...");
+    window.stopPingSound();
     if (window._activeListeners) {
         window._activeListeners.forEach(unsub => { 
             try { 
@@ -739,6 +758,27 @@ window.initRealtimeListeners = function initRealtimeListeners() {
             }
         });
         window._activeListeners.push(unsub1);
+
+        // 1b. Detect when unassigned orders are taken by another rider
+        const unsub1c = onChildChanged(q1, snap => {
+            const data = snap.val();
+            if (!data) return;
+            const newStatus = (data.status || "").toLowerCase();
+            const newRider = data.assignedRider || "";
+            // If order left "ready" status or got assigned, it was taken
+            if (newStatus !== "ready" || newRider !== "") {
+                const changedId = snap.key;
+                // If this was our ping candidate, stop the alarm
+                if (window._pingCandidate && window._pingCandidate.id === changedId) {
+                    window.hidePingModal();
+                    window._pingCandidate = null;
+                    window.renderAllOrders();
+                }
+            }
+        }, error => {
+            console.error(`[Firebase] Changed Sync Error (${outletId}):`, error);
+        });
+        window._activeListeners.push(unsub1c);
 
         // 2. My Orders (Assigned to me)
         const q2 = query(ref(db, ordersPath), orderByChild('assignedRider'), equalTo(currentEmail));
@@ -937,6 +977,7 @@ window._doRenderAllOrders = () => {
     let historyCards = "";
     let unassignedCount = 0;
     let historyCount = 0;
+    const currentUnassignedIds = new Set();
     
     // Stats for Today
     let todayOrders = 0; 
@@ -1058,8 +1099,11 @@ window._doRenderAllOrders = () => {
                 const outletName = outletId === 'pizza' ? 'Pizza' : 'Cake';
                 const outletIcon = outletId === 'pizza' ? '🍕' : '🎂';
                 
+                const isNewOrder = !window._previousUnassignedIds.has(id);
+                currentUnassignedIds.add(id);
+                
                 unassignedRows += `
-                    <tr>
+                    <tr class="${isNewOrder ? 'highlight-new-row' : ''}">
                         <td>
                             <div style="display:flex; flex-direction:column; gap:4px;">
                                 <span class="order-id">#${safeOrderId}</span>
@@ -1075,7 +1119,7 @@ window._doRenderAllOrders = () => {
                 `;
 
                 unassignedCards += `
-                    <div class="order-card-compact animate-fade-in">
+                    <div class="order-card-compact animate-fade-in ${isNewOrder ? 'highlight-new' : ''}">
                         <div class="card-header">
                             <div class="order-meta">
                                 <span class="order-id-badge">#${safeOrderId}</span>
@@ -1367,6 +1411,9 @@ window._doRenderAllOrders = () => {
             </div>
         `;
     }
+
+    // Update previous unassigned set for next render diff
+    window._previousUnassignedIds = currentUnassignedIds;
 
     // Trigger Ping Modal if not currently active
     const pingModal = document.getElementById('newOrderPingModal');
@@ -1734,6 +1781,7 @@ function _startHeartbeat(uid) {
 }
 
 window.addEventListener('beforeunload', () => {
+    window.stopPingSound();
     if (window.currentUser?.profile?.status === 'Online') {
         const uid = window.currentUser.uid;
         update(ref(db, `riders/${uid}`), { status: 'Offline', lastSeen: serverTimestamp() }).catch(() => {});

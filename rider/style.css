@@ -2888,6 +2888,23 @@ body {
 .close-modal { cursor:pointer; transition: color .15s ease; }
 .close-modal:hover { color: var(--primary); }
 
+/* --- New Order Highlight --- */
+@keyframes orderHighlight {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(232, 73, 8, 0); }
+    50% { box-shadow: 0 0 0 8px rgba(232, 73, 8, 0.25); }
+}
+.highlight-new {
+    animation: orderHighlight 1s ease 3;
+    border-color: var(--primary) !important;
+}
+@keyframes rowHighlight {
+    0%, 100% { background: inherit; }
+    50% { background: rgba(232, 73, 8, 0.06); }
+}
+.highlight-new-row {
+    animation: rowHighlight 1s ease 3;
+}
+
 /* --- Reduced Motion --- */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
