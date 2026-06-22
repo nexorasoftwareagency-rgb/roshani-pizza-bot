@@ -203,7 +203,7 @@ function _renderRequestsBanner() {
 async function _resolveTableRequest(reqId) {
     try {
         await update(_reqRef(reqId), { status: 'resolved', resolvedAt: _nowMs() });
-        showToast('Request resolved', 'danger');
+        showToast('Request resolved', 'success');
         haptic(15);
     } catch (e) {
         showToast('Could not resolve request: ' + (e?.message || e), 'error');
@@ -979,6 +979,7 @@ export function cleanupTables() {
     if (_connUnsub) { _connUnsub(); _connUnsub = null; }
     if (_kdsTickInterval) { clearInterval(_kdsTickInterval); _kdsTickInterval = null; }
     _seenRequestIds = null;
+    _customerSyncedOrderIds.clear();
     _closeTableDrawer();
 }
 
