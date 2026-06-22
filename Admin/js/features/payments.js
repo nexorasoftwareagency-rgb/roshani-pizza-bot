@@ -11,8 +11,13 @@ let _grid = null;
 function buildGrid(data) {
     const el = document.getElementById('paymentsTable');
     if (!el) return;
-    el.innerHTML = '';
 
+    if (_grid) {
+        _grid.setData(data || []);
+        return;
+    }
+
+    el.innerHTML = '';
     _grid = new Tabulator("#paymentsTable", {
         data: data || [],
         ...GRID_DEFAULTS,

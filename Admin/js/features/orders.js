@@ -9,7 +9,6 @@ import { escapeHtml, showToast, playNotificationSound, startContinuousSound, sto
 import { showAlert, addNotification, highlightOrder } from './notifications.js';
 import { showPaymentPicker } from '../ui-utils.js';
 import { autoDeductStock } from './inventory.js';
-import { sendToRider } from '../fcm-sender.js';
 import { logger } from '../utils/logger.js';
 import { renderPayments } from './payments.js';
 
@@ -125,16 +124,8 @@ export function initRealtimeListeners() {
         showToast("Error loading orders: " + err.message, "error");
     });
 
-    const liveOrdersRef = Outlet.ref("orders");
-    _liveOrdersUnsub = onValue(query(liveOrdersRef, orderByChild("createdAt"), limitToLast(100)), snap => {
-        state.liveOrdersMap.clear();
-        snap.forEach(child => {
-            state.liveOrdersMap.set(child.key, child.val());
-        });
-        if (state.currentActiveTab === 'live') {
-            renderOrders(state.lastOrdersSnap);
-        }
-    });
+    // Live orders are populated from the main _ordersUnsub listener
+    // by filtering for live statuses in renderOrders(). No separate listener needed.
 }
 
 function buildOrdersQuery(ordersRef, fromDate, toDate, limit) {
@@ -360,9 +351,15 @@ export function renderOrders(snap) {
         // Use paginated data for orders tab
         ordersToProcess = state.ordersPageData;
     } else if (activeTab === 'live') {
-        // Use live map if available, fallback to main map
-        const sourceMap = state.liveOrdersMap.size > 0 ? state.liveOrdersMap : state.ordersMap;
-        ordersToProcess = Array.from(sourceMap.entries()).map(([id, o]) => ({ id, ...o }));
+        // Populate liveOrdersMap from ordersMap (filtered for live statuses)
+        const _liveList = ["Placed", "Confirmed", "Ready", "Pending", "New", "Arriving at Restaurant", "Arrived at Restaurant", "Picked Up", "Out for Delivery", "Reached Drop Location", "Dispatched"];
+        state.liveOrdersMap.clear();
+        state.ordersMap.forEach((o, key) => {
+            if (_liveList.some(s => s.toLowerCase() === (o.status || '').toLowerCase())) {
+                state.liveOrdersMap.set(key, o);
+            }
+        });
+        ordersToProcess = Array.from(state.liveOrdersMap.entries()).map(([id, o]) => ({ id, ...o }));
     } else {
         ordersToProcess = Array.from(state.ordersMap.entries()).map(([id, o]) => ({ id, ...o }));
     }
@@ -385,9 +382,6 @@ export function renderOrders(snap) {
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return timeB - timeA;
     });
-
-    console.log(`[Orders] Processed ${allOrders.length} total orders from snapshot.`);
-    console.log(`[Orders] Filtered ${sortedOrders.length} orders for current tab: ${activeTab}`);
 
     // Update Dashboard Elements using snapshot data (not paginated).
     // Use ordersMap which is populated from the latest onValue snapshot.
@@ -442,10 +436,10 @@ export function renderOrders(snap) {
     }
     
     // Empty state for live tab
+    const _liveStatusList = ["Placed", "Confirmed", "Ready", "Pending", "New", "Arriving at Restaurant", "Arrived at Restaurant", "Picked Up", "Out for Delivery", "Reached Drop Location", "Dispatched"];
     if (activeTab === 'live' && sortedOrders.filter(o => {
         const status = (o.status || "Unknown").trim();
-        const liveStatuses = ["Placed", "Confirmed", "Ready", "Out for Delivery", "Pending", "New", "Dispatched", "Reached Drop Location", "Delivered"];
-        return liveStatuses.some(s => s.toLowerCase() === status.toLowerCase());
+        return _liveStatusList.some(s => s.toLowerCase() === status.toLowerCase());
     }).length === 0 && containers['live']) {
         containers['live'].innerHTML = '<tr><td colspan="7" class="empty-state-cell"><div class="empty-state"><i data-lucide="activity"></i><p>No live orders</p><span>Active orders will appear here</span></div></td></tr>';
         if (window.lucide) window.lucide.createIcons();
@@ -472,8 +466,7 @@ export function renderOrders(snap) {
         o.normalizedItems = items;
 
         const status = (o.status || "Unknown").trim();
-        const liveStatuses = ["Placed", "Confirmed", "Ready", "Out for Delivery", "Pending", "New", "Dispatched", "Reached Drop Location", "Delivered"];
-        const isLive = liveStatuses.some(s => s.toLowerCase() === status.toLowerCase());
+        const isLive = _liveStatusList.some(s => s.toLowerCase() === status.toLowerCase());
         
         if (isLive) liveCount++;
 
@@ -482,7 +475,6 @@ export function renderOrders(snap) {
             if (!isLive) {
                 return;
             }
-            console.log(`[Orders] Rendering live order: #${id.slice(-5)} (Status: ${status})`);
         }
 
         const tr = document.createElement('tr');
@@ -1161,9 +1153,8 @@ export async function assignRider(id, riderId) {
         logger.firebase('ORDERS', `Saving rider assignment: orders/${id}`);
         await update(Outlet.ref(`orders/${id}`), updateData);
         
-        // Notify Rider
+        // Notify Rider (in-app notification; FCM push handled by Cloud Function)
         await addRiderNotification(riderId, "New Order Assigned!", `Order #${id.slice(-5)} for ₹${order.total} assigned to you.`, 'new');
-        sendToRider(riderId, "🚚 New Order Assigned!", `Order #${id.slice(-5)} for ₹${order.total} — Please check the app.`, { orderId: id });
 
         logAudit("Orders", `Assigned Rider: ${rider.name} to #${id.slice(-5)}`, id);
         logger.success('ORDERS', `Rider ${rider.name} assigned to ${id}`);

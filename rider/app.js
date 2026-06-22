@@ -81,7 +81,7 @@ window.reachedDropLocation = async (id, outlet) => {
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         // Use cache-busting for SW registration itself
-            navigator.serviceWorker.register('sw.js?v=5.0.0').catch(err => console.error('SW failed', err));
+            navigator.serviceWorker.register('sw.js?v=5.3.6').catch(err => console.error('SW failed', err));
     });
 }
 
@@ -1289,13 +1289,14 @@ window._doRenderAllOrders = () => {
 
                 const oId = (o.orderId || id.slice(-5)).toUpperCase();
                 const dTime = o.deliveredAt ? new Date(o.deliveredAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                const deliveredDate = o.deliveredAt ? new Date(o.deliveredAt).toISOString().split('T')[0] : '';
                 const safeAddress = escapeHtml(o.address || '---');
                 
                 const outletName = outletId === 'pizza' ? 'Pizza' : 'Cake';
                 const outletIcon = outletId === 'pizza' ? '🍕' : '🎂';
 
                 historyRows += `
-                    <tr>
+                    <tr data-delivered-date="${deliveredDate}">
                         <td>
                             <div style="display:flex; flex-direction:column; gap:4px;">
                                 <span class="order-id">#${oId}</span>
@@ -1310,7 +1311,7 @@ window._doRenderAllOrders = () => {
                 `;
 
                 historyCards += `
-                    <div class="order-card-compact" style="opacity: 0.85;">
+                    <div class="order-card-compact" style="opacity: 0.85;" data-delivered-date="${deliveredDate}">
                         <div class="card-header">
                             <div class="order-meta">
                                 <span class="order-id-badge">#${oId}</span>
@@ -1513,6 +1514,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnViewSettlements')?.addEventListener('click', window.openSettlementHistory);
     document.getElementById('btnCloseSettlement')?.addEventListener('click', window.closeSettlementHistory);
 
+    // Global data-action handler for buttons outside scoped containers
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === 'site-refresh') window.completeSiteRefresh();
+        else if (action === 'close-success-overlay') window.closeSuccessOverlay();
+    });
+
     // Login & Sync Actions
     document.getElementById('loginBtn')?.addEventListener('click', window.login);
     document.getElementById('btnRefreshApp')?.addEventListener('click', (e) => {
@@ -1551,17 +1561,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // History Search — works on both desktop table and mobile card views
-    document.getElementById('historySearch')?.addEventListener('input', (e) => {
-        const term = (e.target.value || '').toLowerCase().trim();
+    const historySearch = document.getElementById('historySearch');
+    const historyDateFrom = document.getElementById('historyDateFrom');
+    const historyDateTo = document.getElementById('historyDateTo');
+
+    function _filterHistory() {
+        const term = (historySearch?.value || '').toLowerCase().trim();
+        const fromDate = historyDateFrom?.value || '';
+        const toDate = historyDateTo?.value || '';
+
         document.querySelectorAll('#completedOrdersList tbody tr').forEach(row => {
             const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(term) ? '' : 'none';
+            const matchesText = !term || text.includes(term);
+            let matchesDate = true;
+            if (fromDate || toDate) {
+                const rowDate = row.getAttribute('data-delivered-date') || '';
+                if (fromDate && rowDate < fromDate) matchesDate = false;
+                if (toDate && rowDate > toDate) matchesDate = false;
+            }
+            row.style.display = (matchesText && matchesDate) ? '' : 'none';
         });
         document.querySelectorAll('#completedOrdersList .order-card-grid').forEach(card => {
             const text = card.textContent.toLowerCase();
-            card.style.display = text.includes(term) ? '' : 'none';
+            const matchesText = !term || text.includes(term);
+            let matchesDate = true;
+            if (fromDate || toDate) {
+                const cardDate = card.getAttribute('data-delivered-date') || '';
+                if (fromDate && cardDate < fromDate) matchesDate = false;
+                if (toDate && cardDate > toDate) matchesDate = false;
+            }
+            card.style.display = (matchesText && matchesDate) ? '' : 'none';
         });
-    });
+    }
+
+    historySearch?.addEventListener('input', _filterHistory);
+    historyDateFrom?.addEventListener('change', _filterHistory);
+    historyDateTo?.addEventListener('change', _filterHistory);
 });
 
 window.hideLoader = () => {
@@ -1701,10 +1736,6 @@ function _startHeartbeat(uid) {
 window.addEventListener('beforeunload', () => {
     if (window.currentUser?.profile?.status === 'Online') {
         const uid = window.currentUser.uid;
-        navigator.sendBeacon?.(
-            '',
-            new Blob([JSON.stringify({ uid })], { type: 'application/json' })
-        );
         update(ref(db, `riders/${uid}`), { status: 'Offline', lastSeen: serverTimestamp() }).catch(() => {});
     }
 });

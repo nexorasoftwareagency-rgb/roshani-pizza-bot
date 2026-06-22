@@ -9,8 +9,6 @@
     --primary-glow: rgba(232, 73, 8, 0.2);
     
     /* Enhanced Outlet Colors */
-    --primary: #E84908;
-    --primary-dark: #c43d00;
     --action-green: #10b981;      /* Missing Emerald Green */
     
     /* MODERN SEMANTIC COLORS (Matching Image) */
@@ -79,6 +77,25 @@
     --border-premium: 1.5px solid rgba(232, 73, 8, 0.2);
     --radius-premium: 24px;
     --grad-primary: linear-gradient(135deg, #E84908 0%, #f97316 100%);
+
+    /* Aliases for variables used across the codebase */
+    --bg: #FFFFFF;
+    --bg-ghost: #f8fafc;
+    --bg-main: #FFFFFF;
+    --border: rgba(232, 73, 8, 0.12);
+    --card-bg: #FFFFFF;
+    --dark: #0f172a;
+    --glass-surface: rgba(255, 255, 255, 0.9);
+    --ghost-white: #f8fafc;
+    --premium-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    --primary-color: #E84908;
+    --primary-grad: linear-gradient(135deg, #E84908 0%, #f97316 100%);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --text: #0f172a;
+    --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    --vibrant-orange: #E84908;
 }
 
 /* --- ICON PERFORMANCE OPTIMIZATION --- */
@@ -230,7 +247,8 @@ html, body {
 }
 
 .w-100 {
-    width: 100px !important;
+    width: 100% !important;
+    min-width: 0;
 }
 
 .w-150 {
@@ -646,6 +664,10 @@ html, body {
     border-color: var(--primary);
     outline: none;
 }
+.outlet-switcher-admin:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
 
 .outlet-switcher-admin option {
     background: #1a1a2e;
@@ -678,7 +700,7 @@ html, body {
     width: 100%;
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: left 0.5s ease;
+    transition: left var(--transition-slow) ease;
 }
 
 .btn-primary:hover::before {
@@ -718,7 +740,7 @@ html, body {
     width: 100%;
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: left 0.5s ease;
+    transition: left var(--transition-slow) ease;
 }
 
 .btn-whatsapp:hover::before {
@@ -748,7 +770,7 @@ html, body {
     cursor: pointer;
     font-weight: 600;
     padding: 12px 24px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-normal);
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
 }
@@ -781,6 +803,10 @@ html, body {
     border-color: var(--primary);
     box-shadow: 0 0 0 4px var(--primary-lighter);
     outline: none;
+}
+.form-input:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 .form-input.error {
     border-color: var(--error);
@@ -1162,11 +1188,11 @@ html, body {
 }
 
 .mb-15 {
-    margin-bottom: 12px;
+    margin-bottom: 15px;
 }
 
 .mb-24 {
-    margin-bottom: 18px;
+    margin-bottom: 24px;
 }
 
 .p-10 {
@@ -1229,7 +1255,7 @@ html, body {
     border: 1px solid rgba(255, 255, 255, 0.6);
     border-radius: 12px;
     padding: 8px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-normal);
     position: relative;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     -webkit-backdrop-filter: blur(8px);
@@ -1416,10 +1442,6 @@ html, body {
 
 .border-dashed {
     border-style: dashed !important;
-}
-
-.w-100 {
-    width: 100px;
 }
 
 .h-100 {
@@ -1680,6 +1702,10 @@ html, body {
 }
 .dynamic-modal-input:focus {
     border-color: var(--primary);
+}
+.dynamic-modal-input:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 .dynamic-payment-grid {
     display: grid;
@@ -2091,6 +2117,10 @@ html, body {
         inset 0 2px 4px rgba(0,0,0,0.2);
     transform: translateY(-2px);
 }
+.login-input-v4:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
 
 .input-stitch-v4 {
     position: absolute;
@@ -2123,7 +2153,7 @@ html, body {
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-normal);
     box-shadow: 0 10px 25px rgba(var(--primary-rgb), 0.3);
 }
 
@@ -2274,7 +2304,7 @@ html, body {
     margin-top: 5px;
 }
 
-@keyframes slideInPremium {
+@keyframes slideInFromRight {
     from { opacity: 0; transform: translateX(50px); }
     to { opacity: 1; transform: translateX(0); }
 }
@@ -2635,7 +2665,7 @@ html, body {
     color: var(--text-muted);
     white-space: nowrap;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-normal);
     border: 2px solid transparent;
 }
 
@@ -2717,7 +2747,7 @@ html, body {
     align-items: center;
     justify-content: center;
     color: var(--text-main);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-normal);
 }
 
 .walkin-cart-item .qty-btn:hover {
@@ -2954,7 +2984,7 @@ body {
     border-radius: 12px;
     padding: 12px;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-normal);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -3086,7 +3116,7 @@ body {
         overflow-y: auto;
         width: var(--sidebar-width) !important;
         min-width: var(--sidebar-width) !important;
-        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: width var(--transition-normal);
         scrollbar-width: thin;
         scrollbar-color: rgba(0,0,0,0.08) transparent;
     }
@@ -3895,7 +3925,7 @@ body {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
     border-left: 4px solid var(--primary);
     font-weight: 600;
-    animation: slideInRight 0.3s ease-out;
+    animation: slideInFromRight 0.3s ease-out;
     min-width: 200px;
 }
 
@@ -3915,18 +3945,6 @@ body {
     border-left-color: var(--error, #b91c1c);
     background: #fef2f2;
     font-weight: 700;
-}
-
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
 }
 
 .rider-row:hover {
@@ -4120,7 +4138,7 @@ body {
     font-size: 14px;
     min-width: 300px;
     background: rgba(0, 0, 0, 0.03);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-normal);
 }
 
 .search-input:focus {
@@ -4129,12 +4147,11 @@ body {
     border-color: var(--primary);
     outline: none;
     min-width: 350px;
-}
-
-.search-input:focus {
-    border-color: var(--primary);
     box-shadow: 0 0 0 4px var(--primary-light);
-    outline: none;
+}
+.search-input:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 .text-xs {
@@ -4339,7 +4356,7 @@ body {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
   box-shadow: 0 4px 15px rgba(232, 73, 8, 0.3);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--transition-normal);
   border: none;
   cursor: pointer;
 }
@@ -4959,7 +4976,6 @@ body {
 /* 6. ADDITIONAL UTILITIES */
 .border-t-ghost { border-top: 1px solid rgba(0, 0, 0, 0.05); }
 .pt-12 { padding-top: 12px; }
-.mb-15 { margin-bottom: 15px; }
 .ls-sm { letter-spacing: 0.5px; }
 .link-premium {
     color: var(--primary);
@@ -5528,7 +5544,7 @@ body {
     border-radius: 16px;
     overflow: hidden;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-normal);
     display: flex;
     flex-direction: column;
 }
@@ -5804,8 +5820,6 @@ body.pos-selection-mode .walkin-picker {
     font-size: 16px !important;
     border-radius: 16px !important;
 }
-
-.w-100 { width: 100px !important; }
 
 /* ============================================================
    DASHBOARD V4.2 MODERNIZATION
@@ -6360,7 +6374,7 @@ body.pos-selection-mode .walkin-picker {
     border-radius: 18px;
     padding: 15px;
     margin-bottom: 12px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-normal);
     position: relative;
     overflow: hidden;
     display: flex;
@@ -6527,7 +6541,7 @@ body.pos-selection-mode .walkin-picker {
     flex-direction: column;
     align-items: center;
     gap: 12px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-normal);
     box-shadow: var(--shadow-sm);
 }
 
@@ -6594,14 +6608,9 @@ body.pos-selection-mode .walkin-picker {
     border-left: 1px solid var(--glass-border);
     display: flex;
     flex-direction: column;
-    animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slideInFromRight var(--transition-normal);
     background: var(--bg-main) !important;
     box-shadow: -10px 0 30px rgba(0,0,0,0.1);
-}
-
-@keyframes slideInRight {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
 }
 
 .selection-panel-v4 .modal-header {
@@ -6677,7 +6686,7 @@ body.pos-selection-mode .walkin-picker {
     padding: 16px 12px;
     border-radius: 16px;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-normal);
     text-align: center;
     position: relative;
     display: flex;
@@ -7819,6 +7828,7 @@ body.pos-selection-mode .walkin-picker {
     display:inline-flex; align-items:center; gap:4px;
     padding:2px 8px; border-radius:999px; font-size:12px; font-weight:500;
     background:#f1f5f9; color:#334155;
+    text-transform:uppercase; letter-spacing:.5px;
 }
 .discount-type-global     { background:#dbeafe; color:#1e40af; }
 .discount-type-category   { background:#fef3c7; color:#92400e; }
@@ -7891,14 +7901,6 @@ body.pos-selection-mode .walkin-picker {
 .drr-bar-wrap { background:#e2e8f0; border-radius:4px; height:8px; overflow:hidden; }
 .drr-bar { background:linear-gradient(90deg, #1d4ed8, #3b82f6); height:100%; border-radius:4px; transition:width .3s; }
 .drr-value { font-weight:700; color:#0f172a; min-width:80px; text-align:right; }
-.discount-type-badge {
-    font-size:10px; padding:2px 6px; border-radius:4px;
-    text-transform:uppercase; letter-spacing:.5px; font-weight:700;
-}
-.discount-type-global    { background:#dcfce7; color:#166534; }
-.discount-type-firstorder{ background:#fef3c7; color:#92400e; }
-.discount-type-coupon    { background:#ede9fe; color:#5b21b6; }
-.discount-type-category  { background:#cffafe; color:#155e75; }
 
 .discount-report-channels { display:flex; flex-direction:column; gap:6px; }
 .drc-row {
@@ -8060,6 +8062,10 @@ body.pos-selection-mode .walkin-picker {
     background: rgba(255,255,255,0.25) !important;
     border-color: rgba(255,255,255,0.5) !important;
     outline: none !important;
+}
+.tabulator .tabulator-header .tabulator-col .tabulator-header-filter input:focus-visible {
+    outline: 2px solid var(--primary) !important;
+    outline-offset: 2px !important;
 }
 
 /* =============================

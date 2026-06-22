@@ -18,7 +18,7 @@
         }
         
         // Version Enforcement
-        const APP_VERSION = '5.2.0';
+        const APP_VERSION = '5.3.6';
         if (localStorage.getItem('rider_app_version') !== APP_VERSION) {
             localStorage.setItem('rider_app_version', APP_VERSION);
             // Optionally clear specific caches
@@ -30,7 +30,7 @@
 
     <script>
         // Force cleanup of old service workers and caches if stuck on old versions
-        const CURRENT_VERSION = '5.2.0';
+        const CURRENT_VERSION = '5.3.6';
         if (localStorage.getItem('app_version') !== CURRENT_VERSION) {
             console.log(`Stale version detected. Cleaning up (${CURRENT_VERSION})...`);
             if ('serviceWorker' in navigator) {
@@ -52,7 +52,7 @@
             }
         });
     </script>
-    <link rel="stylesheet" href="style.css?v=5.3.2">
+    <link rel="stylesheet" href="style.css?v=5.3.6">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="icon-512.png">
     <link rel="apple-touch-icon" href="icon-512.png">
@@ -177,7 +177,7 @@
                     <button class="nav-btn"><i data-lucide="download"></i> <span>Install App</span></button>
                 </li>
                 <li id="refreshBtn">
-                    <button class="nav-btn text-warning" onclick="window.completeSiteRefresh()">
+                    <button class="nav-btn text-warning" data-action="site-refresh">
                         <i data-lucide="refresh-cw"></i> <span>Reset App</span>
                     </button>
                 </li>
@@ -265,6 +265,10 @@
                 <div class="search-box mb-15">
                     <i data-lucide="search"></i>
                     <input type="text" id="historySearch" placeholder="Search by Order ID..." class="glass-input">
+                </div>
+                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                    <input type="date" id="historyDateFrom" class="glass-input" style="flex:1; font-size:0.85rem; padding:8px;">
+                    <input type="date" id="historyDateTo" class="glass-input" style="flex:1; font-size:0.85rem; padding:8px;">
                 </div>
                 <div id="completedOrdersList" class="order-list"></div>
             </section>
@@ -365,7 +369,7 @@
     <!-- NOTE: #verificationModal and #confirmModal removed — #verificationModal was unused (no listeners),
          #confirmModal was replaced by dynamic window.showConfirm() in app.js. -->
 
-    <div id="otpPanel" class="modal-overlay">
+    <div id="otpPanel" class="modal-overlay" role="dialog" aria-modal="true" aria-label="OTP verification">
         <div class="modal-card text-center">
             <h2 class="mb-10 text-orange">TRIP COMPLETE</h2>
             <p class="text-muted mb-20">Enter 4-digit verification code from customer</p>
@@ -380,7 +384,7 @@
         </div>
     </div>
 
-    <div id="paymentPanel" class="modal-overlay">
+    <div id="paymentPanel" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Collect payment">
         <div class="modal-card text-center">
             <h2 class="mb-10 text-orange">COLLECT PAYMENT</h2>
             <p class="text-muted mb-20" id="paymentTotalTxt">Total to collect: ₹0</p>
@@ -397,7 +401,7 @@
         <div class="notif-sheet-header">
             <h3>Notifications</h3>
             <button id="btnClearAllNotifs" class="btn-clear-all">Clear All</button>
-            <button id="btnCloseNotifSheet" class="btn-close-sheet" title="Close Notifications"><i data-lucide="x"></i></button>
+            <button id="btnCloseNotifSheet" class="btn-close-sheet" title="Close Notifications" aria-label="Close notifications"><i data-lucide="x"></i></button>
         </div>
         <div id="notifList" class="notif-list">
             <div class="empty-notif">
@@ -407,7 +411,7 @@
         </div>
     </div>
 
-    <div id="newOrderPingModal" class="modal-overlay hidden">
+    <div id="newOrderPingModal" class="modal-overlay hidden" role="alertdialog" aria-modal="true" aria-label="New order received">
         <div class="ping-modal-content">
             <div class="ping-header">
                 <div class="ping-subtitle" id="pingOutletName">NEW DELIVERY TASK</div>
@@ -447,7 +451,7 @@
         <div class="modal-content animate-fade-in-up">
             <div class="modal-header">
                 <h3>Settlement History</h3>
-                <button class="close-modal" id="btnCloseSettlement">&times;</button>
+                <button class="close-modal" id="btnCloseSettlement" aria-label="Close settlement">&times;</button>
             </div>
             <div class="modal-body">
                 <div id="settlementList" class="history-list">
@@ -457,8 +461,8 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=5.3.2"></script>
-    <div id="successOverlay" class="modal-overlay">
+    <script type="module" src="app.js?v=5.3.6"></script>
+    <div id="successOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Success">
         <div class="modal-card text-center success-card">
             <div class="success-icon-wrapper">
                 <i data-lucide="check-circle"></i>
@@ -475,7 +479,7 @@
                     <strong id="summaryCommission">---</strong>
                 </div>
             </div>
-            <button onclick="window.closeSuccessOverlay()" class="btn-primary full-width mt-20">BACK TO HOME</button>
+            <button data-action="close-success-overlay" class="btn-primary full-width mt-20">BACK TO HOME</button>
         </div>
     </div>
 </body>

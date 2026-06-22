@@ -447,7 +447,7 @@
 
                         <h1 class="logo-text">ROSHANI ERP</h1>
 
-                        <div class="version-badge">Premium v5.3.0</div>
+                        <div class="version-badge">Premium v5.3.6</div>
 
                     </div>
 
@@ -2026,11 +2026,11 @@
 
                                         <select id="settingShopStatus" class="form-input" title="Shop Status Override">
 
-                                            <option value="AUTO"><i data-lucide="clock"></i> Auto (Time Based)</option>
+                                            <option value="AUTO">Auto (Time Based)</option>
 
-                                            <option value="FORCE_OPEN"><i data-lucide="check-circle"></i> Force Open — Accept Orders</option>
+                                            <option value="FORCE_OPEN">Force Open — Accept Orders</option>
 
-                                            <option value="FORCE_CLOSED"><i data-lucide="moon"></i> Force Closed — Reject Orders</option>
+                                            <option value="FORCE_CLOSED">Force Closed — Reject Orders</option>
 
                                         </select>
 
@@ -2419,12 +2419,6 @@
                     </div>
 
                 </div>
-
-                <label class="checkbox-label mt-8">
-
-                    <input type="checkbox" id="discStackable"> <span data-i18n="discount.editor.stackable">Stackable with other discounts</span>
-
-                </label>
 
             </div>
 
@@ -4408,7 +4402,7 @@
 
     <!-- DISH MODAL -->
 
-    <div id="dishModal" class="modal">
+    <div id="dishModal" class="modal" role="dialog" aria-modal="true" aria-label="Edit Dish">
 
         <div class="modal-content glass-card">
 
@@ -4560,7 +4554,7 @@
 
     <!-- RIDER MANAGEMENT MODAL -->
 
-    <div id="riderModal" class="modal modal-fullscreen-top">
+    <div id="riderModal" class="modal modal-fullscreen-top" role="dialog" aria-modal="true" aria-label="Rider Details">
 
         <div class="modal-content glass-card rider-modal-width">
 
@@ -4998,7 +4992,7 @@
 
     <!-- DISCOUNTS REPORTS MODAL -->
 
-    <div id="discountsReportsModal" class="modal" role="dialog" aria-labelledby="discountsReportsTitle" aria-hidden="true">
+    <div id="discountsReportsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="discountsReportsTitle" aria-hidden="true">
 
         <div class="modal-content glass-card" style="max-width: 880px;">
 
@@ -5122,7 +5116,7 @@
 
     <!-- PROMOTIONS GUIDE MODAL -->
 
-    <div id="promotionsGuideModal" class="modal" role="dialog" aria-labelledby="promoGuideTitle" aria-hidden="true">
+    <div id="promotionsGuideModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="promoGuideTitle" aria-hidden="true">
 
         <div class="modal-content glass-card" style="max-width: 640px;">
 
@@ -5164,7 +5158,7 @@
 
     <!-- TEMPLATE PICKER MODAL -->
 
-    <div id="promoTemplatePickerModal" class="modal">
+    <div id="promoTemplatePickerModal" class="modal" role="dialog" aria-modal="true" aria-label="Promotion Template Picker">
 
         <div class="modal-content" style="max-width:700px;">
 
@@ -5172,7 +5166,7 @@
 
                 <h3>Choose a template</h3>
 
-                <button class="modal-close" data-action="closePromoTemplatePicker">&times;</button>
+                <button class="modal-close" data-action="closePromoTemplatePicker" aria-label="Close template picker">&times;</button>
 
             </div>
 
@@ -5196,7 +5190,7 @@
 
     <!-- NEW DISCOUNT MODAL (outside .main, alongside other modals) -->
 
-    <div id="discountEditorModal" class="modal" role="dialog" aria-labelledby="discountEditorTitle" aria-hidden="true">
+    <div id="discountEditorModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="discountEditorTitle" aria-hidden="true">
 
         <div class="modal-content glass-card" style="max-width:640px;">
 
@@ -5213,6 +5207,8 @@
             </div>
 
             <div class="modal-body">
+
+                <form id="discountEditorForm" onsubmit="return false;">
 
                 <div class="form-group">
 
@@ -5398,6 +5394,12 @@
 
                 </label>
 
+                <label class="checkbox-label mt-8">
+
+                    <input type="checkbox" id="discStackable"> <span data-i18n="discount.editor.stackable">Stackable with other discounts</span>
+
+                </label>
+
 
 
                 <div class="promo-options-grid mt-16">
@@ -5442,7 +5444,7 @@
 
 
 
-    <div id="posSelectionModal" class="modal pos-side-panel">
+    <div id="posSelectionModal" class="modal pos-side-panel" role="dialog" aria-modal="true" aria-label="POS Selection">
 
         <div class="modal-content glass-card selection-panel-v4">
 
@@ -5564,7 +5566,7 @@
 
     <!-- RE-AUTHENTICATION MODAL -->
 
-    <div id="reauthModal" class="modal">
+    <div id="reauthModal" class="modal" role="dialog" aria-modal="true" aria-label="Re-authenticate">
 
         <div class="modal-content glass-card max-w-400">
 
@@ -5600,11 +5602,13 @@
 
                         <input type="password" id="reauthPassword" class="form-input" placeholder="Enter password" autocomplete="current-password">
 
-                    </div>
-
                 </div>
 
-                <div class="modal-footer">
+                </form>
+
+            </div>
+
+            <div class="modal-footer">
 
                     <button type="button" class="btn-secondary btn-hide-modal">Cancel</button>
 
@@ -5626,7 +5630,7 @@
 
     <!-- ADD/EDIT INVENTORY MODAL -->
 
-    <div id="inventoryModal" class="modal">
+    <div id="inventoryModal" class="modal" role="dialog" aria-modal="true" aria-label="Inventory Management">
 
         <div class="modal-content glass-card w-400">
 
@@ -5744,7 +5748,7 @@
 
     <!-- Receipt Preview Modal -->
 
-    <div id="receiptPreviewModal" class="modal hidden">
+    <div id="receiptPreviewModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Receipt Preview">
 
         <div class="modal-content" style="max-width: 520px; width: 95%;">
 
@@ -5786,7 +5790,7 @@
 
     <!-- PAGE GUIDE MODAL (generic, used by all tabs) -->
 
-    <div id="pageGuideModal" class="modal" role="dialog" aria-labelledby="pageGuideTitle" aria-hidden="true">
+    <div id="pageGuideModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="pageGuideTitle" aria-hidden="true">
 
         <div class="modal-content glass-card" style="max-width:640px;">
 
@@ -5818,7 +5822,7 @@
 
     </div>
 
-    <div id="tableEditorModal" class="modal">
+    <div id="tableEditorModal" class="modal" role="dialog" aria-modal="true" aria-label="Edit Table">
 
         <div class="modal-content" style="max-width:380px;">
 
@@ -5872,7 +5876,7 @@
 
     </div>
 
-    <div id="tableQrModal" class="modal">
+    <div id="tableQrModal" class="modal" role="dialog" aria-modal="true" aria-label="Table QR Code">
 
         <div class="modal-content" style="max-width:340px; text-align:center;">
 
@@ -5908,7 +5912,7 @@
 
             <div class="modal-footer">
 
-                <button class="btn-secondary" onclick="document.getElementById('tableQrModal').classList.remove('active')">Close</button>
+                <button class="btn-secondary" id="tableQrCloseBtn">Close</button>
 
                 <button class="btn-primary" id="tableQrPrintBtn">
 

@@ -67,7 +67,15 @@ export const switchTab = async (tabId, skipHistory = false) => {
 
     const previousTab = state.currentActiveTab;
     state.currentActiveTab = tabId;
-    window.__adminLogger?.nav('TAB', `Switching: ${previousTab || '(none)'} â†’ ${tabId}`);
+    window.__adminLogger?.nav('TAB', `Switching: ${previousTab || '(none)'} → ${tabId}`);
+
+    // Reset orders pagination when leaving the orders tab
+    if (previousTab === 'orders' && tabId !== 'orders') {
+        state.ordersPageData = [];
+        state.ordersPageCursor = null;
+        state.ordersPageLoading = false;
+        state.hasMoreOrders = true;
+    }
 
     if (!skipHistory) {
         history.pushState({ tabId }, "", `#${tabId}`);

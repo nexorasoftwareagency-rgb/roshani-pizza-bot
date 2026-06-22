@@ -1,5 +1,6 @@
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 import { app, auth, db, ref, update } from './firebase.js';
+import { showToast } from '../shared/dom/modal.js';
 
 let messaging = null;
 let fcmInitDone = false;
@@ -35,9 +36,7 @@ function initFCM() {
   onMessage(msg, (payload) => {
     const title = payload.notification?.title || 'New Alert';
     const body = payload.notification?.body || '';
-    if (window.showToast) {
-      window.showToast(`${title}: ${body}`, 'info');
-    }
+    showToast(`${title}: ${body}`, 'info');
   });
 }
 

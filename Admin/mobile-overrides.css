@@ -2,15 +2,6 @@
  * Optimized for Mobile Touch & PWA
  */
 
-/* TODO: DEDUPLICATION NEEDED
- * This file contains ~120 lines of duplicate CSS:
- *   - .kpi-row, .panel, .scroll-x, body, .search-input, .reports-grid all declared 2-3 times.
- *   - Per-tab #tab-X .premium-row-v4 selectors (reports, dashboard, customers, riderAnalytics)
- *     have repeating td[data-label=...] blocks.
- * Last definition wins, but the redundancy is a maintenance hazard.
- * Consolidate by merging all per-tab #tab-X .premium-row-v4 rules into one block.
- */
-
 @media (max-width: 1024px) {
 
     /* --- 0. LOADING SCREEN MOBILE --- */
@@ -120,6 +111,8 @@
         -webkit-overflow-scrolling: touch !important;
         touch-action: pan-x pan-y !important;
         position: relative !important;
+        font-size: 14px;
+        line-height: 1.5;
     }
 
     * {
@@ -156,16 +149,19 @@
         transition: transform 0.1s ease, background 0.2s ease, opacity 0.2s ease !important;
     }
 
-    /* Allow vertical touch scrolling inside tab content and panels */
-    .tab-content,
+    /* Allow vertical touch scrolling inside panels */
     .panel {
         touch-action: pan-y !important;
     }
     /* Order table wrapper: let the OS handle touch for both axes */
     .scroll-x {
         touch-action: auto !important;
+        position: relative;
+        overflow-x: auto !important;
+        margin: 0 -10px;
+        padding: 0 10px;
+        width: calc(100% + 20px) !important;
     }
-
     button:active, 
     .btn-primary:active, 
     .btn-secondary:active,
@@ -214,14 +210,6 @@
         max-width: 100% !important;
         padding-top: calc(var(--mobile-header-height) + 10px) !important; /* Mobile Header height + buffer */
         padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 35px) !important; /* Space for bottom nav */
-    }
-
-    .scroll-x {
-        position: relative;
-        overflow-x: auto !important;
-        margin: 0 -10px;
-        padding: 0 10px;
-        width: calc(100% + 20px) !important;
     }
 
     .scroll-x::after {
@@ -337,6 +325,7 @@
         z-index: 20 !important;
         position: relative !important;
         pointer-events: auto !important;
+        touch-action: auto !important;
         padding-top: 10px !important;
         padding-left: 12px !important;
         padding-right: 12px !important;
@@ -406,8 +395,7 @@
         }
     }
 
-    /* Ensure tab contents are clickable */
-    .tab-content,
+    /* Ensure tab pane is clickable */
     .tab-pane {
         pointer-events: auto !important;
         touch-action: auto !important;
@@ -554,13 +542,6 @@
     @keyframes slideSheetUp {
         from { transform: translateY(100%); }
         to { transform: translateY(0); }
-    }
-
-    body {
-        font-size: 14px;
-        line-height: 1.5;
-        background-color: #f8fafc;
-        -webkit-font-smoothing: antialiased;
     }
 
     /* --- 2. SIDEBAR NAVIGATION (DRAWER MODE) --- */
@@ -1672,7 +1653,6 @@
     .pos-dish-btn-v4 { padding: 8px !important; }
     .dish-visual { height: 100px !important; }
     .panel { margin-left: 0; margin-right: 0; border-radius: 16px; border: 1px solid var(--glass-border); padding: 20px; margin-bottom: 20px; background: var(--white); }
-    .reports-grid { grid-template-columns: 1fr; }
     .mobile-header h2 { margin: 0; font-size: 16px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .modal.modal-fullscreen-top { align-items: flex-start !important; padding: 0 !important; z-index: 3000; }
     .modal.modal-fullscreen-top .modal-content { height: 100dvh !important; max-height: 100dvh !important; width: 100% !important; max-width: 100% !important; border-radius: 0 !important; margin: 0 !important; display: flex; flex-direction: column; animation: slideInDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important; background: var(--bg-primary); overflow: hidden; }
@@ -1851,11 +1831,6 @@
         overflow-y: auto !important;
     }
 
-    /* KPI cards stay 2x2 grid */
-    .kpi-row {
-        grid-template-columns: repeat(2, 1fr) !important;
-    }
-
     /* Priority cards 2-column */
     .priority-order-list {
         grid-template-columns: repeat(2, 1fr) !important;
@@ -1866,13 +1841,11 @@
         max-height: 300px !important;
         overflow-y: auto !important;
     }
-}
 
 /* ======================================================================
    ANALYTICS / REPORTS MOBILE OPTIMIZATION
    Adaptive column hiding based on screen width
    ====================================================================== */
-@media (max-width: 1024px) {
     /* Reports Grid - Single Column */
     .reports-grid {
         grid-template-columns: 1fr !important;

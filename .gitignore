@@ -27,3 +27,8 @@ rider_old/
 
 # Audit report
 roshani_pizza_admin_ui_audit.html
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+Desktop.ini

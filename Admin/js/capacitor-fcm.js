@@ -1,4 +1,5 @@
 import { db, ref, update } from './firebase.js';
+import { showToast } from '../shared/dom/modal.js';
 
 export async function setupCapacitorFCM(userId) {
   if (typeof Capacitor === 'undefined') return;
@@ -19,9 +20,7 @@ export async function setupCapacitorFCM(userId) {
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
       const title = notification.title || 'New Alert';
       const body = notification.body || '';
-      if (window.showToast) {
-        window.showToast(`${title}: ${body}`, 'info');
-      }
+      showToast(`${title}: ${body}`, 'info');
     });
 
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {

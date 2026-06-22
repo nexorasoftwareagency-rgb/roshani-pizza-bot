@@ -41,6 +41,7 @@ let _sessionsListener = null;
 let _ordersListener = null;
 let _requestsListener = null;
 let _connUnsub = null;
+let _ordersListenerAttached = false;
 let _kdsTickInterval = null;
 
 let _tables = {};
@@ -937,15 +938,20 @@ function _attachListeners() {
         _renderAll();
     });
 
-    // Reuses the existing /orders node — this is NOT a new listener pattern,
-    // it is the same path orders.js already subscribes to. tables.js attaches
-    // its own because it is lazy-loaded independently of orders.js and must
-    // not assume orders.js's listener is currently active when this tab opens.
-    _ordersListener = onValue(_ordersRef(), (snap) => {
-        _orders = snap.val() || {};
+    // Reuses the existing /orders node — prefer state.ordersMap from orders.js
+    // when available, only subscribe to Firebase as fallback.
+    if (state.ordersMap && state.ordersMap.size > 0) {
+        _orders = Object.fromEntries(state.ordersMap);
         _syncCustomersFromOrders(_orders);
         _renderAll();
-    });
+    } else if (!_ordersListenerAttached) {
+        _ordersListenerAttached = true;
+        _ordersListener = onValue(_ordersRef(), (snap) => {
+            _orders = snap.val() || {};
+            _syncCustomersFromOrders(_orders);
+            _renderAll();
+        });
+    }
 
     _requestsListener = onValue(_reqRef(), (snap) => {
         _tableRequests = snap.val() || {};
@@ -968,7 +974,7 @@ function _attachListeners() {
 export function cleanupTables() {
     if (_tablesListener) { _tablesListener(); _tablesListener = null; }
     if (_sessionsListener) { _sessionsListener(); _sessionsListener = null; }
-    if (_ordersListener) { _ordersListener(); _ordersListener = null; }
+    if (_ordersListener) { _ordersListener(); _ordersListener = null; _ordersListenerAttached = false; }
     if (_requestsListener) { _requestsListener(); _requestsListener = null; }
     if (_connUnsub) { _connUnsub(); _connUnsub = null; }
     if (_kdsTickInterval) { clearInterval(_kdsTickInterval); _kdsTickInterval = null; }

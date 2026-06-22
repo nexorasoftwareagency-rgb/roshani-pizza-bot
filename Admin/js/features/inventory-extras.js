@@ -19,17 +19,17 @@ const _notifyTimers = new Map();
  */
 export function maybeNotifyLowStock({ itemId, itemName, prevStock, newStock, threshold }) {
     if (!itemId) return;
-    const t = threshold || 0;
-    if (newStock > t) {
+    const thresh = threshold || 0;
+    if (newStock > thresh) {
         clearLowStockNotify(itemId);
         return;
     }
-    if (prevStock <= t) return;
+    if (prevStock <= thresh) return;
     if (_notifiedLowStock.has(itemId)) return;
 
     _notifiedLowStock.add(itemId);
     showToast(t('inv.lowStockToast', '📦 Low Stock: {name} ({stock})', { name: itemName, stock: newStock }), 'warning');
-    logAudit('Inventory', `Low stock: ${itemName} at ${newStock} (threshold ${t})`);
+    logAudit('Inventory', `Low stock: ${itemName} at ${newStock} (threshold ${thresh})`);
 
     if (_notifyTimers.has(itemId)) clearTimeout(_notifyTimers.get(itemId));
     _notifyTimers.set(itemId, setTimeout(() => {

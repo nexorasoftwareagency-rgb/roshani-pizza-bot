@@ -10,6 +10,10 @@ import { setupCapacitorFCM } from './capacitor-fcm.js';
 
 let idleTimer;
 const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+const ADMIN_CONFIG = {
+    SUPREME_ADMIN_EMAIL: "nexorasoftware@gmail.com",
+    SUPER_ADMIN_EMAIL: "roshanisudha@gmail.com"
+};
 
 function resetIdleTimer() {
     clearTimeout(idleTimer);
@@ -75,7 +79,6 @@ export function initAuth() {
     onAuthStateChanged(auth, async (user) => {
         console.log("[Auth] State change detected:", user ? `Logged in as ${user.email}` : "Logged out");
         if (!user) {
-            console.log("[Auth] State: Logged Out");
             state.adminData = null;
             const overlay = document.getElementById("authOverlay");
             const layout = document.querySelector(".layout");
@@ -93,20 +96,14 @@ export function initAuth() {
         }
 
         console.log("[Auth] State Change:", user.email, "Verified:", user.emailVerified);
-        console.log(`[Auth] User Logged In: ${user.email} (UID: ${user.uid})`);
         
         let adminData = null;
         try {
-            console.log("[Auth] Fetching admin record for:", user.uid);
-            console.log(`[Auth] Fetching profile from: admins/${user.uid}`);
-            console.log("[Auth] Current outlet:", window.currentOutlet);
-
             // Ensure global paths are used for system-wide nodes
             const adminSnap = await Promise.race([
                 get(ref(db, `admins/${user.uid}`)),
                 new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000))
             ]);
-            console.log("[Auth] Admin snapshot exists:", adminSnap.exists());
             if (adminSnap.exists()) {
                 const rawVal = adminSnap.val();
                 const sanitized = { id: rawVal.id || user.uid, email: rawVal.email, role: rawVal.role, outlet: rawVal.outlet };
@@ -114,24 +111,21 @@ export function initAuth() {
             }
             
             adminData = adminSnap.val();
-            console.log("[Auth] Admin Data Received:", adminData ? "OK" : "MISSING");
             
             // --- Tiered Access Logic Injection ---
             const email = user.email.toLowerCase();
-            const SUPREME_ADMIN = "nexorasoftware@gmail.com";
-            const SUPER_ADMIN = "roshanisudha@gmail.com";
 
-            if (email === SUPREME_ADMIN) {
+            if (email === ADMIN_CONFIG.SUPREME_ADMIN_EMAIL) {
                 console.log("[Auth] Supreme Admin Detected");
-                if (!adminData) adminData = { name: "Supreme Admin", email: SUPREME_ADMIN };
+                if (!adminData) adminData = { name: "Supreme Admin", email: ADMIN_CONFIG.SUPREME_ADMIN_EMAIL };
                 adminData.isSuper = true;
                 adminData.isSupreme = true;
                 adminData.role = "Supreme Admin";
                 // Supreme admin can access any outlet, default to pizza if none set
                 if (!adminData.outlet) adminData.outlet = "pizza"; 
-            } else if (email === SUPER_ADMIN) {
+            } else if (email === ADMIN_CONFIG.SUPER_ADMIN_EMAIL) {
                 console.log("[Auth] Super Admin Detected");
-                if (!adminData) adminData = { name: "Super Admin", email: SUPER_ADMIN };
+                if (!adminData) adminData = { name: "Super Admin", email: ADMIN_CONFIG.SUPER_ADMIN_EMAIL };
                 adminData.isSuper = true;
                 adminData.role = "Super Admin";
                 // Super admin can access pizza and cake
@@ -268,9 +262,12 @@ export function initAuth() {
         setupCapacitorFCM(user.uid);
         setupAdminFCM(user.uid);
         initNewOrderNotifications();
-        document.addEventListener('switchOutlet', () => {
-            initNewOrderNotifications();
-        });
+        if (!document._switchOutletListenerBound) {
+            document.addEventListener('switchOutlet', () => {
+                initNewOrderNotifications();
+            });
+            document._switchOutletListenerBound = true;
+        }
 
         // Initial Tab Navigation (Respect Hash or Default to Dashboard)
         const initialTab = window.location.hash.replace('#', '') || 'dashboard';

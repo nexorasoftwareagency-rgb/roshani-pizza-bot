@@ -96,9 +96,8 @@ function buildSidebarCard(r, id) {
     const orderInfo = r.currentOrder
         ? `<div class="tracker-card-order">📦 Order #${escapeHtml(String(r.currentOrder).slice(-5))}</div>`
         : '';
-    const onClick = r.location ? `trackerLocateRider('${id}')` : '';
     return `
-        <div class="tracker-card tracker-card-${cls}" data-rider-id="${id}" ${r.location ? 'role="button" tabindex="0"' : ''} onclick="${onClick}" onkeydown="if(event.key==='Enter'||event.key===' '){${onClick};event.preventDefault();}">
+        <div class="tracker-card tracker-card-${cls}" data-rider-id="${id}" ${r.location ? 'role="button" tabindex="0"' : ''} data-action="locate-rider">
             <div class="tracker-card-avatar">
                 <img src="${profileImg}" alt="" onerror="this.style.display='none'">
                 <span class="tracker-card-dot tracker-card-dot-${cls}"></span>
@@ -120,7 +119,7 @@ function buildMobileChip(r, id) {
     const { label, cls } = displayStatus(r);
     const initial = escapeHtml((r.name || 'R').charAt(0).toUpperCase());
     return `
-        <button class="tracker-chip tracker-chip-${cls}" data-rider-id="${id}" onclick="window.trackerLocateRider && window.trackerLocateRider('${id}')">
+        <button class="tracker-chip tracker-chip-${cls}" data-rider-id="${id}" data-action="locate-rider">
             <span class="tracker-chip-dot"></span>
             <span class="tracker-chip-avatar">${initial}</span>
             <span class="tracker-chip-name">${escapeHtml((r.name || 'Rider').split(' ')[0])}</span>
@@ -275,6 +274,27 @@ function bindUi() {
             }
         });
     }
+
+    ['trackerOnlineList', 'trackerOfflineList', 'trackerMobileChips'].forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (container && !container.dataset.delegationBound) {
+            container.dataset.delegationBound = '1';
+            container.addEventListener('click', e => {
+                const card = e.target.closest('[data-action="locate-rider"]');
+                if (!card) return;
+                const riderId = card.dataset.riderId;
+                if (riderId) window.trackerLocateRider?.(riderId);
+            });
+            container.addEventListener('keydown', e => {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                const card = e.target.closest('[data-action="locate-rider"]');
+                if (!card) return;
+                e.preventDefault();
+                const riderId = card.dataset.riderId;
+                if (riderId) window.trackerLocateRider?.(riderId);
+            });
+        }
+    });
 }
 
 function updateLastUpdated() {

@@ -24,7 +24,9 @@ export function getISTDateString(dateInput = new Date()) {
  */
 export function formatDateShort(dateInput) {
     if (!dateInput) return '';
-    return toIST(dateInput).toLocaleDateString('en-IN', {
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
@@ -53,9 +55,12 @@ export function formatTimeShort(dateInput) {
  */
 export function formatDateIndian(dateInput) {
     if (!dateInput) return '';
-    return toIST(dateInput).toLocaleDateString('en-IN', {
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-IN', {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric'
+        year: 'numeric',
+        timeZone: 'Asia/Kolkata'
     });
 }

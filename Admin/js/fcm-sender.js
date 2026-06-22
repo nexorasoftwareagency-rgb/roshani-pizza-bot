@@ -1,47 +1,27 @@
-import { db, ref, get } from './firebase.js';
+/**
+ * FCM Sender — DEPRECATED STUB.
+ *
+ * Push notifications are now handled by Firebase Cloud Functions:
+ *   functions/index.js → onOrderUpdate (rider assignment + status changes)
+ *   functions/index.js → onNewOrder (admin notifications)
+ *
+ * Deploy with: firebase deploy --only functions
+ *
+ * This file is kept for backward compatibility but all functions are no-ops.
+ */
 
-const FCM_SERVER_KEY = window.firebaseConfig?.fcmServerKey || '';
-
-if (!FCM_SERVER_KEY) {
-    console.warn('[FCM] fcmServerKey not configured in firebase-config.js — push notifications disabled. Add fcmServerKey to enable.');
-}
+let _warned = false;
 
 export async function sendFCM(token, title, body, data = {}) {
-    if (!FCM_SERVER_KEY || !token) {
-        if (!token) console.warn('[FCM] No token provided — skipping push.');
-        return;
-    }
-    try {
-        const res = await fetch('https://fcm.googleapis.com/fcm/send', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `key=${FCM_SERVER_KEY}`
-            },
-            body: JSON.stringify({
-                to: token,
-                notification: { title, body },
-                data: { click_action: 'FLUTTER_NOTIFICATION_CLICK', ...data }
-            })
-        });
-        if (!res.ok) {
-            const text = await res.text();
-            console.error('[FCM] Send failed:', res.status, text);
-        }
-    } catch (e) {
-        console.error('[FCM] Error:', e);
+    if (!_warned) {
+        console.warn('[FCM] sendFCM is deprecated. Push notifications are now handled by Cloud Functions (functions/index.js).');
+        _warned = true;
     }
 }
 
 export async function sendToRider(riderId, title, body, data = {}) {
-    try {
-        const snap = await get(ref(db, `riders/${riderId}`));
-        const rider = snap.val();
-        const token = rider?.fcmToken;
-        if (token) {
-            await sendFCM(token, title, body, data);
-        }
-    } catch (e) {
-        console.error('[FCM] sendToRider error:', e);
+    if (!_warned) {
+        console.warn('[FCM] sendToRider is deprecated. Push notifications are now handled by Cloud Functions (functions/index.js).');
+        _warned = true;
     }
 }

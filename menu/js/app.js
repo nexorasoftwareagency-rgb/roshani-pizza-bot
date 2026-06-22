@@ -255,12 +255,14 @@ document.getElementById('btnGuestMinus')?.addEventListener('click', () => { hapt
 document.getElementById('btnGuestPlus')?.addEventListener('click', () => { haptic(10); M.guestCount = Math.min(20, M.guestCount + 1); M._guestCountDirty = true; document.getElementById('guestCountVal').textContent = String(M.guestCount); });
 
 document.getElementById('btnPlaceOrder')?.addEventListener('click', async () => {
+    if (M._placing) return;
     if (cartIsEmpty()) { UI.showToast('Your cart is empty'); return; }
     haptic([20, 50, 20]);
     const name = document.getElementById('checkoutName')?.value.trim();
     const phone = document.getElementById('checkoutPhone')?.value.trim();
     if (!name) { UI.showToast('Please enter your name'); document.getElementById('checkoutName')?.focus(); return; }
     if (!phone || phone.length < 10) { UI.showToast('Please enter a valid 10-digit mobile number'); document.getElementById('checkoutPhone')?.focus(); return; }
+    M._placing = true;
     const btn = document.getElementById('btnPlaceOrder');
     btn.disabled = true;
     btn.textContent = 'Placing order…';
@@ -276,6 +278,7 @@ document.getElementById('btnPlaceOrder')?.addEventListener('click', async () => 
         console.error('[PlaceOrder]', e);
         UI.showToast('Could not place order. Please try again.');
     } finally {
+        M._placing = false;
         btn.disabled = false;
         btn.textContent = 'PLACE ORDER';
     }

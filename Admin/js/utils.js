@@ -65,8 +65,32 @@ export function initPagination(containerId, totalItems, pageSize, onPageChange) 
     return { currentPage: () => currentPage, goToPage: (p) => { currentPage = Math.max(1, Math.min(p, totalPages)); update(); onPageChange(currentPage); } };
 }
 
+// ── Audio (pre-created, unlocked on first user interaction) ──
+let _alertAudio = null;
+let _audioUnlocked = false;
+
+function _ensureAudio() {
+    if (!_alertAudio) {
+        _alertAudio = new Audio('assets/sounds/alert.mp3');
+        _alertAudio.preload = 'auto';
+    }
+    return _alertAudio;
+}
+
+function _unlockAudio() {
+    if (_audioUnlocked) return;
+    const a = _ensureAudio();
+    a.currentTime = 0;
+    a.play().then(() => { _audioUnlocked = true; a.pause(); a.currentTime = 0; }).catch(() => {});
+}
+
+['click', 'touchstart', 'keydown'].forEach(evt =>
+    document.addEventListener(evt, _unlockAudio, { once: false, passive: true })
+);
+
 export const playNotificationSound = () => {
-    const audio = new Audio('assets/sounds/alert.mp3');
+    const audio = _ensureAudio();
+    audio.currentTime = 0;
     audio.play().catch(e => console.warn('Audio playback failed:', e));
 };
 
@@ -75,7 +99,8 @@ let _continuousAudio = null;
 export function startContinuousSound() {
     if (state.continuousSoundInterval) return;
 
-    _continuousAudio = new Audio('assets/sounds/alert.mp3');
+    _continuousAudio = _ensureAudio();
+    _continuousAudio.currentTime = 0;
     _continuousAudio.play().catch(e => console.warn('Audio failed:', e));
 
     state.continuousSoundInterval = setInterval(() => {
@@ -83,7 +108,7 @@ export function startContinuousSound() {
             stopContinuousSound();
             return;
         }
-        _continuousAudio = new Audio('assets/sounds/alert.mp3');
+        _continuousAudio.currentTime = 0;
         _continuousAudio.play().catch(e => console.warn('Audio failed:', e));
     }, 2000);
 }
@@ -104,7 +129,8 @@ window.addEventListener('beforeunload', () => {
 });
 
 export const playSuccessSound = () => {
-    const audio = new Audio('assets/sounds/alert.mp3');
+    const audio = _ensureAudio();
+    audio.currentTime = 0;
     audio.play().catch(e => console.warn('Audio playback failed:', e));
 };
 

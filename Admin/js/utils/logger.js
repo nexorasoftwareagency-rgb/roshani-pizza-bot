@@ -108,10 +108,13 @@ export const logger = {
 window.__adminLogger = logger;
 
 let _installMonitor = null;
+let _origConsole = null;
+let _monitorInstalled = false;
+
 export function installConsoleMonitor(enabled = true) {
     if (!enabled || _installMonitor) return;
     _installMonitor = true;
-    const orig = {
+    _origConsole = {
         log: console.log.bind(console),
         info: console.info.bind(console),
         warn: console.warn.bind(console),
@@ -130,12 +133,26 @@ export function installConsoleMonitor(enabled = true) {
         if (a instanceof Error) return a.message;
         try { return JSON.stringify(a); } catch { return String(a); }
     }).join(' ').slice(0, 200);
-    console.log = (...args) => { emit('info', inferCategory(args), fmt(args)); orig.log(...args); };
-    console.info = (...args) => { emit('info', inferCategory(args), fmt(args)); orig.info(...args); };
-    console.warn = (...args) => { emit('warn', inferCategory(args), fmt(args)); orig.warn(...args); };
-    console.error = (...args) => { emit('error', inferCategory(args), fmt(args), args[0] instanceof Error ? args[0] : null); orig.error(...args); };
-    console.debug = (...args) => { orig.debug(...args); };
+    _monitorInstalled = true;
+    console.log = (...args) => { emit('info', inferCategory(args), fmt(args)); _origConsole.log(...args); };
+    console.info = (...args) => { emit('info', inferCategory(args), fmt(args)); _origConsole.info(...args); };
+    console.warn = (...args) => { emit('warn', inferCategory(args), fmt(args)); _origConsole.warn(...args); };
+    console.error = (...args) => { emit('error', inferCategory(args), fmt(args), args[0] instanceof Error ? args[0] : null); _origConsole.error(...args); };
+    console.debug = (...args) => { _origConsole.debug(...args); };
     logger.info('SYSTEM', 'Console monitor installed (all console.* calls will be captured)');
+}
+
+export function uninstallConsoleMonitor() {
+    if (!_monitorInstalled || !_origConsole) return;
+    console.log = _origConsole.log;
+    console.info = _origConsole.info;
+    console.warn = _origConsole.warn;
+    console.error = _origConsole.error;
+    console.debug = _origConsole.debug;
+    _monitorInstalled = false;
+    _installMonitor = null;
+    _origConsole = null;
+    logger.info('SYSTEM', 'Console monitor uninstalled');
 }
 
 if (typeof window !== 'undefined' && window.location?.search?.includes('logMonitor=1')) {

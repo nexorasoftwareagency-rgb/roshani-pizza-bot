@@ -191,7 +191,6 @@ export function initSecondaryAuth() {
         const secondaryApp = initializeApp(window.firebaseConfig, "secondary_auth");
         secondaryAuth = getAuth(secondaryApp);
         secondaryAuthAvailable = true;
-        console.log("Secondary Auth initialized successfully.");
     } catch (e) {
         console.error("Secondary Auth Init Error:", e);
         secondaryAuthAvailable = false;

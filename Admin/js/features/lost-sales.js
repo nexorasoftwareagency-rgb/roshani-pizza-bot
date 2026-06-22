@@ -1,4 +1,4 @@
-import { Outlet, get, remove } from '../firebase.js';
+import { Outlet, get, update } from '../firebase.js';
 import { ui } from '../ui.js';
 import { showToast, logAudit, escapeHtml, formatDate, haptic, getSkeletonDivs } from '../utils.js';
 import { showBulkDeleteConfirm } from '../ui-utils.js';
@@ -201,7 +201,7 @@ export async function clearLostSales() {
             }
         });
         if (Object.keys(updates).length > 0) {
-            await remove(Outlet.ref('logs/lostSales'));
+            await update(Outlet.ref('logs/lostSales'), updates);
         }
         _allLostSales = [];
         logAudit('Maintenance', `Cleared Lost Sales Logs for ${outlet}`, outlet);

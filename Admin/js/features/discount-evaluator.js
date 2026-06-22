@@ -83,6 +83,8 @@ export async function evaluateDiscount(ctx = {}) {
         .filter(([, d]) => d && d.type && d.value != null)
         .map(([id, d]) => ({ id, ...d }));
 
+    const customerPhone = customer?.phone ? String(customer.phone).replace(/\D/g, '').slice(-10) : null;
+
     const candidates = list.filter(d =>
         d.enabled !== false
         && now >= (d.startsAt || 0)
@@ -90,6 +92,7 @@ export async function evaluateDiscount(ctx = {}) {
         && (!d.minSubtotal || subtotal >= d.minSubtotal)
         && (!d.globalLimit || (d.stats?.usedCount || 0) < d.globalLimit)
         && (!d.channel || d.channel === 'all' || d.channel === channel || (d.channel === 'both' && (channel === 'whatsapp' || channel === 'pos')))
+        && (!d.perCustomerLimit || !customerPhone || (customer?.discountUsage?.[d.id] || 0) < d.perCustomerLimit)
     );
 
     const applicable = candidates.filter(d => {

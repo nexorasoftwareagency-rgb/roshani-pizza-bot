@@ -59,7 +59,8 @@ export const LIVE_STATUSES = [
  * Returns true if the given status is a "live" (in-progress) status.
  */
 export function isLiveStatus(status) {
-    return LIVE_STATUSES.includes(status);
+    const lower = String(status || '').toLowerCase();
+    return LIVE_STATUSES.some(s => s.toLowerCase() === lower);
 }
 
 /**

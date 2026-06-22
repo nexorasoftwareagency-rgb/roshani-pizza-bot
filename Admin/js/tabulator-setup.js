@@ -3,6 +3,8 @@
 // Shared defaults, formatters, and color rules
 // =============================
 
+import { escapeHtml } from '../shared/dom/escape.js';
+
 // --- EXCEL-LIKE DEFAULTS ---
 export const GRID_DEFAULTS = {
     layout: "fitColumns",
@@ -205,8 +207,4 @@ export function updateGridData(table, data) {
 // =============================
 // UTILITY
 // =============================
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+// escapeHtml imported from shared/dom/escape.js at top of file
