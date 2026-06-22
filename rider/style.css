@@ -2913,3 +2913,22 @@ body {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* --- Focus Visible (Accessibility) --- */
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-danger:focus-visible,
+.action-pill:focus-visible,
+.history-tab-btn:focus-visible,
+.nav-item:focus-visible,
+.close-modal:focus-visible,
+.accept-btn:focus-visible,
+.payment-btn:focus-visible,
+.data-action:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+button:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
