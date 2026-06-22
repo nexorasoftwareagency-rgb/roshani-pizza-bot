@@ -366,7 +366,7 @@ export function renderHistoryList(orderIds, ordersMap) {
             </div>
             <div class="history-order-items">${esc(itemNames)}${itemCount > 3 ? ` +${itemCount - 3} more` : ''}</div>
             <div class="history-order-foot">
-                <span style="font-size:11px;color:var(--text-tertiary);">${esc(time)}</span>
+                <span class="history-order-time">${esc(time)}</span>
                 <span class="history-order-total">${fmtMoney(o.total || 0)}</span>
             </div>
         </div>`;

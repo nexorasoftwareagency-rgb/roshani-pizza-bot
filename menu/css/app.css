@@ -247,7 +247,6 @@ img{max-width:100%; display:block;}
 }
 
 #dishListContainer{ padding-bottom:148px !important; }
-.promotions-links{ padding-bottom:calc(16px + 60px + var(--safe-bottom)); }
 
 /* ---------- History Screen ---------- */
 .history-list{ padding:14px 16px; display:flex; flex-direction:column; gap:10px; flex:1; overflow-y:auto; padding-bottom:calc(16px + 60px + var(--safe-bottom)); }
@@ -267,7 +266,7 @@ img{max-width:100%; display:block;}
 .history-empty{ text-align:center; padding:60px 24px; color:var(--text-sub); font-size:13px; }
 
 /* ---------- Promotions Screen ---------- */
-.promotions-links{ padding:6px 16px; display:flex; flex-direction:column; gap:12px; flex:1; overflow-y:auto; }
+.promotions-links{ padding:6px 16px calc(16px + 60px + var(--safe-bottom)); display:flex; flex-direction:column; gap:12px; flex:1; overflow-y:auto; }
 .promo-link-card{
     display:flex; align-items:center; gap:14px; background:var(--card);
     border:1px solid var(--border); border-radius:16px; padding:16px;
