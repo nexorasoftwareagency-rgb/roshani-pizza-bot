@@ -4,7 +4,7 @@
  * This is the only file with top-level event listener registration.
  */
 import { outletRef, get, onValue, push, set } from './firebase.js';
-import { initSession, Session, requestBill, saveCheckoutContact } from './session.js';
+import { initSession, Session, requestBill, saveCheckoutContact, cleanupSession } from './session.js';
 import { Cart, addLine, setQty, clearCart, lineCount, subtotal as cartSubtotal, isEmpty as cartIsEmpty } from './cart.js';
 import { placeOrder } from './order.js';
 import * as UI from './ui.js';
@@ -393,6 +393,10 @@ async function renderPromotionsScreen() {
     }
     UI.renderPromotionsLinks(_storeSettingsCache);
 }
+
+// Cleanup Firebase listeners on page unload
+window.addEventListener('beforeunload', cleanupSession);
+window.addEventListener('pagehide', cleanupSession);
 
 // Boot
 boot().catch(err => {
