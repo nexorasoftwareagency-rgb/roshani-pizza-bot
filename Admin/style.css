@@ -8458,12 +8458,20 @@ body.pos-selection-mode .walkin-picker {
 .drawer-order-actions .btn-action-orange,
 .drawer-order-actions .btn-action-green { color: #fff; }
 
-/* QR modal preview */
+/* QR modal preview — matches the "food craving" gradient-bordered
+   design used on the actual printed QR cards (see tables.js
+   _qrCardMarkup / QR_CARD_CSS), so what admin previews here is what
+   customers will see on the table. */
 .table-qr-preview-wrap {
-    display: flex; justify-content: center; padding: 16px;
-    background: #fff; border-radius: 14px; border: 1px solid var(--border-color, #e2e8f0);
+    display: flex; justify-content: center; padding: 6px;
+    background: linear-gradient(135deg, #FFB347, #E84908 55%, #C81D11);
+    border-radius: 20px;
 }
-.table-qr-preview-wrap img { width: 220px; height: 220px; image-rendering: pixelated; }
+.table-qr-preview-wrap-inner {
+    background: #fff7ed; border-radius: 15px; padding: 14px;
+    border: 3px solid #FFB347; display: flex; justify-content: center;
+}
+.table-qr-preview-wrap img { width: 200px; height: 200px; image-rendering: pixelated; display: block; }
 
 /* Dark mode support */
 [data-theme="dark"] .table-grid-card,

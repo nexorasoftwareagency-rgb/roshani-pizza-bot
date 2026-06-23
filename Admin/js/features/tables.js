@@ -785,6 +785,68 @@ async function _dineInBaseUrl() {
     return snap.exists() ? snap.val() : `${window.location.origin}/menu/`;
 }
 
+let _storeBrandingCache = null;
+async function _fetchStoreBranding() {
+    if (_storeBrandingCache) return _storeBrandingCache;
+    const snap = await get(Outlet.ref('settings/Store'));
+    const s = snap.val() || {};
+    _storeBrandingCache = {
+        storeName: s.storeName || 'Our Restaurant',
+        poweredBy: (s.poweredBy || '').trim()
+    };
+    return _storeBrandingCache;
+}
+
+function _qrCardMarkup({ storeName, poweredBy, tableNumber, qrSrc, compact }) {
+    const qrSize = compact ? 150 : 220;
+    const footer = poweredBy
+        ? `<div class="qr-divider"></div><div class="qr-footer">Powered by <b>${escapeHtml(poweredBy)}</b></div>`
+        : '';
+    return `
+    <div class="qr-frame${compact ? ' qr-frame-compact' : ''}">
+        <div class="qr-card">
+            <div class="qr-header">
+                <div class="qr-store-name">🍕 ${escapeHtml(storeName)}</div>
+                <div class="qr-tagline">DINE-IN MENU</div>
+            </div>
+            <div class="qr-body">
+                <div class="qr-table-label">TABLE</div>
+                <div class="qr-table-number">${escapeHtml(String(tableNumber))}</div>
+                <div class="qr-scan-cta">📷 Scan &amp; Crave</div>
+                <div class="qr-img-frame">${qrSrc ? `<img src="${qrSrc}" width="${qrSize}" height="${qrSize}">` : '<p style="font-size:11px;color:#c81d11;">QR failed</p>'}</div>
+            </div>
+            ${footer}
+        </div>
+    </div>`;
+}
+
+const QR_CARD_CSS = `
+    .qr-frame{ display:inline-block; background:linear-gradient(135deg,#FFB347,#E84908 55%,#C81D11); border-radius:26px; padding:5px; box-shadow:0 10px 26px rgba(232,73,8,.25); }
+    .qr-frame-compact{ border-radius:20px; padding:4px; box-shadow:none; break-inside:avoid; page-break-inside:avoid; }
+    .qr-card{ background:#fff; border-radius:22px; overflow:hidden; width:300px; text-align:center; font-family:-apple-system,'Segoe UI',sans-serif; }
+    .qr-frame-compact .qr-card{ border-radius:17px; width:230px; }
+    .qr-header{ background:linear-gradient(135deg,#FF8A3D,#E84908); color:#fff; padding:16px 14px 14px; }
+    .qr-frame-compact .qr-header{ padding:11px 10px 10px; }
+    .qr-store-name{ font-size:17px; font-weight:900; letter-spacing:.01em; text-transform:uppercase; line-height:1.2; }
+    .qr-frame-compact .qr-store-name{ font-size:13px; }
+    .qr-tagline{ font-size:10px; opacity:.92; margin-top:3px; font-weight:700; letter-spacing:.1em; }
+    .qr-body{ padding:20px 18px 16px; }
+    .qr-frame-compact .qr-body{ padding:13px 12px 10px; }
+    .qr-table-label{ font-size:11px; font-weight:800; color:#E84908; letter-spacing:.14em; }
+    .qr-table-number{ font-size:40px; font-weight:900; color:#1a1a1a; line-height:1; margin:2px 0 12px; }
+    .qr-frame-compact .qr-table-number{ font-size:28px; margin-bottom:8px; }
+    .qr-scan-cta{ font-size:12px; font-weight:800; color:#C81D11; margin-bottom:12px; }
+    .qr-frame-compact .qr-scan-cta{ font-size:10px; margin-bottom:8px; }
+    .qr-img-frame{ display:inline-block; padding:10px; background:#fff7ed; border:3px solid #FFB347; border-radius:14px; }
+    .qr-frame-compact .qr-img-frame{ padding:6px; border-radius:11px; border-width:2px; }
+    .qr-img-frame img{ display:block; }
+    .qr-divider{ border-top:2px dashed #f3cba8; margin:14px 18px 0; }
+    .qr-frame-compact .qr-divider{ margin:10px 12px 0; }
+    .qr-footer{ padding:10px 14px 16px; font-size:10px; color:#b97a4e; font-weight:600; }
+    .qr-frame-compact .qr-footer{ padding:7px 10px 11px; font-size:8px; }
+    .qr-footer b{ color:#E84908; }
+`;
+
 async function _ensureQrLib() {
     if (window.QRCode) return true;
     return new Promise((resolve) => {
@@ -832,7 +894,7 @@ async function _openQrModal(id) {
         const modal = document.getElementById('tableQrModal');
         if (modal) modal.dataset.tableId = id;
         modal?.classList.add('active');
-        const dataUri = await _qrDataUri(url, 240);
+        const dataUri = await _qrDataUri(url, 200);
         if (dataUri) { img.src = dataUri; img.alt = `QR code for Table ${t.number}`; }
         else showToast('QR generation failed — check connection', 'error');
     } finally {
@@ -847,17 +909,21 @@ function _copyQrLink() {
     navigator.clipboard?.writeText(url).then(() => showToast('Link copied', 'success')).catch(() => showToast('Could not copy link', 'error'));
 }
 
-function _printSingleQr() {
+async function _printSingleQr() {
     const img = document.getElementById('tableQrModalImage');
-    const title = document.getElementById('tableQrModalTitle')?.textContent || 'Table QR';
+    const titleText = document.getElementById('tableQrModalTitle')?.textContent || 'Table QR';
+    const tableNumberMatch = titleText.match(/Table\s+(\S+)/i);
+    const tableNumber = tableNumberMatch ? tableNumberMatch[1] : titleText;
     if (!img?.src) return;
-    const w = window.open('', '_blank', 'width=400,height=560');
-    w.document.write(`<html><head><title>${escapeHtml(title)}</title><style>
-        body{font-family:sans-serif;text-align:center;padding:24px;}
-        h2{margin-bottom:4px;} .sub{color:#777;margin-bottom:18px;font-size:13px;}
-        img{width:240px;height:240px;} .foot{margin-top:14px;font-size:12px;color:#999;}
-        </style></head><body><h2>${escapeHtml(title)}</h2><div class="sub">Scan to order</div>
-        <img src="${img.src}"><div class="foot">Roshani Pizza — Thank You!</div>
+
+    const { storeName, poweredBy } = await _fetchStoreBranding();
+    const w = window.open('', '_blank', 'width=420,height=620');
+    w.document.write(`<html><head><title>Table ${escapeHtml(tableNumber)} QR — ${escapeHtml(storeName)}</title><style>
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fef3e8;padding:24px;}
+        ${QR_CARD_CSS}
+        </style></head><body>
+        ${_qrCardMarkup({ storeName, poweredBy, tableNumber, qrSrc: img.src, compact: false })}
         <script>window.onload=function(){window.print();};</script></body></html>`);
     w.document.close();
 }
@@ -869,31 +935,23 @@ async function _bulkQrPrint() {
     if (!ok) return;
 
     showToast('Generating QR codes…', 'info');
+    const { storeName, poweredBy } = await _fetchStoreBranding();
     const cards = [];
     for (const t of tables) {
         const url = await _qrUrlForTable(t);
-        const dataUri = await _qrDataUri(url, 200);
+        const dataUri = await _qrDataUri(url, 150);
         cards.push({ t, dataUri });
     }
     const w = window.open('', '_blank');
-    const cardsHtml = cards.map(({ t, dataUri }) => `
-        <div class="qr-card">
-            <div class="qr-card-label">TABLE</div>
-            <div class="qr-card-number">${escapeHtml(t.number)}</div>
-            <div class="qr-card-scan">SCAN TO ORDER</div>
-            ${dataUri ? `<img src="${dataUri}">` : '<p>QR failed</p>'}
-            <div class="qr-card-thanks">Thank You!</div>
-        </div>`).join('');
-    w.document.write(`<html><head><title>Bulk QR Print — Roshani Pizza</title><style>
-        body{font-family:sans-serif;margin:0;padding:16px;}
-        .qr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
-        .qr-card{border:2px solid #E84908;border-radius:12px;padding:16px;text-align:center;break-inside:avoid;page-break-inside:avoid;}
-        .qr-card-label{font-size:11px;letter-spacing:2px;color:#E84908;font-weight:700;}
-        .qr-card-number{font-size:36px;font-weight:900;color:#1a1a1a;margin:2px 0 6px;}
-        .qr-card-scan{font-size:11px;color:#777;margin-bottom:8px;font-weight:600;}
-        .qr-card img{width:140px;height:140px;}
-        .qr-card-thanks{font-size:11px;color:#999;margin-top:8px;}
-        @media print{ .qr-grid{grid-template-columns:repeat(2,1fr);} }
+    const cardsHtml = cards.map(({ t, dataUri }) =>
+        _qrCardMarkup({ storeName, poweredBy, tableNumber: t.number, qrSrc: dataUri, compact: true })
+    ).join('');
+    w.document.write(`<html><head><title>Bulk QR Print — ${escapeHtml(storeName)}</title><style>
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:-apple-system,'Segoe UI',sans-serif;background:#fef3e8;padding:20px;}
+        .qr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;justify-items:center;}
+        ${QR_CARD_CSS}
+        @media print{ body{background:#fff;} .qr-grid{grid-template-columns:repeat(2,1fr);} }
         </style></head><body><div class="qr-grid">${cardsHtml}</div>
         <script>window.onload=function(){setTimeout(function(){window.print();},300);};</script></body></html>`);
     w.document.close();
