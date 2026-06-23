@@ -285,21 +285,23 @@ function getStatusOptions(currentStatus, type = 'Online') {
     const sequence = STATUS_SEQUENCES[type] || STATUS_SEQUENCES['Default'];
     const currentLevel = sequence.indexOf(currentStatus);
     const options = [];
-    
-    // Always show current status as selected
+
+    // Always show current status as selected (disabled)
     options.push({ value: currentStatus, label: currentStatus, selected: true });
 
-    // Show next step if exists
-    // If current status is not in sequence, offer the first step
-    const nextStep = (currentLevel !== -1) ? sequence[currentLevel + 1] : sequence[0];
-    
-    if (nextStep && nextStep !== currentStatus) {
-        options.push({ value: nextStep, label: `Move to ${nextStep}`, selected: false });
+    // Show ALL remaining steps after current position
+    // If current status is not in sequence, offer all steps starting from first
+    const startIndex = (currentLevel !== -1) ? currentLevel + 1 : 0;
+    for (let i = startIndex; i < sequence.length; i++) {
+        const step = sequence[i];
+        if (step && step !== currentStatus) {
+            options.push({ value: step, label: step, selected: false });
+        }
     }
 
     // Always allow cancellation (unless already delivered or cancelled)
     if (currentStatus !== "Delivered" && currentStatus !== "Cancelled") {
-        options.push({ value: "Cancelled", label: "Cancel Order X", selected: false });
+        options.push({ value: "Cancelled", label: "Cancel", selected: false });
     }
 
     return options.map(opt => `
