@@ -193,7 +193,6 @@
         ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || root.child('riders').child(auth.uid).exists())",
         ".write": "auth != null && (auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).exists())",
         "Store": {
-          ".read": "true",
           "storeName": { ".read": "true" },
           "customerMenuBgImage": { ".read": "true" },
           "instagram": { ".read": "true" },
@@ -229,7 +228,7 @@
       "tableSessions": {
         ".read": "true",
         "$sessionId": {
-          ".write": "(auth != null && (root.child('admins').child(auth.uid).child('outlet').val() == $outletId || auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('isSuper').val() == true || root.child('admins').child(auth.uid).child('isSupreme').val() == true)) || (!data.exists() || data.child('status').val() == 'active')",
+          ".write": "(auth != null && (root.child('admins').child(auth.uid).child('outlet').val() == $outletId || auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('isSuper').val() == true || root.child('admins').child(auth.uid).child('isSupreme').val() == true)) || (!data.exists() || data.child('status').val() != 'closed')",
           "orders": {
             ".write": "(auth != null && (root.child('admins').child(auth.uid).child('outlet').val() == $outletId || auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('isSuper').val() == true || root.child('admins').child(auth.uid).child('isSupreme').val() == true)) || (data.parent().child('status').val() != 'closed')"
           },
@@ -241,7 +240,8 @@
       "tableRequests": {
         ".read": "auth != null && (root.child('admins').child(auth.uid).child('outlet').val() == $outletId || auth.token.email == 'nexorasoftware@gmail.com' || auth.token.email == 'roshanisudha@gmail.com' || root.child('admins').child(auth.uid).child('isSuper').val() == true || root.child('admins').child(auth.uid).child('isSupreme').val() == true)",
         "$reqId": {
-          ".write": "(!data.exists() && newData.hasChildren(['tableId','type','createdAt'])) || auth != null"
+          ".write": "(!data.exists() && newData.hasChildren(['tableId','type','createdAt'])) || auth != null",
+          ".validate": "newData.hasChildren(['tableId','type','createdAt'])"
         }
       },
       "tableAnalytics": {
