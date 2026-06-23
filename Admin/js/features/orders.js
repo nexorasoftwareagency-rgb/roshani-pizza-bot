@@ -551,7 +551,7 @@ export function renderOrders(snap) {
                 <td data-label="Actions">
                     <div class="action-group-v4">
                         ${renderStatusDropdown(o.status || 'Placed', o.type || 'Online', id)}
-                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4" title="Print Receipt">
+                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4" title="Print Receipt" aria-label="Print Receipt">
                             <i data-lucide="printer"></i>
                         </button>
                     </div>
@@ -604,7 +604,7 @@ export function renderOrders(snap) {
                 <td data-label="Actions">
                     <div class="action-group-v4">
                         ${renderStatusDropdown(o.status || 'Placed', o.type || 'Online', id)}
-                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4">
+                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4" aria-label="Print Receipt">
                             <i data-lucide="printer"></i>
                         </button>
                     </div>
@@ -661,7 +661,7 @@ export function renderOrders(snap) {
                         <span class="name">${safeCustomerName}</span>
                         <div class="action-group-v4 mt-5">
                             <span class="sub">${escapeHtml(o.phone || 'Guest')}</span>
-                            ${o.phone ? `<button data-action="chatOnWhatsapp" data-phone="${o.phone}" class="btn-action-v4 success" style="width:20px;height:20px;font-size:10px;"><i data-lucide="message-square" style="width:10px;"></i></button>` : ''}
+                            ${o.phone ? `<button data-action="chatOnWhatsapp" data-phone="${o.phone}" class="btn-action-v4 success" style="width:20px;height:20px;font-size:10px;" aria-label="Chat on WhatsApp"><i data-lucide="message-square" style="width:10px;"></i></button>` : ''}
                         </div>
                     </div>
                 </td>
@@ -689,7 +689,7 @@ export function renderOrders(snap) {
                 <td data-label="Actions">
                     <div class="action-group-v4">
                         ${renderStatusDropdown(o.status || 'Placed', o.type || 'Online', id)}
-                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4">
+                        <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4" aria-label="Print Receipt">
                             <i data-lucide="printer"></i>
                         </button>
                     </div>

@@ -57,10 +57,10 @@ export function loadCategories() {
                     </div>
                 </div>
                 <div class="action-group-v4">
-                    <button data-action="editCategory" data-id="${cat.id}" class="btn-action-v4" title="Edit Category">
+                    <button data-action="editCategory" data-id="${cat.id}" class="btn-action-v4" title="Edit Category" aria-label="Edit Category">
                          <i data-lucide="pencil" style="width:12px;"></i>
                     </button>
-                    <button data-action="deleteCategory" data-id="${cat.id}" class="btn-action-v4 danger" title="Delete Category">
+                    <button data-action="deleteCategory" data-id="${cat.id}" class="btn-action-v4 danger" title="Delete Category" aria-label="Delete Category">
                          <i data-lucide="trash-2" style="width:12px;"></i>
                     </button>
                 </div>
@@ -263,10 +263,10 @@ export function loadMenu() {
 
                     <div class="flex-row justify-between flex-center pt-12 border-t-ghost">
                         <div class="action-group-v4">
-                            <button class="btn-action-v4" data-action="editDish" data-id="${dishId}" title="Edit Dish">
+                            <button class="btn-action-v4" data-action="editDish" data-id="${dishId}" title="Edit Dish" aria-label="Edit Dish">
                                 <i data-lucide="edit-3" style="width:14px;"></i>
                             </button>
-                            <button class="btn-action-v4 danger" data-action="deleteDish" data-id="${dishId}" title="Delete Dish">
+                            <button class="btn-action-v4 danger" data-action="deleteDish" data-id="${dishId}" title="Delete Dish" aria-label="Delete Dish">
                                 <i data-lucide="trash-2" style="width:14px;"></i>
                             </button>
                         </div>
