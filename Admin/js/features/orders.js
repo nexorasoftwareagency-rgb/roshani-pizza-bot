@@ -286,29 +286,31 @@ function getStatusOptions(currentStatus, type = 'Online') {
     const currentLevel = sequence.indexOf(currentStatus);
     const options = [];
 
-    // Always show current status as selected (disabled)
-    options.push({ value: currentStatus, label: currentStatus, selected: true });
-
-    // Show ALL remaining steps after current position
-    // If current status is not in sequence, offer all steps starting from first
-    const startIndex = (currentLevel !== -1) ? currentLevel + 1 : 0;
-    for (let i = startIndex; i < sequence.length; i++) {
-        const step = sequence[i];
-        if (step && step !== currentStatus) {
-            options.push({ value: step, label: step, selected: false });
-        }
+    // Show next step only
+    const nextStep = (currentLevel !== -1) ? sequence[currentLevel + 1] : sequence[0];
+    if (nextStep && nextStep !== currentStatus) {
+        options.push({ value: nextStep, label: nextStep });
     }
 
     // Always allow cancellation (unless already delivered or cancelled)
     if (currentStatus !== "Delivered" && currentStatus !== "Cancelled") {
-        options.push({ value: "Cancelled", label: "Cancel", selected: false });
+        options.push({ value: "Cancelled", label: "Cancel" });
     }
 
-    return options.map(opt => `
-        <option value="${opt.value}" ${opt.selected ? 'selected disabled' : ''}>
-            ${opt.label}
-        </option>
-    `).join('');
+    return options;
+}
+
+function renderStatusDropdown(currentStatus, type, orderId) {
+    const options = getStatusOptions(currentStatus, type);
+    if (options.length === 0) return `<span class="status-badge status-${(currentStatus||'').toLowerCase()}">${currentStatus}</span>`;
+    const optionsHtml = options.map(o => {
+        const cls = o.value === 'Cancelled' ? 'status-opt-cancel' : 'status-opt-next';
+        return `<div class="status-opt ${cls}" data-value="${o.value}" data-action="pickStatus" data-id="${orderId}">${o.label}</div>`;
+    }).join('');
+    return `<div class="status-dropdown" data-order-id="${orderId}">
+        <button class="status-dropdown-trigger" data-action="toggleStatus" data-id="${orderId}">${currentStatus} ▾</button>
+        <div class="status-dropdown-menu">${optionsHtml}</div>
+    </div>`;
 }
 
 /**
@@ -548,9 +550,7 @@ export function renderOrders(snap) {
                 </td>
                 <td data-label="Actions">
                     <div class="action-group-v4">
-                        <select data-action="updateStatus" data-id="${id}" class="status-select-mini" style="width: 100px;">
-                            ${getStatusOptions(o.status || "Placed", o.type || 'Online')}
-                        </select>
+                        ${renderStatusDropdown(o.status || 'Placed', o.type || 'Online', id)}
                         <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4" title="Print Receipt">
                             <i data-lucide="printer"></i>
                         </button>
@@ -603,9 +603,7 @@ export function renderOrders(snap) {
                 </td>
                 <td data-label="Actions">
                     <div class="action-group-v4">
-                        <select data-action="updateStatus" data-id="${id}" class="status-select-mini">
-                            ${getStatusOptions(o.status || "Placed", o.type || 'Online')}
-                        </select>
+                        ${renderStatusDropdown(o.status || 'Placed', o.type || 'Online', id)}
                         <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4">
                             <i data-lucide="printer"></i>
                         </button>
@@ -690,9 +688,7 @@ export function renderOrders(snap) {
                 </td>
                 <td data-label="Actions">
                     <div class="action-group-v4">
-                        <select data-action="updateStatus" data-id="${id}" class="status-select-mini">
-                            ${getStatusOptions(o.status || "Placed", o.type || 'Online')}
-                        </select>
+                        ${renderStatusDropdown(o.status || 'Placed', o.type || 'Online', id)}
                         <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4">
                             <i data-lucide="printer"></i>
                         </button>
@@ -1336,9 +1332,7 @@ export async function openOrderDrawer(id) {
                     <div class="ctrl-row">
                         <div class="ctrl-group">
                             <label class="form-label-small mb-6 d-block" style="color:#64748b;">STATUS</label>
-                            <select data-action="updateStatus" data-id="${id}" class="form-input-v4 w-100">
-                                ${getStatusOptions(order.status || "Placed", orderType)}
-                            </select>
+                            ${renderStatusDropdown(order.status || 'Placed', orderType, id)}
                         </div>
                         <div class="ctrl-group">
                             <label class="form-label-small mb-6 d-block" style="color:#64748b;">RIDER</label>

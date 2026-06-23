@@ -4879,6 +4879,28 @@ body {
     border-color: var(--primary) !important;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
 }
+/* Custom status dropdown */
+.status-dropdown{ position:relative; display:inline-block; }
+.status-dropdown-trigger{
+    display:inline-flex; align-items:center; gap:4px;
+    padding:8px 12px; border-radius:10px; border:1px solid rgba(0,0,0,.1);
+    background:#fff; font-size:12px; font-weight:700; cursor:pointer;
+    transition:border-color .15s ease, box-shadow .15s ease; white-space:nowrap;
+}
+.status-dropdown-trigger:hover{ border-color:var(--primary); box-shadow:0 2px 8px rgba(0,0,0,.05); }
+.status-dropdown-menu{
+    display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:50;
+    min-width:160px; background:#fff; border:1px solid var(--border,#e2e8f0);
+    border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12); padding:4px; overflow:hidden;
+}
+.status-dropdown.open .status-dropdown-menu{ display:block; }
+.status-opt{
+    padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600;
+    cursor:pointer; transition:background .1s ease; white-space:nowrap;
+}
+.status-opt:hover{ background:#f1f5f9; }
+.status-opt-next{ color:var(--primary,#E84908); }
+.status-opt-cancel{ color:#dc2626; }
 /* 4. DISH PRICING V4 REFINEMENTS */
 .dish-pricing-v4 {
     display: flex;

@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     );
     initGestures();
 
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', e => e.preventDefault());
+    });
+
     window.hideLoader = () => {
         const loader = document.getElementById('initial-loader');
         if (loader) {
@@ -115,6 +119,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'closeReceiptPreview': logger.info('PRINT', 'Close receipt preview'); (await useMod('printing')).closeReceiptPreview(); break;
                 case 'printReceiptFromPreview': logger.info('PRINT', 'Print from preview'); (await useMod('printing')).printReceiptFromPreview(); break;
                 case 'updateStatus': { const v = val || (el.tagName === 'SELECT' ? el.value : null); logger.info('ORDERS', `Update status: ${id} → ${v}`); (await useMod('orders')).updateStatus(id, v); break; }
+                case 'toggleStatus': { const dd = el.closest('.status-dropdown'); if (dd) dd.classList.toggle('open'); break; }
+                case 'pickStatus': { const dd = el.closest('.status-dropdown'); if (dd) dd.classList.remove('open'); logger.info('ORDERS', `Status picked: ${id} → ${val}`); (await useMod('orders')).updateStatus(id, val); break; }
                 case 'assignRider': logger.info('ORDERS', `Assign rider: ${id} → ${val}`); (await useMod('orders')).assignRider(id, val); break;
                 case 'openOrderDrawer': logger.info('ORDERS', `Open order drawer: ${id}`); (await useMod('orders')).openOrderDrawer(id); break;
                 case 'markAsPaid': logger.info('ORDERS', `Mark paid: ${id}`); (await useMod('orders')).markAsPaid(id); break;
@@ -341,6 +347,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         document.addEventListener('click', (e) => {
+            // Close status dropdowns on outside click
+            if (!e.target.closest('.status-dropdown')) {
+                document.querySelectorAll('.status-dropdown.open').forEach(dd => dd.classList.remove('open'));
+            }
             if (e.target.closest('.close-btn, .cancel-dish-btn, .btn-hide-modal')) {
                 const modal = e.target.closest('.modal');
                 if (modal) {
