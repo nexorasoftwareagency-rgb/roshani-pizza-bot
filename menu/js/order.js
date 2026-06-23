@@ -28,7 +28,20 @@ import { Cart, clearCart, subtotal as cartSubtotal } from './cart.js';
 
 function round2(n) { return Math.round(n * 100) / 100; }
 
-export async function placeOrder({ taxPercent = 5, taxEnabled = true, serviceChargeEnabled = false, serviceChargeRate = 0, customerName = '', customerPhone = '' } = {}) {
+/**
+ * @param {Object} opts
+ * @param {number} opts.taxPercent
+ * @param {boolean} opts.taxEnabled
+ * @param {boolean} opts.serviceChargeEnabled
+ * @param {number} opts.serviceChargeRate
+ * @param {string} opts.customerName
+ * @param {string} opts.customerPhone
+ * @param {Object} [opts.discount] - Applied discount from evaluator
+ * @param {number} [opts.discount.amount] - Discount amount in ₹
+ * @param {string} [opts.discount.label] - Discount label
+ * @param {string} [opts.discount.source] - Source string (e.g. "coupon:WELCOME20")
+ * @param {string} [opts.discount.discountId] - Firebase discount ID */
+export async function placeOrder({ taxPercent = 5, taxEnabled = true, serviceChargeEnabled = false, serviceChargeRate = 0, customerName = '', customerPhone = '', discount = null } = {}) {
     if (Object.keys(Cart.lines).length === 0) throw new Error('Cart is empty');
 
     const items = {};
@@ -45,7 +58,8 @@ export async function placeOrder({ taxPercent = 5, taxEnabled = true, serviceCha
     const subtotal = round2(cartSubtotal());
     const tax = taxEnabled ? round2(subtotal * (taxPercent / 100)) : 0;
     const serviceCharge = serviceChargeEnabled ? round2(subtotal * (serviceChargeRate / 100)) : 0;
-    const total = round2(subtotal + tax + serviceCharge);
+    const discountAmount = discount && discount.amount > 0 ? Math.min(round2(discount.amount), subtotal + tax + serviceCharge) : 0;
+    const total = round2(subtotal + tax + serviceCharge - discountAmount);
 
     const orderPayload = {
         // --- Standard fields every existing order has ---
@@ -66,14 +80,22 @@ export async function placeOrder({ taxPercent = 5, taxEnabled = true, serviceCha
         // --- Optional contact, collected at checkout only ---
         customerName: customerName || '',
         customerPhone: customerPhone || '',
-        phone: customerPhone
+        phone: customerPhone,
+
+        // --- Discount (if applied) ---
+        ...(discountAmount > 0 ? {
+            discountAmount,
+            discountLabel: discount.label || '',
+            discountSource: discount.source || '',
+            discountId: discount.discountId || ''
+        } : {})
     };
 
     const newOrderRef = push(outletRef('orders'));
     await set(newOrderRef, orderPayload);
 
     // Fold this order's totals into the session's running bill
-    await attachOrderToSession(newOrderRef.key, { subtotal, tax, serviceCharge, total });
+    await attachOrderToSession(newOrderRef.key, { subtotal, tax, serviceCharge, total, discountAmount });
 
     clearCart();
     return { orderId: newOrderRef.key, ...orderPayload };

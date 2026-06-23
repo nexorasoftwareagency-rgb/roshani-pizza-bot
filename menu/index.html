@@ -91,7 +91,8 @@
             </button>
         </div>
         <div style="flex:1; overflow-y:auto;">
-            <img id="customHeroImg" class="custom-hero" alt="">
+            <img id="customHeroImg" class="custom-hero" alt="Dish photo"
+                 src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='250'%3E%3Crect fill='%23f1f5f9' width='400' height='250' rx='12'/%3E%3Ctext x='200' y='130' text-anchor='middle' fill='%2394a3b8' font-size='14' font-family='sans-serif'%3EDish Photo%3C/text%3E%3C/svg%3E">
             <div class="custom-body">
                 <div class="custom-title-row">
                     <div class="custom-title" id="customDishName">Dish Name</div>
@@ -160,12 +161,21 @@
                 <label>Special Note (Optional)</label>
                 <textarea id="checkoutNote" placeholder="e.g. Birthday celebration, allergens…" rows="2" maxlength="200"></textarea>
             </div>
+            <div class="form-group-mini discount-input-wrap" id="discountInputWrap">
+                <label>Discount Code (Optional)</label>
+                <div class="discount-input-row">
+                    <input type="text" id="discountCodeInput" placeholder="e.g. WELCOME20" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false">
+                    <button type="button" class="btn-apply-discount" id="btnApplyDiscount">Apply</button>
+                </div>
+                <div class="discount-msg hidden" id="discountMsg"></div>
+            </div>
         </div>
 
         <div class="cart-summary" id="cartSummaryWrap">
             <div class="cart-summary-row"><span>This Order</span><span id="cartSubtotal">₹0</span></div>
             <div class="cart-summary-row" id="cartTaxRow"><span><span id="cartTaxName">Tax</span> (<span id="cartTaxPct">5</span>%)</span><span id="cartTax">₹0</span></div>
             <div class="cart-summary-row hidden" id="cartServiceChargeRow"><span><span id="cartServiceChargeName">Service Charge</span> (<span id="cartServiceChargePct">10</span>%)</span><span id="cartServiceCharge">₹0</span></div>
+            <div class="cart-summary-row cart-summary-discount hidden" id="cartDiscountRow"><span id="cartDiscountLabel">Discount</span><span id="cartDiscount">-₹0</span></div>
             <div class="cart-summary-row cart-summary-total"><span>Total</span><span id="cartTotal">₹0</span></div>
             <div id="cartSessionNote" class="cart-session-note hidden"></div>
             <button class="btn-place-order" id="btnPlaceOrder">PLACE ORDER</button>

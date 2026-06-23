@@ -7,6 +7,7 @@ import { outletRef, get, onValue, push, set } from './firebase.js';
 import { initSession, Session, requestBill, saveCheckoutContact, cleanupSession } from './session.js';
 import { Cart, addLine, setQty, clearCart, lineCount, subtotal as cartSubtotal, isEmpty as cartIsEmpty } from './cart.js';
 import { placeOrder } from './order.js';
+import { validateCoupon } from './discount.js';
 import * as UI from './ui.js';
 import { haptic } from './ui.js';
 
@@ -25,6 +26,7 @@ const M = {
     guestCount: 1,
     _guestCountDirty: false,
     _placing: false,
+    appliedDiscount: null,  // { discountId, name, couponCode, amount, ... }
 };
 
 // ---------------------------------------------------------------
@@ -237,12 +239,68 @@ document.getElementById('btnAddToOrder')?.addEventListener('click', () => {
 });
 
 // ---------------------------------------------------------------
+// DISCOUNT CODE
+// ---------------------------------------------------------------
+function _refreshDiscountInput() {
+    if (M.appliedDiscount) {
+        UI.showAppliedDiscount(M.appliedDiscount.name || M.appliedDiscount.couponCode, M.appliedDiscount.amount);
+    } else {
+        UI.resetDiscountInput();
+    }
+}
+
+function _clearDiscount() {
+    M.appliedDiscount = null;
+    UI.resetDiscountInput();
+    UI.updateCartTotals(cartSubtotal(), M.taxPercent, M.taxName, M.taxEnabled, M.serviceChargeEnabled, M.serviceChargeName, M.serviceChargeRate, null);
+}
+
+function clearDiscountIfCartChanged() {
+    if (M.appliedDiscount) _clearDiscount();
+}
+
+document.getElementById('btnApplyDiscount')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btnApplyDiscount');
+    const input = document.getElementById('discountCodeInput');
+    if (!input) return;
+    haptic(10);
+
+    // If already applied, remove
+    if (M.appliedDiscount) {
+        _clearDiscount();
+        return;
+    }
+
+    const code = input.value.trim();
+    if (!code) { UI.showDiscountMsg('Please enter a code', 'error'); return; }
+
+    UI.setDiscountInputLoading(true);
+    try {
+        const result = await validateCoupon(code, cartSubtotal());
+        if (!result) {
+            UI.showDiscountMsg('Invalid or expired discount code', 'error');
+            UI.setDiscountInputLoading(false);
+            return;
+        }
+        M.appliedDiscount = result;
+        UI.updateCartTotals(cartSubtotal(), M.taxPercent, M.taxName, M.taxEnabled, M.serviceChargeEnabled, M.serviceChargeName, M.serviceChargeRate, M.appliedDiscount);
+        UI.showAppliedDiscount(result.name || result.couponCode, result.amount);
+        haptic([10, 30, 10]);
+    } catch (e) {
+        console.error('[Discount]', e);
+        UI.showDiscountMsg('Could not verify code. Try again.', 'error');
+        UI.setDiscountInputLoading(false);
+    }
+});
+
+// ---------------------------------------------------------------
 // CART / CHECKOUT
 // ---------------------------------------------------------------
 function renderCartScreen() {
-    UI.renderCartList(Cart.lines, { onStep: (id, delta) => { haptic(10); setQty(id, (Cart.lines[id]?.qty || 0) + delta); } });
-    UI.updateCartTotals(cartSubtotal(), M.taxPercent, M.taxName, M.taxEnabled, M.serviceChargeEnabled, M.serviceChargeName, M.serviceChargeRate);
+    UI.renderCartList(Cart.lines, { onStep: (id, delta) => { haptic(10); setQty(id, (Cart.lines[id]?.qty || 0) + delta); clearDiscountIfCartChanged(); } });
+    UI.updateCartTotals(cartSubtotal(), M.taxPercent, M.taxName, M.taxEnabled, M.serviceChargeEnabled, M.serviceChargeName, M.serviceChargeRate, M.appliedDiscount);
     UI.updateSessionNoteInCart(Session.session);
+    _refreshDiscountInput();
 }
 
 ['btnOpenCartFromMenu', 'btnOpenCartFromCustomize', 'btnViewCartBar'].forEach(id => {
@@ -272,7 +330,8 @@ document.getElementById('btnPlaceOrder')?.addEventListener('click', async () => 
         const note = document.getElementById('checkoutNote')?.value.trim() || '';
         await saveCheckoutContact(name, phone, M.guestCount, note);
 
-        const { orderId } = await placeOrder({ taxPercent: M.taxPercent, taxEnabled: M.taxEnabled, serviceChargeEnabled: M.serviceChargeEnabled, serviceChargeRate: M.serviceChargeRate, customerName: name, customerPhone: phone });
+        const { orderId } = await placeOrder({ taxPercent: M.taxPercent, taxEnabled: M.taxEnabled, serviceChargeEnabled: M.serviceChargeEnabled, serviceChargeRate: M.serviceChargeRate, customerName: name, customerPhone: phone, discount: M.appliedDiscount });
+        M.appliedDiscount = null;
         watchOrder(orderId);
         UI.showScreen('screenTracking');
     } catch (e) {
@@ -395,6 +454,11 @@ async function renderPromotionsScreen() {
 }
 
 // Cleanup Firebase listeners on page unload
+// Enter key on discount code input triggers Apply
+document.getElementById('discountCodeInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btnApplyDiscount')?.click(); }
+});
+
 window.addEventListener('beforeunload', cleanupSession);
 window.addEventListener('pagehide', cleanupSession);
 

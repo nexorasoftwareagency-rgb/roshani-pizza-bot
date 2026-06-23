@@ -196,7 +196,7 @@ export function renderCartList(lines, { onStep }) {
     });
 }
 
-export function updateCartTotals(subtotal, taxPercent, taxName, taxEnabled, serviceChargeEnabled, serviceChargeName, serviceChargeRate) {
+export function updateCartTotals(subtotal, taxPercent, taxName, taxEnabled, serviceChargeEnabled, serviceChargeName, serviceChargeRate, discount = null) {
     const taxRow = document.getElementById('cartTaxRow');
     const taxEnabledVal = taxEnabled !== false;
     const tax = taxEnabledVal ? Math.round(subtotal * (taxPercent / 100) * 100) / 100 : 0;
@@ -220,8 +220,15 @@ export function updateCartTotals(subtotal, taxPercent, taxName, taxEnabled, serv
     if (el('cartServiceChargePct')) el('cartServiceChargePct').textContent = String(scRate);
     if (el('cartServiceCharge')) el('cartServiceCharge').textContent = fmtMoney(sc);
 
-    if (el('cartTotal')) el('cartTotal').textContent = fmtMoney(subtotal + tax + sc);
-    return { tax, serviceCharge: sc, total: subtotal + tax + sc };
+    // Discount row
+    const discountRow = document.getElementById('cartDiscountRow');
+    const discountAmount = discount && discount.amount > 0 ? Math.min(discount.amount, subtotal + tax + sc) : 0;
+    if (discountRow) discountRow.classList.toggle('hidden', discountAmount <= 0);
+    if (el('cartDiscountLabel')) el('cartDiscountLabel').textContent = discount?.label || 'Discount';
+    if (el('cartDiscount')) el('cartDiscount').textContent = '-' + fmtMoney(discountAmount);
+
+    if (el('cartTotal')) el('cartTotal').textContent = fmtMoney(subtotal + tax + sc - discountAmount);
+    return { tax, serviceCharge: sc, discount: discountAmount, total: subtotal + tax + sc - discountAmount };
 }
 
 export function updateSessionNoteInCart(session) {
@@ -417,4 +424,41 @@ export function renderPromotionsLinks(store) {
             </span>
             <svg class="promo-link-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
         </a>`).join('');
+}
+
+// --- Discount code UI helpers ---
+export function showDiscountMsg(text, type) {
+    const el = document.getElementById('discountMsg');
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'discount-msg ' + (type === 'success' ? 'discount-success' : 'discount-error');
+    el.classList.remove('hidden');
+}
+
+export function hideDiscountMsg() {
+    const el = document.getElementById('discountMsg');
+    if (el) el.classList.add('hidden');
+}
+
+export function setDiscountInputLoading(loading) {
+    const btn = document.getElementById('btnApplyDiscount');
+    const input = document.getElementById('discountCodeInput');
+    if (btn) { btn.disabled = loading; btn.textContent = loading ? 'Checking…' : 'Apply'; }
+    if (input) input.disabled = loading;
+}
+
+export function showAppliedDiscount(label, amount) {
+    const btn = document.getElementById('btnApplyDiscount');
+    const input = document.getElementById('discountCodeInput');
+    if (btn) { btn.textContent = 'Remove'; btn.classList.add('discount-applied'); }
+    if (input) { input.disabled = true; input.value = label; }
+    showDiscountMsg(`✓ ${label} applied — ${fmtMoney(amount)} off`, 'success');
+}
+
+export function resetDiscountInput() {
+    const btn = document.getElementById('btnApplyDiscount');
+    const input = document.getElementById('discountCodeInput');
+    if (btn) { btn.textContent = 'Apply'; btn.classList.remove('discount-applied'); btn.disabled = false; }
+    if (input) { input.disabled = false; input.value = ''; input.focus(); }
+    hideDiscountMsg();
 }
