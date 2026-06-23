@@ -31,7 +31,7 @@ import { Outlet, ref, get, onValue, set, update, remove, push, runTransaction, i
 import { state } from '../state.js';
 import { showToast, showConfirm, showDeleteConfirm, showPaymentPicker } from '../ui-utils.js';
 import { printOrderReceipt } from './printing.js';
-import { haptic, escapeHtml } from '../utils.js';
+import { haptic, escapeHtml, playNotificationSound } from '../utils.js';
 
 // ---------------------------------------------------------------------
 // Module-level cache
@@ -964,7 +964,7 @@ function _attachListeners() {
                 const meta = REQUEST_TYPE_META[r.type] || { label: r.type || 'Request' };
                 showToast(`Table ${r.tableNumber || ''}: ${meta.label}`, 'info');
             });
-            if (newOnes.length) haptic(25);
+            if (newOnes.length) { haptic(25); playNotificationSound(); }
         }
         _seenRequestIds = currentIds;
         _renderAll();

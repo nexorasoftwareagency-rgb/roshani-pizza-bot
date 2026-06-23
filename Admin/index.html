@@ -2048,7 +2048,7 @@
 
 
 
-                                        <form onsubmit="return false;">
+                                        <form>
 
                                             <div class="flex-row flex-gap-12 mb-14">
 
@@ -3936,7 +3936,8 @@
 
                             <div id="promoMediaPreview" class="promo-media-preview hidden">
 
-                                <img id="promoMediaImg" alt="Selected image preview">
+                                <img id="promoMediaImg" alt="Selected image preview"
+                                     src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f1f5f9' width='100' height='100' rx='8'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='%2394a3b8' font-size='10' font-family='sans-serif'%3EPreview%3C/text%3E%3C/svg%3E">
 
                                 <button class="btn-text text-danger" data-action="clearPromoMedia" aria-label="Remove image">
 
@@ -4430,7 +4431,8 @@
 
                             <img id="dishPreview" class="modal-img-preview hidden"
 
-                                alt="Dish Preview">
+                                alt="Dish Preview"
+                                src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f1f5f9' width='100' height='100' rx='8'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='%2394a3b8' font-size='10' font-family='sans-serif'%3EDish%3C/text%3E%3C/svg%3E">
 
                         <div class="modal-img-overlay">
 
@@ -4588,7 +4590,8 @@
 
                             <span>No photo</span>
 
-                            <img id="riderProfilePreview" class="rider-preview-sm hidden" alt="Rider Profile">
+                            <img id="riderProfilePreview" class="rider-preview-sm hidden" alt="Rider Profile"
+                                 src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%23f1f5f9' width='60' height='60' rx='30'/%3E%3Ctext x='30' y='35' text-anchor='middle' fill='%2394a3b8' font-size='10' font-family='sans-serif'%3ERider%3C/text%3E%3C/svg%3E">
 
                             <input type="file" id="riderPhotoInput" accept="image/*" class="hidden"
 
@@ -4612,7 +4615,8 @@
 
                                 <span>No document</span>
 
-                                <img id="aadharPreview" class="aadhar-preview-sm hidden" alt="Aadhar Card">
+                                <img id="aadharPreview" class="aadhar-preview-sm hidden" alt="Aadhar Card"
+                                     src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='70'%3E%3Crect fill='%23f1f5f9' width='100' height='70' rx='8'/%3E%3Ctext x='50' y='40' text-anchor='middle' fill='%2394a3b8' font-size='10' font-family='sans-serif'%3EAadhar%3C/text%3E%3C/svg%3E">
 
                             </div>
 
@@ -4632,7 +4636,7 @@
 
                     <!-- Right: Form Fields -->
 
-                    <form id="riderAccountForm" onsubmit="return false;">
+                    <form id="riderAccountForm">
 
                         <div class="modal-form-section p-r-10">
 
@@ -5208,7 +5212,7 @@
 
             <div class="modal-body">
 
-                <form id="discountEditorForm" onsubmit="return false;">
+                <form id="discountEditorForm">
 
                 <div class="form-group">
 
@@ -5896,7 +5900,8 @@
 
                 <div class="table-qr-preview-wrap">
 
-                    <img id="tableQrModalImage" alt="QR code" width="220" height="220">
+                    <img id="tableQrModalImage" alt="QR code" width="220" height="220"
+                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Crect fill='%23f1f5f9' width='220' height='220' rx='12'/%3E%3Ctext x='110' y='115' text-anchor='middle' fill='%2394a3b8' font-size='12' font-family='sans-serif'%3EQR Code%3C/text%3E%3C/svg%3E">
 
                 </div>
 
@@ -5912,7 +5917,7 @@
 
             <div class="modal-footer">
 
-                <button class="btn-secondary" id="tableQrCloseBtn">Close</button>
+                <button class="btn-secondary close-btn" id="tableQrFooterCloseBtn">Close</button>
 
                 <button class="btn-primary" id="tableQrPrintBtn">
 

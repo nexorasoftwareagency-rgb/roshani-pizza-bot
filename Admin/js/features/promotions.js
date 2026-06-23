@@ -17,7 +17,6 @@ import { renderPromotionsGuide } from './promotions-guide.js';
 import { logger } from '../utils/logger.js';
 
 const PROMO_MAX_PER_CAMPAIGN = 300;
-const PROMO_ENABLED_PATH = 'bot/{outlet}/promotions/enabled';
 const PHONE_HINTS = ['whatsapp', 'phone', 'mobile', 'number', 'cell', 'contact', 'tel', 'msisdn'];
 
 let _campaignListener = null;
