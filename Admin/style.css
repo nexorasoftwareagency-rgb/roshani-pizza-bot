@@ -8382,6 +8382,11 @@ body.pos-selection-mode .walkin-picker {
         left: calc(100% - 460px);
         box-shadow: -8px 0 30px rgba(0,0,0,.12);
     }
+    #orderDrawer.drawer-content {
+        left: calc(100% - 480px);
+        width: 480px;
+        box-shadow: -8px 0 30px rgba(0,0,0,.12);
+    }
 }
 .table-drawer-header {
     display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;

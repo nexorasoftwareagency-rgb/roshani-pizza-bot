@@ -1366,6 +1366,7 @@ export async function openOrderDrawer(id) {
     const overlay = document.getElementById('orderDrawerOverlay');
     if (drawer) drawer.classList.add('active');
     if (overlay) overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
 
     history.pushState({ action: 'closeDrawer', targetId: 'orderDrawer' }, "", window.location.hash);
 
@@ -1382,6 +1383,7 @@ export function closeOrderDrawer() {
     const overlay = document.getElementById('orderDrawerOverlay');
     if (drawer) drawer.classList.remove('active');
     if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = '';
 
     if (window._drawerPopstateHandler) {
         window.removeEventListener('popstate', window._drawerPopstateHandler);

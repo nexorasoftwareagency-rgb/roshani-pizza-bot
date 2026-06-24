@@ -8,7 +8,9 @@ import { haptic } from './utils.js';
 export function initGestures() {
     initSwipeToClose('orderDrawer', () => {
         const drawer = document.getElementById('orderDrawer');
+        const overlay = document.getElementById('orderDrawerOverlay');
         if (drawer) drawer.classList.remove('active');
+        if (overlay) overlay.classList.remove('active');
     });
 
     initSwipeToClose('notificationSheet', () => {
