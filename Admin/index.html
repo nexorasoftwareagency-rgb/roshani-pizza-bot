@@ -5937,6 +5937,42 @@
 
 
 
+    <div id="categoryEditorModal" class="modal" role="dialog" aria-modal="true" aria-label="Edit Category">
+        <div class="modal-content glass-card" style="max-width:460px;">
+            <div class="modal-header">
+                <h2 class="modal-title" id="categoryEditorTitle">Edit Category</h2>
+                <button class="close-btn" data-action="hideCategoryModal" aria-label="Close dialog"><i data-lucide="x" class="icon-18"></i></button>
+            </div>
+            <div class="modal-grid-2col">
+                <div>
+                    <div class="modal-media-upload img-placeholder" id="catEditPreviewWrap">
+                        <img id="catEditPreview" class="modal-img-preview" alt="Category Preview" style="width:100%;height:auto;border-radius:12px;">
+                        <button id="btnChangeCatEditPhoto" class="btn-secondary btn-small mt-8" style="width:100%;">Change Photo</button>
+                        <input type="file" id="catEditFile" accept="image/*" class="hidden" title="Select category photo">
+                    </div>
+                </div>
+                <div>
+                    <div class="form-group-mini">
+                        <label class="form-label-small">Category Name</label>
+                        <input id="catEditName" placeholder="Category Name" class="form-input w-100">
+                    </div>
+                    <div class="form-group-mini">
+                        <label class="form-label-small">Sort Order</label>
+                        <input id="catEditOrder" type="number" placeholder="Serial (lower = first)" class="form-input w-100">
+                    </div>
+                </div>
+            </div>
+            <div class="category-addons-container mt-10">
+                <div class="flex-between flex-center mb-10">
+                    <label class="form-label-small mb-0">Add-ons (Optional)</label>
+                    <button id="btnAddCatEditAddon" class="btn-secondary btn-small">+ Add Addon</button>
+                </div>
+                <div id="catEditAddonsList"></div>
+            </div>
+            <button id="btnSaveCategory" class="btn-primary w-full mt-14 p-12 br-12 font-weight-700">Save Category</button>
+        </div>
+    </div>
+
     <script src="receipt-templates.js?v=5.3.6"></script>
 
     <script type="module" src="js/main.js?v=5.3.6"></script>

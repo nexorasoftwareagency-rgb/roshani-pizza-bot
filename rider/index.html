@@ -59,7 +59,8 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"
+            onerror="window.confetti=function(){console.warn('Confetti unavailable')}"></script>
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
@@ -95,6 +96,7 @@
             <div class="login-logo-box">
                 <i data-lucide="zap"></i>
             </div>
+            <h1 class="sr-only">Roshani Rider Portal</h1>
             <h2>ROSHANI RIDER</h2>
             <p>Secured Access Portal</p>
             <div class="input-group">
@@ -337,7 +339,8 @@
                             <button class="btn-ghost-small" id="btn-toggle-aadhar">SHOW</button>
                         </div>
                         <div id="aadhar-container" class="hidden mt-10">
-                            <img id="r-aadhar-img" class="w-full br-10" alt="Rider Aadhar Card">
+                            <img id="r-aadhar-img" class="w-full br-10" alt="Rider Aadhar Card"
+                                 src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120'%3E%3Crect fill='%23f1f5f9' width='200' height='120' rx='8'/%3E%3Ctext x='100' y='65' text-anchor='middle' fill='%2394a3b8' font-size='12' font-family='sans-serif'%3ENo Aadhar Image%3C/text%3E%3C/svg%3E">
                         </div>
                     </div>
                 </div>
@@ -369,7 +372,7 @@
     <!-- NOTE: #verificationModal and #confirmModal removed — #verificationModal was unused (no listeners),
          #confirmModal was replaced by dynamic window.showConfirm() in app.js. -->
 
-    <div id="otpPanel" class="modal-overlay" role="dialog" aria-modal="true" aria-label="OTP verification">
+    <div id="otpPanel" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="OTP verification">
         <div class="modal-card text-center">
             <h2 class="mb-10 text-orange">TRIP COMPLETE</h2>
             <p class="text-muted mb-20">Enter 4-digit verification code from customer</p>
@@ -384,7 +387,7 @@
         </div>
     </div>
 
-    <div id="paymentPanel" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Collect payment">
+    <div id="paymentPanel" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Collect payment">
         <div class="modal-card text-center">
             <h2 class="mb-10 text-orange">COLLECT PAYMENT</h2>
             <p class="text-muted mb-20" id="paymentTotalTxt">Total to collect: ₹0</p>
@@ -397,7 +400,7 @@
     </div>
 
 
-    <div id="notificationSheet" class="notif-sheet">
+    <div id="notificationSheet" class="notif-sheet hidden">
         <div class="notif-sheet-header">
             <h3>Notifications</h3>
             <button id="btnClearAllNotifs" class="btn-clear-all">Clear All</button>
@@ -447,7 +450,7 @@
         window.initSlideToActions = window.initSlideToActions || (() => {});
     </script>
     <!-- SETTLEMENT HISTORY MODAL -->
-    <div id="settlementModal" class="modal-premium" role="dialog" aria-modal="true" aria-label="Settlement History">
+    <div id="settlementModal" class="modal-premium hidden" role="dialog" aria-modal="true" aria-label="Settlement History">
         <div class="modal-content animate-fade-in-up">
             <div class="modal-header">
                 <h3>Settlement History</h3>
@@ -462,7 +465,7 @@
     </div>
 
     <script type="module" src="app.js?v=5.3.6"></script>
-    <div id="successOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Success">
+    <div id="successOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Success">
         <div class="modal-card text-center success-card">
             <div class="success-icon-wrapper">
                 <i data-lucide="check-circle"></i>

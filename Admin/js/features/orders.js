@@ -305,7 +305,7 @@ function renderStatusDropdown(currentStatus, type, orderId) {
     if (options.length === 0) return `<span class="status-badge status-${(currentStatus||'').toLowerCase()}">${currentStatus}</span>`;
     const optionsHtml = options.map(o => {
         const cls = o.value === 'Cancelled' ? 'status-opt-cancel' : 'status-opt-next';
-        return `<div class="status-opt ${cls}" data-value="${o.value}" data-action="pickStatus" data-id="${orderId}">${o.label}</div>`;
+        return `<div class="status-opt ${cls}" data-val="${o.value}" data-action="pickStatus" data-id="${orderId}">${o.label}</div>`;
     }).join('');
     return `<div class="status-dropdown" data-order-id="${orderId}">
         <button class="status-dropdown-trigger" data-action="toggleStatus" data-id="${orderId}">${currentStatus} ▾</button>

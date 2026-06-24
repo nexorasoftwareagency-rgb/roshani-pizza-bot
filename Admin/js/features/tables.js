@@ -323,6 +323,15 @@ function _kdsCard(o) {
     const itemsLines = Object.values(o.items || {}).map(it => `<div class="kds-item-line">${it.qty || 1} × ${escapeHtml(it.name || 'Item')}</div>`).join('');
     const mins = Math.floor((_nowMs() - _ms(o.createdAt)) / 60000);
     const urgentCls = mins >= 15 ? 'kds-card-urgent' : (mins >= 8 ? 'kds-card-warn' : '');
+    const st = o.status || 'Placed';
+    let actionBtn = '';
+    if (st === 'Placed') {
+        actionBtn = `<button class="kds-btn kds-btn-accept" data-action="advanceTableOrder" data-id="${escapeHtml(o.id)}" data-next="Confirmed">Accept</button>`;
+    } else if (st === 'Confirmed' || st === 'Preparing') {
+        actionBtn = `<button class="kds-btn kds-btn-ready" data-action="advanceTableOrder" data-id="${escapeHtml(o.id)}" data-next="Ready">Mark Ready</button>`;
+    } else if (st === 'Ready') {
+        actionBtn = `<button class="kds-btn kds-btn-serve" data-action="advanceTableOrder" data-id="${escapeHtml(o.id)}" data-next="Delivered">Serve</button>`;
+    }
     return `
     <div class="kds-card ${urgentCls}" data-order-id="${escapeHtml(o.id)}">
         <div class="kds-card-top">
@@ -330,6 +339,7 @@ function _kdsCard(o) {
             <span class="kds-card-id">#${escapeHtml(String(o.id).slice(-6).toUpperCase())}</span>
         </div>
         <div class="kds-card-items">${itemsLines}</div>
+        <div class="kds-card-actions">${actionBtn}</div>
         <div class="kds-card-footer">
             <span class="kds-elapsed" data-created-at="${_ms(o.createdAt)}">${_elapsedLabel(o.createdAt)}</span>
             <span class="kds-time-label">${new Date(o.createdAt || _nowMs()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -705,10 +715,14 @@ function _printTableKOT(tableId) {
     const sess = _sessionForTable(tableId);
     if (!t || !sess) { showToast('No active session to print', 'warning'); return; }
     const orders = _ordersForSession(sess.sessionId || t.currentSession);
-    const allItems = [];
-    orders.forEach(o => Object.values(o.items || {}).forEach(it => allItems.push(it)));
-
-    const itemRows = allItems.map(it => `<div class="kot-item-row"><span>${it.qty || 1} ×</span><span>${escapeHtml(it.name || 'Item')}</span></div>`).join('');
+    const grouped = {};
+    orders.forEach(o => Object.values(o.items || {}).forEach(it => {
+        const name = it.name || 'Item';
+        grouped[name] = (grouped[name] || 0) + (it.qty || 1);
+    }));
+    const itemRows = Object.entries(grouped).map(([name, qty]) =>
+        `<div class="kot-item-row"><span>${qty} ×</span><span>${escapeHtml(name)}</span></div>`
+    ).join('');
     const w = window.open('', '_blank', 'width=380,height=600');
     w.document.write(`<html><head><title>KOT — Table ${escapeHtml(t.number)}</title><style>
         body{font-family:'Courier New',monospace;padding:16px;width:280px;}

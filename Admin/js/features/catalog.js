@@ -478,6 +478,9 @@ export function hideDishModal() {
         modal.classList.add('hidden');
     }
     document.querySelectorAll('#dishModal .form-input').forEach(el => el.classList.remove('error', 'valid'));
+    state.editingDishId = null;
+    const fileInput = document.getElementById('dishFile');
+    if (fileInput) fileInput.value = '';
 }
 
 export function resetDishValidation() {
@@ -539,6 +542,19 @@ export function addCategoryAddonField(name = "", price = "") {
     container.appendChild(div);
 }
 
+export function addCategoryEditAddonField(name = "", price = "") {
+    const container = document.getElementById('catEditAddonsList');
+    if (!container) return;
+    const div = document.createElement('div');
+    div.className = "addon-row-small flex-row flex-gap-10 mb-8";
+    div.innerHTML = `
+        <input placeholder="Addon Name" value="${escapeHtml(name)}" class="form-input mb-0" style="flex:2">
+        <input type="number" placeholder="Price" value="${escapeHtml(String(price))}" class="form-input mb-0" style="flex:1">
+        <button data-action="removeParent" class="btn-text-danger">&times;</button>
+    `;
+    container.appendChild(div);
+}
+
 /**
  * CLEANUP CATALOG LISTENERS
  */
@@ -551,26 +567,90 @@ export function cleanupCatalog() {
 export const toggleStock = (id, current) => update(Outlet.ref(`dishes/${id}`), { stock: !current });
 export const toggleDishAvailable = (id, available) => update(Outlet.ref(`dishes/${id}`), { stock: available });
 export const editDish = (id) => showDishModal(id);
+let _editingCatId = null;
+
 export const editCategory = async (id) => {
     const cat = state.categories?.find(c => c.id === id);
     if (!cat) return showToast("Category not found", "error");
-    const newName = prompt("Edit category name:", cat.name);
-    if (newName === null || newName.trim() === '') return;
-    if (newName.trim() === cat.name) return;
-    // Check for duplicate name
+    _editingCatId = id;
+
+    document.getElementById('categoryEditorTitle').textContent = `Edit: ${cat.name}`;
+    document.getElementById('catEditName').value = cat.name || '';
+    document.getElementById('catEditOrder').value = cat.order || 0;
+    document.getElementById('catEditPreview').src = cat.image || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'%3E%3Crect fill=\'%23f1f5f9\' width=\'100\' height=\'100\' rx=\'8\'/%3E%3Ctext x=\'50\' y=\'55\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-size=\'10\' font-family=\'sans-serif\'%3ECategory%3C/text%3E%3C/svg%3E';
+
+    const addonsList = document.getElementById('catEditAddonsList');
+    addonsList.innerHTML = '';
+    if (cat.addons) {
+        Object.entries(cat.addons).forEach(([name, price]) => {
+            addCategoryEditAddonField(name, price);
+        });
+    }
+
+    document.getElementById('categoryEditorModal').classList.add('active');
+};
+
+export function hideCategoryModal() {
+    const modal = document.getElementById('categoryEditorModal');
+    if (modal) {
+        modal.classList.remove('active', 'flex');
+        modal.classList.add('hidden');
+    }
+    _editingCatId = null;
+    const fileInput = document.getElementById('catEditFile');
+    if (fileInput) fileInput.value = '';
+}
+
+export async function saveCategoryEdits() {
+    const id = _editingCatId;
+    if (!id) return showToast('No category selected', 'error');
+    const cat = state.categories?.find(c => c.id === id);
+    if (!cat) return showToast('Category not found', 'error');
+
+    const name = document.getElementById('catEditName').value.trim();
+    const order = parseInt(document.getElementById('catEditOrder').value) || 0;
+    const fileInput = document.getElementById('catEditFile');
+
+    if (!name) return showToast('Category name is required', 'warning');
+
     const existingCats = state.categories || [];
-    if (existingCats.some(c => c.id !== id && c.name.toLowerCase() === newName.trim().toLowerCase())) {
+    if (existingCats.some(c => c.id !== id && c.name.toLowerCase() === name.toLowerCase())) {
         return showToast('A category with this name already exists', 'warning');
     }
-    try {
-        await update(Outlet.ref(`categories/${id}`), { name: newName.trim() });
-        logAudit("Category Edit", `Renamed "${cat.name}" → "${newName.trim()}"`, "Catalog");
-        showToast("Category updated!", "success");
-    } catch (e) {
-        console.error("[Catalog] Category edit failed:", e);
-        showToast("Failed to update category", "error");
+
+    let imageUrl = cat.image;
+    if (fileInput.files && fileInput.files[0]) {
+        try {
+            imageUrl = await uploadImage(fileInput.files[0], `categories/${id}_${Date.now()}_${fileInput.files[0].name}`);
+        } catch (e) {
+            console.error('[Catalog] Image upload failed:', e);
+            return showToast('Failed to upload image', 'error');
+        }
     }
-};
+
+    const addonRows = document.querySelectorAll('#catEditAddonsList .addon-row-small');
+    const addons = {};
+    addonRows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const aName = inputs[0]?.value.trim();
+        const aPrice = parseFloat(inputs[1]?.value) || 0;
+        if (aName) addons[aName] = aPrice;
+    });
+
+    try {
+        const payload = { name, order, image: imageUrl };
+        if (Object.keys(addons).length > 0) payload.addons = addons;
+        await update(Outlet.ref(`categories/${id}`), payload);
+        logAudit('Category Edit', `Updated "${cat.name}" → "${name}"`, 'Catalog');
+        showToast('Category updated!', 'success');
+        document.getElementById('categoryEditorModal').classList.remove('active');
+        _editingCatId = null;
+        fileInput.value = '';
+    } catch (e) {
+        console.error('[Catalog] Category save failed:', e);
+        showToast('Failed to save category', 'error');
+    }
+}
 
 export function filterMenu(searchTerm) {
     const term = (searchTerm || '').toLowerCase().trim();

@@ -8366,6 +8366,15 @@ body.pos-selection-mode .walkin-picker {
 .kds-card-urgent .kds-card-footer { animation: kdsUrgentPulse 1.4s ease-in-out infinite; }
 @keyframes kdsUrgentPulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .kds-card-urgent .kds-card-footer { animation: none; } }
+.kds-card-actions { display:flex;gap:6px;margin-top:8px; }
+.kds-btn { flex:1;padding:6px 10px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;transition:transform .12s,box-shadow .12s; }
+.kds-btn:active { transform:scale(.96); }
+.kds-btn-accept { background:#22c55e;color:#fff; }
+.kds-btn-accept:hover { background:#16a34a; }
+.kds-btn-ready { background:#f59e0b;color:#fff; }
+.kds-btn-ready:hover { background:#d97706; }
+.kds-btn-serve { background:#3b82f6;color:#fff; }
+.kds-btn-serve:hover { background:#2563eb; }
 
 /* ---------- Table Drawer ---------- */
 @media (min-width: 1025px) {

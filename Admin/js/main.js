@@ -260,6 +260,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'addSizeField': logger.info('CATALOG', 'Add size field'); (await useMod('catalog')).addSizeField(); break;
                 case 'addDishAddonField': logger.info('CATALOG', 'Add dish addon field'); (await useMod('catalog')).addDishAddonField(); break;
                 case 'addCategoryAddonField': logger.info('CATALOG', 'Add category addon field'); (await useMod('catalog')).addCategoryAddonField(); break;
+                case 'addCategoryEditAddon': logger.info('CATALOG', 'Add category edit addon field'); (await useMod('catalog')).addCategoryEditAddonField(); break;
+                case 'saveCategory': logger.info('CATALOG', 'Save category'); (await useMod('catalog')).saveCategoryEdits(); break;
+                case 'hideCategoryModal': logger.info('CATALOG', 'Hide category modal'); (await useMod('catalog')).hideCategoryModal(); break;
                 case 'saveRiderAccount': logger.info('RIDERS', 'Save rider account'); (await useMod('riders')).saveRiderAccount(); break;
                 case 'applyWalkinDiscount': {
                     const amt = el.getAttribute('data-amount');
@@ -294,19 +297,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'sendTestPromo':
                     (await useMod('promotions'))._sendTest?.();
                     break;
-                case 'openTableDrawerByOrder': logger.info('TABLES', 'Open table drawer by order'); window.__tables?.openDrawerByOrder?.(el.getAttribute('data-order-id') || id); break;
-                case 'openTableDrawer': logger.info('TABLES', 'Open table drawer'); window.__tables?.openDrawer?.(id); break;
-                case 'editTable': logger.info('TABLES', 'Edit table'); window.__tables?.openEditor?.(id); break;
-                case 'deleteTable': logger.info('TABLES', 'Delete table'); window.__tables?.delete?.(id); break;
-                case 'enableTable': logger.info('TABLES', 'Enable table'); window.__tables?.setTableEnabled?.(id, true); break;
-                case 'disableTable': logger.info('TABLES', 'Disable table'); window.__tables?.setTableEnabled?.(id, false); break;
-                case 'requestBillForTable': logger.info('TABLES', 'Request bill'); window.__tables?.requestBill?.(id); break;
-                case 'printTableKOT': logger.info('TABLES', 'Print KOT'); window.__tables?.printKOT?.(id); break;
-                case 'printSessionBill': logger.info('TABLES', 'Print session bill'); window.__tables?.printSessionBill?.(id); break;
-                case 'jumpToOrderInOrdersTab': logger.info('TABLES', 'Jump to order'); window.__tables?.jumpToOrder?.(id); break;
-                case 'openTableQr': logger.info('TABLES', 'Open table QR'); window.__tables?.openQr?.(id); break;
-                case 'closeSessionForTable': logger.info('TABLES', 'Close session'); window.__tables?.closeSession?.(id); break;
-                case 'cancelSessionForTable': logger.info('TABLES', 'Cancel session'); window.__tables?.cancelSession?.(id); break;
+                case 'openTableDrawerByOrder': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Open table drawer by order'); window.__tables?.openDrawerByOrder?.(el.getAttribute('data-order-id') || id); break;
+                case 'openTableDrawer': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Open table drawer'); window.__tables?.openDrawer?.(id); break;
+                case 'editTable': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Edit table'); window.__tables?.openEditor?.(id); break;
+                case 'deleteTable': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Delete table'); window.__tables?.delete?.(id); break;
+                case 'enableTable': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Enable table'); window.__tables?.setTableEnabled?.(id, true); break;
+                case 'disableTable': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Disable table'); window.__tables?.setTableEnabled?.(id, false); break;
+                case 'requestBillForTable': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Request bill'); window.__tables?.requestBill?.(id); break;
+                case 'printTableKOT': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Print KOT'); window.__tables?.printKOT?.(id); break;
+                case 'printSessionBill': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Print session bill'); window.__tables?.printSessionBill?.(id); break;
+                case 'jumpToOrderInOrdersTab': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Jump to order'); window.__tables?.jumpToOrder?.(id); break;
+                case 'openTableQr': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Open table QR'); window.__tables?.openQr?.(id); break;
+                case 'closeSessionForTable': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Close session'); window.__tables?.closeSession?.(id); break;
+                case 'cancelSessionForTable': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Cancel session'); window.__tables?.cancelSession?.(id); break;
                 default:
                     logger.warn('CLICK', `Unhandled action: ${action}`, { el: el.outerHTML.slice(0, 200) });
             }
@@ -449,6 +452,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         document.getElementById('saveDishBtn')?.addEventListener('click', async () => {
             (await useMod('catalog')).saveDish();
+        });
+
+        bindClickTo('btnChangeCatEditPhoto', 'catEditFile');
+        document.getElementById('catEditFile')?.addEventListener('change', (e) => {
+            previewImage(e.target, 'catEditPreview');
+        });
+        document.getElementById('btnSaveCategory')?.addEventListener('click', async () => {
+            (await useMod('catalog')).saveCategoryEdits();
+        });
+        document.getElementById('btnAddCatEditAddon')?.addEventListener('click', async () => {
+            (await useMod('catalog')).addCategoryEditAddonField();
         });
 
         const setupPassToggle = (btnId, inputId) => {
