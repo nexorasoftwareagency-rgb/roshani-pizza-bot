@@ -15,26 +15,9 @@ const SETTINGS_PATHS = {
  * Merged "Cooked" + "Ready" into a single "Ready" status; "Preparing" deleted.
  * Guarded by localStorage flag so it only runs once per browser.
  */
-async function purgeDeprecatedBotImages(botData) {
-    if (!botData) return;
-    if (localStorage.getItem('bot_images_v5_migrated') === '1') return;
-    const updates = {};
-    if ('imgPreparing' in botData) updates['imgPreparing'] = null;
-    if ('imgCooked' in botData) updates['imgCooked'] = null;
-    if (Object.keys(updates).length === 0) {
-        localStorage.setItem('bot_images_v5_migrated', '1');
-        return;
-    }
-    try {
-        await update(Outlet.ref(SETTINGS_PATHS.BOT), updates);
-        localStorage.setItem('bot_images_v5_migrated', '1');
-        console.info('[Settings] v5.0.0 migration: purged imgPreparing/imgCooked from bot images');
-    } catch (e) {
-        console.warn('[Settings] v5.0.0 bot image migration failed:', e);
-    }
-}
-
 /**
+ * COORDINATE VALIDATION
+ */
  * Validates Latitude and Longitude
  */
 function validateCoords(lat, lng) {
@@ -101,9 +84,6 @@ export async function loadStoreSettings() {
             get(Outlet.ref(SETTINGS_PATHS.BOT)),
             get(Outlet.ref(SETTINGS_PATHS.DISPLAY))
         ]);
-
-        // One-time v5.0.0 migration: purge deprecated bot image keys (imgPreparing, imgCooked)
-        await purgeDeprecatedBotImages(botSnap.val());
 
         const store = storeSnap.val();
         const del = delSnap.val();
@@ -391,12 +371,29 @@ export function addFeeSlab() {
     const tbody = document.getElementById('feeSlabsTable');
     if (!tbody) return;
     const tr = document.createElement('tr');
+    tr.className = 'premium-row-v4';
     tr.innerHTML = `
-        <td><input type="number" class="slab-km form-input-small" value="0" placeholder="KM"></td>
-        <td><input type="number" class="slab-fee form-input-small" value="0" placeholder="₹"></td>
-        <td><button class="btn-icon text-danger" data-action="removeFeeSlab">🗑️</button></td>
+        <td>
+            <div class="flex-row flex-center flex-gap-8">
+                <i data-lucide="map-pin" class="text-muted" style="width:14px;"></i>
+                <input type="number" class="slab-km form-input-small w-80" value="0" placeholder="KM">
+                <span class="text-muted-small">km</span>
+            </div>
+        </td>
+        <td>
+            <div class="flex-row flex-center flex-gap-8">
+                <span class="text-muted-small">₹</span>
+                <input type="number" class="slab-fee form-input-small w-80" value="0" placeholder="Fee">
+            </div>
+        </td>
+        <td class="text-right">
+            <button class="btn-icon-danger" data-action="removeFeeSlab" title="Remove Slab">
+                <i data-lucide="trash-2" style="width:16px;"></i>
+            </button>
+        </td>
     `;
     tbody.appendChild(tr);
+    if (window.lucide) window.lucide.createIcons({ root: tr });
 }
 
 function getSlabsFromTable() {
@@ -480,6 +477,14 @@ function showStatusAlert(newStatus) {
         setTimeout(() => div.remove(), 500);
     }, 4000);
 }
+
+window.updateOutletStatusIndicator = function(status) {
+    const pill = document.getElementById('outletStatusPill');
+    if (!pill) return;
+    const label = { 'FORCE_OPEN': 'OPEN', 'FORCE_CLOSED': 'CLOSED', 'AUTO': 'AUTO' }[status] || 'AUTO';
+    pill.textContent = label;
+    pill.className = 'outlet-status-pill status-' + (status === 'FORCE_OPEN' ? 'open' : status === 'FORCE_CLOSED' ? 'closed' : 'auto');
+};
 
 // --- INITIALIZATION ---
 // Bind image uploads for Settings

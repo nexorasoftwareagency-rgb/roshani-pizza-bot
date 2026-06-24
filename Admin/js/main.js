@@ -472,7 +472,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btn.addEventListener('click', () => {
                     const isPass = input.type === 'password';
                     input.type = isPass ? 'text' : 'password';
-                    btn.textContent = isPass ? '\uD83D\uDD12' : '\uD83D\uDC41\uFE0F';
+                    btn.innerHTML = isPass ? '<i data-lucide="eye-off" class="icon-16"></i>' : '<i data-lucide="eye" class="icon-16"></i>';
+                    if (window.lucide) window.lucide.createIcons({ root: btn });
                 });
             }
         };
