@@ -631,6 +631,12 @@ async function _closeSessionForTable(tableId) {
     try {
         await update(_sessRef(sess.sessionId), { status: 'closed', closedAt: _nowMs(), paymentMethod: method, paidAt: _nowMs() });
         await update(_tblRef(tableId), { status: 'free', currentSession: null, updatedAt: _nowMs() });
+        const ordersInSession = _ordersForSession(sess.sessionId);
+        for (const o of ordersInSession) {
+            if (o.id && o.status !== 'Cancelled') {
+                await update(_ordersRef(o.id), { paymentMethod: method, paymentStatus: 'Paid', updatedAt: _nowMs() });
+            }
+        }
         await runTransaction(Outlet.ref(`tableAnalytics/${tableId}`), (cur) => {
             cur = cur || { totalOrders: 0, totalRevenue: 0, avgSessionTime: 0, occupancyRate: 0 };
             const orderCount = (sess.orders || []).length;
@@ -669,9 +675,25 @@ async function _cancelSessionForTable(tableId) {
 // ---------------------------------------------------------------------
 async function _advanceOrder(orderId, nextStatus) {
     try {
-        await update(_ordersRef(orderId), { status: nextStatus, updatedAt: _nowMs() });
+        let paymentMethod, paymentStatus;
+        if (nextStatus === 'Delivered') {
+            const o = _orders[orderId];
+            const total = Number(o?.total || 0);
+            const method = await showPaymentPicker(total);
+            if (!method) return;
+            paymentMethod = method;
+            paymentStatus = 'Paid';
+        }
+        const updates = { status: nextStatus, updatedAt: _nowMs() };
+        if (paymentMethod) updates.paymentMethod = paymentMethod;
+        if (paymentStatus) updates.paymentStatus = paymentStatus;
+        await update(_ordersRef(orderId), updates);
+        if (_orders[orderId]) {
+            _orders[orderId] = { ..._orders[orderId], ...updates };
+        }
         showToast(`Order moved to ${nextStatus}`, 'success');
         haptic(20);
+        _renderKDS();
     } catch (e) {
         showToast('Update failed: ' + (e?.message || e), 'error');
     }
@@ -783,7 +805,7 @@ async function _printSessionBill(tableId) {
         deliveryFee: 0,
         tableNo: String(t.number),
         createdAt: sess.openedAt || Date.now(),
-        paymentMethod: 'Cash',
+        paymentMethod: sess.paymentMethod || 'Cash',
         status: 'Delivered',
         customerName: `Table ${t.number}`
     };
@@ -1010,13 +1032,13 @@ function _attachListeners() {
         _renderAll();
     });
 
-    // Reuses the existing /orders node — prefer state.ordersMap from orders.js
-    // when available, only subscribe to Firebase as fallback.
+    // Always attach an /orders listener so KDS status updates
+    // (advanceTableOrder) immediately trigger a re-render.
     if (state.ordersMap && state.ordersMap.size > 0) {
         _orders = Object.fromEntries(state.ordersMap);
         _syncCustomersFromOrders(_orders);
-        _renderAll();
-    } else if (!_ordersListenerAttached) {
+    }
+    if (!_ordersListenerAttached) {
         _ordersListenerAttached = true;
         _ordersListener = onValue(_ordersRef(), (snap) => {
             _orders = snap.val() || {};

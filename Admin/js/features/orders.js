@@ -1163,10 +1163,17 @@ export async function assignRider(id, riderId) {
 }
 
 export async function markAsPaid(id) {
+    const order = state.ordersMap.get(id);
+    if (!order) {
+        showToast("Order not found!", "error");
+        return;
+    }
+    const method = order.paymentMethod || await showPaymentPicker(order.total);
+    if (!method) return;
     try {
-        await update(Outlet.ref(`orders/${id}`), { paymentStatus: "Paid" });
-        logAudit("Payments", `Marked Order Paid: #${id.slice(-5)}`, id);
-        showToast("Order marked as PAID", "success");
+        await update(Outlet.ref(`orders/${id}`), { paymentMethod: method, paymentStatus: "Paid" });
+        logAudit("Payments", `Marked Order Paid: #${id.slice(-5)} via ${method}`, id);
+        showToast(`Order marked as PAID via ${method}`, "success");
     } catch (e) {
         showToast("Update failed: " + e.message, "error");
     }
@@ -1322,6 +1329,25 @@ export async function openOrderDrawer(id) {
                 <div class="summary-total">
                     <span class="label">Grand Total</span>
                     <span class="value">₹${order.total || 0}</span>
+                </div>
+            </div>
+
+            <!-- Payment Info -->
+            <div class="drawer-section">
+                <div class="section-label-v4"><i data-lucide="credit-card"></i> Payment</div>
+                <div class="drawer-payment-card">
+                    <div class="payment-method-row">
+                        <span class="label">Method</span>
+                        <span class="badge-payment-v4" data-method="${escapeHtml((order.paymentMethod || '---').toLowerCase())}">
+                            <i data-lucide="${(order.paymentMethod || '').toLowerCase() === 'cash' ? 'banknote' : (order.paymentMethod || '').toLowerCase() === 'upi' ? 'smartphone' : 'credit-card'}" style="width:12px;height:12px;"></i>
+                            <span>${escapeHtml(order.paymentMethod || '---')}</span>
+                        </span>
+                    </div>
+                    <div class="payment-status-row">
+                        <span class="label">Status</span>
+                        <span class="badge ${(order.paymentStatus || 'Pending') === 'Paid' ? 'badge-success' : 'badge-pending'}">${escapeHtml(order.paymentStatus || 'Pending')}</span>
+                    </div>
+                    ${order.paymentMethod && order.paymentStatus !== 'Paid' ? `<button class="btn-text text-success btn-small" data-action="markAsPaid" data-id="${id}"><i data-lucide="check-circle" style="width:12px;height:12px;"></i> Mark as Paid</button>` : ''}
                 </div>
             </div>
 

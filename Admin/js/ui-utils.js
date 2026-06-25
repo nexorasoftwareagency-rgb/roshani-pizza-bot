@@ -195,6 +195,7 @@ export const showPaymentPicker = (total) => {
                 <div class="dynamic-payment-grid">
                     <button data-method="Cash" class="pay-btn">💵 Cash</button>
                     <button data-method="UPI" class="pay-btn">📱 UPI</button>
+                    <button data-method="Card" class="pay-btn">💳 Card</button>
                     <button id="cancelPay" class="pay-btn pay-btn-cancel">Cancel</button>
                 </div>
             </div>`;
