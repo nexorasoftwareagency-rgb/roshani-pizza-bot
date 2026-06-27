@@ -500,6 +500,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
+        const reportOutletFilter = document.getElementById('reportOutletFilter');
+        if (reportOutletFilter) {
+            reportOutletFilter.addEventListener('change', async (e) => {
+                const r = await useMod('analytics');
+                if (r.setOutletFilter) r.setOutletFilter(e.target.value);
+            });
+        }
+
+        const btnToggleCompare = document.getElementById('btnToggleCompare');
+        if (btnToggleCompare) {
+            btnToggleCompare.addEventListener('click', async () => {
+                const r = await useMod('analytics');
+                if (r.toggleCompare) {
+                    const on = btnToggleCompare.classList.toggle('active');
+                    btnToggleCompare.style.background = on ? 'var(--accent)' : '';
+                    btnToggleCompare.style.color = on ? '#fff' : '';
+                    r.toggleCompare(on);
+                }
+            });
+        }
+
         const btnWhatsappReport = document.getElementById('btnWhatsappReport');
         if (btnWhatsappReport) btnWhatsappReport.addEventListener('click', async () => {
             if (!(await showConfirm("Send Daily Sales Report to WhatsApp now?", "Confirm Report"))) return;

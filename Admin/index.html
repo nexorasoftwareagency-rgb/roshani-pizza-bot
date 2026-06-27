@@ -2977,6 +2977,19 @@
 
                         </select>
 
+                        <select id="reportOutletFilter" class="form-input report-date-input" title="Filter by Outlet">
+
+                            <option value="current">Current</option>
+
+                            <option value="pizza">Pizza</option>
+
+                            <option value="cake">Cake</option>
+
+                        </select>
+
+                        <button id="btnToggleCompare" class="btn-secondary report-gen-btn"
+                            title="Compare with previous period" style="padding:8px 12px;font-size:12px;">vs Previous</button>
+
                         <button id="btnGenerateReport" class="btn-primary report-gen-btn"
 
                             title="Generate Sales Statistics for the selected dates">Generate</button>
@@ -3061,6 +3074,80 @@
 
 
 
+                    <!-- PAYMENT BREAKDOWN KPIs -->
+
+                    <div class="kpi-row mb-24" id="paymentBreakdownRow">
+
+                        <div class="kpi-card-v4 success">
+
+                            <div class="icon-wrap success"><i data-lucide="wallet"></i></div>
+
+                            <div class="info-wrap">
+
+                                <span class="val" id="reportCashTotal">₹0</span>
+
+                                <span class="lbl">Cash Payments</span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="kpi-card-v4 info">
+
+                            <div class="icon-wrap info"><i data-lucide="smartphone"></i></div>
+
+                            <div class="info-wrap">
+
+                                <span class="val" id="reportUpiTotal">₹0</span>
+
+                                <span class="lbl">UPI Payments</span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="kpi-card-v4 orange">
+
+                            <div class="icon-wrap orange"><i data-lucide="banknote"></i></div>
+
+                            <div class="info-wrap">
+
+                                <span class="val" id="reportCodTotal">₹0</span>
+
+                                <span class="lbl">COD Payments</span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="kpi-card-v4 warning">
+
+                            <div class="icon-wrap warning"><i data-lucide="percent"></i></div>
+
+                            <div class="info-wrap">
+
+                                <span class="val" id="reportTopMethod">-</span>
+
+                                <span class="lbl">Top Payment Method</span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div id="reportComparisonBar" class="glass-card p-10-20 mb-20 flex-row flex-center flex-gap-20 hidden" style="justify-content:center;">
+
+                        <span style="font-weight:700;color:var(--text-secondary);font-size:13px;">vs Previous Period:</span>
+
+                        <span id="compRevenue" class="flex-row flex-gap-5 flex-center" style="font-size:13px;font-weight:700;">Revenue: <span>--</span></span>
+
+                        <span id="compOrders" class="flex-row flex-gap-5 flex-center" style="font-size:13px;font-weight:700;">Orders: <span>--</span></span>
+
+                        <span id="compAvg" class="flex-row flex-gap-5 flex-center" style="font-size:13px;font-weight:700;">Avg Ticket: <span>--</span></span>
+
+                    </div>
+
                     <div class="reports-grid">
 
                         <!-- Left: Detailed Table -->
@@ -3110,6 +3197,18 @@
                                 <div class="w-full h-300" style="position:relative">
 
                                     <canvas id="revenueChart" style="position:relative;z-index:2"></canvas>
+
+                                </div>
+
+                            </div>
+
+                            <div class="glass-card mb-20 p-24">
+
+                                <h4 class="panel-title mb-15">Order Type Distribution</h4>
+
+                                <div class="w-full h-250" style="position:relative">
+
+                                    <canvas id="orderTypeChart" style="position:relative;z-index:2"></canvas>
 
                                 </div>
 
@@ -3779,7 +3878,7 @@
 
                                 class="btn-primary w-full btn-checkout">
 
-                                âœ… Record Sale
+                                ✅ Record Sale
 
                             </button>
 

@@ -1451,24 +1451,33 @@
         pointer-events: auto !important; /* Re-enable for the actual toast */
     }
 
-    /* POS Side Panel Mobile Optimization */
+    /* POS Selection — full page on mobile, not a partial drawer/sheet.
+       Was a 90vh bottom sheet with rounded top corners (a "drawer" feel,
+       background still peeking through above it); now fills the entire
+       viewport like a dedicated screen, consistent with how every other
+       mobile screen in this app behaves. */
     .selection-panel-v4 {
         width: 100% !important;
-        border-radius: 24px 24px 0 0 !important;
-        height: 90vh !important;
-        margin-top: auto !important;
-        animation: mobilePanelSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-height: none !important;
+        border-radius: 0 !important;
+        margin-top: 0 !important;
+        animation: mobilePanelSlide 0.3s ease !important;
     }
 
     .pos-side-panel {
-        align-items: flex-end !important;
+        align-items: stretch !important;
         justify-content: center !important;
         flex-direction: column !important;
+        background: var(--card, #fff) !important;
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
     }
 
     @keyframes mobilePanelSlide {
-        from { transform: translateY(100%); }
-        to { transform: translateY(0); }
+        from { transform: translateX(100%); }
+        to { transform: translateX(0); }
     }
 
     .total-price-large {
@@ -1844,107 +1853,16 @@
 
 /* ======================================================================
    ANALYTICS / REPORTS MOBILE OPTIMIZATION
-   Adaptive column hiding based on screen width
    ====================================================================== */
     /* Reports Grid - Single Column */
     .reports-grid {
         grid-template-columns: 1fr !important;
     }
 
-    /* Sales Data Table - Card Layout */
-    #tab-reports .premium-table-v4 {
-        display: block;
-        border-spacing: 0;
-    }
-    #tab-reports .premium-row-v4 {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 4px clamp(6px, 1.5vw, 10px);
-        padding: clamp(10px, 2.5vw, 14px) clamp(10px, 2.5vw, 16px);
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: clamp(10px, 2vw, 14px);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        transition: transform 0.15s ease;
-    }
-    #tab-reports .premium-row-v4 {
-        -webkit-tap-highlight-color: rgba(232,73,8,0.15);
-    }
-    #tab-reports .premium-row-v4:active {
-        transform: scale(0.98);
-        background: #f1f5f9 !important;
-    }
-    #tab-reports .premium-row-v4 td {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 0;
-        border: none;
-        font-size: clamp(11px, 2.8vw, 12px);
-        background: transparent !important;
-        flex: 0 0 auto;
-    }
-    #tab-reports .premium-row-v4 td:before {
-        content: attr(data-label);
-        font-size: clamp(8px, 2vw, 9px);
-        font-weight: 700;
-        color: #94a3b8;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        display: block;
-        width: 100%;
-    }
-    #tab-reports .premium-row-v4 td[data-label="Date"] {
-        flex: 1 1 auto;
-    }
-    #tab-reports .premium-row-v4 td[data-label="Date"]:before {
-        display: none;
-    }
-    #tab-reports .premium-row-v4 td[data-label="Customer"] {
-        flex: 1 1 auto;
-    }
-    #tab-reports .premium-row-v4 td[data-label="Total"] {
-        font-weight: 800;
-        font-size: clamp(12px, 3vw, 14px);
-        color: var(--primary);
-    }
-    #tab-reports .premium-row-v4 td[data-label="Items"] {
-        flex: 1 1 100%;
-        margin-top: 4px;
-        padding-top: 6px;
-        border-top: 1px solid #f1f5f9;
-    }
-
-    /* Hide Payment on medium screens (< 600px) */
-    @media (max-width: 600px) {
-        #tab-reports .premium-row-v4 td[data-label="Payment"] {
-            display: none !important;
-        }
-    }
-
-    /* Hide Order Type on small screens (< 480px) */
-    @media (max-width: 480px) {
-        #tab-reports .premium-row-v4 td[data-label="Order Type"],
-        #tab-reports .premium-row-v4 td[data-label="Payment"] {
-            display: none !important;
-        }
-        #tab-reports .premium-row-v4 {
-            gap: 4px 8px;
-            padding: 10px 12px;
-        }
-    }
-
-    /* Hide Customer sub-info on very small screens (< 360px) */
-    @media (max-width: 360px) {
-        #tab-reports .premium-row-v4 td[data-label="Customer"] .identity-info-v4 .sub {
-            display: none;
-        }
-        #tab-reports .premium-row-v4 td[data-label="Items"] {
-            display: none !important;
-        }
-    }
+    /* Sales Data Table now renders via Tabulator.js (see analytics.js) —
+       Tabulator's own responsiveLayout:"hide" setting handles column
+       hiding on narrow screens; the table's visual theme lives in
+       style.css under .tabulator / .tabulator-row etc. */
 
     /* Lost Sales Table - Card Layout */
     #tab-lostSales .premium-table-v4 {
@@ -2285,11 +2203,6 @@
         width: 30px;
         background: linear-gradient(to right, transparent, rgba(255,255,255,0.85));
         pointer-events: none;
-    }
-
-    /* Mobile table card body sizing */
-    #tab-reports .premium-row-v4 {
-        position: relative;
     }
 
     /* --- 17. MENU PAGE (#tab-menu) MOBILE ADAPTATION v5.1.3 ---

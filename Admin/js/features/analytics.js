@@ -1,12 +1,16 @@
-import { Outlet, get, query, orderByChild, startAt, endAt } from '../firebase.js';
+import { Outlet, db, ref, get, query, orderByChild, startAt, endAt } from '../firebase.js';
 import { ui } from '../ui.js';
 import { showToast, escapeHtml, formatDate, getISTDateString, getSkeletonDivs } from '../utils.js';
 import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
 
 let salesData = [];
+let prevPeriodData = [];
 let revenueChart = null;
+let orderTypeChart = null;
 let _isLoading = false;
 let _currentStatusFilter = 'delivered';
+let _currentOutletFilter = 'current';
+let _compareMode = false;
 let _grid = null;
 
 const STATUS_OPTIONS = {
@@ -24,6 +28,31 @@ export function setStatusFilter(value) {
 
 export function getStatusFilter() { return _currentStatusFilter; }
 
+export function setOutletFilter(value) {
+    if (!value) value = 'current';
+    if (_currentOutletFilter === value) return;
+    _currentOutletFilter = value;
+    if (salesData.length > 0) renderFromCache();
+}
+
+export function getOutletFilter() { return _currentOutletFilter; }
+
+export function toggleCompare(enabled) {
+    _compareMode = enabled;
+    const bar = document.getElementById('reportComparisonBar');
+    if (!bar) return;
+    if (enabled && salesData.length > 0 && prevPeriodData.length > 0) {
+        bar.classList.remove('hidden');
+        _renderComparison();
+        renderRevenueChart(_filteredCurrent());
+    } else if (enabled && salesData.length > 0) {
+        generateCustomReport();
+    } else {
+        bar.classList.add('hidden');
+        renderRevenueChart(_filteredCurrent());
+    }
+}
+
 export function loadReports() {
     const today = new Date();
     const yesterday = new Date();
@@ -37,6 +66,9 @@ export function loadReports() {
 
     const filterEl = document.getElementById('reportStatusFilter');
     if (filterEl) filterEl.value = _currentStatusFilter;
+
+    const outletEl = document.getElementById('reportOutletFilter');
+    if (outletEl) outletEl.value = _currentOutletFilter;
 
     console.log(`[Reports] Initializing with default range: ${fromVal} to ${toVal}`);
     generateCustomReport();
@@ -89,6 +121,15 @@ function buildGrid(data) {
                 formatter: function(cell) {
                     const val = cell.getValue() || 'COD';
                     return `<span class="badge-payment" data-method="${val.toLowerCase()}">${escapeHtml(val)}</span>`;
+                }
+            },
+            {
+                title: "Outlet",
+                field: "outlet",
+                width: 80,
+                formatter: function(cell) {
+                    const val = cell.getValue() || 'pizza';
+                    return `<span class="outlet-badge" style="background:${val === 'cake' ? '#f59e0b' : '#10b981'}">${escapeHtml(val.toUpperCase())}</span>`;
                 }
             },
             {
@@ -145,6 +186,9 @@ export async function generateCustomReport() {
 
     _isLoading = true;
     if (_grid) { _grid.destroy(); _grid = null; }
+    prevPeriodData = [];
+    const compBar = document.getElementById('reportComparisonBar');
+    if (compBar) compBar.classList.add('hidden');
     tableBody.innerHTML = getSkeletonDivs(5);
 
     try {
@@ -154,25 +198,34 @@ export async function generateCustomReport() {
         const qStart = `${dFrom.toISOString().split('T')[0]}T00:00:00.000Z`;
         const qEnd = `${dTo.toISOString().split('T')[0]}T23:59:59.999Z`;
 
-        const ordersSnap = await get(
-            query(Outlet.ref('orders'), orderByChild('createdAt'), startAt(qStart), endAt(qEnd))
-        );
+        const outletFilter = document.getElementById('reportOutletFilter')?.value || 'current';
+        _currentOutletFilter = outletFilter;
+
+        const outletsToFetch = outletFilter === 'current'
+            ? [window.currentOutlet || 'pizza']
+            : [outletFilter];
 
         salesData = [];
-        ordersSnap.forEach(child => {
-            const o = child.val();
-            if (!o) return;
-            const dateStr = getISTDateString(o.createdAt);
-            if (dateStr >= from && dateStr <= to) {
-                const rawItems = o.cart || o.items || {};
-                const itemsList = Array.isArray(rawItems) ? rawItems : Object.values(rawItems);
-                const finalItems = itemsList.length ? itemsList : (o.item ? [{ name: o.item, qty: 1 }] : []);
-                const itemsStr = finalItems.length
-                    ? finalItems.map(i => `${i.name || i.item || 'Item'} x${i.qty || i.quantity || 1}`).join(', ')
-                    : 'No items';
-                salesData.push({ id: child.key, ...o, dateStr, itemsStr });
-            }
-        });
+        for (const outlet of outletsToFetch) {
+            const ordersRef = outletFilter === 'current' ? Outlet.ref('orders') : ref(db, `${outlet}/orders`);
+            const ordersSnap = await get(
+                query(ordersRef, orderByChild('createdAt'), startAt(qStart), endAt(qEnd))
+            );
+            ordersSnap.forEach(child => {
+                const o = child.val();
+                if (!o) return;
+                const dateStr = getISTDateString(o.createdAt);
+                if (dateStr >= from && dateStr <= to) {
+                    const rawItems = o.cart || o.items || {};
+                    const itemsList = Array.isArray(rawItems) ? rawItems : Object.values(rawItems);
+                    const finalItems = itemsList.length ? itemsList : (o.item ? [{ name: o.item, qty: 1 }] : []);
+                    const itemsStr = finalItems.length
+                        ? finalItems.map(i => `${i.name || i.item || 'Item'} x${i.qty || i.quantity || 1}`).join(', ')
+                        : 'No items';
+                    salesData.push({ id: child.key, outlet, ...o, dateStr, itemsStr });
+                }
+            });
+        }
 
         salesData.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
 
@@ -180,6 +233,32 @@ export async function generateCustomReport() {
         const toDate = to ? formatDate(new Date(to + 'T23:59:59')) : 'Today';
         const periodEl = document.getElementById('reportPeriod');
         if (periodEl) periodEl.innerText = `${fromDate} to ${toDate}`;
+
+        if (_compareMode) {
+            const rangeMs = new Date(to).getTime() - new Date(from).getTime();
+            const prevFrom = new Date(new Date(from).getTime() - rangeMs - 86400000);
+            const prevTo = new Date(new Date(from).getTime() - 86400000);
+            const pFrom = prevFrom.toISOString().split('T')[0];
+            const pTo = prevTo.toISOString().split('T')[0];
+            const pdFrom = new Date(pFrom); pdFrom.setDate(pdFrom.getDate() - 1);
+            const pdTo = new Date(pTo); pdTo.setDate(pdTo.getDate() + 1);
+            const pqStart = `${pdFrom.toISOString().split('T')[0]}T00:00:00.000Z`;
+            const pqEnd = `${pdTo.toISOString().split('T')[0]}T23:59:59.999Z`;
+
+            prevPeriodData = [];
+            for (const outlet of outletsToFetch) {
+                const ordersRef = outletFilter === 'current' ? Outlet.ref('orders') : ref(db, `${outlet}/orders`);
+                const snap = await get(query(ordersRef, orderByChild('createdAt'), startAt(pqStart), endAt(pqEnd)));
+                snap.forEach(child => {
+                    const o = child.val();
+                    if (!o) return;
+                    const dateStr = getISTDateString(o.createdAt);
+                    if (dateStr >= pFrom && dateStr <= pTo) {
+                        prevPeriodData.push({ id: child.key, outlet, ...o, dateStr });
+                    }
+                });
+            }
+        }
 
         renderFromCache();
     } catch (e) {
@@ -210,9 +289,78 @@ function renderFromCache() {
     if (ordEl) ordEl.innerText = totalOrd;
     if (avgEl) avgEl.innerText = '₹' + (totalOrd > 0 ? Math.round(totalRev / totalOrd) : 0);
 
+    const paymentTotals = { cash: 0, upi: 0, cod: 0 };
+    const orderTypeCounts = {};
+    filtered.forEach(o => {
+        const pm = (o.paymentMethod || 'cod').toLowerCase();
+        if (paymentTotals[pm] !== undefined) paymentTotals[pm] += parseFloat(o.total || 0);
+        else paymentTotals[pm] = (paymentTotals[pm] || 0) + parseFloat(o.total || 0);
+        const ot = o.type || o.orderType || 'Online';
+        orderTypeCounts[ot] = (orderTypeCounts[ot] || 0) + 1;
+    });
+
+    const cashEl = document.getElementById('reportCashTotal');
+    const upiEl = document.getElementById('reportUpiTotal');
+    const codEl = document.getElementById('reportCodTotal');
+    const topMethodEl = document.getElementById('reportTopMethod');
+
+    if (cashEl) cashEl.innerText = '₹' + paymentTotals.cash.toLocaleString();
+    if (upiEl) upiEl.innerText = '₹' + paymentTotals.upi.toLocaleString();
+    if (codEl) codEl.innerText = '₹' + paymentTotals.cod.toLocaleString();
+    if (topMethodEl) {
+        const sorted = Object.entries(paymentTotals).sort((a, b) => b[1] - a[1]);
+        const top = sorted[0];
+        topMethodEl.innerText = top && top[1] > 0 ? top[0].toUpperCase() : '-';
+    }
+
     buildGrid(filtered);
 
+    if (_compareMode && prevPeriodData.length > 0) {
+        const bar = document.getElementById('reportComparisonBar');
+        if (bar) bar.classList.remove('hidden');
+        _renderComparison();
+    }
+
     renderRevenueChart(filtered);
+    renderOrderTypeChart(orderTypeCounts);
+}
+
+function _filteredCurrent() {
+    const filter = STATUS_OPTIONS[_currentStatusFilter] || STATUS_OPTIONS.delivered;
+    return salesData.filter(filter.match);
+}
+
+function _renderComparison() {
+    const filter = STATUS_OPTIONS[_currentStatusFilter] || STATUS_OPTIONS.delivered;
+    const cur = _filteredCurrent();
+    const prev = prevPeriodData.filter(filter.match);
+
+    const curRev = cur.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+    const prevRev = prev.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+    const revChg = prevRev > 0 ? ((curRev - prevRev) / prevRev * 100).toFixed(1) : '--';
+
+    const curOrd = cur.length;
+    const prevOrd = prev.length;
+    const ordChg = prevOrd > 0 ? ((curOrd - prevOrd) / prevOrd * 100).toFixed(1) : '--';
+
+    const curAvg = curOrd > 0 ? curRev / curOrd : 0;
+    const prevAvg = prevOrd > 0 ? prevRev / prevOrd : 0;
+    const avgChg = prevAvg > 0 ? ((curAvg - prevAvg) / prevAvg * 100).toFixed(1) : '--';
+
+    const fmtPct = (v, suffix) => {
+        if (v === '--') return `<span style="color:#94a3b8;">--</span>`;
+        const isUp = parseFloat(v) >= 0;
+        const arrow = isUp ? '▲' : '▼';
+        const color = isUp ? '#16a34a' : '#dc2626';
+        return `<span style="color:${color};font-weight:800;">${arrow} ${Math.abs(parseFloat(v)).toFixed(1)}${suffix}</span>`;
+    };
+
+    const revEl = document.querySelector('#compRevenue span');
+    const ordEl = document.querySelector('#compOrders span');
+    const avgEl = document.querySelector('#compAvg span');
+    if (revEl) revEl.innerHTML = fmtPct(revChg, '%');
+    if (ordEl) ordEl.innerHTML = fmtPct(ordChg, '%');
+    if (avgEl) avgEl.innerHTML = fmtPct(avgChg, '%');
 }
 
 export function renderRevenueChart(data) {
@@ -222,6 +370,14 @@ export function renderRevenueChart(data) {
     const dailyData = {};
     data.forEach(o => {
         dailyData[o.dateStr] = (dailyData[o.dateStr] || 0) + Number(o.total || 0);
+    });
+
+    const prevDailyData = {};
+    const filter = STATUS_OPTIONS[_currentStatusFilter] || STATUS_OPTIONS.delivered;
+    const prevFiltered = prevPeriodData.filter(filter.match);
+    prevFiltered.forEach(o => {
+        const d = o.dateStr || getISTDateString(o.createdAt);
+        if (d) prevDailyData[d] = (prevDailyData[d] || 0) + parseFloat(o.total || 0);
     });
 
     const labels = Object.keys(dailyData).sort();
@@ -248,23 +404,38 @@ export function renderRevenueChart(data) {
     const tickColor = 'rgba(0,0,0,0.5)';
     const gridColor = 'rgba(0,0,0,0.05)';
 
+    const datasets = [{
+        label: 'Current Period',
+        data: values,
+        borderColor: '#E84908',
+        backgroundColor: 'rgba(232, 73, 8, 0.1)',
+        borderWidth: 3,
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: '#E84908',
+        pointRadius: 4
+    }];
+
+    if (_compareMode && prevPeriodData.length > 0) {
+        const prevValues = labels.map(l => prevDailyData[l] || 0);
+        datasets.push({
+            label: 'Previous Period',
+            data: prevValues,
+            borderColor: '#94a3b8',
+            backgroundColor: 'rgba(148, 163, 184, 0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: false,
+            borderDash: [6, 3],
+            pointBackgroundColor: '#94a3b8',
+            pointRadius: 3
+        });
+    }
+
     if (typeof Chart !== 'undefined') {
         revenueChart = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Daily Revenue',
-                    data: values,
-                    borderColor: '#E84908',
-                    backgroundColor: 'rgba(232, 73, 8, 0.1)',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    fill: true,
-                    pointBackgroundColor: '#E84908',
-                    pointRadius: 4
-                }]
-            },
+            data: { labels, datasets },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -272,7 +443,55 @@ export function renderRevenueChart(data) {
                     y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 } } },
                     x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 10 } } }
                 },
-                plugins: { legend: { display: false } }
+                plugins: { legend: { display: datasets.length > 1, position: 'top', labels: { font: { size: 11, weight: 'bold' }, usePointStyle: true } } }
+            }
+        });
+    }
+}
+
+export function renderOrderTypeChart(orderTypeCounts) {
+    const ctx = document.getElementById('orderTypeChart');
+    if (!ctx) return;
+
+    if (orderTypeChart) { orderTypeChart.destroy(); orderTypeChart = null; }
+
+    const labels = Object.keys(orderTypeCounts);
+    const values = Object.values(orderTypeCounts);
+
+    if (labels.length === 0) {
+        ctx.style.display = 'none';
+        return;
+    }
+    ctx.style.display = '';
+
+    const colorMap = {
+        'Online': '#3b82f6', 'WhatsApp': '#10b981', 'POS': '#f59e0b',
+        'Dine-in': '#a855f7', 'Dine In': '#a855f7', 'Dinein': '#a855f7',
+        'Walk-in': '#f97316', 'Walkin': '#f97316'
+    };
+    const colors = labels.map(l => colorMap[l] || '#94a3b8');
+
+    if (typeof Chart !== 'undefined') {
+        orderTypeChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { size: 11, weight: 'bold' }, padding: 12, usePointStyle: true }
+                    }
+                }
             }
         });
     }
@@ -280,6 +499,7 @@ export function renderRevenueChart(data) {
 
 export function cleanupReports() {
     if (revenueChart) { revenueChart.destroy(); revenueChart = null; }
+    if (orderTypeChart) { orderTypeChart.destroy(); orderTypeChart = null; }
 }
 
 export function downloadExcel() {
@@ -293,6 +513,7 @@ export function downloadExcel() {
         'Order ID': o.orderId || o.id,
         Customer: o.customerName || 'Guest',
         Phone: o.phone || '',
+        Outlet: (o.outlet || 'pizza').toUpperCase(),
         'Order Type': o.type || o.orderType || 'Online',
         Payment: o.paymentMethod || 'COD',
         Total: o.total || 0,
@@ -337,6 +558,7 @@ export function downloadPDF() {
     const tableData = filtered.map(o => [
         formatDate(o.createdAt),
         o.customerName || 'Guest',
+        (o.outlet || 'pizza').toUpperCase(),
         o.type || o.orderType || 'Online',
         o.paymentMethod || 'COD',
         `Rs.${o.total}`,
@@ -345,7 +567,7 @@ export function downloadPDF() {
 
     doc.autoTable({
         startY: 48,
-        head: [['Date', 'Customer', 'Order Type', 'Payment', 'Total', 'Items']],
+        head: [['Date', 'Customer', 'Outlet', 'Order Type', 'Payment', 'Total', 'Items']],
         body: tableData,
         theme: 'grid',
         headStyles: { fillColor: [6, 95, 70] },

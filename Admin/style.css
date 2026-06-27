@@ -723,13 +723,14 @@ html, body {
     font-weight: 600;
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
-    transition: all var(--transition-normal);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease;
     display: flex;
     align-items: center;
     gap: 12px;
     white-space: nowrap;
     position: relative;
     overflow: hidden;
+    touch-action: manipulation;
 }
 
 .btn-whatsapp::before {
@@ -850,6 +851,7 @@ html, body {
     font-size: 13px !important;
     border-radius: 8px !important;
     font-weight: 600 !important;
+    touch-action: manipulation;
 }
 
 .search-input-group {
@@ -1052,8 +1054,9 @@ html, body {
     justify-content: space-between;
     margin-bottom: 24px;
     flex-shrink: 0;
-    padding-bottom: 20px;
+    padding: 20px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    background: rgba(255,255,255,0.02);
 }
 
 .modal-title {
@@ -1097,10 +1100,12 @@ html, body {
 .modal-footer {
     border-top: 1px solid rgba(0, 0, 0, 0.05);
     display: flex;
+    justify-content: flex-end;
     gap: 15px;
     margin-top: 20px;
-    padding-top: 20px;
+    padding: 20px;
     flex-shrink: 0;
+    background: rgba(255,255,255,0.02);
 }
 
 /* UTILITY CLASSES */
@@ -1538,19 +1543,12 @@ html, body {
     padding: 4px 8px;
 }
 
-.report-date-input {
-    margin-bottom: 0;
-    width: auto;
-}
-
-.report-gen-btn {
-    padding: 8px 15px;
-}
-
 .excel-btn {
     background: #eefdf3 !important;
     color: #16a34a !important;
     border: 1px solid rgba(22, 163, 74, 0.2) !important;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+    touch-action: manipulation;
 }
 
 .excel-btn:hover {
@@ -1562,43 +1560,13 @@ html, body {
     background: #fff1f2 !important;
     color: #e11d48 !important;
     border: 1px solid rgba(225, 29, 72, 0.2) !important;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+    touch-action: manipulation;
 }
 
 .pdf-btn:hover {
     background: #ffe4e6 !important;
     box-shadow: 0 4px 12px rgba(225, 29, 72, 0.1);
-}
-
-.report-table-wrapper {
-    border: 1px solid var(--neutral-200);
-    border-radius: 16px;
-    overflow: hidden;
-    background: var(--white);
-}
-
-.report-table-wrapper table thead th {
-    background: var(--neutral-50);
-    padding: 14px 16px;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-secondary);
-    border-bottom: 1px solid var(--neutral-200);
-}
-
-.report-table-wrapper table tbody td {
-    padding: 14px 16px;
-    font-size: 14px;
-    color: var(--text-primary);
-    border-bottom: 1px solid var(--neutral-100);
-}
-
-.report-table-wrapper table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.report-table-wrapper table tbody tr:hover td {
-    background: var(--neutral-50);
 }
 
 /* DYNAMIC MODAL (ui-utils.js) */
@@ -2358,6 +2326,140 @@ html, body {
     display: none;
 }
 
+/* Cart items get their own bounded, independently-scrolling region
+   (mirroring the dish grid's pattern) so a long order never pushes the
+   totals/checkout button out of view below the fold. */
+.cart-items-container {
+    max-height: 45vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+.cart-items-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* The "sticky-cart" name was never actually wired up to position:sticky —
+   only enable it on the desktop 2-column layout (matches .walkin-layout's
+   own breakpoint); on mobile the cart is its own full-width section below
+   the picker, where sticky would just look broken. */
+@media screen and (min-width: 1101px) {
+    .panel.sticky-cart {
+        position: sticky;
+        top: 16px;
+    }
+}
+
+/* ---------- Cart row v5 — qty badge / size subtitle / icon actions ---------- */
+.cart-row-v5 {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+}
+
+.cart-row-qty-badge {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: #fee2e2;
+    border-radius: 10px;
+    padding: 3px;
+}
+
+.qty-step-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    border: none;
+    background: #fff;
+    color: var(--primary, #f36b21);
+    font-weight: 800;
+    font-size: 14px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    touch-action: manipulation;
+}
+.qty-step-btn:hover { background: var(--primary, #f36b21); color: #fff; }
+
+.qty-badge-num {
+    min-width: 22px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 13px;
+    color: #b91c1c;
+}
+
+.cart-row-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.cart-row-name {
+    display: block;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-main, #1a1a1a);
+    line-height: 1.25;
+}
+
+.cart-row-size-sub {
+    display: block;
+    font-size: 11.5px;
+    color: var(--text-muted, #94a3b8);
+    font-weight: 600;
+    margin-top: 1px;
+}
+
+.cart-row-right {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 44px;
+}
+
+.cart-row-price {
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--text-main, #1a1a1a);
+    white-space: nowrap;
+}
+
+.cart-row-icon-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.cart-row-icon-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: #f1f5f9;
+    color: var(--text-muted, #64748b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    touch-action: manipulation;
+}
+.cart-row-icon-btn svg { width: 13px; height: 13px; }
+.cart-row-icon-btn:hover { background: #e2e8f0; color: var(--text-main, #1a1a1a); }
+.cart-row-icon-btn-danger:hover { background: #fee2e2; color: #dc2626; }
+
 .pos-dish-btn {
     background: #ffffff;
     border: 1.5px solid rgba(0, 0, 0, 0.05);
@@ -2563,7 +2665,7 @@ html, body {
     gap: 10px;
     padding: 10px 0;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, margin 0.2s ease, padding 0.2s ease;
 }
 
 .walkin-cart-item:last-child {
@@ -2602,28 +2704,6 @@ html, body {
     margin-top: 8px;
 }
 
-.size-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
-    border: 2px solid rgba(0, 0, 0, 0.06);
-    border-radius: 16px;
-    padding: 14px 10px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    transition: all 0.2s;
-    text-align: center;
-}
-
-.size-card:hover {
-    border-color: var(--primary);
-    background: white;
-}
-
-.size-card.active {
-    border-color: var(--primary);
-    background: var(--sidebar-accent);
-    box-shadow: 0 4px 12px var(--primary-glow);
-}
-
 .size-chip-box {
     display: flex;
     flex-direction: column;
@@ -2657,58 +2737,33 @@ html, body {
 }
 
 .category-tab {
-    padding: 5px 12px;
-    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
-    border-radius: var(--radius-premium);
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
-    white-space: nowrap;
-    cursor: pointer;
-    transition: all var(--transition-normal);
-    border: 2px solid transparent;
-}
-
-.category-tab:hover {
-    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
-    transform: translateY(-1px);
-}
-
-.category-tab.active {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    border-color: var(--primary);
-    color: white;
-    box-shadow: 0 4px 15px rgba(var(--primary-rgb), 0.35);
-}
-
-.walkin-cart-item .item-name {
-    flex: 1;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.category-tabs-container::-webkit-scrollbar {
-    display: none;
-}
-
-.category-tab {
-    padding: 5px 12px;
-    background: #f1f5f9;
-    border-radius: 12px;
-    font-size: 11px;
+    padding: 6px 14px;
+    background: #f8fafc;
+    border-radius: 20px;
+    font-size: 11.5px;
     font-weight: 700;
     color: var(--text-muted);
     white-space: nowrap;
     cursor: pointer;
-    transition: all 0.2s;
-    border: 2px solid transparent;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1.5px solid var(--border-color, #e2e8f0);
+    touch-action: manipulation;
+}
+
+.category-tab:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.category-tab:active {
+    transform: scale(0.96);
 }
 
 .category-tab.active {
-    background: white;
+    background: linear-gradient(135deg, #FF8A3D, var(--primary));
     border-color: var(--primary);
-    color: var(--primary);
-    box-shadow: var(--shadow-soft);
+    color: white;
+    box-shadow: 0 4px 14px rgba(var(--primary-rgb), 0.32);
 }
 
 .walkin-cart-item .item-name {
@@ -2747,7 +2802,8 @@ html, body {
     align-items: center;
     justify-content: center;
     color: var(--text-main);
-    transition: all var(--transition-normal);
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    touch-action: manipulation;
 }
 
 .walkin-cart-item .qty-btn:hover {
@@ -2774,7 +2830,8 @@ html, body {
     cursor: pointer;
     padding: 6px;
     opacity: 0.7;
-    transition: all 0.3s ease;
+    transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    touch-action: manipulation;
 }
 
 .walkin-cart-item .remove-btn:hover {
@@ -3277,130 +3334,18 @@ body {
 }
 
 /* POS SELECTION ENHANCEMENTS */
-/* Duplicate category-tabs-container style removed and consolidated at line 1161 */
-
-.category-tab {
-    padding: 5px 12px;
-    background: white;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    border-radius: 30px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all var(--transition-fast);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-
-.category-tab.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-    box-shadow: 0 4px 12px var(--primary-glow);
-    transform: translateY(-1px);
-}
-
-
-
-.size-selection-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 12px;
-}
-
-.size-card {
-    padding: 16px;
-    background: white;
-    border: 2px solid rgba(0, 0, 0, 0.05);
-    border-radius: 16px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.size-card.active {
-    border-color: var(--primary);
-    background: rgba(var(--primary-rgb), 0.05);
-}
-
-.size-card .size-name {
-    display: block;
-    font-weight: 800;
-    font-size: 14px;
-    color: var(--text-main);
-    margin-bottom: 4px;
-}
-
-.size-card .size-price {
-    display: block;
-    font-size: 12px;
-    color: var(--action-green);
-    font-weight: 700;
-}
-
-.addons-checklist-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    background: rgba(0, 0, 0, 0.02);
-    padding: 15px;
-    border-radius: 16px;
-}
-
-.addon-check-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 12px;
-    background: white;
-    border-radius: 10px;
-    cursor: pointer;
-    border: 1px solid rgba(0, 0, 0, 0.03);
-    transition: all 0.2s;
-}
-
-.addon-check-item input {
-    margin-right: 10px;
-}
-
-.addon-check-item:hover {
-    border-color: var(--primary);
-}
-
-.qty-btn-large {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    background: white;
-    font-size: 20px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.qty-btn-large:active {
-    transform: scale(0.9);
-    background: #f5f5f5;
-}
-
-.qty-val-large {
-    font-size: 24px;
-    font-weight: 800;
-    min-width: 40px;
-    text-align: center;
-}
+/* Duplicate category-tab styles removed and consolidated near .category-tabs-container */
+/* Duplicate size-selection-grid removed and consolidated near .size-card */
 
 .selection-footer {
+    padding: 20px;
+    background: white;
+    border-top: 1px solid #e2e8f0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.8);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    gap: 20px;
+    margin-top: auto;
 }
 
 .total-price-large {
@@ -3410,10 +3355,23 @@ body {
 }
 
 .btn-add-large {
-    padding: 14px 28px;
-    border-radius: 14px;
+    flex: 1;
+    padding: 16px;
+    border-radius: 16px;
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 800;
+    background: linear-gradient(135deg, #FF8A3D, var(--primary));
+    color: white;
+    border: none;
+    box-shadow: 0 10px 25px rgba(232, 73, 8, 0.25);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    touch-action: manipulation;
+}
+
+.btn-add-large:active {
+    transform: scale(0.97);
+    box-shadow: 0 6px 16px rgba(232, 73, 8, 0.22);
 }
 
 /* Category management row for addons */
@@ -3586,49 +3544,6 @@ body {
 .object-cover {
     object-fit: cover;
 }
-
-.report-table-wrapper {
-    max-height: 600px;
-    overflow-y: auto;
-    border-radius: 12px;
-}
-
-.report-row-bordered {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-    transition: background 0.2s;
-}
-
-.report-row-bordered:hover {
-    background: rgba(0, 0, 0, 0.01);
-}
-
-.report-cell {
-    padding: 16px 12px;
-    vertical-align: middle;
-}
-
-.report-date-cell {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-.report-cust-name {
-    font-weight: 700;
-    color: var(--text-main);
-}
-
-.report-cust-phone {
-    font-size: 11px;
-    color: var(--text-muted);
-}
-
-.report-total-cell {
-    font-weight: 800;
-    color: var(--action-green);
-    font-size: 15px;
-}
-
 
 /* WIDGET STYLES */
 .top-spender-card {
@@ -4237,9 +4152,23 @@ body {
 .top-cust-row .total { font-weight: 700; color: var(--vibrant-orange); }
 
 .badge-payment {
-    font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
-    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-    color: var(--text-muted);
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px;
+    background: #f1f5f9; border: 1px solid #e2e8f0;
+    color: #475569;
+}
+/* The base style above assumes a dark surrounding context (semi-transparent
+   white on dark) and renders almost invisible on the Reports table's white
+   Tabulator cells. These data-method variants (matching the real values
+   written by pos.js and the WhatsApp bot — Cash, UPI, COD) make payment
+   method legible and distinguishable at a glance. */
+.badge-payment[data-method="cash"] {
+    background: #f0fdf4; border-color: rgba(34, 197, 94, 0.25); color: #166534;
+}
+.badge-payment[data-method="upi"] {
+    background: #eff6ff; border-color: rgba(59, 130, 246, 0.25); color: #1d4ed8;
+}
+.badge-payment[data-method="cod"] {
+    background: #fff7ed; border-color: rgba(232, 73, 8, 0.25); color: #c2410c;
 }
 
 .empty-state-mini {
@@ -4351,22 +4280,6 @@ body {
   box-shadow: 0 2px 8px rgba(198, 40, 40, 0.1);
 }
 
-/* PRIMARY ACTIONS - High emphasis */
-.btn-primary {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: white;
-  box-shadow: 0 4px 15px rgba(232, 73, 8, 0.3);
-  transition: all var(--transition-normal);
-  border: none;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(232, 73, 8, 0.4);
-}
-
-
 /* CONNECTION STATUS INDICATOR */
 .status-indicator { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; transition: all 0.3s ease; }
 .status-indicator.connected { background: var(--success); box-shadow: 0 0 8px var(--success); }
@@ -4446,24 +4359,6 @@ body {
     border-radius: var(--radius-premium);
     box-shadow: 0 10px 40px rgba(0,0,0,0.03);
     border: 1px solid rgba(0,0,0,0.04);
-}
-
-#tab-reports .report-table-wrapper th {
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-size: 11px;
-    color: #64748b;
-    border-bottom: 2px solid #f1f5f9;
-    padding: 12px 10px;
-}
-
-#tab-reports .report-table-wrapper td {
-    padding: 12px 10px;
-    font-size: 14px;
-    font-weight: 500;
-    color: #334155;
-    border-bottom: 1px solid #f8fafc;
 }
 
 /* --- PREMIUM TABLE & ROW REFINEMENTS (v4.1) --- */
@@ -5010,9 +4905,6 @@ body {
 }
 
 .badge-payment-v4 {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
     background: #f1f5f9;
     color: #475569;
     padding: 4px 10px;
@@ -5021,32 +4913,6 @@ body {
     font-weight: 700;
     text-transform: uppercase;
     border: 1px solid #e2e8f0;
-}
-.badge-payment-v4[data-method="cash"] { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
-.badge-payment-v4[data-method="upi"] { background: #ede9fe; color: #7c3aed; border-color: #ddd6fe; }
-.badge-payment-v4[data-method="card"] { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
-
-/* Drawer payment card */
-.drawer-payment-card {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 14px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%);
-    border: 1px solid rgba(34, 197, 94, 0.1);
-}
-.drawer-payment-card .payment-method-row,
-.drawer-payment-card .payment-status-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
-.drawer-payment-card .label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #64748b;
 }
 
 /* 7. QUICK STATS MINI */
@@ -5595,15 +5461,23 @@ body {
     border-radius: 16px;
     overflow: hidden;
     cursor: pointer;
-    transition: all var(--transition-normal);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     display: flex;
     flex-direction: column;
+    touch-action: manipulation;
+    content-visibility: auto;
+    contain-intrinsic-size: 0 170px;
 }
 
 .pos-dish-btn-v4:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 22px rgba(232, 73, 8, 0.12);
     border-color: var(--primary);
+}
+
+.pos-dish-btn-v4:active {
+    transform: scale(0.97);
+    box-shadow: 0 4px 10px rgba(232, 73, 8, 0.1);
 }
 
 .dish-visual {
@@ -5800,76 +5674,6 @@ body.pos-selection-mode .walkin-picker {
     letter-spacing: 1px;
     margin-bottom: 12px;
     display: block;
-}
-
-
-
-.addons-checklist-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-}
-
-.addon-check-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 14px;
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #f1f5f9;
-    transition: all 0.2s;
-}
-
-.addon-check-item:hover {
-    border-color: var(--primary-lighter);
-}
-
-.qty-btn-large {
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    border: none;
-    background: #f1f5f9;
-    color: var(--dark);
-    font-size: 20px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.qty-btn-large:hover {
-    background: var(--primary);
-    color: white;
-}
-
-.qty-val-large {
-    font-size: 24px;
-    font-weight: 900;
-    min-width: 40px;
-    text-align: center;
-}
-
-.selection-footer {
-    padding: 24px;
-    background: #f8fafc;
-    border-radius: 24px 0 0 0;
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    margin-top: auto !important;
-}
-
-.total-price-large {
-    font-size: 28px;
-    font-weight: 900;
-    color: var(--primary);
-}
-
-.btn-add-large {
-    padding: 16px 32px !important;
-    font-size: 16px !important;
-    border-radius: 16px !important;
 }
 
 /* ============================================================
@@ -6737,7 +6541,7 @@ body.pos-selection-mode .walkin-picker {
     padding: 16px 12px;
     border-radius: 16px;
     cursor: pointer;
-    transition: all var(--transition-normal);
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     text-align: center;
     position: relative;
     display: flex;
@@ -6746,12 +6550,17 @@ body.pos-selection-mode .walkin-picker {
     justify-content: center;
     gap: 4px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    touch-action: manipulation;
 }
 
 .size-card:hover {
     border-color: var(--primary-light);
     background: white;
     transform: translateY(-2px);
+}
+
+.size-card:active {
+    transform: scale(0.96);
 }
 
 .size-card.active {
@@ -6813,8 +6622,9 @@ body.pos-selection-mode .walkin-picker {
     background: #f8fafc;
     border-radius: 14px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s ease, border-color 0.2s ease;
     border: 1px solid transparent;
+    touch-action: manipulation;
 }
 
 .addon-check-item:hover {
@@ -6822,8 +6632,12 @@ body.pos-selection-mode .walkin-picker {
     border-color: #e2e8f0;
 }
 
+.addon-check-item:active {
+    transform: scale(0.98);
+}
+
 .addon-check-item.active {
-    background: white;
+    background: linear-gradient(135deg, #fff7ed, #fff1e6);
     border-color: #E84908;
 }
 
@@ -6833,7 +6647,8 @@ body.pos-selection-mode .walkin-picker {
     border: 2px solid #cbd5e1;
     border-radius: 6px;
     position: relative;
-    transition: all 0.2s;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    flex-shrink: 0;
 }
 
 .custom-checkbox.checked {
@@ -6860,7 +6675,8 @@ body.pos-selection-mode .walkin-picker {
     font-size: 20px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    touch-action: manipulation;
 }
 
 .qty-btn-large:hover {
@@ -6869,41 +6685,16 @@ body.pos-selection-mode .walkin-picker {
     color: #E84908;
 }
 
+.qty-btn-large:active {
+    transform: scale(0.92);
+    background: #fff7ed;
+}
+
 .qty-val-large {
     font-size: 22px;
     font-weight: 800;
     min-width: 40px;
     text-align: center;
-}
-
-.selection-footer {
-    padding: 24px 20px !important;
-    background: white;
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-    margin-top: auto;
-}
-
-.total-price-large {
-    font-size: 22px;
-    font-weight: 900;
-    color: #0f172a;
-}
-
-.btn-add-large {
-    flex: 1;
-    padding: 16px !important;
-    border-radius: 16px !important;
-    font-size: 16px !important;
-    font-weight: 800 !important;
-    background: linear-gradient(135deg, #E84908, #d35400) !important;
-    color: white !important;
-    border: none !important;
-    box-shadow: 0 10px 25px rgba(232, 73, 8, 0.25) !important;
-    cursor: pointer;
 }
 
 /* Mobile Adjustments for Side Panel */
@@ -7148,14 +6939,6 @@ body.pos-selection-mode .walkin-picker {
     pointer-events: none;
 }
 
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    border-bottom: 1px solid var(--border);
-    background: rgba(255,255,255,0.02);
-}
 .modal-header h3 {
     margin: 0;
     font-size: 1.2rem;
@@ -7197,26 +6980,18 @@ body.pos-selection-mode .walkin-picker {
     font-family: monospace;
     font-size: 14px;
 }
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    padding: 20px;
-    border-top: 1px solid var(--border);
-    background: rgba(255,255,255,0.02);
-}
-
 /* L5: Connection lost banner */
 .connection-banner {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+    top: 0; left: 0; right: 0;
     z-index: 9999;
     background: #dc2626;
     color: white;
-    text-align: center;
-    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    padding: 8px 20px;
     font-size: 13px;
     font-weight: 600;
     animation: slideDown 0.3s ease;
@@ -7386,23 +7161,6 @@ body.pos-selection-mode .walkin-picker {
 }
 .star-rating .star.filled {
     color: #f59e0b;
-}
-
-/* P-04: Connection Banner */
-.connection-banner {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    background: #dc2626;
-    color: white;
-    padding: 8px 20px;
-    font-size: 13px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    justify-content: center;
-    z-index: 9999;
-    animation: slideDown 0.3s ease;
 }
 
 /* L7: Print styles */
@@ -7837,7 +7595,7 @@ body.pos-selection-mode .walkin-picker {
 .promo-campaign-card { background:var(--bg-card, #fff); border:1px solid var(--border-color, #e5e7eb); border-radius:10px; padding:14px; }
 .progress-bar { height:6px; background:var(--bg-subtle, #f3f4f6); border-radius:99px; overflow:hidden; }
 .progress-bar-fill { height:100%; background:var(--primary, #E84908); transition:width .3s ease; }
-.badge { display:inline-block; padding:2px 8px; border-radius:99px; font-size:12px; font-weight:500; margin-left:6px; }
+.badge-running, .badge-scheduled, .badge-paused, .badge-done, .badge-stopped, .badge-aborted, .badge-expired { display:inline-block; padding:2px 8px; border-radius:99px; font-size:12px; font-weight:500; margin-left:6px; }
 .badge-running { background:#dbeafe; color:#1d4ed8; }
 .badge-scheduled { background:#fef3c7; color:#92400e; }
 .badge-paused { background:#fde68a; color:#92400e; }
@@ -8014,12 +7772,7 @@ body.pos-selection-mode .walkin-picker {
     background: #fff !important;
     overflow: hidden;
 }
-.tabulator .tabulator-header {
-    background: #4472C4 !important;
-    border-bottom: 2px solid #3560a8 !important;
-}
 .tabulator .tabulator-header .tabulator-col {
-    background: #4472C4 !important;
     color: #fff !important;
     font-weight: 700 !important;
     font-size: 11px !important;
@@ -8029,9 +7782,6 @@ body.pos-selection-mode .walkin-picker {
 }
 .tabulator .tabulator-header .tabulator-col .tabulator-col-content {
     padding: 8px 10px !important;
-}
-.tabulator .tabulator-header .tabulator-col.tabulator-sortable:hover {
-    background: #3560a8 !important;
 }
 .tabulator .tabulator-header .tabulator-col .tabulator-arrow {
     border-bottom-color: rgba(255,255,255,0.7) !important;
@@ -8061,18 +7811,6 @@ body.pos-selection-mode .walkin-picker {
     background: #fafbfc !important;
 }
 
-/* --- Row Hover --- */
-.tabulator-row:hover {
-    background: #f0f4ff !important;
-    transition: background 0.15s ease;
-}
-
-/* --- Row Selected / Clicked --- */
-.tabulator-row.tabulator-selected {
-    background: #dbeafe !important;
-    border-left: 3px solid #4472C4 !important;
-}
-
 /* --- Pagination --- */
 .tabulator-footer {
     border-top: 1px solid #e8e8e8 !important;
@@ -8088,13 +7826,32 @@ body.pos-selection-mode .walkin-picker {
     background: #fff !important;
     margin: 0 2px !important;
 }
+/* =============================
+   TABULATOR — BRAND COLOR THEME
+   Warm orange treatment matching the rest of the app's "food craving"
+   identity, applied to ALL Tabulator instances across every tab.
+   ============================= */
+.tabulator .tabulator-header,
+.tabulator .tabulator-header .tabulator-col {
+    background: linear-gradient(135deg, #FF8A3D, var(--primary)) !important;
+    border-bottom: 2px solid var(--primary-dark, #d6571a) !important;
+}
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable:hover {
+    background: var(--primary-dark, #d6571a) !important;
+}
+.tabulator-row.tabulator-selected {
+    background: #fff7ed !important;
+    border-left: 3px solid var(--primary) !important;
+}
+.tabulator-row:hover {
+    background: #fff7ed !important;
+}
 .tabulator-footer .tabulator-page.tabulator-page-active {
-    background: #4472C4 !important;
-    color: #fff !important;
-    border-color: #4472C4 !important;
+    background: var(--primary) !important;
+    border-color: var(--primary) !important;
 }
 .tabulator-footer .tabulator-page:hover:not(.tabulator-page-active) {
-    background: #f0f4ff !important;
+    background: #fff7ed !important;
 }
 
 /* --- Header Filter Inputs --- */
