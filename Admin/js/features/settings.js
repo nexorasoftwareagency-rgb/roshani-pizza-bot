@@ -14,10 +14,8 @@ const SETTINGS_PATHS = {
  * v5.0.0 One-time migration: remove deprecated bot image keys (imgPreparing, imgCooked).
  * Merged "Cooked" + "Ready" into a single "Ready" status; "Preparing" deleted.
  * Guarded by localStorage flag so it only runs once per browser.
- */
-/**
+ *
  * COORDINATE VALIDATION
- */
  * Validates Latitude and Longitude
  */
 function validateCoords(lat, lng) {
@@ -68,6 +66,25 @@ function validateBackupCode(code) {
     return { valid: true };
 }
 
+/**
+ * Validates a generic URL field — optional, but if present must look like a URL.
+ */
+function validateOptionalUrl(url, label) {
+    if (!url) return true;
+    try {
+        const v = url.match(/^https?:\/\//i) ? url : `https://${url}`;
+        new URL(v);
+        return { valid: true };
+    } catch {
+        return { valid: false, msg: `${label} doesn't look like a valid URL` };
+    }
+}
+
+const val = (id) => document.getElementById(id)?.value ?? '';
+const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+const setChecked = (id, v) => { const el = document.getElementById(id); if (el) el.checked = v; };
+const isChecked = (id) => document.getElementById(id)?.checked ?? false;
+
 // --- CORE FUNCTIONS ---
 
 export async function loadStoreSettings() {
@@ -92,49 +109,47 @@ export async function loadStoreSettings() {
 
         // 1. Store Info
         const s = store || {};
-        document.getElementById('settingEntityName').value = s.entityName || '';
-        document.getElementById('settingStoreName').value = s.storeName || '';
-        document.getElementById('settingStoreAddress').value = s.address || '';
-        document.getElementById('settingGSTIN').value = s.gstin || '';
-        document.getElementById('settingFSSAI').value = s.fssai || '';
-        document.getElementById('settingTagline').value = s.tagline || '';
-        document.getElementById('settingPoweredBy').value = s.poweredBy || 'Powered by Roshani ERP';
-        document.getElementById('settingOpenTime').value = s.shopOpenTime || '10:00';
-        document.getElementById('settingCloseTime').value = s.shopCloseTime || '23:00';
-        document.getElementById('settingShopStatus').value = s.shopStatus || 'AUTO';
-        
-        document.getElementById('settingWifiName').value = s.wifiName || '';
-        document.getElementById('settingWifiPass').value = s.wifiPass || '';
-        document.getElementById('settingInstagram').value = s.instagram || '';
-        document.getElementById('settingFacebook').value = s.facebook || '';
-        document.getElementById('settingGoogleReviewLink').value = s.googleReviewLink || '';
-        document.getElementById('settingWhatsappNumber').value = s.whatsappNumber || '';
-        document.getElementById('settingReviewUrl').value = s.reviewUrl || '';
-        document.getElementById('settingCustomerMenuBgImage').value = s.customerMenuBgImage || '';
-        
-        document.getElementById('settingLat').value = s.lat || '25.887444';
-        document.getElementById('settingLng').value = s.lng || '85.026889';
-        document.getElementById('displayCoords').innerText = `${s.lat || '25.887444'}, ${s.lng || '85.026889'}`;
+        setVal('settingEntityName', s.entityName || '');
+        setVal('settingStoreName', s.storeName || '');
+        setVal('settingStoreAddress', s.address || '');
+        setVal('settingGSTIN', s.gstin || '');
+        setVal('settingFSSAI', s.fssai || '');
+        setVal('settingTagline', s.tagline || '');
+        setVal('settingPoweredBy', s.poweredBy || 'Powered by Roshani ERP');
+        setVal('settingOpenTime', s.shopOpenTime || '10:00');
+        setVal('settingCloseTime', s.shopCloseTime || '23:00');
+        setVal('settingShopStatus', s.shopStatus || 'AUTO');
+        setVal('settingWifiName', s.wifiName || '');
+        setVal('settingWifiPass', s.wifiPass || '');
+        setVal('settingInstagram', s.instagram || '');
+        setVal('settingFacebook', s.facebook || '');
+        setVal('settingGoogleReviewLink', s.googleReviewLink || '');
+        setVal('settingWhatsappNumber', s.whatsappNumber || '');
+        setVal('settingReviewUrl', s.reviewUrl || '');
+        setVal('settingCustomerMenuBgImage', s.customerMenuBgImage || '');
+        setVal('settingLat', s.lat || '25.887444');
+        setVal('settingLng', s.lng || '85.026889');
+        const coordsEl = document.getElementById('displayCoords');
+        if (coordsEl) coordsEl.innerText = `${s.lat || '25.887444'}, ${s.lng || '85.026889'}`;
 
         // 2. Delivery & Security
         const d = del || {};
-        document.getElementById('settingDevPhone').value = d.developerPhone || '';
-        document.getElementById('settingReportPhone').value = d.reportPhone || '';
-        document.getElementById('settingAdminPhone').value = d.notifyPhone || '';
-        document.getElementById('settingDeliveryBackupCode').value = d.backupCode || '';
-
-        // Render Fee Slabs
+        setVal('settingDevPhone', d.developerPhone || '');
+        setVal('settingReportPhone', d.reportPhone || '');
+        setVal('settingAdminPhone', d.notifyPhone || '');
+        setVal('settingDeliveryBackupCode', d.backupCode || '');
         renderFeeSlabs(d.slabs || []);
 
-        // 2b. Dine-In Settings (tax, service charge)
+        // 2b. Dine-In Settings (tax, service charge, QR ordering base URL)
         const dineSnap = await get(Outlet.ref('dineinSettings'));
         const dine = dineSnap.val() || {};
-        document.getElementById('dineinTaxEnabled').checked = dine.taxEnabled !== false;
-        document.getElementById('dineinTaxName').value = dine.taxName || 'GST';
-        document.getElementById('dineinTaxRate').value = typeof dine.taxRate === 'number' ? dine.taxRate : 5;
-        document.getElementById('dineinServiceChargeEnabled').checked = dine.serviceChargeEnabled === true;
-        document.getElementById('dineinServiceChargeName').value = dine.serviceChargeName || 'Service Charge';
-        document.getElementById('dineinServiceChargeRate').value = typeof dine.serviceChargeRate === 'number' ? dine.serviceChargeRate : 10;
+        setChecked('dineinTaxEnabled', dine.taxEnabled !== false);
+        setVal('dineinTaxName', dine.taxName || 'GST');
+        setVal('dineinTaxRate', typeof dine.taxRate === 'number' ? dine.taxRate : 5);
+        setChecked('dineinServiceChargeEnabled', dine.serviceChargeEnabled === true);
+        setVal('dineinServiceChargeName', dine.serviceChargeName || 'Service Charge');
+        setVal('dineinServiceChargeRate', typeof dine.serviceChargeRate === 'number' ? dine.serviceChargeRate : 10);
+        setVal('settingQrBaseUrl', dine.qrBaseUrl || '');
 
         // 3. Bot Aesthetics & Marketing
         const b = bot || {};
@@ -151,22 +166,19 @@ export async function loadStoreSettings() {
             if (url) {
                 const el = document.getElementById(id);
                 if (el) el.src = url;
-                // Also update hidden inputs for Marketing images
-                if (id === 'greetingImgPreview') document.getElementById('settingGreetingUrl').value = url;
-                if (id === 'menuImgPreview') document.getElementById('settingMenuUrl').value = url;
+                if (id === 'greetingImgPreview') setVal('settingGreetingUrl', url);
+                if (id === 'menuImgPreview') setVal('settingMenuUrl', url);
             }
         }
 
         // 4. Social & Promotions
-        document.getElementById('botSocialInsta').value = b.socialInsta || '';
-        document.getElementById('botSocialFb').value = b.socialFb || '';
-        document.getElementById('botSocialReview').value = b.socialReview || '';
-        document.getElementById('botSocialWebsite').value = b.socialWebsite || '';
-        
-        // Feedback Reasons
-        document.getElementById('settingFeedbackReason1').value = b.reason1 || 'Delicious Taste';
-        document.getElementById('settingFeedbackReason2').value = b.reason2 || 'Fast Delivery';
-        document.getElementById('settingFeedbackReason3').value = b.reason3 || 'Premium Packaging';
+        setVal('botSocialInsta', b.socialInsta || '');
+        setVal('botSocialFb', b.socialFb || '');
+        setVal('botSocialReview', b.socialReview || '');
+        setVal('botSocialWebsite', b.socialWebsite || '');
+        setVal('settingFeedbackReason1', b.reason1 || 'Delicious Taste');
+        setVal('settingFeedbackReason2', b.reason2 || 'Fast Delivery');
+        setVal('settingFeedbackReason3', b.reason3 || 'Premium Packaging');
 
         // 5. Visibility Controls
         const vi = disp || {};
@@ -174,15 +186,13 @@ export async function loadStoreSettings() {
             'checkShowStoreName', 'checkShowAddress', 'checkShowGSTIN', 'checkShowFSSAI', 'checkShowTagline',
             'checkShowPoweredBy', 'checkShowQR', 'checkShowWifiInfo', 'checkShowSocial', 'checkShowFeedbackQR'
         ];
-        checks.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.checked = vi[id] !== false; // default to true
-        });
+        checks.forEach(id => setChecked(id, vi[id] !== false));
 
         // 6. Payment QR
         if (s.paymentQR) {
-            document.getElementById('qrPreview').src = s.paymentQR;
-            document.getElementById('settingQRUrl').value = s.paymentQR;
+            setVal('settingQRUrl', s.paymentQR);
+            const qrEl = document.getElementById('qrPreview');
+            if (qrEl) qrEl.src = s.paymentQR;
         }
 
         // 7. Today's Offers
@@ -202,24 +212,28 @@ export async function saveStoreSettings() {
     console.log("[Settings] Preparing to save...");
     
     // 1. Validation
-    const lat = document.getElementById('settingLat').value;
-    const lng = document.getElementById('settingLng').value;
+    const lat = val('settingLat');
+    const lng = val('settingLng');
     const vCoord = validateCoords(lat, lng);
     if (!vCoord.valid) return showToast(vCoord.msg, "error");
 
-    const gstinVal = document.getElementById('settingGSTIN').value.trim();
+    const gstinVal = val('settingGSTIN').trim();
     const vGst = validateGSTIN(gstinVal);
     if (vGst !== true && !vGst.valid) return showToast(vGst.msg, "error");
 
-    const fssaiVal = document.getElementById('settingFSSAI').value.trim();
+    const fssaiVal = val('settingFSSAI').trim();
     const vFssai = validateFSSAI(fssaiVal);
     if (vFssai !== true && !vFssai.valid) return showToast(vFssai.msg, "error");
 
-    const backupCode = document.getElementById('settingDeliveryBackupCode').value.trim();
+    const backupCode = val('settingDeliveryBackupCode').trim();
     if (backupCode) {
         const vBackup = validateBackupCode(backupCode);
         if (!vBackup.valid) return showToast(vBackup.msg, "error");
     }
+
+    const qrBaseUrlVal = val('settingQrBaseUrl').trim();
+    const vQrBase = validateOptionalUrl(qrBaseUrlVal, "QR Ordering Base URL");
+    if (vQrBase !== true && !vQrBase.valid) return showToast(vQrBase.msg, "error");
 
     const phones = [
         { id: 'settingDevPhone', label: "Developer Phone" },
@@ -235,58 +249,62 @@ export async function saveStoreSettings() {
     }
 
     const saveBtn = document.getElementById('btnSaveSettings');
-    saveBtn.disabled = true;
-    saveBtn.textContent = '⏳ Saving...';
+    const saveBtnOriginalHTML = saveBtn ? saveBtn.innerHTML : '';
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i data-lucide="loader-circle" class="icon-16 spin-icon"></i> Saving...';
+        if (window.lucide) window.lucide.createIcons({ root: saveBtn });
+    }
 
     try {
         // 2. Collect Data
         const storeData = {
-            entityName: document.getElementById('settingEntityName').value,
-            storeName: document.getElementById('settingStoreName').value,
-            address: document.getElementById('settingStoreAddress').value,
-            gstin: document.getElementById('settingGSTIN').value,
-            fssai: document.getElementById('settingFSSAI').value,
-            tagline: document.getElementById('settingTagline').value,
-            poweredBy: document.getElementById('settingPoweredBy').value,
-            shopOpenTime: document.getElementById('settingOpenTime').value,
-            shopCloseTime: document.getElementById('settingCloseTime').value,
-            shopStatus: document.getElementById('settingShopStatus').value,
-            wifiName: document.getElementById('settingWifiName').value,
-            wifiPass: document.getElementById('settingWifiPass').value,
-            instagram: document.getElementById('settingInstagram').value,
-            facebook: document.getElementById('settingFacebook').value,
-            googleReviewLink: document.getElementById('settingGoogleReviewLink').value,
-            whatsappNumber: document.getElementById('settingWhatsappNumber').value,
-            reviewUrl: document.getElementById('settingReviewUrl').value,
-            customerMenuBgImage: document.getElementById('settingCustomerMenuBgImage').value,
+            entityName: val('settingEntityName'),
+            storeName: val('settingStoreName'),
+            address: val('settingStoreAddress'),
+            gstin: val('settingGSTIN'),
+            fssai: val('settingFSSAI'),
+            tagline: val('settingTagline'),
+            poweredBy: val('settingPoweredBy'),
+            shopOpenTime: val('settingOpenTime'),
+            shopCloseTime: val('settingCloseTime'),
+            shopStatus: val('settingShopStatus'),
+            wifiName: val('settingWifiName'),
+            wifiPass: val('settingWifiPass'),
+            instagram: val('settingInstagram'),
+            facebook: val('settingFacebook'),
+            googleReviewLink: val('settingGoogleReviewLink'),
+            whatsappNumber: val('settingWhatsappNumber'),
+            reviewUrl: val('settingReviewUrl'),
+            customerMenuBgImage: val('settingCustomerMenuBgImage'),
             lat, lng,
-            paymentQR: document.getElementById('settingQRUrl').value,
+            paymentQR: val('settingQRUrl'),
             updatedAt: new Date().toISOString()
         };
 
         const deliveryData = {
-            developerPhone: document.getElementById('settingDevPhone').value,
-            reportPhone: document.getElementById('settingReportPhone').value,
-            notifyPhone: document.getElementById('settingAdminPhone').value,
-            backupCode: document.getElementById('settingDeliveryBackupCode').value,
+            developerPhone: val('settingDevPhone'),
+            reportPhone: val('settingReportPhone'),
+            notifyPhone: val('settingAdminPhone'),
+            backupCode: val('settingDeliveryBackupCode'),
             slabs: getSlabsFromTable()
         };
 
         const botData = {
-            imgConfirmed: document.getElementById('botImgConfirmedPreview').src,
-            imgReady: document.getElementById('botImgReadyPreview').src,
-            imgOut: document.getElementById('botImgOutPreview').src,
-            imgDelivered: document.getElementById('botImgDeliveredPreview').src,
-            imgFeedback: document.getElementById('botImgFeedbackPreview').src,
-            greetingImage: document.getElementById('settingGreetingUrl').value,
-            menuImage: document.getElementById('settingMenuUrl').value,
-            socialInsta: document.getElementById('botSocialInsta').value,
-            socialFb: document.getElementById('botSocialFb').value,
-            socialReview: document.getElementById('botSocialReview').value,
-            socialWebsite: document.getElementById('botSocialWebsite').value,
-            reason1: document.getElementById('settingFeedbackReason1').value,
-            reason2: document.getElementById('settingFeedbackReason2').value,
-            reason3: document.getElementById('settingFeedbackReason3').value
+            imgConfirmed: document.getElementById('botImgConfirmedPreview')?.src || '',
+            imgReady: document.getElementById('botImgReadyPreview')?.src || '',
+            imgOut: document.getElementById('botImgOutPreview')?.src || '',
+            imgDelivered: document.getElementById('botImgDeliveredPreview')?.src || '',
+            imgFeedback: document.getElementById('botImgFeedbackPreview')?.src || '',
+            greetingImage: val('settingGreetingUrl'),
+            menuImage: val('settingMenuUrl'),
+            socialInsta: val('botSocialInsta'),
+            socialFb: val('botSocialFb'),
+            socialReview: val('botSocialReview'),
+            socialWebsite: val('botSocialWebsite'),
+            reason1: val('settingFeedbackReason1'),
+            reason2: val('settingFeedbackReason2'),
+            reason3: val('settingFeedbackReason3')
         };
 
         const displayData = {};
@@ -294,10 +312,7 @@ export async function saveStoreSettings() {
             'checkShowStoreName', 'checkShowAddress', 'checkShowGSTIN', 'checkShowFSSAI', 'checkShowTagline',
             'checkShowPoweredBy', 'checkShowQR', 'checkShowWifiInfo', 'checkShowSocial', 'checkShowFeedbackQR'
         ];
-        checks.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) displayData[id] = el.checked;
-        });
+        checks.forEach(id => { displayData[id] = isChecked(id); });
 
         // 3. Atomic multi-path update
         const updates = {};
@@ -306,13 +321,13 @@ export async function saveStoreSettings() {
         updates[`${Outlet.current}/settings/Bot`] = botData;
         updates[`${Outlet.current}/settings/Display`] = displayData;
         updates[`${Outlet.current}/dineinSettings`] = {
-            qrBaseUrl: (await get(Outlet.ref('dineinSettings'))).val()?.qrBaseUrl || '',
-            taxEnabled: document.getElementById('dineinTaxEnabled').checked,
-            taxName: document.getElementById('dineinTaxName').value.trim() || 'GST',
-            taxRate: parseFloat(document.getElementById('dineinTaxRate').value) || 0,
-            serviceChargeEnabled: document.getElementById('dineinServiceChargeEnabled').checked,
-            serviceChargeName: document.getElementById('dineinServiceChargeName').value.trim() || 'Service Charge',
-            serviceChargeRate: parseFloat(document.getElementById('dineinServiceChargeRate').value) || 0,
+            qrBaseUrl: val('settingQrBaseUrl'),
+            taxEnabled: isChecked('dineinTaxEnabled'),
+            taxName: val('dineinTaxName').trim() || 'GST',
+            taxRate: parseFloat(val('dineinTaxRate')) || 0,
+            serviceChargeEnabled: isChecked('dineinServiceChargeEnabled'),
+            serviceChargeName: val('dineinServiceChargeName').trim() || 'Service Charge',
+            serviceChargeRate: parseFloat(val('dineinServiceChargeRate')) || 0,
             offers: _getOffers()
         };
         await update(ref(db), updates);
@@ -327,8 +342,11 @@ export async function saveStoreSettings() {
         console.error("[Settings] Save Error:", e);
         showToast("Critical failure while saving settings", "error");
     } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = '💾 Save Settings';
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = saveBtnOriginalHTML;
+            if (window.lucide) window.lucide.createIcons({ root: saveBtn });
+        }
     }
 }
 
@@ -394,6 +412,7 @@ export function addFeeSlab() {
     `;
     tbody.appendChild(tr);
     if (window.lucide) window.lucide.createIcons({ root: tr });
+    state.settingsDirty = true;
 }
 
 function getSlabsFromTable() {
@@ -456,15 +475,16 @@ function showStatusAlert(newStatus) {
     const div = document.createElement('div');
     div.className = 'alert-box info';
     
-    const labelMap = { 
-        'FORCE_OPEN': '✅ Outlet is now FORCE OPEN', 
-        'FORCE_CLOSED': '🌙 Outlet is now FORCE CLOSED', 
-        'AUTO': '⏰ Outlet set to AUTO' 
+    const labelMap = {
+        'FORCE_OPEN': 'Outlet is now FORCE OPEN',
+        'FORCE_CLOSED': 'Outlet is now FORCE CLOSED',
+        'AUTO': 'Outlet set to AUTO'
     };
-    
+    const iconMap = { 'FORCE_OPEN': 'check-circle', 'FORCE_CLOSED': 'moon', 'AUTO': 'clock' };
+
     div.innerHTML = `
         <div class="alert-title">
-            <i data-lucide="zap" style="width:18px;"></i>
+            <i data-lucide="${iconMap[newStatus] || 'zap'}" style="width:18px;"></i>
             <span>${labelMap[newStatus] || 'Status Updated'}</span>
         </div>
         <div class="alert-sub">The WhatsApp bot and ordering system will respect this status immediately.</div>
@@ -550,14 +570,18 @@ function _renderOffers(offers) {
     if (noMsg) noMsg.classList.add('hidden');
 
     list.innerHTML = _offers.map((o, i) => `
-        <div class="offer-row" style="display:flex; gap:8px; align-items:start; padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--bg);">
-            <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
-                <input type="text" class="offer-title-input" data-offer-idx="${i}" data-field="title" value="${(o.title || '').replace(/"/g, '&quot;')}" placeholder="Offer title" style="border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:13px; font-weight:700;">
-                <input type="text" class="offer-desc-input" data-offer-idx="${i}" data-field="description" value="${(o.description || '').replace(/"/g, '&quot;')}" placeholder="Description (optional)" style="border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12px;">
-                <input type="text" class="offer-code-input" data-offer-idx="${i}" data-field="code" value="${(o.code || '').replace(/"/g, '&quot;')}" placeholder="Promo code (optional)" style="border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12px; max-width:160px;">
+        <div class="offer-row">
+            <div class="offer-row-fields">
+                <input type="text" class="offer-title-input form-input-small" data-offer-idx="${i}" data-field="title" value="${(o.title || '').replace(/"/g, '&quot;')}" placeholder="Offer title">
+                <input type="text" class="offer-desc-input form-input-small" data-offer-idx="${i}" data-field="description" value="${(o.description || '').replace(/"/g, '&quot;')}" placeholder="Description (optional)">
+                <input type="text" class="offer-code-input form-input-small" data-offer-idx="${i}" data-field="code" value="${(o.code || '').replace(/"/g, '&quot;')}" placeholder="Promo code (optional)">
             </div>
-            <button class="btn-icon offer-remove-btn" data-offer-idx="${i}" title="Remove" style="color:var(--error); font-size:18px; padding:4px;">✕</button>
+            <button type="button" class="btn-icon-danger offer-remove-btn" data-offer-idx="${i}" title="Remove offer">
+                <i data-lucide="x" class="icon-14"></i>
+            </button>
         </div>`).join('');
+
+    if (window.lucide) window.lucide.createIcons({ root: list });
 
     // Bind input changes
     list.querySelectorAll('[data-field]').forEach(el => {
