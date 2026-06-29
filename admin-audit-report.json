@@ -1,0 +1,411 @@
+{
+  "auditTimestamp": "2026-06-23T10:30:00Z",
+  "appUrl": "https://roshani-sudha-admin.web.app",
+  "appTitle": "Roshani ERP | Admin Dashboard",
+  "loginStatus": "Logged in as roshanisudha@gmail.com (Super Admin)",
+
+  "consoleErrors": {
+    "totalCount": 8,
+    "uniqueIssues": [
+      {
+        "source": "Firebase AppCheck",
+        "error": "FirebaseError: AppCheck: ReCAPTCHA error. (appCheck/recaptcha-error)",
+        "occurrences": 5,
+        "severity": "HIGH",
+        "detail": "ReCAPTCHA v3 token generation fails persistently. This may block Firebase security rules that require AppCheck."
+      },
+      {
+        "source": "Firebase Auth",
+        "error": "Firebase: Error (auth/invalid-credential)",
+        "occurrences": 2,
+        "severity": "MEDIUM",
+        "detail": "Login attempt with pre-filled credentials (roshanisudha@gmail.com / 989515) failed - password is incorrect. This is a previous session error."
+      },
+      {
+        "source": "Firebase Auth HTTP",
+        "error": "HTTP 400 on identitytoolkit.googleapis.com (signInWithPassword)",
+        "occurrences": 2,
+        "severity": "MEDIUM",
+        "detail": "Related to the invalid credential error above."
+      },
+      {
+        "source": "Cache",
+        "error": "net::ERR_CACHE_READ_FAILURE on firebase-app.js, firebase-database.js, recaptcha files",
+        "occurrences": 4,
+        "severity": "LOW",
+        "detail": "Cached Firebase scripts failed to load from disk cache. Likely a browser cache corruption issue, not a code bug."
+      },
+      {
+        "source": "reCAPTCHA",
+        "error": "ReferenceError: recaptcha is not defined",
+        "occurrences": 1,
+        "severity": "HIGH",
+        "detail": "reCAPTCHA library failed to load, causing reference error in reCAPTCHA anchor script."
+      }
+    ],
+    "consoleWarnings": {
+      "totalCount": 9,
+      "issues": [
+        "Firebase: Lost connection - data may not sync. Retrying...",
+        "Manifest: Syntax error in rider manifest.json (cross-origin reference)"
+      ]
+    }
+  },
+
+  "pagesAudit": {
+    "login": {
+      "status": "LOADED",
+      "elements": {
+        "emailInput": { "exists": true, "id": "loginEmail", "placeholder": "admin@roshani.com", "type": "email", "ariaLabel": "Admin Email" },
+        "passwordInput": { "exists": true, "id": "loginPassword", "placeholder": "••••••••", "type": "password", "ariaLabel": "Secret Key" },
+        "loginButton": { "exists": true, "text": "Access Dashboard", "ariaLabel": null },
+        "additionalUi": "Security badge 'Enterprise Security Level 4', logo, title 'Roshani ERP'"
+      },
+      "issues": [
+        "Login button has no aria-label (uses button text only, which is acceptable)",
+        "Pre-filled credentials (roshanisudha@gmail.com / 989515) are invalid (auth/invalid-credential)"
+      ]
+    },
+    "dashboard": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 4,
+        "visibleButtons": 4,
+        "inputs": 4,
+        "tables": 1,
+        "kpiCards": 9,
+        "unlabeledButtons": 2
+      },
+      "kpiCards": [
+        "0 Active Orders - Today",
+        "0 In Progress",
+        "₹0 Total Revenue - Today",
+        "0 Riders Online - Online",
+        "Promotional messages - Sending is ON",
+        "Top Spenders - Calculating...",
+        "Top Selling Items - Processing...",
+        "Rider Status - 0 ON",
+        "Priority Orders (Action Required) - Scanning..."
+      ],
+      "issues": [
+        "2 buttons without text/aria-label (likely icon-only action buttons)"
+      ]
+    },
+    "orders": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 4,
+        "visibleButtons": 4,
+        "inputs": 3,
+        "tables": 1,
+        "orderCards": 0
+      },
+      "table": {
+        "columns": ["Order ID", "Customer", "Address", "Total", "Payment", "Status", "Actions"],
+        "rows": 0
+      },
+      "issues": [
+        "All 4 buttons have empty text (likely icon-only - need aria-labels)",
+        "No order data loaded (order list is empty)"
+      ]
+    },
+    "live": {
+      "status": "PASS",
+      "elements": { "buttons": 0, "inputs": 0, "tables": 1 },
+      "issues": []
+    },
+    "walkin": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 11,
+        "visibleButtons": 8,
+        "inputs": 7,
+        "tables": 0,
+        "images": 21
+      },
+      "issues": [
+        "1 unlabeled button",
+        "Some buttons hidden (3 of 11 not visible)"
+      ]
+    },
+    "tables": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 4,
+        "visibleButtons": 4,
+        "inputs": 0,
+        "tables": 0
+      },
+      "buttons": ["Export", "Bulk QR Print", "Add Table", "01 4 Seats Free"],
+      "issues": []
+    },
+    "menu": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 43,
+        "visibleButtons": 43,
+        "inputs": 1,
+        "tables": 0,
+        "images": 21
+      },
+      "issues": [
+        "42 out of 43 buttons have empty/whitespace-only text - likely rendered dynamically without labels"
+      ]
+    },
+    "categories": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 16,
+        "visibleButtons": 16,
+        "inputs": 4,
+        "images": 7
+      },
+      "issues": [
+        "12 buttons without visible text (icon-only buttons)",
+        "6 images missing alt text"
+      ]
+    },
+    "inventory": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 8,
+        "visibleButtons": 8,
+        "disabledButtons": 4,
+        "inputs": 4,
+        "tables": 0
+      },
+      "buttons": ["Export", "Import", "Add Item", "First (disabled)", "Prev (disabled)", "1", "Next (disabled)", "Last (disabled)"],
+      "issues": []
+    },
+    "riders": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 10,
+        "visibleButtons": 6,
+        "disabledButtons": 4,
+        "inputs": 2,
+        "images": 1
+      },
+      "buttons": ["Add New Rider", "💰", "✏️", "🔑", "🗑️", "First (disabled)", "Prev (disabled)", "1", "Next (disabled)", "Last (disabled)"],
+      "issues": [
+        "1 image missing alt text (rider avatar placeholder)"
+      ]
+    },
+    "customers": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 5,
+        "visibleButtons": 5,
+        "disabledButtons": 4,
+        "inputs": 2
+      },
+      "buttons": ["First (disabled)", "Prev (disabled)", "1", "Next (disabled)", "Last (disabled)"],
+      "issues": []
+    },
+    "promotions": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 50,
+        "visibleButtons": 8,
+        "disabledButtons": 1,
+        "inputs": 16,
+        "images": 2,
+        "tabs": ["Send Now", "Schedule", "Active", "History"]
+      },
+      "issues": [
+        "34 buttons with empty/icon-only text hidden in inactive tabs",
+        "'EMERGENCY STOP ALL' button is disabled",
+        "'Launch campaign' button is disabled"
+      ]
+    },
+    "discounts": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 7,
+        "visibleButtons": 7,
+        "inputs": 1
+      },
+      "buttons": ["Reports", "New Discount", "Active 1", "Scheduled 0", "Expired / Disabled 0"],
+      "issues": [
+        "2 unlabeled buttons (icon-only)",
+        "No discount list table visible"
+      ]
+    },
+    "lostSales": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 1,
+        "visibleButtons": 1,
+        "inputs": 1
+      },
+      "issues": []
+    },
+    "reports": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 4,
+        "visibleButtons": 4,
+        "inputs": 3
+      },
+      "buttons": ["Generate", "Bot Report", "📥 Excel", "📥 PDF"],
+      "issues": []
+    },
+    "riderAnalytics": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 4,
+        "visibleButtons": 4,
+        "inputs": 3
+      },
+      "buttons": ["Analyze", "Settle Balance", "📥 Excel", "📥 PDF"],
+      "issues": []
+    },
+    "feedback": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 0,
+        "inputs": 0,
+        "tables": 0
+      },
+      "issues": [
+        "No content loaded - only heading visible"
+      ]
+    },
+    "liveTracker": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 2,
+        "visibleButtons": 2,
+        "images": 13
+      },
+      "issues": [
+        "13 images missing alt text (map markers/avatars)",
+        "1 unlabeled button"
+      ]
+    },
+    "notifications": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 1,
+        "visibleButtons": 1
+      },
+      "button": "Clear All",
+      "issues": []
+    },
+    "payments": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 5,
+        "visibleButtons": 5,
+        "disabledButtons": 4,
+        "inputs": 1
+      },
+      "issues": []
+    },
+    "settings": {
+      "status": "PASS",
+      "elements": {
+        "buttons": 23,
+        "visibleButtons": 23,
+        "disabledButtons": 1,
+        "inputs": 70,
+        "tables": 1,
+        "images": 8
+      },
+      "sections": [
+        "Receipt & Store Information",
+        "Store Location (Lat/Lng)",
+        "Order Notifications (WhatsApp, Delivery Security, Push)",
+        "WhatsApp Bot Aesthetics & Promotions",
+        "Dine-In Charges",
+        "Today's Offers (QR Welcome Screen)",
+        "Delivery Fee Tiers"
+      ],
+      "issues": [
+        "6 unlabeled buttons (icon-only)",
+        "1 disabled button (likely 'Save Settings' during load)"
+      ]
+    }
+  },
+
+  "modalAudit": {
+    "totalModals": 24,
+    "properDialogs": 12,
+    "properlyAccessible": 12,
+    "modals": [
+      { "id": "dishModal", "role": "dialog", "ariaModal": "true", "ariaLabel": "Edit Dish", "heading": "Add New Dish", "hasCloseBtn": true, "issues": [] },
+      { "id": "riderModal", "role": "dialog", "ariaModal": "true", "ariaLabel": "Rider Details", "heading": "Rider Profile", "hasCloseBtn": true, "issues": [] },
+      { "id": "discountsReportsModal", "role": "dialog", "ariaModal": "true", "ariaLabelledby": "discountsReportsTitle", "heading": "Discount Performance Reports", "hasCloseBtn": true, "issues": [] },
+      { "id": "promotionsGuideModal", "role": "dialog", "ariaModal": "true", "ariaLabelledby": "promoGuideTitle", "heading": "How to use Promotions", "hasCloseBtn": true, "issues": [] },
+      { "id": "promoTemplatePickerModal", "role": "dialog", "ariaModal": "true", "ariaLabel": "Promotion Template Picker", "heading": "Choose a template", "hasCloseBtn": true, "issues": [] },
+      { "id": "discountEditorModal", "role": "dialog", "ariaModal": "true", "ariaLabelledby": "discountEditorTitle", "heading": "New Discount", "hasCloseBtn": true, "issues": [] },
+      { "id": "posSelectionModal", "role": "dialog", "ariaModal": "true", "ariaLabel": "POS Selection", "heading": "Select Options", "hasCloseBtn": true, "issues": [] },
+      { "id": "reauthModal", "role": "dialog", "ariaModal": "true", "ariaLabel": "Re-authenticate", "heading": "Security Confirmation", "hasCloseBtn": true, "issues": [] },
+      { "id": "inventoryModal", "role": "dialog", "ariaModal": "true", "ariaLabel": "Inventory Management", "heading": "Track New Product", "hasCloseBtn": true, "issues": [] },
+      { "id": "receiptPreviewModal", "role": "dialog", "ariaModal": "true", "ariaLabel": "Receipt Preview", "heading": "Receipt Preview", "hasCloseBtn": true, "issues": [], "hidden": true },
+      { "id": "pageGuideModal", "role": "dialog", "ariaModal": "true", "ariaLabelledby": "pageGuideTitle", "heading": "How to use this page", "hasCloseBtn": true, "issues": [] },
+      { "id": "tableEditorModal", "role": "dialog", "ariaModal": "true", "ariaLabel": "Edit Table", "heading": "Add Table", "hasCloseBtn": true, "issues": [] },
+      { "id": "tableQrModal", "role": "dialog", "ariaModal": "true", "ariaLabel": "Table QR Code", "heading": "Table QR Code", "hasCloseBtn": true, "issues": [] }
+    ],
+    "subElementIssues": [
+      { "id": "dishModalTitle", "issues": ["missing role=\"dialog\"", "missing aria-modal", "missing accessible name"] },
+      { "id": "riderModalTitle", "issues": ["missing role=\"dialog\"", "missing aria-modal", "missing accessible name"] },
+      { "id": "modalRiderId", "issues": ["missing role=\"dialog\"", "missing accessible name"], "hidden": true },
+      { "id": "posModalDishName", "issues": ["missing role=\"dialog\"", "missing aria-modal", "missing accessible name"] },
+      { "id": "posModalDishCategory", "issues": ["missing role=\"dialog\"", "missing aria-modal", "missing accessible name"] },
+      { "id": "posModalQty", "issues": ["missing role=\"dialog\"", "missing aria-modal", "missing accessible name"] },
+      { "id": "posModalTotal", "issues": ["missing role=\"dialog\"", "missing aria-modal", "missing accessible name"] },
+      { "id": "invModalTitle", "issues": ["missing role=\"dialog\"", "missing aria-modal", "missing accessible name"] },
+      { "id": "tableQrModalTitle", "issues": ["missing role=\"dialog\"", "missing aria-modal", "missing accessible name"] },
+      { "id": "tableQrModalImage", "issues": ["missing role=\"dialog\"", "missing aria-modal", "missing accessible name"] },
+      { "id": "tableQrModalUrl", "issues": ["missing role=\"dialog\"", "missing aria-modal", "missing accessible name"] }
+    ]
+  },
+
+  "globalAudit": {
+    "totalButtons": 286,
+    "visibleButtons": 93,
+    "disabledButtons": 18,
+    "totallyUnlabeledButtons": 1,
+    "visibleUnlabeledButtons": 0,
+    "totalImages": 64,
+    "brokenImages": 0,
+    "imagesWithoutAlt": 0,
+    "totalInputs": "~150+ across all tabs"
+  },
+
+  "issuesSummary": {
+    "critical": [],
+    "high": [
+      "Firebase AppCheck: ReCAPTCHA v3 token generation fails persistently (5 occurrences) - may block Firebase security rules",
+      "reCAPTCHA ReferenceError: recaptcha is not defined - library failed to load"
+    ],
+    "medium": [
+      "Login credentials (roshanisudha@gmail.com) have an invalid password stored in UI - user will be confused",
+      "12 modal sub-elements lack proper ARIA dialog attributes (role, aria-modal, accessible name)",
+      "Menu tab: 42 of 43 buttons have empty/whitespace text - dynamic rendering issue",
+      "Orders tab: All 4 action buttons are icon-only without aria-labels"
+    ],
+    "low": [
+      "Categories tab: 6 images missing alt text",
+      "Live Tracker tab: 13 images missing alt text (map markers)",
+      "Rider tab: 1 image missing alt text",
+      "Settings tab: 6 unlabeled icon buttons",
+      "Dashboard & Promotions: several icon-only buttons without labels",
+      "Cache read failures on Firebase scripts (ERR_CACHE_READ_FAILURE) - browser cache issue",
+      "Cross-origin manifest.json syntax error (rider manifest referenced from admin)"
+    ]
+  },
+
+  "recommendations": [
+    "Fix ReCAPTCHA v3 configuration or site key - AppCheck errors may cause security rule failures",
+    "Add aria-labels to all icon-only buttons (especially Orders, Menu, Categories tabs)",
+    "Fix the 12 sub-element modal ARIA issues - second-level elements inside dialogs should not have role='dialog'",
+    "Add alt text to images in Categories and Live Tracker pages",
+    "Investigate Menu tab rendering: 42/43 buttons have empty text",
+    "Clear browser cache to resolve ERR_CACHE_READ_FAILURE warnings",
+    "Remove cross-origin reference to rider manifest.json from admin app",
+    "Consider storing correct default credentials or removing pre-filled values",
+    "Add proper aria-labels to all pagination buttons (First, Prev, Next, Last)"
+  ]
+}

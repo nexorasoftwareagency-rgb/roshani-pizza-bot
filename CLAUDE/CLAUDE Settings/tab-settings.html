@@ -1,0 +1,500 @@
+            <div id="tab-settings" class="tab-content hidden">
+
+                <div class="panel">
+
+                    <div class="panel-header">
+                        <h3><i data-lucide="settings" class="icon-16"></i> Delivery & Store Settings</h3>
+                        <button id="btnSaveSettings" class="btn-primary"><i data-lucide="save" class="icon-16"></i> Save Settings</button>
+                    </div>
+
+                    <div class="settings-grid">
+
+                        <!-- ============ Receipt & Store Information ============ -->
+                        <div class="glass-card p-20 grid-full">
+
+                            <div class="flex-between flex-center mb-14">
+                                <div>
+                                    <h4 class="mb-4"><i data-lucide="file-text" class="icon-16"></i> Receipt & Store Information</h4>
+                                    <p class="text-muted-small">Legal details and branding for your professional bills</p>
+                                </div>
+                            </div>
+
+                            <div class="flex-row flex-gap-24">
+                                <div class="flex-2">
+
+                                    <!-- Business Details -->
+                                    <div class="settings-section-card">
+                                        <h5 class="section-card-heading"><i data-lucide="building-2" class="icon-14"></i> Business Details</h5>
+
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Legal Entity Name</label>
+                                                <input type="text" id="settingEntityName" class="form-input" placeholder="e.g. Avipriya Enterprises">
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Store Name (Display)</label>
+                                                <input type="text" id="settingStoreName" class="form-input" placeholder="e.g. One Bite Chapra">
+                                            </div>
+                                        </div>
+
+                                        <label class="form-label-small">Store Address</label>
+                                        <textarea id="settingStoreAddress" class="form-input mb-14 h-60 p-10" placeholder="Full address for the bill header..."></textarea>
+
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">GSTIN Number</label>
+                                                <input type="text" id="settingGSTIN" class="form-input" placeholder="e.g. 10DYTPS7666L1ZG">
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">FSSAI Number</label>
+                                                <input type="text" id="settingFSSAI" class="form-input" placeholder="e.g. 10422250000150">
+                                            </div>
+                                        </div>
+
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Header Tagline</label>
+                                                <input type="text" id="settingTagline" class="form-input" placeholder="e.g. JAI HIND">
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Shop Opening Time</label>
+                                                <input type="time" id="settingOpenTime" class="form-input" value="10:00" title="Opening Time">
+                                            </div>
+                                        </div>
+
+                                        <div class="flex-row flex-gap-12">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Shop Closing Time (Report Time)</label>
+                                                <input type="time" id="settingCloseTime" class="form-input" value="23:00" title="Closing Time">
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Daily Report Mobile Number (Admin)</label>
+                                                <input type="text" id="settingReportPhone" class="form-input" placeholder="e.g. 918887776660">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Outlet Status -->
+                                    <div class="outlet-status-control glass-card p-16 mb-14">
+                                        <div class="flex-between flex-center mb-10">
+                                            <div class="flex-row flex-center flex-gap-10">
+                                                <label class="form-label-small mb-0 fw-700"><i data-lucide="power" class="icon-14"></i> Outlet Status</label>
+                                                <span id="outletStatusPill" class="outlet-status-pill status-auto" title="Current outlet status">AUTO</span>
+                                            </div>
+                                            <button type="button" id="btnQuickToggleOutlet" class="btn-primary btn-small flex-center flex-gap-6 p-6-14" title="Instantly apply this status to Firebase">
+                                                <i data-lucide="power" class="icon-fixed-sm"></i> Apply Status
+                                            </button>
+                                        </div>
+                                        <select id="settingShopStatus" class="form-input" title="Shop Status Override">
+                                            <option value="AUTO">Auto (Time Based)</option>
+                                            <option value="FORCE_OPEN">Force Open — Accept Orders</option>
+                                            <option value="FORCE_CLOSED">Force Closed — Reject Orders</option>
+                                        </select>
+                                        <p class="text-secondary-small mt-6" id="outletStatusHint">Status will follow your opening/closing hours.</p>
+                                    </div>
+
+                                    <!-- Marketing & Connectivity -->
+                                    <div class="settings-section-card">
+                                        <h5 class="section-card-heading"><i data-lucide="wifi" class="icon-14"></i> Marketing & Connectivity</h5>
+
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">WiFi Name (SSID)</label>
+                                                <input type="text" id="settingWifiName" class="form-input" placeholder="e.g. ROSHANI_GUEST_WIFI" title="WiFi SSID" autocomplete="off">
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">WiFi Password</label>
+                                                <div class="flex-row flex-gap-10">
+                                                    <input type="password" id="settingWifiPass" class="form-input flex-1" autocomplete="new-password" placeholder="WiFi Password" title="WiFi Password">
+                                                    <button type="button" id="btnToggleWifiPass" class="btn-secondary flex-center p-0-10" title="Toggle password visibility" aria-label="Show password" aria-pressed="false"><i data-lucide="eye" id="wifiPassIcon" class="icon-16"></i></button>
+                                                </div>
+                                                <div class="notif-sub-premium mt-6 font-weight-500 color-primary">
+                                                    <i data-lucide="alert-triangle" class="icon-14"></i> Note: This password will be printed on customer receipts for their convenience.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Instagram Handle</label>
+                                                <input type="text" id="settingInstagram" class="form-input" placeholder="e.g. @roshani_pizza">
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Facebook Page URL</label>
+                                                <input type="text" id="settingFacebook" class="form-input" placeholder="Facebook Profile Link">
+                                            </div>
+                                        </div>
+
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Google Maps Review Link</label>
+                                                <input type="text" id="settingGoogleReviewLink" class="form-input" placeholder="https://g.page/r/.../review">
+                                                <small class="fs-10 text-muted">Shown as "Rate us on Google" on the customer QR menu's Promotions page.</small>
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">WhatsApp Number</label>
+                                                <input type="text" id="settingWhatsappNumber" class="form-input" placeholder="e.g. 919876543210 (with country code, no +)">
+                                                <small class="fs-10 text-muted">Used to build the "Chat with us" link on the customer Promotions page.</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Customer Menu Background Image (URL)</label>
+                                                <input type="text" id="settingCustomerMenuBgImage" class="form-input" placeholder="https://.../hero-photo.jpg">
+                                                <small class="fs-10 text-muted">Optional. Shown as the hero banner on the QR menu's Welcome screen. Leave blank to use the default design.</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex-row flex-gap-12">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Receipt Feedback URL (Base)</label>
+                                                <input type="text" id="settingReviewUrl" class="form-input" placeholder="https://yourwebsite.com/feedback">
+                                                <small class="fs-10 text-muted">This URL will be used for the Receipt QR. Order details will be appended automatically.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Feedback Bot Options -->
+                                    <div class="settings-section-card">
+                                        <h5 class="section-card-heading"><i data-lucide="message-square" class="icon-14"></i> Feedback Bot Options (Post-Delivery)</h5>
+                                        <div class="flex-col flex-gap-10">
+                                            <input type="text" id="settingFeedbackReason1" class="form-input" placeholder="Reason 1 (e.g. Delicious Taste)" title="Feedback Reason 1">
+                                            <input type="text" id="settingFeedbackReason2" class="form-input" placeholder="Reason 2 (e.g. Lightning Fast Delivery)" title="Feedback Reason 2">
+                                            <input type="text" id="settingFeedbackReason3" class="form-input" placeholder="Reason 3 (e.g. Premium Packaging)" title="Feedback Reason 3">
+                                        </div>
+                                    </div>
+
+                                    <!-- Developer Settings -->
+                                    <div class="settings-section-card system-section">
+                                        <h5 class="section-card-heading"><i data-lucide="terminal" class="icon-14"></i> Developer Settings <span class="text-muted-small fw-400">(optional)</span></h5>
+                                        <div class="flex-row flex-gap-12 mb-14">
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Powered By Tagline</label>
+                                                <input type="text" id="settingPoweredBy" class="form-input" placeholder="Powered by Roshani ERP">
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="form-label-small">Developer Support (WhatsApp Number)</label>
+                                                <input type="text" id="settingDevPhone" class="form-input" placeholder="e.g. 919876543210">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <div class="flex-1 border-l-ghost p-24">
+                                    <h5 class="mb-12 text-muted-small text-upper ls-sm">Visibility Controls</h5>
+                                    <div class="flex-col flex-gap-12 mb-24">
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small" title="Toggle Store Name display on receipts">
+                                            <input type="checkbox" id="checkShowStoreName" checked> <span>Show Store Name</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small" title="Toggle Address display on receipts">
+                                            <input type="checkbox" id="checkShowAddress" checked> <span>Show Address</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small" title="Toggle GSTIN display on receipts">
+                                            <input type="checkbox" id="checkShowGSTIN"> <span>Show GSTIN</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
+                                            <input type="checkbox" id="checkShowFSSAI"> <span>Show FSSAI</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
+                                            <input type="checkbox" id="checkShowTagline" checked> <span>Show Tagline</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
+                                            <input type="checkbox" id="checkShowPoweredBy" checked> <span>Show 'Powered By'</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
+                                            <input type="checkbox" id="checkShowQR"> <span>Show Payment QR</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small border-t-ghost pt-8 mt-4">
+                                            <input type="checkbox" id="checkShowWifiInfo"> <span>Show WiFi Info</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small">
+                                            <input type="checkbox" id="checkShowSocial"> <span>Show Social Handles</span>
+                                        </label>
+                                        <label class="flex-row flex-center flex-gap-10 cursor-pointer text-muted-small" title="Toggle Feedback QR display on thermal receipts">
+                                            <input type="checkbox" id="checkShowFeedbackQR" checked> <span>Show Feedback QR (Receipt)</span>
+                                        </label>
+                                    </div>
+
+                                    <h5 class="mb-12 text-muted-small text-upper ls-sm">Payment QR</h5>
+                                    <div class="qr-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                        <img id="qrPreview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect fill='%23f1f5f9' width='150' height='150'/%3E%3Ctext x='75' y='80' text-anchor='middle' fill='%2394a3b8' font-size='12' font-family='Inter,sans-serif'%3EQR Code%3C/text%3E%3C/svg%3E" alt="Payment QR Preview" class="br-8 mb-12 w-100 h-100 border-ghost-light bg-white">
+                                        <input type="file" id="settingQRFile" accept="image/*" class="hidden" title="Select QR Image">
+                                        <button id="btnChangeQR" class="btn-secondary btn-small w-full" title="Upload New Payment QR Code">Change QR</button>
+                                        <input type="hidden" id="settingQRUrl">
+                                    </div>
+
+                                    <h5 class="mb-12 mt-24 text-muted-small text-upper ls-sm"><i data-lucide="image" class="icon-14"></i> WhatsApp Marketing Images</h5>
+                                    <div class="glass-card p-15 bg-ghost br-15 border-dashed">
+                                        <div class="flex-col flex-gap-10">
+                                            <div>
+                                                <label class="form-label-small" for="settingGreetingFile">Greeting (Branding) Image</label>
+                                                <div class="flex-row flex-center flex-gap-10">
+                                                    <img id="greetingImgPreview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23E84908' width='100' height='100'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='white' font-size='10' font-family='Inter,sans-serif'%3EBranding%3C/text%3E%3C/svg%3E" class="br-8 border-ghost w-60 h-60 bg-white" alt="Branding Preview">
+                                                    <div class="flex-col flex-1">
+                                                        <input type="file" id="settingGreetingFile" accept="image/*" class="hidden" title="Upload greeting image">
+                                                        <button id="btnChangeGreetingImg" class="btn-secondary btn-small">Change Image</button>
+                                                        <input type="hidden" id="settingGreetingUrl">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="border-t-ghost pt-10 mt-5">
+                                                <label class="form-label-small" for="settingMenuFile">Menu (Category List) Image</label>
+                                                <div class="flex-row flex-center flex-gap-10">
+                                                    <img id="menuImgPreview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23E84908' width='100' height='100'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='white' font-size='10' font-family='Inter,sans-serif'%3EMenu%3C/text%3E%3C/svg%3E" class="br-8 border-ghost w-60 h-60 bg-white" alt="Menu Preview">
+                                                    <div class="flex-col flex-1">
+                                                        <input type="file" id="settingMenuFile" accept="image/*" class="hidden" title="Upload menu image">
+                                                        <button id="btnChangeMenuImg" class="btn-secondary btn-small">Change Image</button>
+                                                        <input type="hidden" id="settingMenuUrl">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ============ Store Location ============ -->
+                        <div class="glass-card p-20">
+                            <h4 class="mb-14"><i data-lucide="map-pin" class="icon-16"></i> Store Location</h4>
+                            <p class="text-secondary-small mb-14">Used for distance-based delivery calculations</p>
+
+                            <label class="form-label-small">Latitude</label>
+                            <input type="text" id="settingLat" class="form-input mb-14" placeholder="e.g. 25.887444">
+
+                            <label class="form-label-small">Longitude</label>
+                            <input type="text" id="settingLng" class="form-input mb-14" placeholder="e.g. 85.026889">
+
+                            <div class="location-badge">
+                                <strong>Current:</strong> <span id="displayCoords">25.887444, 85.026889</span>
+                            </div>
+                        </div>
+
+                        <!-- ============ Order Notifications ============ -->
+                        <div class="glass-card p-20">
+                            <h4 class="mb-14"><i data-lucide="bell-ring" class="icon-16"></i> Order Notifications</h4>
+
+                            <div class="notification-setting-group mb-20">
+                                <h5 class="mb-8 text-muted-small text-upper ls-sm">WhatsApp Alerts</h5>
+                                <label class="form-label-small">Notification WhatsApp Number</label>
+                                <input type="text" id="settingAdminPhone" class="form-input mb-8" placeholder="e.g. 919876543210">
+                                <p class="text-secondary-small note-small">* Existing behavior: Orders forwarded via bot.</p>
+                            </div>
+
+                            <div class="divider-dashed mb-20"></div>
+
+                            <div class="notification-setting-group mb-20">
+                                <h5 class="mb-8 text-muted-small text-upper ls-sm">Delivery Security</h5>
+                                <label class="form-label-small">Verification Backup Code (Admin Fallback)</label>
+                                <input type="text" id="settingDeliveryBackupCode" class="form-input mb-8" placeholder="e.g. 1234" title="Fallback code for riders in case customer is unavailable">
+                                <p class="text-secondary-small note-small">* Use this 4-digit code to bypass customer OTP if needed.</p>
+                            </div>
+
+                            <div class="divider-dashed mb-20"></div>
+
+                            <div class="notification-setting-group">
+                                <h5 class="mb-8 text-muted-small text-upper ls-sm">Browser & App Push</h5>
+                                <p class="text-secondary-small mb-14">Get instant sound & visual alerts on this device even if the app is in background.</p>
+
+                                <div id="notifStatusInfo" class="status-badge-ghost mb-14">
+                                    <i data-lucide="info"></i>
+                                    <span id="notifPermissionText">Permission: Unknown</span>
+                                </div>
+
+                                <div class="flex-row flex-gap-10">
+                                    <button id="btnEnableNotif" class="btn-primary flex-center flex-gap-8 flex-1">
+                                        <i data-lucide="bell"></i> <span>Enable Alerts</span>
+                                    </button>
+                                    <button id="btnTestNotif" class="btn-secondary flex-center flex-gap-8">
+                                        <i data-lucide="play-circle"></i> <span>Test</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ============ WhatsApp Bot Aesthetics & Promotions ============ -->
+                        <div class="glass-card p-20">
+                            <h4 class="mb-14"><i data-lucide="bot" class="icon-16"></i> WhatsApp Bot Aesthetics & Promotions</h4>
+                            <p class="text-secondary-small mb-14">Upload status-specific images and update your social footprints.</p>
+
+                            <div class="divider-dashed mb-20"></div>
+
+                            <h5 class="mb-12 text-muted-small text-upper ls-sm">Status-Specific Images</h5>
+                            <div class="grid grid-cols-2 grid-gap-12 mb-20">
+                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                    <label class="form-label-small mb-4"><i data-lucide="check-circle-2" class="icon-14"></i> Order Confirmed</label>
+                                    <img id="botImgConfirmedPreview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23E84908' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Confirmed" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgConfirmedFile" accept="image/*" class="hidden" title="Order Confirmed Status Image">
+                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img" data-target="botImgConfirmedFile">Upload</button>
+                                </div>
+                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                    <label class="form-label-small mb-4"><i data-lucide="cooking-pot" class="icon-14"></i> Ready</label>
+                                    <img id="botImgReadyPreview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23E84908' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Ready" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgReadyFile" accept="image/*" class="hidden" title="Order Ready Status Image">
+                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img" data-target="botImgReadyFile" title="Upload Ready Status Image">Upload</button>
+                                </div>
+                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                    <label class="form-label-small mb-4"><i data-lucide="truck" class="icon-14"></i> Out for Delivery</label>
+                                    <img id="botImgOutPreview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23E84908' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Out for Delivery" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgOutFile" accept="image/*" class="hidden" aria-label="Upload Out for Delivery Image">
+                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img" data-target="botImgOutFile" title="Upload Out for Delivery Image">Upload</button>
+                                </div>
+                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                    <label class="form-label-small mb-4"><i data-lucide="party-popper" class="icon-14"></i> Delivered (Thank You)</label>
+                                    <img id="botImgDeliveredPreview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23E84908' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Delivered" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgDeliveredFile" accept="image/*" class="hidden" aria-label="Upload Delivered Image">
+                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img" data-target="botImgDeliveredFile" title="Upload Delivered Image">Upload</button>
+                                </div>
+                                <div class="bot-img-upload-box flex-col flex-center bg-ghost p-10 br-10 border-t-ghost border-dashed">
+                                    <label class="form-label-small mb-4"><i data-lucide="star" class="icon-14"></i> Feedback / Rating</label>
+                                    <img id="botImgFeedbackPreview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect fill='%23fff5ed' width='600' height='200'/%3E%3Crect fill='%23E84908' x='250' y='80' width='100' height='40' rx='8'/%3E%3Ctext x='300' y='105' text-anchor='middle' fill='white' font-size='12' font-family='Inter,sans-serif'%3EBanner%3C/text%3E%3C/svg%3E" alt="Feedback" class="br-8 mb-8 w-100 h-60 object-cover border-ghost-light bg-white">
+                                    <input type="file" id="botImgFeedbackFile" accept="image/*" class="hidden" aria-label="Upload Feedback Image">
+                                    <button class="btn-secondary btn-small w-full btn-upload-bot-img" data-target="botImgFeedbackFile" title="Upload Feedback Image">Upload</button>
+                                </div>
+                            </div>
+
+                            <div class="divider-dashed mb-20"></div>
+
+                            <h5 class="mb-12 text-muted-small text-upper ls-sm">Promotional Social Links</h5>
+                            <div class="flex-row flex-gap-12 mb-14">
+                                <div class="flex-1">
+                                    <label class="form-label-small">Instagram Profile URL</label>
+                                    <input type="text" id="botSocialInsta" class="form-input" placeholder="https://instagram.com/your-brand">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="form-label-small">Facebook Page URL</label>
+                                    <input type="text" id="botSocialFb" class="form-input" placeholder="https://facebook.com/your-page">
+                                </div>
+                            </div>
+                            <div class="flex-row flex-gap-12 mb-10">
+                                <div class="flex-1">
+                                    <label class="form-label-small">Google Review Link</label>
+                                    <input type="text" id="botSocialReview" class="form-input" placeholder="https://g.page/r/your-id/review">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="form-label-small">Website / Store Link</label>
+                                    <input type="text" id="botSocialWebsite" class="form-input" placeholder="https://yourwebsite.com">
+                                </div>
+                            </div>
+
+                            <div class="migration-card premium-row-v4 p-20 br-16 mb-20">
+                                <div class="flex-row flex-center flex-gap-15 mb-14">
+                                    <div class="kpi-icon-box orange box-40"><i data-lucide="database" class="icon-18"></i></div>
+                                    <h5 class="migration-title primary m-0">POS Migration Utility</h5>
+                                </div>
+                                <p class="migration-text text-muted-small mb-14">Moves all add-ons from dishes to categories. Use this once to sync existing data.</p>
+                                <button id="btnMigrateAddons" data-action="migrateAddons" class="btn-primary btn-small w-full flex-center flex-gap-8"><i data-lucide="refresh-cw"></i> Run Migration</button>
+                            </div>
+
+                            <div class="migration-card alt premium-row-v4 p-20 br-16">
+                                <div class="flex-row flex-center flex-gap-15 mb-14">
+                                    <div class="kpi-icon-box green box-40"><i data-lucide="image" class="icon-18"></i></div>
+                                    <h5 class="migration-title green m-0">Image Storage Migration</h5>
+                                </div>
+                                <p class="migration-text text-muted-small mb-14">Converts all Firebase Storage images to Base64 text in the database. Run this to finalize the move to text-only storage.</p>
+                                <button id="btnRunImageMigration" data-action="runImageMigration" class="btn-action-green btn-small w-full" title="Start image storage migration"><i data-lucide="zap" class="icon-14"></i> Migrate Images</button>
+                            </div>
+                        </div>
+
+                        <!-- ============ Dine-In Charges & QR Ordering ============ -->
+                        <div class="glass-card p-20">
+                            <h4 class="mb-14"><i data-lucide="utensils-crossed" class="icon-16"></i> Dine-In Charges & QR Ordering</h4>
+                            <p class="text-secondary-small mb-14">Tax, service charge and the customer-facing QR ordering link, all shown on the diner's bill.</p>
+
+                            <div class="settings-grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div class="settings-section-card" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                                    <div class="flex-between flex-center mb-10">
+                                        <h5 style="margin:0;">Tax</h5>
+                                        <label class="toggle-switch" style="margin:0;">
+                                            <input type="checkbox" id="dineinTaxEnabled">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="form-group-mini mb-10">
+                                        <label>Tax Name</label>
+                                        <input type="text" id="dineinTaxName" placeholder="GST" maxlength="20">
+                                    </div>
+                                    <div class="form-group-mini">
+                                        <label>Tax Rate (%)</label>
+                                        <input type="number" id="dineinTaxRate" placeholder="5" min="0" max="100" step="0.5">
+                                    </div>
+                                </div>
+
+                                <div class="settings-section-card" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                                    <div class="flex-between flex-center mb-10">
+                                        <h5 style="margin:0;">Service Charge</h5>
+                                        <label class="toggle-switch" style="margin:0;">
+                                            <input type="checkbox" id="dineinServiceChargeEnabled">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="form-group-mini mb-10">
+                                        <label>Service Charge Name</label>
+                                        <input type="text" id="dineinServiceChargeName" placeholder="Service Charge" maxlength="30">
+                                    </div>
+                                    <div class="form-group-mini">
+                                        <label>Service Charge Rate (%)</label>
+                                        <input type="number" id="dineinServiceChargeRate" placeholder="10" min="0" max="100" step="0.5">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="settings-section-card mt-14">
+                                <h5 class="section-card-heading"><i data-lucide="qr-code" class="icon-14"></i> QR Ordering Base URL</h5>
+                                <input type="text" id="settingQrBaseUrl" class="form-input" placeholder="https://menu.yourdomain.com/pizza/">
+                                <small class="fs-10 text-muted">Where the customer QR ordering app is deployed. Used to build every table's QR code link — leave blank to default to this device's origin.</small>
+                            </div>
+                        </div>
+
+                        <!-- ============ Today's Offers ============ -->
+                        <div class="glass-card p-20">
+                            <div class="flex-between flex-center mb-14">
+                                <h4><i data-lucide="tag" class="icon-16"></i> Today's Offers (QR Welcome Screen)</h4>
+                                <button id="btnAddOffer" class="btn-secondary btn-small"><i data-lucide="plus" class="icon-14"></i> Add Offer</button>
+                            </div>
+                            <p class="text-secondary-small mb-14">These offers appear on the customer's welcome screen when they scan the QR code.</p>
+                            <div id="offersList" class="offers-list"></div>
+                            <div id="noOffersMsg" class="text-secondary-small text-center p-16">No offers configured. Click "Add Offer" to create one.</div>
+                        </div>
+
+                        <!-- ============ Delivery Fee Tiers ============ -->
+                        <div class="glass-card p-20">
+                            <div class="flex-between flex-center mb-14">
+                                <h4><i data-lucide="truck" class="icon-16"></i> Delivery Fee Tiers</h4>
+                                <button id="btnAddFeeSlab" data-action="addFeeSlab" class="btn-secondary btn-small" title="Add New Delivery Distance Tier"><i data-lucide="plus" class="icon-14"></i> Add Tier</button>
+                            </div>
+                            <p class="text-secondary-small mb-14">Define charges based on KM distance from store</p>
+
+                            <div class="scroll-x">
+                                <table class="premium-table-v4">
+                                    <thead>
+                                        <tr><th>Up to (KM)</th><th>Charge (₹)</th><th>Action</th></tr>
+                                    </thead>
+                                    <tbody id="feeSlabsTable">
+                                        <tr class="skeleton-row"><td colspan="4"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                        <tr class="skeleton-row"><td colspan="4"><div class="skeleton" style="height:36px;width:100%"></div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- ============ Danger Zone ============ -->
+                        <div class="glass-card p-20 grid-full danger-zone-card">
+                            <h4 class="mb-8 text-danger"><i data-lucide="alert-triangle" class="icon-16"></i> Danger Zone</h4>
+                            <p class="text-secondary-small mb-14">Destructive, app-wide actions. Not specific to this outlet's data — use with care.</p>
+                            <div class="flex-between flex-center" style="flex-wrap:wrap; gap:14px;">
+                                <div>
+                                    <strong style="display:block; font-size:13px; color:var(--text-primary);">Nuclear Refresh</strong>
+                                    <span class="text-muted-small">Clears all caches and local storage, then forces a full reload of the admin app on this device.</span>
+                                </div>
+                                <button data-action="completeSiteRefresh" class="btn-secondary text-danger" style="border-color:var(--error);">
+                                    <i data-lucide="refresh-cw" class="icon-16"></i> Force Cache Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>

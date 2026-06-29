@@ -79,22 +79,53 @@ img{max-width:100%; display:block;}
 .search-input-wrap{ display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 14px; }
 .search-input-wrap input{flex:1; border:none; outline:none; font-size:14px; background:none;}
 .search-input-wrap input:focus-visible{outline:2px solid var(--primary); outline-offset:2px;}
+/* ---------- Category pills — ported from the real Admin POS's
+   .category-tab design (flat pill, gradient-orange when active) so the
+   customer menu and the staff POS feel like the same product. ---------- */
 .category-pills{ display:flex; gap:8px; padding:0 16px 12px; overflow-x:auto; scrollbar-width:none; }
 .category-pills::-webkit-scrollbar{display:none;}
-.category-pill{ flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 4px; min-width:64px; }
-.category-pill-icon{ width:48px; height:48px; border-radius:14px; background:var(--card); border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:20px; }
-.category-pill.active .category-pill-icon{ background:var(--primary); border-color:var(--primary); color:#fff; }
-.category-pill-label{font-size:11px; font-weight:700; color:var(--text-sub);}
-.category-pill.active .category-pill-label{color:var(--primary);}
+.category-pill{
+    flex-shrink:0; display:flex; align-items:center; gap:5px;
+    padding:8px 16px; border-radius:20px; font-size:13px; font-weight:700;
+    color:var(--text-sub); white-space:nowrap; background:var(--card);
+    border:1.5px solid var(--border); cursor:pointer; touch-action:manipulation;
+    transition:background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.category-pill:active{ transform:scale(.96); }
+.category-pill.active{
+    background:linear-gradient(135deg,#FF8A3D,var(--primary));
+    border-color:var(--primary); color:#fff;
+    box-shadow:0 4px 14px rgba(243,107,33,.32);
+}
 
 .menu-section-title{padding:4px 16px 10px; font-size:14px; font-weight:800; color:var(--text);}
-.dish-list{padding:0 16px; display:flex; flex-direction:column; gap:10px;}
-.dish-card{ display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:10px; }
-.dish-card-img{width:60px; height:60px; border-radius:10px; object-fit:cover; flex-shrink:0; background:var(--bg);}
-.dish-card-body{flex:1; min-width:0;}
-.dish-card-name{font-size:14px; font-weight:700; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-.dish-card-price{font-size:13px; color:var(--text-sub); font-weight:700;}
-.dish-card-add{ width:34px; height:34px; border-radius:10px; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:18px; font-weight:700; }
+
+/* ---------- Dish grid — ported from the real Admin POS's .pos-dish-btn-v4
+   card (image with a price-chip overlay, name + category below) instead
+   of the old horizontal thumbnail-list-row. ---------- */
+.dish-list{
+    padding:0 16px; display:grid; grid-template-columns:repeat(2, 1fr); gap:12px;
+}
+.dish-card{
+    background:var(--card); border:1px solid var(--border); border-radius:16px;
+    overflow:hidden; cursor:pointer; display:flex; flex-direction:column;
+    touch-action:manipulation; content-visibility:auto; contain-intrinsic-size:0 190px;
+    transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.dish-card:active{ transform:scale(.97); box-shadow:0 4px 10px rgba(243,107,33,.1); }
+.dish-visual{ position:relative; aspect-ratio:4/3; overflow:hidden; background:var(--bg); }
+.dish-visual img{ width:100%; height:100%; object-fit:cover; }
+.dish-overlay{ position:absolute; bottom:8px; right:8px; }
+.price-chip{ background:#1a1a1a; color:#fff; padding:4px 10px; border-radius:8px; font-weight:800; font-size:12px; }
+.dish-content{ padding:10px; }
+.dish-card-name{
+    font-weight:700; font-size:13.5px; color:var(--text); margin-bottom:2px;
+    line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.dish-card-category{
+    font-size:10px; color:var(--text-tertiary); font-weight:600;
+    text-transform:uppercase; letter-spacing:.05em;
+}
 
 /* Sticky cart bar */
 .menu-cart-bar{ position:fixed; bottom:calc(60px + var(--safe-bottom)); left:0; right:0; max-width:480px; margin:0 auto; padding:0 16px 10px; z-index:30; }
@@ -293,11 +324,7 @@ img{max-width:100%; display:block;}
 .promotions-empty{ text-align:center; padding:60px 24px; color:var(--text-sub); font-size:13px; }
 
 /* ---------- Hover feedback ---------- */
-.dish-card{ transition: transform .12s ease, box-shadow .12s ease; }
-.dish-card:hover{ transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.08); }
-.dish-card-add{ transition: transform .12s ease, opacity .12s ease; }
-.dish-card-add:hover{ transform:scale(1.1); opacity:.9; }
-.category-pill{ cursor:pointer; transition: transform .12s ease; }
+.dish-card:hover{ box-shadow:0 10px 22px rgba(243,107,33,.12); border-color:var(--primary); }
 .category-pill:hover{ transform:translateY(-1px); }
 .size-opt{ cursor:pointer; transition: border-color .15s ease, background .15s ease; }
 .size-opt:hover{ border-color:var(--primary); background:rgba(232,73,8,.04); }
@@ -354,6 +381,11 @@ img{max-width:100%; display:block;}
 .discount-msg.discount-error {
     color: #dc2626;
     background: #fef2f2;
+}
+.btn-apply-discount.discount-applied {
+    background: #64748b;
+    color: #fff;
+    border-color: #64748b;
 }
 .cart-summary-discount {
     color: #15803d;

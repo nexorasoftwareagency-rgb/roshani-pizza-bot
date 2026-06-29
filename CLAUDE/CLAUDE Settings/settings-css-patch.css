@@ -1,0 +1,310 @@
+/* ================================================================
+   SETTINGS PAGE REDESIGN — CSS PATCH
+   Apply the "FIND & REPLACE" blocks first (they fix real, confirmed
+   visual bugs that affect more than just Settings), then append the
+   "NEW RULES" block to the end of Admin/style.css.
+   ================================================================ */
+
+
+/* ----------------------------------------------------------------
+   FIND & REPLACE #1 — .settings-section-card / .section-card-heading
+   BUG: background is white-at-3%-opacity and heading text is
+   white-at-60%-opacity. Both were authored for a dark theme that
+   was never actually shipped — on this site's real (light) theme
+   they render as a near-invisible box with illegible white-on-white
+   text. This is the single biggest reason the Settings page reads
+   as "broken" today.
+
+   FIND (style.css ~line 583):
+---------------------------------------------------------------- */
+/*
+.settings-section-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+}
+
+.settings-section-card .section-card-heading {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.system-section {
+    opacity: 0.75;
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+}
+*/
+
+/* REPLACE WITH: */
+.settings-section-card {
+    background: var(--neutral-50, #f8fafc);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+}
+
+.settings-section-card .section-card-heading {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.system-section {
+    opacity: 0.85;
+    background: var(--neutral-100, #f1f5f9);
+    border: 1px dashed var(--neutral-300, #cbd5e1);
+}
+
+.system-section .section-card-heading {
+    color: var(--text-tertiary);
+}
+
+
+/* ----------------------------------------------------------------
+   FIND & REPLACE #2 — .outlet-status-pill status variants
+   BUG: text colours (#60a5fa / #4ade80 / #f87171) are "-400" shades
+   designed to sit on a dark background. On this site's light theme
+   they sit at roughly 2:1 contrast on their own tinted background —
+   a WCAG AA failure and genuinely hard to read at 10px font-size.
+
+   FIND (style.css ~line 611):
+---------------------------------------------------------------- */
+/*
+.outlet-status-pill.status-auto {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.outlet-status-pill.status-open {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.outlet-status-pill.status-closed {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+*/
+
+/* REPLACE WITH: */
+.outlet-status-pill.status-auto {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.outlet-status-pill.status-open {
+    background: rgba(34, 197, 94, 0.12);
+    color: #166534;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.outlet-status-pill.status-closed {
+    background: rgba(239, 68, 68, 0.12);
+    color: #991b1b;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+
+/* ----------------------------------------------------------------
+   FIND & REPLACE #3 — .border-l-ghost / .border-t-ghost
+   BUG: same dark-theme leftover as above — a white border at 5%
+   opacity is invisible on a light background. These two utilities
+   are used site-wide (not just Settings), so this fix improves
+   every screen that uses them, with no regression risk: an
+   invisible border becoming a faint visible one is strictly an
+   improvement.
+
+   FIND (style.css ~line 1210):
+---------------------------------------------------------------- */
+/*
+.border-l-ghost {
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.border-t-ghost {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+*/
+
+/* REPLACE WITH: */
+.border-l-ghost {
+    border-left: 1px solid var(--border-color);
+}
+
+.border-t-ghost {
+    border-top: 1px solid var(--border-color);
+}
+
+
+/* ================================================================
+   NEW RULES — append to the end of Admin/style.css
+   These are classes the redesigned Settings markup uses that don't
+   exist anywhere in style.css yet (verified by grep against the
+   full file). Most are small, generic utilities consistent with
+   the existing naming convention (.mb-N / .mt-N / .flex-gap-N /
+   .br-N / .w-N) and are safe to use anywhere else in the app too.
+   ================================================================ */
+
+/* --- Missing spacing/sizing utilities (same convention as existing .mb-14, .flex-gap-12, etc.) --- */
+.flex-gap-6  { gap: 6px; }
+.flex-gap-8  { gap: 8px; }
+.flex-gap-15 { gap: 15px; }
+.flex-gap-24 { gap: 24px; }
+.mb-10 { margin-bottom: 10px; }
+.mt-4  { margin-top: 4px; }
+.mt-5  { margin-top: 5px; }
+.mt-14 { margin-top: 14px; }
+.mt-24 { margin-top: 24px; }
+.pt-8  { padding-top: 8px; }
+.pt-10 { padding-top: 10px; }
+.p-16  { padding: 16px; }
+.br-15 { border-radius: 15px; }
+.br-16 { border-radius: 16px; }
+.w-60  { width: 60px; }
+.fw-400 { font-weight: 400; }
+.font-weight-500 { font-weight: 500; }
+.text-secondary-small { font-size: 12px; color: var(--text-secondary); }
+
+.grid { display: grid; }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-gap-12 { gap: 12px; }
+
+/* --- Save button spinner (used while Save Settings is in flight) --- */
+@keyframes settingsSpin { to { transform: rotate(360deg); } }
+.spin-icon { animation: settingsSpin 0.7s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .spin-icon { animation-duration: 1.4s; } }
+
+/* --- Payment QR upload box (Settings → Visibility Controls column) --- */
+.qr-upload-box {
+    border: 1.5px dashed var(--border-color);
+    background: var(--neutral-50, #f8fafc);
+}
+
+/* --- Bot status-image upload box (Settings → WhatsApp Bot Aesthetics) --- */
+.bot-img-upload-box {
+    border: 1.5px dashed var(--border-color);
+    background: var(--neutral-50, #f8fafc);
+}
+.bot-img-upload-box .form-label-small {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: center;
+    text-align: center;
+}
+
+/* --- Migration card icon swatch (base rule — only a mobile override existed before) --- */
+.kpi-icon-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+.kpi-icon-box.box-40 { width: 40px; height: 40px; }
+.kpi-icon-box.orange { background: var(--primary-lighter); color: var(--primary); }
+.kpi-icon-box.green  { background: rgba(34, 197, 94, 0.12); color: var(--success-dark, #16a34a); }
+
+/* --- Store coordinates display badge (Settings → Store Location) --- */
+.location-badge {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--neutral-50, #f8fafc);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+.location-badge strong { color: var(--text-primary); font-weight: 700; margin-right: 4px; }
+
+/* --- Compact label+input pairs (Settings → Dine-In Charges tax/service charge cards) --- */
+.form-group-mini { margin-bottom: 0; }
+.form-group-mini label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+.form-group-mini input {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--neutral-50, #f8fafc);
+    color: var(--text-primary);
+}
+.form-group-mini input:focus { outline: 2px solid var(--primary-glow); border-color: var(--primary); }
+
+/* --- Small form input (fee-slab km/fee fields, offer code field — these
+   are built dynamically by settings.js's innerHTML strings, so they never
+   showed up in a static-HTML grep, but the class has never had a rule) --- */
+.form-input-small {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    background: var(--white, #fff);
+    color: var(--text-primary);
+}
+.form-input-small:focus { outline: 2px solid var(--primary-glow); border-color: var(--primary); }
+.w-80 { width: 80px; }
+
+/* --- Small danger icon button (fee-slab / offer remove buttons) --- */
+.btn-icon-danger {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    background: rgba(239, 68, 68, 0.06);
+    color: var(--error);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    flex-shrink: 0;
+}
+.btn-icon-danger:hover { background: rgba(239, 68, 68, 0.14); }
+
+/* --- Today's Offers list (Settings → Today's Offers) --- */
+.offers-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.offer-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--neutral-50, #f8fafc);
+}
+.offer-row-fields { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.offer-title-input { font-weight: 700; }
+.offer-code-input { max-width: 200px; }
+
+/* --- Danger Zone (Settings → bottom of page; relocated from the sidebar) --- */
+.danger-zone-card {
+    border: 1px dashed rgba(239, 68, 68, 0.35) !important;
+    background: rgba(239, 68, 68, 0.03) !important;
+}
+.danger-zone-card h4 { display: flex; align-items: center; gap: 8px; }

@@ -96,17 +96,12 @@ export function updateRunningBillStrip(session) {
     }
 }
 
-const CATEGORY_ICONS = { pizza: '🍕', burger: '🍔', pasta: '🍝', beverages: '🥤', desserts: '🍰' };
-
 export function renderCategoryPills(categories, activeId, onSelect) {
     const row = document.getElementById('categoryPillsRow');
     if (!row) return;
     const pills = [{ id: 'all', name: 'All' }, ...categories];
     row.innerHTML = pills.map(c => `
-        <button class="category-pill ${activeId === c.id ? 'active' : ''}" data-cat="${esc(c.id)}">
-            <span class="category-pill-icon">${CATEGORY_ICONS[c.id] || c.icon || '🍽️'}</span>
-            <span class="category-pill-label">${esc(c.name)}</span>
-        </button>`).join('');
+        <button class="category-pill ${activeId === c.id ? 'active' : ''}" data-cat="${esc(c.id)}">${esc(c.name)}</button>`).join('');
     row.querySelectorAll('.category-pill').forEach(btn => btn.addEventListener('click', () => onSelect(btn.dataset.cat)));
 }
 
@@ -121,17 +116,21 @@ export function renderDishList(dishes, { searchTerm, activeCategoryName }, onOpe
         list.innerHTML = '<div class="empty-cart">No dishes found.</div>';
         return;
     }
+    // Card structure ported from the real Admin POS's .pos-dish-btn-v4
+    // (image with a price-chip overlay, name + category below) so the
+    // customer menu matches the staff POS visually.
     list.innerHTML = dishes.map(d => `
         <div class="dish-card" data-dish-id="${esc(d.id)}">
-            <img class="dish-card-img" src="${esc(d.image || '')}" alt="${esc(d.name)}" onerror="this.style.visibility='hidden'">
-            <div class="dish-card-body">
-                <div class="dish-card-name">${esc(d.name)}</div>
-                <div class="dish-card-price">${fmtMoney(d.price)}</div>
+            <div class="dish-visual">
+                <img src="${esc(d.image || '')}" alt="${esc(d.name)}" loading="lazy" onerror="this.style.visibility='hidden'">
+                <div class="dish-overlay"><span class="price-chip">${fmtMoney(d.price)}</span></div>
             </div>
-            <button class="dish-card-add" data-open-dish="${esc(d.id)}" aria-label="Add ${esc(d.name)}">+</button>
+            <div class="dish-content">
+                <div class="dish-card-name">${esc(d.name)}</div>
+                <div class="dish-card-category">${esc(d.category || '')}</div>
+            </div>
         </div>`).join('');
 
-    list.querySelectorAll('[data-open-dish]').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); onOpenDish(btn.dataset.openDish); }));
     list.querySelectorAll('.dish-card').forEach(card => card.addEventListener('click', () => onOpenDish(card.dataset.dishId)));
 }
 
