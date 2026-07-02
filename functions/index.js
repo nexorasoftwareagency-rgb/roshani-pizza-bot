@@ -7,9 +7,11 @@
  */
 
 const { onValueWritten } = require("firebase-functions/v2/database");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getDatabase } = require("firebase-admin/database");
 const { getMessaging } = require("firebase-admin/messaging");
+const { getAuth } = require("firebase-admin/auth");
 
 initializeApp();
 
@@ -210,3 +212,29 @@ async function sendToAdmins(payload) {
     console.error("[FCM] Failed to send to admins:", err.message);
   }
 }
+
+/**
+ * Callable: setAdminClaim
+ *
+ * Sets a Firebase custom claim (superAdmin or owner) on a user by email.
+ * Only callable by existing superAdmins.
+ */
+exports.setAdminClaim = onCall({ enforceAppCheck: false }, async (request) => {
+  if (request.auth?.token?.superAdmin !== true) {
+    throw new HttpsError("permission-denied", "Only super admins can set admin claims");
+  }
+
+  const { email, role } = request.data;
+  if (!email || !role || !["superAdmin", "owner"].includes(role)) {
+    throw new HttpsError("invalid-argument", "email and role (superAdmin|owner) required");
+  }
+
+  try {
+    const user = await getAuth().getUserByEmail(email);
+    const existingClaims = user.customClaims || {};
+    await getAuth().setCustomUserClaims(user.uid, { ...existingClaims, [role]: true });
+    return { success: true, message: `Set ${role} claim on ${email}` };
+  } catch (err) {
+    throw new HttpsError("internal", `Failed to set claim: ${err.message}`);
+  }
+});
