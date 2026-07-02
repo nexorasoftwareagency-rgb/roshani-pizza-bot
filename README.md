@@ -2,6 +2,8 @@
 
 A full-stack ERP system for **Roshani Pizza** and **Roshani Cake** outlets. Customers order via WhatsApp bot; admins manage orders, menu, riders, and reports from a web dashboard; riders receive, track, and complete deliveries from a mobile-optimized web app.
 
+> **⚠️ Free-Tier Optimized** — This project runs entirely on Firebase **Spark (free)** plan. No Cloud Functions deployment needed. Push notifications (FCM) are sent directly from the Firebase Realtime Database listener using the Firebase Admin SDK. See [Custom Claims Security](#custom-claims--firebase-security) for the admin access security fix.
+
 ---
 
 ## Table of Contents
@@ -40,7 +42,7 @@ A full-stack ERP system for **Roshani Pizza** and **Roshani Cake** outlets. Cust
 | Maps | **Leaflet.js** + **OpenStreetMap** | Rider GPS tracking & live admin tracker |
 | Charts | **Chart.js** v4.4 | Revenue trend graphs in analytics |
 | Export | **SheetJS (xlsx)** + **jsPDF + AutoTable** | Download reports as Excel or PDF |
-| Push Notifications | **Firebase Cloud Messaging (FCM)** | Rider in-app notifications + audio alerts |
+| Push Notifications | **Firebase Cloud Messaging (FCM)** via Admin SDK | Rider in-app notifications + audio alerts (no Cloud Functions needed) |
 | PWA | **Service Worker** + Web Manifest | Installable on mobile home screen |
 | Geolocation | **navigator.geolocation.watchPosition()** | 30-second interval rider GPS streaming |
 | Table Grid | **Tabulator** v6.3 | Interactive data tables (riders, inventory, feedback, customers) |
@@ -93,6 +95,50 @@ A full-stack ERP system for **Roshani Pizza** and **Roshani Cake** outlets. Cust
 │  Differentiated by OUTLET env var    │
 └──────────────────────────────────────┘
 ```
+
+---
+
+## Custom Claims & Firebase Security
+
+### Admin Access Control
+
+The database enforces role-based access using Firebase Custom Claims set on user accounts:
+
+| Claim | Privilege |
+|---|---|
+| `superAdmin: true` | Full read/write across all nodes. Can set claims on other users. |
+| `owner: true` | Full read/write. Intended for business owners. |
+| *(no claims)* | Admins who signed up via the dashboard — access restricted by auth `uid` matching their profile in `admins/{uid}`. |
+
+**How claims were set:** A one-time Admin SDK script (`scripts/claim-upsert/upsert-admin-claims.js`) was executed locally to stamp the `superAdmin` claim on the two primary admin accounts. No Cloud Functions deployment is required for this — it runs offline against your Firebase project.
+
+### Database Rules Enforcement
+
+The `database.rules.json` file gates every read/write using `auth.token`:
+
+```
+/admin
+  .read/.write → auth.token.superAdmin === true OR auth.token.owner === true
+  OR (auth.uid === auth.uid)                   # own profile access
+  OR (root/child('admins/'+auth.uid).exists()) # admin self-access
+
+/pizza/**, /cake/**
+  .read → any authenticated admin
+  .write → superAdmin OR owner
+  OR (status-based writes for bot)
+
+/riders/{riderId}
+  .read/.write → matched by auth.uid (rider self-access)
+  OR superAdmin/owner override
+
+/bot/**
+  .read/.write → restricted to bot service account
+```
+
+### No Cloud Functions Required for Auth
+
+- Admin accounts were stamped with custom claims via a **one-time local script** (not a deployed function).
+- If you need to add new admins in the future, re-run the script or use the Firebase Console > Authentication > Users > Set custom claims.
 
 ---
 
@@ -1194,6 +1240,13 @@ Add Fee Slab button (`#btnAddFeeSlab`), Fee Slabs Table (`#feeSlabsTable`: Up to
 
 ## Deployment Guide
 
+### Important: Free-Tier Deployment
+
+This project is designed for the **Firebase Spark (free) plan**. No Cloud Functions deployment is required:
+- **Push notifications** are sent directly via Firebase Admin SDK (not Cloud Functions)
+- **Admin custom claims** were set via a one-time local script (see [Custom Claims & Firebase Security](#custom-claims--firebase-security))
+- The `functions/` directory exists for reference only — **do not deploy** it unless you upgrade to the Blaze plan
+
 ### Firebase Hosting (Admin + Rider)
 
 ```bash
@@ -1421,24 +1474,25 @@ Prasant-Pizza-ERP/
 │   └── dom/
 │       └── escape.js          # HTML escaping utility
 │
+├── menu/                      # QR Menu App (Firebase Hosting: menu)
+│   ├── index.html             # Menu app entry point
+│   ├── css/app.css            # Menu app styles
+│   └── js/
+│       ├── app.js             # Menu app logic (boot, cart, order flow)
+│       ├── ui.js              # Rendering helpers
+│       ├── firebase.js        # Firebase SDK exports
+│       ├── session.js         # Dine-in session management
+│       ├── cart.js            # Cart state management
+│       └── order.js           # Order placement
+│
+├── Cake-bot/                  # Cake outlet bot variant (legacy)
+├── functions/                 # Firebase Cloud Functions (reference only — requires Blaze plan to deploy)
+│
+├── assets/                    # Static assets (images, sounds, icons)
+│
 ├── ecosystem.config.js        # PM2 process manager config
 ├── firebase.json              # Firebase Hosting config
 ├── .firebaserc                # Firebase project alias
 ├── database.rules.json        # Firebase RTDB security rules
 ├── storage.rules              # Firebase Storage rules
-├── Cake-bot/                  # Cake outlet bot variant
-├── capacitor-admin/           # Capacitor native wrapper for Admin
-├── capacitor-rider/           # Capacitor native wrapper for Rider
-├── QR Ordering Feature/       # QR Menu App (Firebase Hosting: menu)
-│   └── Menu/
-│       ├── index.html         # QR customer menu entry point
-│       ├── css/app.css        # Menu app styles
-│       └── js/
-│           ├── app.js         # Menu app logic (boot, cart, order flow)
-│           ├── ui.js          # Rendering helpers
-│           ├── firebase.js    # Firebase SDK exports
-│           ├── session.js     # Dine-in session management
-│           ├── cart.js        # Cart state management
-│           └── order.js       # Order placement
-├── assets/                    # Static assets
 ```
