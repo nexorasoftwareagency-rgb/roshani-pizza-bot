@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Roshani Rider</string>
-    <string name="title_activity_main">Roshani Rider</string>
-    <string name="package_name">com.roshani.pizza.rider</string>
-    <string name="custom_url_scheme">com.roshani.pizza.rider</string>
-</resources>

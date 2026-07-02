@@ -1441,6 +1441,4 @@ Prasant-Pizza-ERP/
 │           ├── cart.js        # Cart state management
 │           └── order.js       # Order placement
 ├── assets/                    # Static assets
-├── scripts/                   # Build/deployment scripts
-└── Plans/                     # Planning documents
 ```

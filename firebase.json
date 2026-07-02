@@ -25,7 +25,6 @@
         "!.well-known/**",
         "**/node_modules/**",
         "scratch/**",
-        "graphify-out/**",
         "rider_old/**"
       ],
       "rewrites": [
@@ -154,7 +153,6 @@
         "**/.*",
         "!.well-known/**",
         "**/node_modules/**",
-        "graphify-out/**",
         "rider_old/**"
       ],
       "rewrites": [

@@ -2,7 +2,7 @@
 
 **Generated:** 2026-07-02
 **Scope:** Admin (`roshani-sudha-admin.web.app`), Menu/QR (`roshani-sudha-menu.web.app`), Rider (`roshani-sudha-rider`), WhatsApp Bot Backend, Firebase Infrastructure
-**Head Commit:** `aefb45c` — fix: add .discount-applied CSS rule, add root redirect to menu
+**Head Commit:** `a69fbae` — fix: replace hardcoded super-admin emails with Firebase custom claims
 **Platform:** Firebase Realtime Database, Firebase Hosting (3 targets), Firebase Cloud Functions, Firebase App Check (reCAPTCHA v3)
 
 ---
@@ -178,7 +178,7 @@
 
 | # | Finding | File:Line | Severity | Status | Recommendation |
 |---|---------|-----------|----------|--------|----------------|
-| 5.2.1 | Three Playwright test scripts exist (`test-admin.js`, `test-menu.js`, `test-full-audit.js`) but no CI pipeline, no `package.json` `"test"` script, and no `.github/workflows/`. Tests must be run manually. | Root directory | Medium | Open | Create GitHub Actions workflow to run Playwright tests on push. Configure to fail build on CRITICAL/HIGH severity. |
+| 5.2.1 | Three Playwright test scripts existed (`test-admin.js`, `test-menu.js`, `test-full-audit.js`) but were deleted in `a69fbae` as junk. No CI pipeline, no `package.json` `"test"` script, and no `.github/workflows/`. Testing gap remains unresolved. | Root directory | Medium | Open | Create GitHub Actions workflow to run Playwright tests on push. Configure to fail build on CRITICAL/HIGH severity. |
 | 5.2.2 | No unit tests exist for any JavaScript module. No jest/vitest/mocha configuration. | Entire project | Medium | Open | Add unit testing framework and write tests for shared modules (order-status.js, discount-evaluator.js) and critical Admin/rider logic. |
 
 ### 5.3 Cloud Functions

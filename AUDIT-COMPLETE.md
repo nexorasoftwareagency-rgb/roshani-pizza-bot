@@ -1,6 +1,6 @@
 # Prasant Pizza ERP — Complete Code Audit
 
-**Date:** 2026-07-02 | **Scope:** Every file, folder, portal, and concept | **Head commit:** `aefb45c`
+**Date:** 2026-07-02 | **Scope:** Every file, folder, portal, and concept | **Head commit:** `a69fbae`
 
 ---
 
@@ -46,7 +46,7 @@
 | 1.2.2 | **Riders can write customers** — any rider can modify any customer record under any outlet | `database.rules.json:177` | **Critical** | Open |
 | 1.2.3 | **Riders can write discount usage** — any rider can create fake discount usage records | `database.rules.json:186` | **Critical** | Open |
 | 1.2.4 | **Emergency override bypass via self-write** — riders can set `isAdmin: true` on their own profile (rule: `auth.uid == $uid`) then bypass OTP | `database.rules.json:14` | **Critical** | Open |
-| 1.2.5 | **Hardcoded super-admin emails** `nexorasoftware@gmail.com` and `roshanisudha@gmail.com` in 20+ rules — compromise of either account = total DB compromise | `database.rules.json:7,14,25,31,32,45,49,50,78,84,87-88,93,97-98,103,107,111,115,135,139,143,153-154,157-158,168-169,176-177,182,185-186,189,194,206-207,212,217-218,222,224,249,253` | **Critical** | Open |
+| 1.2.5 | **Hardcoded super-admin emails** `nexorasoftware@gmail.com` and `roshanisudha@gmail.com` in 20+ rules — compromise of either account = total DB compromise | `database.rules.json:7,14,25,31,32,45,49,50,78,84,87-88,93,97-98,103,107,111,115,135,139,143,153-154,157-158,168-169,176-177,182,185-186,189,194,206-207,212,217-218,222,224,249,253` | **Critical** | **Fixed** — Replaced with Firebase custom claims (`superAdmin`/`owner`) |
 
 **High:**
 
@@ -319,22 +319,20 @@
 
 ---
 
-## 9. CLAUDE Pending Work
+## 9. CLAUDE Pending Work (DELETED)
 
-These are design reference packages in `CLAUDE/` directories that have NOT been applied to production code.
+The `CLAUDE/` directory was deleted on 2026-07-02 (commit `a69fbae`). These design references were AI-generated working files that were never applied to production. If any of these changes need to be re-implemented, they must be designed fresh against the current codebase.
 
-| # | Item | CLAUDE Dir | Status | Impact |
-|---|------|-----------|--------|--------|
-| 9.1 | **Bottom nav unclickable** — `.toast` `pointer-events:none` blocks bottom nav | `QR menu Bug Fixes/app.css` | **NOT APPLIED** | 🔴 Bug |
-| 9.2 | **Promotions blank screen** — `settings/Store` parent fetch fails for unauthenticated users | `QR menu Bug Fixes/app.js` | **NOT APPLIED** | 🔴 Bug |
-| 9.3 | **Customer data sync** — `_customerSyncedOrderIds`, `_syncCustomersFromOrders()`, `_syncCustomerFromOrder()` (~60 lines) | `CLAUDE AUDIT/` | **NOT APPLIED** | 🟠 Missing Feature |
-| 9.4 | **POS & Analytics redesign** — full Admin/index.html, style.css, mobile-overrides.css replacement | `CLAUDE ANAlytics & POS/` | **NOT APPLIED** | 🟠 Design |
-| 9.5 | **Settings page redesign** — `settings.js` replacement + CSS patch | `CLAUDE Settings/` | **NOT APPLIED** | 🟠 Design |
-| 9.6 | **QR Menu POS port** — category pills + dish cards in Menu app | `QR menu POS 1/` | **NOT APPLIED** | 🟠 Design |
-| 9.7 | **Promotions page redesign** — Active Offers section from discounts node | `QR Menu Promotion PAge/` | **NOT APPLIED** | 🟠 Design |
-| 9.8 | QR card branding redesign | `CLAUDE AUDIT/` | **NOT APPLIED** | 🟡 Design |
-
-**Note:** These are reference-only directories. Changes should be diffed against production code, never wholesale replaced.
+| # | Item | Status |
+|---|------|--------|
+| 9.1 | Bottom nav unclickable fix | **DELETED** — needs fresh implementation |
+| 9.2 | Promotions blank screen fix | **DELETED** — needs fresh implementation |
+| 9.3 | Customer data sync feature | **DELETED** — needs fresh implementation |
+| 9.4 | POS & Analytics redesign | **DELETED** — needs fresh implementation |
+| 9.5 | Settings page redesign | **DELETED** — needs fresh implementation |
+| 9.6 | QR Menu POS port | **DELETED** — needs fresh implementation |
+| 9.7 | Promotions page redesign | **DELETED** — needs fresh implementation |
+| 9.8 | QR card branding redesign | **DELETED** — needs fresh implementation |
 
 ---
 
@@ -402,7 +400,7 @@ The bot uses `firebase-admin` with service account, completely bypassing `databa
 
 | Section | Critical | High | Medium | Low | Total |
 |---------|----------|------|--------|-----|-------|
-| 1. Infrastructure & Security | 5 | 4 | 10 | 5 | 24 |
+| 1. Infrastructure & Security | 4 | 4 | 10 | 5 | 23 |
 | 2. Admin Portal | 0 | 12 | 15 | 18 | 45 |
 | 3. Menu/QR Portal | 3 | 4 | 9 | 8 | 24 |
 | 4. Rider Portal | 5 | 10 | 12 | 6 | 33 |
@@ -410,9 +408,9 @@ The bot uses `firebase-admin` with service account, completely bypassing `databa
 | 6. Bot Backend | 1 | 3 | 3 | 2 | 9 |
 | 7. Cloud Functions | 0 | 2 | 2 | 0 | 4 |
 | 8. Testing & CI/CD | 5 | 1 | 2 | 0 | 8 |
-| 9. CLAUDE Pending | 2 | 1 | 4 | 1 | 8 |
+| 9. CLAUDE Pending (DELETED) | 0 | 0 | 0 | 0 | 0 |
 | 10. Cross-Cutting | 0 | 5 | 3 | 2 | 10 |
-| **Total** | **21** | **42** | **62** | **46** | **171** |
+| **Total** | **18** | **41** | **58** | **45** | **162** |
 
 ### Priority Actions
 
@@ -424,7 +422,6 @@ The bot uses `firebase-admin` with service account, completely bypassing `databa
 | **P0** | Fix emergency override — server-verify admin flag from DB | 4.1.3 |
 | **P0** | Fix OTP attempt counter — riders can bypass rate limiting | 4.1.4 |
 | **P0** | Fix version-check infinite reload loop in Rider | 4.1.5 |
-| **P0** | Remove hardcoded super-admin emails from rules — use custom claims | 1.2.5 |
 | **P1** | Fix `tables/node` world-readability — QR tokens exposed | 3.1.1 |
 | **P1** | Apply bottom-nav and promotions bug fixes from CLAUDE | 9.1, 9.2 |
 | **P1** | Add CI/CD pipeline with automated testing | 8.1-8.5 |
