@@ -448,6 +448,11 @@ let _storeSettingsCache = null;
 async function renderPromotionsScreen() {
     if (!_storeSettingsCache) {
         try {
+            // Read each field directly rather than the settings/Store
+            // parent node — Firebase only grants the child-level public
+            // .read:true to a request for that EXACT path; a parent-level
+            // fetch falls back to settings' own admin-only rule and gets
+            // silently rejected for this unauthenticated customer client.
             const [instagramSnap, facebookSnap, googleReviewSnap, whatsappSnap] = await Promise.all([
                 get(outletRef('settings/Store/instagram')),
                 get(outletRef('settings/Store/facebook')),
@@ -466,6 +471,34 @@ async function renderPromotionsScreen() {
         }
     }
     UI.renderPromotionsLinks(_storeSettingsCache);
+
+    try {
+        const discountsSnap = await get(outletRef('discounts'));
+        UI.renderActiveOffers(discountsSnap.val() || {}, useOfferCode);
+    } catch (e) {
+        console.error('[Promotions] Could not load active offers:', e);
+        UI.renderActiveOffers({}, useOfferCode);
+    }
+}
+
+// Tapping "Use Code" on an offer card jumps to the Cart screen, fills the
+// existing discount-code input with that code, and — if the cart already
+// has items — applies it immediately by reusing the exact same click
+// handler the manual "Apply" button uses (no logic duplicated). If the
+// cart is empty, the code stays filled in ready to apply the moment the
+// customer adds their first item, rather than being lost.
+function useOfferCode(code) {
+    haptic(10);
+    renderCartScreen();
+    UI.showScreen('screenCart');
+    const input = document.getElementById('discountCodeInput');
+    if (!input) return;
+    input.value = code;
+    if (!cartIsEmpty()) {
+        document.getElementById('btnApplyDiscount')?.click();
+    } else {
+        UI.showToast(`Code ${code} ready — add items, then tap Apply`);
+    }
 }
 
 // Cleanup Firebase listeners on page unload

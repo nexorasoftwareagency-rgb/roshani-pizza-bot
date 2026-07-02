@@ -3,7 +3,7 @@
 // Shared defaults, formatters, and color rules
 // =============================
 
-import { escapeHtml } from '../shared/dom/escape.js';
+import { escapeHtml } from '../../shared/dom/escape.js';
 
 // --- EXCEL-LIKE DEFAULTS ---
 export const GRID_DEFAULTS = {

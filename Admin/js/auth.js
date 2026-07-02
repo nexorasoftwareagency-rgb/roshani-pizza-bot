@@ -89,6 +89,7 @@ export function initAuth() {
             if (loginBtn) {
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = '<span>Access Dashboard</span> <div class="btn-stitch-v4"></div>';
+                loginBtn.classList.remove('loading');
             }
             sessionStorage.removeItem('adminIsLoggedIn');
             window.hideLoader?.();
@@ -373,6 +374,7 @@ export async function doLogin(email, pass) {
         if (btn) {
             btn.disabled = true;
             btn.innerHTML = '<span>Verifying Credentials...</span> <div class="btn-stitch-v4"></div>';
+            btn.classList.add('loading');
         }
         if (errEl) errEl.classList.add('hidden');
         
@@ -393,7 +395,7 @@ export async function doLogin(email, pass) {
         if (btn) {
             btn.disabled = false;
             btn.innerHTML = '<span>Access Dashboard</span> <div class="btn-stitch-v4"></div>';
-            if (window.lucide) window.lucide.createIcons({ root: btn.parentElement });
+            btn.classList.remove('loading');
         }
     }
 }

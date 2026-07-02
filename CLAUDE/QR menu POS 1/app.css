@@ -301,28 +301,92 @@ img{max-width:100%; display:block;}
 .history-empty{ text-align:center; padding:60px 24px; color:var(--text-sub); font-size:13px; }
 
 /* ---------- Promotions Screen ---------- */
-.promotions-links{ padding:6px 16px calc(16px + 60px + var(--safe-bottom)); display:flex; flex-direction:column; gap:12px; flex:1; overflow-y:auto; }
-.promo-link-card{
-    display:flex; align-items:center; gap:14px; background:var(--card);
-    border:1px solid var(--border); border-radius:16px; padding:16px;
-    text-decoration:none; color:var(--text); transition:transform .12s ease;
+/* ---------- Promotions — Hero header ---------- */
+.promo-hero{
+    flex-shrink:0; text-align:center; padding:18px 20px 16px;
+    background:linear-gradient(180deg, rgba(232,73,8,.06), transparent);
 }
-.promo-link-card:active{ transform:scale(.98); }
+.promo-hero-icon{ font-size:34px; line-height:1; margin-bottom:6px; }
+.promo-hero-title{ font-size:19px; font-weight:900; color:var(--text); }
+.promo-hero-sub{ font-size:12px; color:var(--text-sub); margin-top:3px; }
+
+.promo-scroll{ flex:1; overflow-y:auto; padding:4px 16px calc(16px + 60px + var(--safe-bottom)); }
+
+.promo-section-label{
+    font-size:11px; font-weight:800; color:var(--text-tertiary); text-transform:uppercase;
+    letter-spacing:.08em; margin:18px 2px 10px; display:flex; align-items:center; gap:6px;
+}
+.promo-section-label:first-child{ margin-top:2px; }
+
+/* ---------- Active Offers — ticket-stub coupon cards ----------
+   Sourced live from the same `discounts` node the Admin Discounts tab
+   manages (publicly readable — .read:true on that node already), filtered
+   client-side to coupon-type discounts that are enabled and currently in
+   their active date window. This is purely informational display; the
+   authoritative check still happens in discount.js's validateCoupon()
+   when the code is actually applied at checkout. */
+.offer-card{
+    position:relative; display:flex; background:#fff; border-radius:16px;
+    overflow:hidden; margin-bottom:12px; box-shadow:0 4px 14px rgba(232,73,8,.1);
+    border:1px solid rgba(232,73,8,.12);
+}
+.offer-value-strip{
+    flex-shrink:0; width:84px; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; background:linear-gradient(160deg,#FF8A3D,var(--primary));
+    color:#fff; padding:10px 6px; text-align:center; position:relative;
+}
+.offer-value-num{ font-size:20px; font-weight:900; line-height:1; }
+.offer-value-unit{ font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; margin-top:2px; opacity:.9; }
+/* Perforated "ticket" edge between the value strip and the details */
+.offer-value-strip::after{
+    content:''; position:absolute; top:0; right:-1px; bottom:0; width:1px;
+    background-image:radial-gradient(circle, #fdf8f3 2.5px, transparent 2.6px);
+    background-size:9px 9px; background-repeat:repeat-y; background-position:center;
+}
+.offer-details{ flex:1; min-width:0; padding:12px 14px; display:flex; flex-direction:column; gap:6px; }
+.offer-name{ font-size:13.5px; font-weight:800; color:var(--text); line-height:1.25; }
+.offer-condition{ font-size:11px; color:var(--text-sub); }
+.offer-code-row{ display:flex; align-items:center; gap:8px; margin-top:2px; }
+.offer-code-chip{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+    background:var(--bg); border:1.5px dashed rgba(232,73,8,.35); border-radius:9px;
+    padding:7px 10px; font-size:13px; font-weight:900; letter-spacing:.06em;
+    color:var(--primary); font-family:'Courier New',monospace;
+}
+.offer-code-chip svg{ width:13px; height:13px; flex-shrink:0; }
+.offer-use-btn{
+    flex-shrink:0; background:var(--primary); color:#fff; font-size:11.5px; font-weight:800;
+    padding:9px 14px; border-radius:9px; white-space:nowrap;
+}
+.offer-use-btn:active{ transform:scale(.96); }
+.offers-empty, .promotions-empty{
+    text-align:center; padding:28px 20px; color:var(--text-sub); font-size:12.5px;
+    background:var(--card); border:1px dashed var(--border); border-radius:14px; margin-bottom:4px;
+}
+
+/* ---------- Social / Connect links — redesigned card shell,
+   keeps each brand's recognizable color on the icon badge only. ---------- */
+.promotions-links{ display:flex; flex-direction:column; gap:10px; }
+.promo-link-card{
+    display:flex; align-items:center; gap:13px; background:var(--card);
+    border:1px solid var(--border); border-radius:15px; padding:13px 14px;
+    text-decoration:none; color:var(--text); box-shadow:0 2px 8px rgba(0,0,0,.03);
+    transition:transform .12s ease, box-shadow .12s ease;
+}
+.promo-link-card:active{ transform:scale(.98); box-shadow:0 1px 4px rgba(0,0,0,.04); }
 .promo-link-icon{
-    width:46px; height:46px; border-radius:14px; flex-shrink:0;
+    width:42px; height:42px; border-radius:12px; flex-shrink:0;
     display:flex; align-items:center; justify-content:center; color:#fff;
 }
-.promo-link-icon svg{ width:24px; height:24px; }
+.promo-link-icon svg{ width:21px; height:21px; }
 .promo-link-google{ background:#ea4335; }
 .promo-link-instagram{ background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af); }
 .promo-link-facebook{ background:#1877f2; }
 .promo-link-whatsapp{ background:#25d366; }
-.promo-link-body{ flex:1; }
-.promo-link-title{ font-size:14px; font-weight:800; margin-bottom:2px; }
-.promo-link-sub{ font-size:11px; color:var(--text-sub); }
+.promo-link-body{ flex:1; min-width:0; }
+.promo-link-title{ font-size:13.5px; font-weight:800; margin-bottom:1px; }
+.promo-link-sub{ font-size:10.5px; color:var(--text-sub); }
 .promo-link-arrow{ color:var(--text-tertiary); flex-shrink:0; }
-.promotions-empty{ text-align:center; padding:60px 24px; color:var(--text-sub); font-size:13px; }
-
 /* ---------- Hover feedback ---------- */
 .dish-card:hover{ box-shadow:0 10px 22px rgba(243,107,33,.12); border-color:var(--primary); }
 .category-pill:hover{ transform:translateY(-1px); }

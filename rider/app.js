@@ -11,7 +11,7 @@ import { initNotifications } from './js/notifications.js';
 import { initSettlement } from './js/settlement.js';
 
 // ── Shared modules ─────────────────────────────────────────────────────────
-import { escapeHtml } from './shared/dom/escape.js';
+import { escapeHtml } from '../shared/dom/escape.js';
 
 // ── Initialize modules (sets window.* globals) ─────────────────────────────
 initUI();

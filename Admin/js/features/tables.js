@@ -816,9 +816,19 @@ async function _printSessionBill(tableId) {
 // ---------------------------------------------------------------------
 // QR generation — client-side only, no external API call
 // ---------------------------------------------------------------------
+let _dineInBaseUrlCache = null;
 async function _dineInBaseUrl() {
-    const snap = await get(_settingsRef('qrBaseUrl'));
-    return snap.exists() ? snap.val() : `${window.location.origin}/menu/`;
+    if (_dineInBaseUrlCache) return _dineInBaseUrlCache;
+    try {
+        const snap = await Promise.race([
+            get(_settingsRef('qrBaseUrl')),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+        ]);
+        _dineInBaseUrlCache = snap.exists() ? snap.val() : `${window.location.origin}/menu/`;
+    } catch {
+        _dineInBaseUrlCache = `${window.location.origin}/menu/`;
+    }
+    return _dineInBaseUrlCache;
 }
 
 let _storeBrandingCache = null;
@@ -897,15 +907,16 @@ async function _ensureQrLib() {
 async function _qrDataUri(text, size = 220) {
     const ok = await _ensureQrLib();
     if (!ok || !window.QRCode) return null;
-    return new Promise((resolve) => {
+    try {
         const holder = document.createElement('div');
         new window.QRCode(holder, { text, width: size, height: size, colorDark: '#1a1a1a', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.M });
-        setTimeout(() => {
-            const img = holder.querySelector('img');
-            const canvas = holder.querySelector('canvas');
-            resolve(img?.src || canvas?.toDataURL('image/png') || null);
-        }, 100);
-    });
+        const img = holder.querySelector('img');
+        const canvas = holder.querySelector('canvas');
+        return img?.src || canvas?.toDataURL('image/png') || null;
+    } catch (e) {
+        console.error('[QRDataUri]', e);
+        return null;
+    }
 }
 
 // Secure URL shape — TOKEN ONLY, never a table number (Decision #5/#6)
@@ -918,21 +929,30 @@ async function _qrUrlForTable(t) {
 async function _openQrModal(id) {
     if (_qrModalOpening) return;
     _qrModalOpening = true;
+    const modal = document.getElementById('tableQrModal');
+    const img = document.getElementById('tableQrModalImage');
+    const titleEl = document.getElementById('tableQrModalTitle');
+    const urlEl = document.getElementById('tableQrModalUrl');
     try {
         const t = _tables[id];
-        if (!t) return;
-        const url = await _qrUrlForTable(t);
-        document.getElementById('tableQrModalTitle').textContent = `Table ${t.number} QR Code`;
-        document.getElementById('tableQrModalUrl').textContent = url;
-        const img = document.getElementById('tableQrModalImage');
+        if (!t) { modal?.classList.remove('active'); return; }
+
+        titleEl.textContent = `Table ${t.number} QR Code`;
         img.removeAttribute('src');
-        img.alt = 'Generating QR…';
-        const modal = document.getElementById('tableQrModal');
+        img.alt = 'Loading...';
         if (modal) modal.dataset.tableId = id;
+        modal?.classList.remove('hidden');
         modal?.classList.add('active');
+        const url = await _qrUrlForTable(t);
+        urlEl.textContent = url;
+        img.alt = 'Generating QR…';
         const dataUri = await _qrDataUri(url, 200);
         if (dataUri) { img.src = dataUri; img.alt = `QR code for Table ${t.number}`; }
         else showToast('QR generation failed — check connection', 'error');
+    } catch (e) {
+        showToast('Failed to load QR', 'error');
+        modal?.classList.remove('active');
+        modal?.classList.add('hidden');
     } finally {
         _qrModalOpening = false;
     }
@@ -946,21 +966,25 @@ function _copyQrLink() {
 }
 
 async function _printSingleQr() {
-    const img = document.getElementById('tableQrModalImage');
+    const modalUrl = document.getElementById('tableQrModalUrl')?.textContent;
+    if (!modalUrl) { showToast('No QR URL to print', 'warning'); return; }
+    const dataUri = await _qrDataUri(modalUrl, 220);
+    if (!dataUri) { showToast('Failed to generate QR for print', 'error'); return; }
+
     const titleText = document.getElementById('tableQrModalTitle')?.textContent || 'Table QR';
     const tableNumberMatch = titleText.match(/Table\s+(\S+)/i);
     const tableNumber = tableNumberMatch ? tableNumberMatch[1] : titleText;
-    if (!img?.src) return;
-
     const { storeName, poweredBy } = await _fetchStoreBranding();
+
     const w = window.open('', '_blank', 'width=420,height=620');
+    if (!w) { showToast('Popup blocked — allow popups for print', 'error'); return; }
     w.document.write(`<html><head><title>Table ${escapeHtml(tableNumber)} QR — ${escapeHtml(storeName)}</title><style>
         *{box-sizing:border-box;margin:0;padding:0;}
         body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fef3e8;padding:24px;}
         ${QR_CARD_CSS}
         </style></head><body>
-        ${_qrCardMarkup({ storeName, poweredBy, tableNumber, qrSrc: img.src, compact: false })}
-        <script>window.onload=function(){window.print();};</script></body></html>`);
+        ${_qrCardMarkup({ storeName, poweredBy, tableNumber, qrSrc: dataUri, compact: false })}
+        <script>window.onload=function(){setTimeout(function(){window.print();},300);};</script></body></html>`);
     w.document.close();
 }
 

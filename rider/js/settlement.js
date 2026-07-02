@@ -2,7 +2,7 @@
  * RIDER Settlement history — view past cash settlements.
  */
 import { auth, db, ref, get } from './firebase.js';
-import { escapeHtml } from '../shared/dom/escape.js';
+import { escapeHtml } from '../../shared/dom/escape.js';
 
 export function initSettlement() {
     window.openSettlementHistory = async () => {

@@ -1,5 +1,5 @@
 import { db, ref, update } from './firebase.js';
-import { showToast } from '../shared/dom/modal.js';
+import { showToast } from '../../shared/dom/modal.js';
 
 export async function setupCapacitorFCM(userId) {
   if (typeof Capacitor === 'undefined') return;

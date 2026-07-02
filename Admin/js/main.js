@@ -1,5 +1,5 @@
 import { previewImage, showToast, showConfirm, logAudit, getISTDateString } from './utils.js';
-import { escapeHtml } from '../shared/dom/escape.js';
+import { escapeHtml } from '../../shared/dom/escape.js';
 import { state } from './state.js';
 import { auth, db, serverTimestamp, ref, push, set } from './firebase.js';
 import { switchOutlet, openOutletInNewTab } from './branding.js';
