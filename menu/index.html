@@ -193,22 +193,64 @@
             <span style="width:38px;"></span>
         </div>
         <div class="tracking-body">
-            <div class="tracking-order-id" id="trackingOrderId">#RP-T07-001</div>
-            <div class="tracking-table" id="trackingTableLabel">Table 07</div>
 
-            <div id="trackerStepsContainer"></div>
+            <!-- Hero status card — current status highlighted in the
+                 complementary blue (--status-active), not the brand orange,
+                 so "what's happening right now" always stands out on its own. -->
+            <div class="tracking-hero" id="trackingHeroCard">
+                <div class="tracking-hero-top-row">
+                    <span class="tracking-order-id" id="trackingOrderId">#RP-T07-001</span>
+                    <span class="tracking-table" id="trackingTableLabel">Table 07</span>
+                </div>
 
-            <div class="tracking-estimate hidden" id="trackingEstimate">
-                <svg class="icon" style="width:14px;height:14px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                <span>Estimated: <strong id="trackingEstimateTime">15–25 min</strong></span>
+                <div class="tracking-status-icon-wrap pulsing" id="trackingStatusIconWrap">
+                    <svg id="trackingStatusIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                </div>
+                <div class="tracking-status-label" id="trackingStatusLabel">Order Received</div>
+                <div class="tracking-status-sub" id="trackingStatusSub">We've got it — sending it to the kitchen now.</div>
+
+                <div class="tracking-elapsed-row" id="trackingElapsedRow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    <span>Elapsed <strong id="trackingElapsedTime">00:00</strong></span>
+                </div>
+
+                <div class="tracking-progress-track" id="trackingProgressTrack"></div>
+                <div class="tracking-progress-labels">
+                    <span>Received</span><span>Preparing</span><span>Ready</span><span>Served</span>
+                </div>
             </div>
 
-            <div class="tracking-thanks-card" id="trackingThanksCard">
+            <!-- Detailed timeline (unchanged data contract — DINE_IN_STEPS / dineInStepIndex()) -->
+            <div class="tracking-step-card">
+                <div class="tracking-step-card-title">Order Timeline</div>
+                <div id="trackerStepsContainer"></div>
+
+                <div class="tracking-estimate hidden" id="trackingEstimate">
+                    <svg class="icon" style="width:14px;height:14px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    <span>Estimated: <strong id="trackingEstimateTime">15–25 min</strong></span>
+                </div>
+            </div>
+
+            <!-- "Your Order" — NEW: always visible (previously items were
+                 only shown once a session had 2+ orders via sessionBillCard) -->
+            <div class="tracking-items-card">
+                <div class="oi-head">
+                    <span class="oi-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.3 4.6A1 1 0 0 0 5.6 19H19"/><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/></svg>
+                        Your Order
+                    </span>
+                    <span class="oi-count-pill" id="trackingOrderItemsCount">0 items</span>
+                </div>
+                <div id="trackingOrderItemsList"></div>
+                <div class="tracking-items-total-row"><span>This order</span><span id="trackingOrderItemsTotal">₹0</span></div>
+            </div>
+
+            <div class="tracking-thanks-card hidden" id="trackingThanksCard">
                 <strong>Thank you!</strong>
                 <p style="font-size:12px;color:var(--text-sub);margin-top:4px;">We will serve your order shortly.</p>
             </div>
 
-            <!-- Session running bill summary (Decision #4) -->
+            <!-- Session running bill summary (Decision #4) — unchanged, shown for 2+ orders -->
             <div id="sessionBillCard" class="session-bill-card hidden">
                 <div class="session-bill-head">
                     <span>Running Bill — This Table</span>
@@ -227,12 +269,20 @@
                 </div>
             </div>
 
-            <button class="btn-order-more" id="btnOrderMore">+ Order More Items</button>
-            <button class="btn-request-bill" id="btnRequestBillFromTracking">
-                <svg class="icon" style="width:18px;height:18px;" viewBox="0 0 24 24"><path d="M4 2h16v20l-3-2-3 2-3-2-3 2-3-2-1 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
-                REQUEST BILL
-            </button>
-            <button class="tracking-call-waiter-link" id="btnGotoCallWaiter">Need help? Call Waiter →</button>
+            <div class="tracking-actions">
+                <button class="btn-order-more" id="btnOrderMore">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    Order More Items
+                </button>
+                <button class="btn-request-bill" id="btnRequestBillFromTracking">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h16v20l-3-2-3 2-3-2-3 2-3-2-1 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+                    Request Bill
+                </button>
+                <button class="tracking-call-waiter-link" id="btnGotoCallWaiter">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    Need help? Call Waiter
+                </button>
+            </div>
         </div>
     </div>
 
@@ -246,28 +296,81 @@
             <span style="width:38px;"></span>
         </div>
         <div class="waiter-body">
-            <div class="waiter-icon-circle">🛎️</div>
-            <div class="waiter-title">Need Assistance?</div>
-            <div class="waiter-sub">We are here to help.</div>
+            <div class="waiter-header">
+                <div class="waiter-icon-circle">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                </div>
+                <div class="waiter-title">Need Assistance?</div>
+                <div class="waiter-sub">Tap a request below — it goes straight to our staff.</div>
+            </div>
+
+            <!-- Each card IS the clickable element and keeps its original
+                 data-request value, so app.js's existing
+                 document.querySelectorAll('[data-request]') binder needs
+                 no selector changes — only the handler body was patched
+                 (see app-js.PATCH.txt) to add the Sending/Sent states below. -->
             <div class="waiter-actions">
-                <button class="btn-waiter-primary" data-request="waiter">
-                    <svg class="icon" style="width:16px;height:16px;" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                    CALL WAITER
+                <button class="request-card request-card--urgent" data-request="waiter">
+                    <span class="request-card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    </span>
+                    <span class="request-card-body">
+                        <span class="request-card-title">Call Waiter</span>
+                        <span class="request-card-sub">Need something? We'll come right over.</span>
+                    </span>
+                    <span class="request-card-state">
+                        <svg class="request-state-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+                        <svg class="request-state-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+                        <svg class="request-state-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    </span>
                 </button>
-                <button class="btn-waiter-secondary" data-request="water">
-                    <svg class="icon" style="width:16px;height:16px;" viewBox="0 0 24 24"><path d="M12 2.69s-5 5.6-5 9.31a5 5 0 0 0 10 0c0-3.71-5-9.31-5-9.31Z"/></svg>
-                    REQUEST WATER
+
+                <button class="request-card request-card--info" data-request="water">
+                    <span class="request-card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2.69s-5 5.6-5 9.31a5 5 0 0 0 10 0c0-3.71-5-9.31-5-9.31Z"/></svg>
+                    </span>
+                    <span class="request-card-body">
+                        <span class="request-card-title">Request Water</span>
+                        <span class="request-card-sub">Get a water refill at the table.</span>
+                    </span>
+                    <span class="request-card-state">
+                        <svg class="request-state-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+                        <svg class="request-state-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+                        <svg class="request-state-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    </span>
                 </button>
-                <button class="btn-waiter-secondary" data-request="bill" id="btnRequestBillFromWaiter">
-                    <svg class="icon" style="width:16px;height:16px;" viewBox="0 0 24 24"><path d="M4 2h16v20l-3-2-3 2-3-2-3 2-3-2-1 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
-                    REQUEST BILL
+
+                <button class="request-card request-card--brand" data-request="bill" id="btnRequestBillFromWaiter">
+                    <span class="request-card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h16v20l-3-2-3 2-3-2-3 2-3-2-1 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+                    </span>
+                    <span class="request-card-body">
+                        <span class="request-card-title">Request Bill</span>
+                        <span class="request-card-sub">Ready to pay? Get your final bill.</span>
+                    </span>
+                    <span class="request-card-state">
+                        <svg class="request-state-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+                        <svg class="request-state-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+                        <svg class="request-state-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    </span>
                 </button>
-                <button class="btn-waiter-secondary" data-request="clean">
-                    <svg class="icon" style="width:16px;height:16px;" viewBox="0 0 24 24"><path d="m3 3 18 18M11 11a2 2 0 1 0-2-2"/></svg>
-                    CLEAN TABLE
+
+                <button class="request-card request-card--neutral" data-request="clean">
+                    <span class="request-card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m3 3 18 18M11 11a2 2 0 1 0-2-2"/></svg>
+                    </span>
+                    <span class="request-card-body">
+                        <span class="request-card-title">Clean Table</span>
+                        <span class="request-card-sub">Ask staff to tidy up the table.</span>
+                    </span>
+                    <span class="request-card-state">
+                        <svg class="request-state-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+                        <svg class="request-state-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+                        <svg class="request-state-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    </span>
                 </button>
             </div>
-            <div class="waiter-thanks">Thank you!</div>
+            <div class="waiter-thanks">A request stays marked "Sent" for about 30 seconds to prevent accidental double-taps.</div>
         </div>
     </div>
 

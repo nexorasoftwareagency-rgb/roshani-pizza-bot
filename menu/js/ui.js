@@ -249,6 +249,47 @@ function dineInStepIndex(status) {
     return map[status] ?? 0;
 }
 
+// Inline stroke icons (Feather/Lucide-style paths, matching the SVG
+// convention already used throughout index.html — viewBox 0 0 24 24,
+// stroke=currentColor, stroke-width=2) keyed by tracker step index.
+const TRACKING_ICONS = [
+    /* 0 Placed     */ '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+    /* 1 Preparing  */ '<path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/>',
+    /* 2 Ready      */ '<path d="M18 8A6 6 0 0 0 6 8c0 3.09-.78 5.3-1.66 6.74A1 1 0 0 0 5.2 16h13.6a1 1 0 0 0 .87-1.26C18.78 13.3 18 11.09 18 8"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+    /* 3 Delivered  */ '<path d="M20 6L9 17l-5-5"/>'
+];
+const TRACKING_CANCELLED_ICON = '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>';
+const TRACKING_HEADLINES = [
+    { label: 'Order Received',     sub: "We've got it — sending it to the kitchen now." },
+    { label: 'Preparing Your Order', sub: 'Our kitchen is cooking it up right now.' },
+    { label: 'Ready To Serve',     sub: 'Your order is ready and heading to your table.' },
+    { label: 'Order Served',       sub: 'Enjoy your meal! Tap "Request Bill" below when ready to pay.' }
+];
+
+// ---- Elapsed-time ticker for the hero card ----
+// Module-level (not per-order) so a single 1s interval is reused across
+// re-renders instead of leaking a new setInterval every time the order
+// snapshot updates. `renderTracking()` just refreshes `_trackMeta`.
+let _trackClockHandle = null;
+let _trackMeta = null; // { createdAt, status }
+
+function _fmtElapsed(ms) {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const m = String(Math.floor(total / 60)).padStart(2, '0');
+    const s = String(total % 60).padStart(2, '0');
+    return `${m}:${s}`;
+}
+function _tickTrackClock() {
+    if (!_trackMeta) return;
+    const el = document.getElementById('trackingElapsedTime');
+    if (!el) return;
+    // order.createdAt is written by order.js as an ISO 8601 string
+    // (new Date().toISOString()) — the Date constructor parses that
+    // directly, no epoch-ms assumption needed.
+    const startMs = new Date(_trackMeta.createdAt).getTime();
+    el.textContent = isNaN(startMs) ? '--:--' : _fmtElapsed(Date.now() - startMs);
+}
+
 export function renderTracking(orderId, order, tableNumber) {
     const orderIdEl = document.getElementById('trackingOrderId');
     const tableLabelEl = document.getElementById('trackingTableLabel');
@@ -257,29 +298,123 @@ export function renderTracking(orderId, order, tableNumber) {
     if (orderIdEl) orderIdEl.textContent = `#RP-T${String(tableNumber).padStart(2, '0')}-${String(orderId).slice(-3).toUpperCase()}`;
     if (tableLabelEl) tableLabelEl.textContent = `Table ${String(tableNumber).padStart(2, '0')}`;
 
-    const currentIdx = dineInStepIndex(order.status);
+    const status = order.status || 'Placed';
+    const isCancelled = status === 'Cancelled';
+    const isDelivered = status === 'Delivered';
+    const currentIdx = dineInStepIndex(status);
+
+    // ---- Detailed timeline (same DINE_IN_STEPS contract as before) ----
     container.innerHTML = DINE_IN_STEPS.map((step, i) => {
-        const cls = i < currentIdx ? 'done' : (i === currentIdx ? 'active' : '');
+        const cls = i < currentIdx ? 'done' : (i === currentIdx && !isCancelled ? 'active' : '');
         const time = i <= currentIdx ? new Date(order.updatedAt || order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '--:--';
         const dotContent = i < currentIdx ? '✓' : (i + 1);
         return `<div class="tracker-step ${cls}"><div class="tracker-dot">${dotContent}</div><div><div class="tracker-label">${esc(step.label)}</div><div class="tracker-time">${time}</div></div></div>`;
     }).join('');
 
-    // Show estimate only while order is in progress (not delivered/cancelled)
-    const estimateEl = document.getElementById('trackingEstimate');
-    if (estimateEl) {
-        estimateEl.classList.toggle('hidden', order.status === 'Delivered' || order.status === 'Cancelled');
+    // ---- Hero status card ----
+    const heroCard = document.getElementById('trackingHeroCard');
+    const iconWrap = document.getElementById('trackingStatusIconWrap');
+    const iconEl = document.getElementById('trackingStatusIcon');
+    const labelEl = document.getElementById('trackingStatusLabel');
+    const subEl = document.getElementById('trackingStatusSub');
+
+    if (heroCard) heroCard.classList.toggle('hero-cancelled', isCancelled);
+    if (iconWrap) iconWrap.classList.toggle('pulsing', !isCancelled && !isDelivered);
+    if (iconEl) iconEl.innerHTML = isCancelled ? TRACKING_CANCELLED_ICON : TRACKING_ICONS[currentIdx];
+    if (labelEl) labelEl.textContent = isCancelled ? 'Order Cancelled' : TRACKING_HEADLINES[currentIdx].label;
+    if (subEl) subEl.textContent = isCancelled ? 'Please speak to a staff member for help.' : TRACKING_HEADLINES[currentIdx].sub;
+
+    // Segmented progress bar — "current" segment uses --status-active
+    const track = document.getElementById('trackingProgressTrack');
+    if (track) {
+        track.innerHTML = DINE_IN_STEPS.map((_, i) => {
+            let cls = 'progress-seg';
+            if (isCancelled) cls += ' seg-cancelled';
+            else if (i < currentIdx || (i === currentIdx && isDelivered)) cls += ' seg-done';
+            else if (i === currentIdx) cls += ' seg-current';
+            return `<div class="${cls}"></div>`;
+        }).join('');
     }
 
-    const thanksCard = document.getElementById('trackingThanksCard');
-    if (!thanksCard) return;
-    if (order.status === 'Delivered') {
-        thanksCard.innerHTML = '<strong>Order served!</strong><p style="font-size:12px;color:var(--text-sub);margin-top:4px;">Enjoy your meal. Tap "Call Waiter" → "Request Bill" when ready to pay.</p>';
-    } else if (order.status === 'Cancelled') {
-        thanksCard.innerHTML = '<strong style="color:var(--error);">Order cancelled</strong><p style="font-size:12px;color:var(--text-sub);margin-top:4px;">Please speak to a staff member.</p>';
-    } else {
-        thanksCard.innerHTML = '<strong>Thank you!</strong><p style="font-size:12px;color:var(--text-sub);margin-top:4px;">We will serve your order shortly.</p>';
+    // Elapsed timer — starts once, ticks every second off module state
+    _trackMeta = { createdAt: order.createdAt, status };
+    _tickTrackClock();
+    if (!_trackClockHandle) _trackClockHandle = setInterval(_tickTrackClock, 1000);
+    const elapsedRow = document.getElementById('trackingElapsedRow');
+    if (elapsedRow) elapsedRow.classList.toggle('hidden', isDelivered || isCancelled);
+
+    // Show estimate only while order is in progress (not delivered/cancelled)
+    const estimateEl = document.getElementById('trackingEstimate');
+    if (estimateEl) estimateEl.classList.toggle('hidden', isDelivered || isCancelled);
+
+    // ---- "Your Order" itemized card (NEW) ----
+    // Always visible — reads order.items straight off the same order
+    // object app.js's watchOrder() already passes in, no extra reads.
+    const itemsList = document.getElementById('trackingOrderItemsList');
+    const itemsCountEl = document.getElementById('trackingOrderItemsCount');
+    const itemsTotalEl = document.getElementById('trackingOrderItemsTotal');
+    if (itemsList) {
+        const items = Object.values(order.items || {});
+        const totalQty = items.reduce((s, it) => s + (Number(it.qty) || 1), 0);
+        if (itemsCountEl) itemsCountEl.textContent = `${totalQty} item${totalQty !== 1 ? 's' : ''}`;
+        itemsList.innerHTML = items.map(it => {
+            const addonsLine = (it.addons && it.addons.length) ? `<div class="oi-row-addons">+ ${esc(it.addons.join(', '))}</div>` : '';
+            const noteLine = it.instructions ? `<div class="oi-row-note">"${esc(it.instructions)}"</div>` : '';
+            return `<div class="oi-row">
+                <span class="oi-row-name">${esc(it.name || 'Item')}</span>
+                <span class="oi-row-qty">×${it.qty || 1}</span>
+                <span class="oi-row-price">${fmtMoney((it.price || 0) * (it.qty || 1))}</span>
+                ${addonsLine}${noteLine}
+            </div>`;
+        }).join('') || '<p class="text-muted-small">No items on this order.</p>';
+        if (itemsTotalEl) itemsTotalEl.textContent = fmtMoney(order.total || 0);
     }
+
+    // Secondary confirmation card — only shown for terminal states now
+    // (Delivered / Cancelled). For in-progress statuses the hero
+    // headline + sub already say this, so showing it twice was
+    // redundant and has been dropped in this redesign.
+    const thanksCard = document.getElementById('trackingThanksCard');
+    if (thanksCard) {
+        if (isDelivered) {
+            thanksCard.classList.remove('hidden');
+            thanksCard.innerHTML = '<strong>Order served!</strong><p style="font-size:12px;color:var(--text-sub);margin-top:4px;">Enjoy your meal. Tap "Request Bill" below when ready to pay.</p>';
+        } else if (isCancelled) {
+            thanksCard.classList.remove('hidden');
+            thanksCard.innerHTML = '<strong style="color:var(--error);">Order cancelled</strong><p style="font-size:12px;color:var(--text-sub);margin-top:4px;">Please speak to a staff member.</p>';
+        } else {
+            thanksCard.classList.add('hidden');
+        }
+    }
+}
+
+// ---- Call Waiter screen: optimistic request-state feedback ----
+// tableRequests is create-only from this client (no read access), so
+// there's no live "acknowledged" status to listen for. Instead each
+// request card shows Sending → Sent for a cooldown window, both to
+// reassure the guest and to stop accidental double-taps/spam.
+const WAITER_COOLDOWN_MS = 30000;
+const _waiterTimers = new WeakMap();
+
+export function setRequestSending(btn) {
+    if (!btn) return;
+    btn.classList.remove('request-sent');
+    btn.classList.add('request-sending');
+    btn.disabled = true;
+}
+export function setRequestSent(btn) {
+    if (!btn) return;
+    btn.classList.remove('request-sending');
+    btn.classList.add('request-sent');
+    btn.disabled = true;
+    clearTimeout(_waiterTimers.get(btn));
+    _waiterTimers.set(btn, setTimeout(() => resetRequestCard(btn), WAITER_COOLDOWN_MS));
+}
+export function resetRequestCard(btn) {
+    if (!btn) return;
+    clearTimeout(_waiterTimers.get(btn));
+    btn.classList.remove('request-sending', 'request-sent');
+    btn.disabled = false;
 }
 
 export function renderSessionBillCard(session, ordersMap, taxName, taxPercent, taxEnabled, serviceChargeEnabled, serviceChargeName, serviceChargeRate) {

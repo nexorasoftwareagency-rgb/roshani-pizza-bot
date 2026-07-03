@@ -10,6 +10,17 @@
     --radius:16px; --radius-sm:10px;
     --transition-fast:0.15s ease; --transition-normal:0.3s ease; --transition-slow:0.5s ease;
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+    /* Status-active accent — the mathematical complement of --primary
+       (#E84908, HSL 17°/93%/47%) rotated 180° on the hue wheel to
+       197°/93%/47% = #08A7E8. Used ONLY to highlight the current /
+       in-progress step on the Tracking screen (hero icon, active step
+       dot + label, active progress segment) so it visually pops against
+       the orange brand color used everywhere else (buttons, prices,
+       chips). Completed steps stay --success green; upcoming steps
+       stay neutral gray — only "what's happening right now" gets this
+       color, so it always means one thing. */
+    --status-active:#08A7E8; --status-active-dark:#078EC5; --status-active-bg:rgba(8,167,232,.12);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;}
@@ -182,28 +193,111 @@ img{max-width:100%; display:block;}
 .btn-place-order{ width:100%; background:var(--primary); color:#fff; padding:16px; border-radius:14px; font-size:15px; font-weight:800; margin-top:6px; }
 .btn-place-order:disabled{opacity:.6;}
 
-/* ---------- Screen 5: Order Tracking ---------- */
-.tracking-body{padding:24px 20px; flex:1; padding-bottom:calc(24px + 60px + var(--safe-bottom)); }
-.tracking-order-id{text-align:center; font-size:13px; color:var(--text-sub); margin-bottom:2px;}
-.tracking-table{text-align:center; font-size:20px; font-weight:900; margin-bottom:32px;}
-.tracker-step{display:flex; gap:14px; padding-bottom:28px; position:relative;}
+/* ================================================================
+   Screen 5: Order Tracking — REDESIGN
+   Data contract unchanged: same #trackingOrderId / #trackingTableLabel /
+   #trackerStepsContainer / #trackingEstimate / #trackingThanksCard /
+   #sessionBillCard(+children) / #btnOrderMore / #btnRequestBillFromTracking
+   / #btnGotoCallWaiter IDs as before, driven by the same DINE_IN_STEPS /
+   dineInStepIndex() logic in ui.js. New elements are additive only.
+   ================================================================ */
+.tracking-body{padding:18px 16px; flex:1; padding-bottom:calc(18px + 60px + var(--safe-bottom)); }
+
+/* ---- Hero status card ---- */
+.tracking-hero{
+    background:var(--card); border:1px solid var(--border); border-radius:22px;
+    padding:22px 20px; text-align:center; position:relative; overflow:hidden;
+}
+.tracking-hero::before{
+    content:''; position:absolute; inset:0 0 auto 0; height:5px;
+    background:linear-gradient(90deg, var(--primary), var(--status-active));
+}
+.tracking-hero-top-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.tracking-order-id{ font-size:12px; color:var(--text-sub); font-weight:700; }
+.tracking-table{ font-size:11px; font-weight:800; color:var(--primary); background:rgba(232,73,8,.08); padding:4px 10px; border-radius:8px; }
+
+.tracking-status-icon-wrap{
+    width:64px; height:64px; border-radius:50%; margin:4px auto 14px;
+    background:var(--status-active-bg); color:var(--status-active-dark);
+    display:flex; align-items:center; justify-content:center; position:relative;
+}
+.tracking-status-icon-wrap svg{ width:30px; height:30px; }
+.tracking-status-icon-wrap.pulsing::before{
+    content:''; position:absolute; inset:-6px; border-radius:50%;
+    border:2px solid var(--status-active); animation:heroPulse 1.8s ease-out infinite;
+}
+@keyframes heroPulse{0%{transform:scale(.88);opacity:1;}100%{transform:scale(1.35);opacity:0;}}
+@media (prefers-reduced-motion: reduce){ .tracking-status-icon-wrap.pulsing::before{animation:none;} }
+
+.tracking-status-label{ font-size:19px; font-weight:900; color:var(--text); }
+.tracking-status-sub{ font-size:12.5px; color:var(--text-sub); margin-top:4px; line-height:1.5; padding:0 8px; }
+
+.tracking-elapsed-row{ display:flex; align-items:center; justify-content:center; gap:6px; margin-top:14px; font-size:12px; font-weight:700; color:var(--text-sub); }
+.tracking-elapsed-row svg{ width:14px; height:14px; }
+.tracking-elapsed-row strong{ color:var(--status-active-dark); }
+
+/* Segmented progress bar — "current" segment uses the complementary
+   blue so the active stage is unmistakable against the orange brand
+   color used for CTAs elsewhere on this screen. */
+.tracking-progress-track{ display:flex; gap:5px; margin-top:16px; }
+.progress-seg{ flex:1; height:5px; border-radius:3px; background:var(--border); overflow:hidden; }
+.progress-seg.seg-done{ background:var(--success); }
+.progress-seg.seg-current{ background:var(--status-active-bg); position:relative; }
+.progress-seg.seg-current::after{ content:''; position:absolute; inset:0; width:55%; border-radius:3px; background:var(--status-active); animation:segFill 1.6s ease-in-out infinite alternate; }
+@keyframes segFill{from{width:18%;}to{width:82%;}}
+@media (prefers-reduced-motion: reduce){ .progress-seg.seg-current::after{animation:none; width:50%;} }
+.progress-seg.seg-cancelled{ background:rgba(239,68,68,.25); }
+.tracking-progress-labels{ display:flex; justify-content:space-between; margin-top:7px; font-size:9.5px; font-weight:800; color:var(--text-tertiary); letter-spacing:.03em; }
+
+.tracking-hero.hero-cancelled .tracking-hero::before,
+.tracking-hero.hero-cancelled::before{ background:var(--error); }
+.tracking-hero.hero-cancelled .tracking-status-icon-wrap{ background:rgba(239,68,68,.12); color:var(--error); }
+.tracking-hero.hero-cancelled .tracking-status-label{ color:var(--error); }
+
+/* ---- Timeline detail card (restyled step list, same markup/IDs) ---- */
+.tracking-step-card{ background:var(--card); border:1px solid var(--border); border-radius:18px; padding:16px 18px; margin-top:12px; }
+.tracking-step-card-title{ font-size:10.5px; font-weight:800; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:.08em; margin-bottom:12px; }
+.tracker-step{display:flex; gap:14px; padding-bottom:24px; position:relative;}
 .tracker-step:last-child{padding-bottom:0;}
 .tracker-step::before{ content:''; position:absolute; left:13px; top:28px; bottom:0; width:2px; background:var(--border); }
 .tracker-step:last-child::before{display:none;}
 .tracker-step.done::before{background:var(--success);}
-.tracker-dot{ width:28px; height:28px; border-radius:50%; background:var(--border); color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:14px; font-weight:800; z-index:1; }
+.tracker-dot{ width:26px; height:26px; border-radius:50%; background:var(--border); color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:12px; font-weight:800; z-index:1; }
 .tracker-step.done .tracker-dot{background:var(--success);}
-.tracker-step.active .tracker-dot{background:var(--warning); animation:trackerPulse 1.6s ease-in-out infinite;}
-@keyframes trackerPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.5);} 50%{box-shadow:0 0 0 8px rgba(245,158,11,0);}}
+.tracker-step.active .tracker-dot{background:var(--status-active); animation:trackerPulse 1.6s ease-in-out infinite;}
+@keyframes trackerPulse{0%,100%{box-shadow:0 0 0 0 rgba(8,167,232,.45);} 50%{box-shadow:0 0 0 8px rgba(8,167,232,0);}}
 @media (prefers-reduced-motion: reduce){.tracker-step.active .tracker-dot{animation:none;}}
-.tracker-label{font-size:14px; font-weight:700;}
-.tracker-time{font-size:12px; color:var(--text-sub); margin-top:2px;}
-.tracking-estimate{ display:flex; align-items:center; gap:6px; justify-content:center; font-size:12px; color:var(--text-sub); margin-top:14px; padding:8px 14px; background:var(--card); border:1px solid var(--border); border-radius:10px; }
-.tracking-estimate strong{ color:var(--primary); }
-.tracking-thanks-card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; text-align:center; margin-top:24px; }
+.tracker-label{font-size:13.5px; font-weight:700; color:var(--text);}
+.tracker-step.active .tracker-label{ color:var(--status-active-dark); }
+.tracker-time{font-size:11.5px; color:var(--text-sub); margin-top:1px;}
 
-.session-bill-card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-top:16px; }
-.session-bill-head{ display:flex; justify-content:space-between; font-size:12px; font-weight:800; color:var(--text-sub); margin-bottom:10px; }
+.tracking-estimate{ display:flex; align-items:center; gap:6px; justify-content:center; font-size:12px; color:var(--text-sub); margin-top:12px; padding:8px 14px; background:var(--bg); border:1px solid var(--border); border-radius:10px; }
+.tracking-estimate strong{ color:var(--status-active-dark); }
+.tracking-thanks-card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; text-align:center; margin-top:12px; }
+
+/* ---- "Your Order" itemized card (NEW) ----
+   Always visible regardless of how many orders are in the session —
+   fixes the previous gap where a single-order session showed no items
+   anywhere on the tracking screen (sessionBillCard only rendered once
+   session.orders.length > 1). Reads the SAME order object already
+   passed into renderTracking() — no extra Firebase reads required. */
+.tracking-items-card{ background:var(--card); border:1px solid var(--border); border-radius:18px; padding:16px 18px; margin-top:12px; }
+.oi-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.oi-title{ font-size:13px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:6px; }
+.oi-title svg{ width:15px; height:15px; color:var(--primary); }
+.oi-count-pill{ font-size:10.5px; font-weight:800; background:rgba(232,73,8,.08); color:var(--primary); padding:2px 8px; border-radius:7px; }
+.oi-row{ display:flex; flex-wrap:wrap; align-items:center; gap:0 8px; padding:8px 0; border-bottom:1px dashed var(--border); font-size:13px; }
+.oi-row:last-of-type{ border-bottom:none; }
+.oi-row-name{ color:var(--text); font-weight:600; flex:1; min-width:0; }
+.oi-row-qty{ color:var(--text-sub); font-size:11.5px; font-weight:700; flex-shrink:0; }
+.oi-row-price{ color:var(--text); font-weight:800; white-space:nowrap; margin-left:auto; }
+.oi-row-addons{ flex-basis:100%; font-size:11px; color:var(--text-sub); padding-left:2px; }
+.oi-row-note{ flex-basis:100%; font-size:11px; color:var(--text-tertiary); font-style:italic; padding-left:2px; }
+.tracking-items-total-row{ display:flex; justify-content:space-between; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:13.5px; font-weight:900; color:var(--text); }
+.tracking-items-total-row span:last-child{ color:var(--primary); }
+
+.session-bill-card{ background:var(--card); border:1px solid var(--border); border-radius:18px; padding:16px 18px; margin-top:12px; }
+.session-bill-head{ display:flex; justify-content:space-between; font-size:10.5px; font-weight:800; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; }
 .session-bill-line{display:flex; justify-content:space-between; font-size:13px; padding:4px 0; color:var(--text-sub);}
 .session-bill-items{ max-height:200px; overflow-y:auto; margin-top:8px; }
 .session-bill-order-section{ margin-bottom:8px; }
@@ -217,21 +311,67 @@ img{max-width:100%; display:block;}
 .session-bill-summary-row{ display:flex; justify-content:space-between; font-size:12px; padding:2px 0; color:var(--text-sub); }
 .session-bill-total-row{ display:flex; justify-content:space-between; font-size:15px; font-weight:900; padding-top:10px; margin-top:6px; border-top:1px solid var(--border); }
 
-.btn-order-more{ display:block; width:100%; text-align:center; background:rgba(232,73,8,.08); color:var(--primary); border:1.5px solid rgba(232,73,8,.3); padding:13px; border-radius:14px; font-weight:800; font-size:14px; margin-top:18px; }
-.btn-request-bill{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; background:var(--error); color:#fff; padding:14px; border-radius:14px; font-weight:800; font-size:14px; margin-top:12px; }
-.btn-request-bill:active{background:#dc2626;}
-.tracking-call-waiter-link{ display:block; text-align:center; margin-top:14px; font-size:13px; font-weight:700; color:var(--text-sub); }
+.tracking-actions{ margin-top:16px; display:flex; flex-direction:column; gap:10px; }
+.btn-order-more{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; text-align:center; background:rgba(232,73,8,.08); color:var(--primary); border:1.5px solid rgba(232,73,8,.3); padding:13px; border-radius:14px; font-weight:800; font-size:13.5px; }
+.btn-order-more svg{ width:16px; height:16px; }
+.btn-request-bill{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; background:var(--text); color:#fff; padding:14px; border-radius:14px; font-weight:800; font-size:13.5px; }
+.btn-request-bill svg{ width:16px; height:16px; }
+.btn-request-bill:active{ opacity:.85; }
+.tracking-call-waiter-link{ display:flex; align-items:center; justify-content:center; gap:6px; text-align:center; margin-top:2px; font-size:12.5px; font-weight:700; color:var(--text-sub); padding:8px; }
+.tracking-call-waiter-link svg{ width:13px; height:13px; }
 
-/* ---------- Screen 6: Call Waiter ---------- */
-.waiter-body{padding:32px 20px; flex:1; text-align:center;}
-.waiter-icon-circle{ width:90px; height:90px; border-radius:50%; background:var(--bg); margin:0 auto 18px; display:flex; align-items:center; justify-content:center; font-size:38px; }
-.waiter-title{font-size:19px; font-weight:800; margin-bottom:6px;}
-.waiter-sub{font-size:13px; color:var(--text-sub); margin-bottom:28px;}
+/* ================================================================
+   Screen 6: Call Waiter — REDESIGN
+   The 4 request "cards" below ARE the clickable elements and still
+   carry data-request="waiter|water|bill|clean" directly, so app.js's
+   existing `document.querySelectorAll('[data-request]')` binder needs
+   zero selector changes. Only the click handler body gains 3 calls
+   into the new UI.setRequestSending/setRequestSent/resetRequestCard
+   helpers — see app-js.PATCH.txt.
+   ================================================================ */
+.waiter-body{padding:20px 16px calc(20px + var(--safe-bottom)); flex:1;}
+.waiter-header{ text-align:center; margin-bottom:22px; }
+.waiter-icon-circle{ width:64px; height:64px; border-radius:50%; background:var(--bg); margin:0 auto 14px; display:flex; align-items:center; justify-content:center; color:var(--primary); }
+.waiter-icon-circle svg{ width:28px; height:28px; }
+.waiter-title{font-size:18px; font-weight:800; margin-bottom:4px; color:var(--text);}
+.waiter-sub{font-size:12.5px; color:var(--text-sub);}
+
 .waiter-actions{display:flex; flex-direction:column; gap:10px;}
-.btn-waiter-primary{ background:var(--error); color:#fff; padding:15px; border-radius:14px; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; gap:8px; }
-.btn-waiter-secondary{ background:var(--card); border:1.5px solid var(--border); color:var(--text); padding:14px; border-radius:14px; font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center; gap:8px; }
-.btn-waiter-secondary:active{background:var(--bg);}
-.waiter-thanks{font-size:13px; color:var(--text-sub); margin-top:18px;}
+.request-card{
+    display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+    background:var(--card); border:1.5px solid var(--border); border-radius:16px;
+    padding:14px; transition:border-color .15s ease, background .15s ease, transform .1s ease;
+}
+.request-card:active{ transform:scale(.98); }
+.request-card-icon{ width:44px; height:44px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.request-card-icon svg{ width:21px; height:21px; }
+.request-card-body{ flex:1; min-width:0; }
+.request-card-title{ font-size:14px; font-weight:800; color:var(--text); }
+.request-card-sub{ font-size:11.5px; color:var(--text-sub); margin-top:1px; }
+.request-card-state{ flex-shrink:0; width:22px; height:22px; display:flex; align-items:center; justify-content:center; color:var(--text-tertiary); }
+.request-card-state svg{ width:18px; height:18px; }
+.request-state-spinner{ display:none; animation:spin .7s linear infinite; }
+.request-state-check{ display:none; color:var(--success); }
+.request-state-arrow{ display:block; }
+
+.request-card--urgent .request-card-icon{ background:rgba(239,68,68,.1); color:var(--error); }
+.request-card--info .request-card-icon{ background:var(--status-active-bg); color:var(--status-active-dark); }
+.request-card--brand .request-card-icon{ background:rgba(232,73,8,.1); color:var(--primary); }
+.request-card--neutral .request-card-icon{ background:var(--bg); color:var(--text-sub); }
+
+.request-card.request-sending{ border-color:var(--status-active); }
+.request-card.request-sending .request-state-arrow{ display:none; }
+.request-card.request-sending .request-state-spinner{ display:block; }
+
+.request-card.request-sent{ border-color:rgba(34,197,94,.4); background:rgba(34,197,94,.05); }
+.request-card.request-sent .request-card-sub{ color:var(--success); font-weight:700; }
+.request-card.request-sent .request-state-arrow{ display:none; }
+.request-card.request-sent .request-state-check{ display:block; }
+
+.request-card:disabled{ cursor:default; }
+@media (prefers-reduced-motion: reduce){ .request-state-spinner{animation-duration:1.4s;} }
+
+.waiter-thanks{font-size:12px; color:var(--text-tertiary); margin-top:20px; text-align:center;}
 
 /* ---------- Invalid token screen ---------- */
 .invalid-token-body{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:40px 28px; text-align:center; }
@@ -245,7 +385,7 @@ img{max-width:100%; display:block;}
 .bill-generated-note{ font-size:13px; color:var(--text-sub); line-height:1.6; margin-bottom:12px; }
 
 /* ---------- Misc ---------- */
-.toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1a1a1a; color:#fff; padding:12px 20px; border-radius:12px; font-size:13px; font-weight:600; z-index:999; opacity:0; pointer-events:none; transition:opacity .25s ease; max-width:90%; text-align:center; }
+.toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1a1a1a; color:#fff; padding:12px 20px; border-radius:12px; font-size:13px; font-weight:600; z-index:999; opacity:0; transition:opacity .25s ease; max-width:90%; text-align:center; }
 .toast.show{opacity:1;}
 .empty-cart{text-align:center; padding:60px 20px; color:var(--text-sub);}
 .icon{width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}

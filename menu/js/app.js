@@ -382,23 +382,30 @@ document.getElementById('btnBackToMenuFromBill')?.addEventListener('click', () =
 document.getElementById('btnBackFromWaiter')?.addEventListener('click', () => UI.showScreen('screenTracking'));
 document.querySelectorAll('[data-request]').forEach(btn => {
     btn.addEventListener('click', async () => {
+        if (btn.disabled) return; // ignore taps during the sending/sent cooldown window
         haptic(15);
         const type = btn.dataset.request;
         const labels = { waiter: 'Waiter called', water: 'Water requested', bill: 'Bill requested', clean: 'Table cleaning requested' };
+        UI.setRequestSending(btn);
         try {
             if (type === 'bill') {
                 await requestBill();
                 document.getElementById('billGenTable').textContent = `Table ${String(Session.table.number).padStart(2, '0')}`;
                 document.getElementById('billGenAmount').textContent = UI.fmtMoney(Session.session?.grandTotal || Session.session?.runningTotal || 0);
+                UI.resetRequestCard(btn); // screen is about to change — leave the card fresh for next visit
                 UI.showScreen('screenBillGenerated');
+                return;
             } else {
                 await set(push(outletRef('tableRequests')), {
                     tableId: Session.tableId, tableNumber: Session.table.number,
                     type, status: 'pending', createdAt: Date.now()
                 });
             }
+            UI.setRequestSent(btn);
+            haptic([10, 30, 10]);
             UI.showToast(labels[type] || 'Request sent');
         } catch (e) {
+            UI.resetRequestCard(btn);
             UI.showToast('Could not send request. Please try again.');
         }
     });
@@ -447,23 +454,8 @@ function renderHistoryScreen() {
 let _storeSettingsCache = null;
 async function renderPromotionsScreen() {
     if (!_storeSettingsCache) {
-        try {
-            const [instagramSnap, facebookSnap, googleReviewSnap, whatsappSnap] = await Promise.all([
-                get(outletRef('settings/Store/instagram')),
-                get(outletRef('settings/Store/facebook')),
-                get(outletRef('settings/Store/googleReviewLink')),
-                get(outletRef('settings/Store/whatsappNumber'))
-            ]);
-            _storeSettingsCache = {
-                instagram: instagramSnap.val() || '',
-                facebook: facebookSnap.val() || '',
-                googleReviewLink: googleReviewSnap.val() || '',
-                whatsappNumber: whatsappSnap.val() || ''
-            };
-        } catch (e) {
-            console.error('[Promotions] Could not load social links:', e);
-            _storeSettingsCache = {};
-        }
+        const snap = await get(outletRef('settings/Store'));
+        _storeSettingsCache = snap.val() || {};
     }
     UI.renderPromotionsLinks(_storeSettingsCache);
 }
