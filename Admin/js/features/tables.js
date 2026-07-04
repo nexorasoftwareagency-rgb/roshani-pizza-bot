@@ -224,7 +224,17 @@ function _renderKpis() {
         return !!linkedTable;
     });
     const totalGuests = activeSessions.reduce((s, sess) => s + (sess.guestCount || 0), 0);
-    const revenueToday = activeSessions.reduce((s, sess) => s + (sess.grandTotal || 0), 0);
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayMs = todayStart.getTime();
+    const revenueToday = Object.values(_sessions).reduce((sum, sess) => {
+        const paidToday = sess.paidAt && sess.paidAt >= todayMs;
+        const openedToday = sess.openedAt && sess.openedAt >= todayMs && sess.status !== 'closed';
+        if (paidToday || openedToday) return sum + (sess.grandTotal || 0);
+        return sum;
+    }, 0);
+
     const avgMins = activeSessions.length
         ? Math.round(activeSessions.reduce((s, sess) => s + _sessionElapsedMinutes(sess), 0) / activeSessions.length)
         : 0;
