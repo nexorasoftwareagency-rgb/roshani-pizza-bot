@@ -218,7 +218,11 @@ function _renderKpis() {
     const counts = { free: 0, occupied: 0, billing: 0, disabled: 0 };
     tables.forEach(t => { if (counts[t.status] !== undefined) counts[t.status]++; });
 
-    const activeSessions = Object.values(_sessions).filter(s => s.status !== 'closed');
+    const activeSessions = Object.values(_sessions).filter(s => {
+        if (s.status === 'closed') return false;
+        const linkedTable = Object.values(_tables).find(t => t.currentSession === s.id);
+        return !!linkedTable;
+    });
     const totalGuests = activeSessions.reduce((s, sess) => s + (sess.guestCount || 0), 0);
     const revenueToday = activeSessions.reduce((s, sess) => s + (sess.grandTotal || 0), 0);
     const avgMins = activeSessions.length
