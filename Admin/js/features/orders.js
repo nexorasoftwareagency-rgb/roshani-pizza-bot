@@ -1369,7 +1369,7 @@ export async function openOrderDrawer(id) {
                     <div class="ctrl-row">
                         <div class="ctrl-group">
                             <label class="form-label-small mb-6 d-block" style="color:#64748b;">STATUS</label>
-                            ${renderStatusDropdown(order.status || 'Placed', orderType, id)}
+                            ${renderStatusDropdown(order.status || 'Placed', orderType, id, order)}
                         </div>
                         <div class="ctrl-group">
                             <label class="form-label-small mb-6 d-block" style="color:#64748b;">RIDER</label>
