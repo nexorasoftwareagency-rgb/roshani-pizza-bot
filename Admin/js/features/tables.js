@@ -218,25 +218,26 @@ function _renderKpis() {
     const counts = { free: 0, occupied: 0, billing: 0, disabled: 0 };
     tables.forEach(t => { if (counts[t.status] !== undefined) counts[t.status]++; });
 
-    const activeSessions = Object.values(_sessions).filter(s => {
+    const activeSessions = Object.entries(_sessions).filter(([id, s]) => {
         if (s.status === 'closed') return false;
-        const linkedTable = Object.values(_tables).find(t => t.currentSession === s.id);
+        const linkedTable = Object.values(_tables).find(t => t.currentSession === id);
         return !!linkedTable;
     });
-    const totalGuests = activeSessions.reduce((s, sess) => s + (sess.guestCount || 0), 0);
+    const totalGuests = activeSessions.reduce((s, [id, sess]) => s + (sess.guestCount || 0), 0);
 
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayMs = todayStart.getTime();
-    const revenueToday = Object.values(_sessions).reduce((sum, sess) => {
+    const revenueToday = Object.entries(_sessions).reduce((sum, [id, sess]) => {
+        const linkedTable = Object.values(_tables).find(t => t.currentSession === id);
+        const activeToday = linkedTable && sess.openedAt && sess.openedAt >= todayMs && sess.status !== 'closed';
         const paidToday = sess.paidAt && sess.paidAt >= todayMs;
-        const openedToday = sess.openedAt && sess.openedAt >= todayMs && sess.status !== 'closed';
-        if (paidToday || openedToday) return sum + (sess.grandTotal || 0);
+        if (activeToday || paidToday) return sum + (sess.grandTotal || 0);
         return sum;
     }, 0);
 
     const avgMins = activeSessions.length
-        ? Math.round(activeSessions.reduce((s, sess) => s + _sessionElapsedMinutes(sess), 0) / activeSessions.length)
+        ? Math.round(activeSessions.reduce((s, [id, sess]) => s + _sessionElapsedMinutes(sess), 0) / activeSessions.length)
         : 0;
 
     const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = String(v); };
