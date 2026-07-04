@@ -3111,6 +3111,8 @@ body {
 .status-preparing { background: var(--primary-light); color: var(--primary); border-color: rgba(var(--primary-rgb), 0.2); }
 .status-out-for-delivery { background: var(--warning-light); color: var(--warning); border-color: rgba(var(--warning-rgb), 0.2); }
 .status-delivered { background: var(--success-light); color: var(--success); border-color: rgba(var(--success-rgb), 0.2); }
+.status-paid { background: var(--success-light); color: var(--success); border-color: rgba(var(--success-rgb), 0.2); }
+.status-pending-payment { background: var(--warning-light); color: var(--warning); border-color: rgba(var(--warning-rgb), 0.2); }
 .status-cancelled { background: var(--error-light); color: var(--error); border-color: rgba(var(--error-rgb), 0.2); }
 
 .form-label-small {
@@ -3765,6 +3767,8 @@ body {
 .status-preparing { background: var(--primary-light); color: var(--primary); border-color: rgba(var(--primary-rgb), 0.2); }
 .status-out-for-delivery { background: var(--warning-light); color: var(--warning); border-color: rgba(var(--warning-rgb), 0.2); }
 .status-delivered { background: var(--success-light); color: var(--success); border-color: rgba(var(--success-rgb), 0.2); }
+.status-paid { background: var(--success-light); color: var(--success); border-color: rgba(var(--success-rgb), 0.2); }
+.status-pending-payment { background: var(--warning-light); color: var(--warning); border-color: rgba(var(--warning-rgb), 0.2); }
 .status-cancelled { background: var(--error-light); color: var(--error); border-color: rgba(var(--error-rgb), 0.2); }
 
 .rider-stats-cell {

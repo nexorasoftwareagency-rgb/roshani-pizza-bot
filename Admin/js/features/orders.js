@@ -28,7 +28,7 @@ function isRiderFresh(r) {
 export const STATUS_SEQUENCE = ["Placed", "Confirmed", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"];
 export const STATUS_SEQUENCES = {
     'Online': ["Placed", "Confirmed", "Ready", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"],
-    'Dine-in': ["Confirmed", "Ready", "Delivered"],
+    'Dine-in': ["Confirmed", "Ready", "Served"],
     'Default': ["Placed", "Confirmed", "Ready", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"]
 };
 export const STATUS_MAPPING = {
@@ -38,7 +38,7 @@ export const STATUS_MAPPING = {
     "Picked Up": 3,
     "Out for Delivery": 4,
     "Reached Drop Location": 5,
-    "Delivered": 6,
+    "Served": 6, "Delivered": 6,
     "Cancelled": 0
 };
 
@@ -292,17 +292,27 @@ function getStatusOptions(currentStatus, type = 'Online') {
         options.push({ value: nextStep, label: nextStep });
     }
 
-    // Always allow cancellation (unless already delivered or cancelled)
-    if (currentStatus !== "Delivered" && currentStatus !== "Cancelled") {
+    // Always allow cancellation (unless already at a terminal status)
+    if (!['Delivered', 'Served', 'Cancelled'].includes(currentStatus)) {
         options.push({ value: "Cancelled", label: "Cancel" });
     }
 
     return options;
 }
 
-function renderStatusDropdown(currentStatus, type, orderId) {
+function renderStatusDropdown(currentStatus, type, orderId, order) {
     const options = getStatusOptions(currentStatus, type);
-    if (options.length === 0) return `<span class="status-badge status-${(currentStatus||'').toLowerCase()}">${currentStatus}</span>`;
+    if (options.length === 0) {
+        // Terminal status — show payment badge for Served Dine-in orders
+        if (currentStatus === 'Served') {
+            const isPaid = (order && (order.paymentStatus === 'Paid' || order.paidAt));
+            if (isPaid) {
+                return `<span class="status-badge status-paid">Paid <i data-lucide="check-circle" style="width:11px;height:11px;vertical-align:-2px;"></i></span>`;
+            }
+            return `<span class="status-badge status-pending-payment">Pending Payment</span>`;
+        }
+        return `<span class="status-badge status-${(currentStatus||'').toLowerCase()}">${currentStatus}</span>`;
+    }
     const optionsHtml = options.map(o => {
         const cls = o.value === 'Cancelled' ? 'status-opt-cancel' : 'status-opt-next';
         return `<div class="status-opt ${cls}" data-val="${o.value}" data-action="pickStatus" data-id="${orderId}">${o.label}</div>`;
@@ -551,7 +561,7 @@ export function renderOrders(snap) {
                 </td>
                 <td data-label="Actions">
                     <div class="action-group-v4">
-                        ${renderStatusDropdown(o.status || 'Placed', o.type || 'Online', id)}
+                        ${renderStatusDropdown(o.status || 'Placed', o.type || 'Online', id, o)}
                         <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4" title="Print Receipt" aria-label="Print Receipt">
                             <i data-lucide="printer"></i>
                         </button>
@@ -604,7 +614,7 @@ export function renderOrders(snap) {
                 </td>
                 <td data-label="Actions">
                     <div class="action-group-v4">
-                        ${renderStatusDropdown(o.status || 'Placed', o.type || 'Online', id)}
+                        ${renderStatusDropdown(o.status || 'Placed', o.type || 'Online', id, o)}
                         <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4" aria-label="Print Receipt">
                             <i data-lucide="printer"></i>
                         </button>
@@ -689,7 +699,7 @@ export function renderOrders(snap) {
                 </td>
                 <td data-label="Actions">
                     <div class="action-group-v4">
-                        ${renderStatusDropdown(o.status || 'Placed', o.type || 'Online', id)}
+                        ${renderStatusDropdown(o.status || 'Placed', o.type || 'Online', id, o)}
                         <button data-action="printReceiptById" data-id="${o.orderId || id}" class="btn-action-v4" aria-label="Print Receipt">
                             <i data-lucide="printer"></i>
                         </button>
@@ -966,13 +976,13 @@ export async function updateStatus(id, status) {
     const currentLevel = sequence.indexOf(currentStatus);
     const nextLevel = sequence.indexOf(status);
 
-    // Rule 0: Counter (Dine-in) orders can skip "Ready" and go directly to "Delivered" on print
+    // Rule 0: Counter (Dine-in) orders can skip "Ready" and go directly to "Served" on print
     const isPosSale = (type || '').toLowerCase() === 'dine-in';
-    const isPosSkipReady = isPosSale && currentStatus === "Confirmed" && status === "Delivered";
+    const isPosSkipReady = isPosSale && currentStatus === "Confirmed" && status === "Served";
 
-    // Rule 1: Allow cancellation from any state EXCEPT "Delivered"
+    // Rule 1: Allow cancellation from any state EXCEPT Delivered or Served
     const isCancelling = status === "Cancelled";
-    const canCancel = isCancelling && currentStatus !== "Delivered";
+    const canCancel = isCancelling && !["Delivered", "Served"].includes(currentStatus);
 
     // Rule 2: Allow ONLY the exact next step in the sequence
     const isNextStep = nextLevel === currentLevel + 1;
@@ -983,8 +993,8 @@ export async function updateStatus(id, status) {
     if (!isNextStep && !canCancel && !isResurrecting && !isPosSkipReady && status !== currentStatus) {
         if (nextLevel <= currentLevel && nextLevel !== -1 && !isCancelling) {
             showToast(`⚠️ Status Reversal Blocked: Cannot go from ${currentStatus} to ${status}`, "error");
-        } else if (isCancelling && currentStatus === "Delivered") {
-            showToast(`⚠️ Cannot cancel an order that is already Delivered`, "error");
+        } else if (isCancelling && ["Delivered", "Served"].includes(currentStatus)) {
+            showToast(`⚠️ Cannot cancel an order that is already Served or Delivered`, "error");
         } else {
             const expectedNext = sequence[currentLevel + 1] || "None";
             showToast(`⚠️ Sequence Violation: Next step for ${type} order must be "${expectedNext}" (not "${status}")`, "error");
