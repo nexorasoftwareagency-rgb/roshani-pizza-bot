@@ -242,10 +242,10 @@ const DINE_IN_STEPS = [
     { key: 'Placed', label: 'Order Received' },
     { key: 'Confirmed', label: 'Preparing' },
     { key: 'Ready', label: 'Ready To Serve' },
-    { key: 'Delivered', label: 'Served' }
+    { key: 'Served', label: 'Served' }
 ];
 function dineInStepIndex(status) {
-    const map = { Placed: 0, Confirmed: 1, Preparing: 1, Ready: 2, Delivered: 3 };
+    const map = { Placed: 0, Confirmed: 1, Preparing: 1, Ready: 2, Served: 3, Delivered: 3 };
     return map[status] ?? 0;
 }
 
@@ -300,6 +300,7 @@ export function renderTracking(orderId, order, tableNumber) {
 
     const status = order.status || 'Placed';
     const isCancelled = status === 'Cancelled';
+    const isServed = status === 'Served';
     const isDelivered = status === 'Delivered';
     const currentIdx = dineInStepIndex(status);
 
@@ -323,6 +324,32 @@ export function renderTracking(orderId, order, tableNumber) {
     if (iconEl) iconEl.innerHTML = isCancelled ? TRACKING_CANCELLED_ICON : TRACKING_ICONS[currentIdx];
     if (labelEl) labelEl.textContent = isCancelled ? 'Order Cancelled' : TRACKING_HEADLINES[currentIdx].label;
     if (subEl) subEl.textContent = isCancelled ? 'Please speak to a staff member for help.' : TRACKING_HEADLINES[currentIdx].sub;
+    
+    // Pending Payment Status Card (green card above status strings)
+    const paymentPending = (isServed || isDelivered) && order.paymentStatus !== 'Paid';
+    if (paymentPending) {
+        const trackingBody = document.querySelector('.tracking-body');
+        if (trackingBody) {
+            // Check if already exists to avoid duplicates
+            let pendingCard = document.querySelector('.pending-payment-card');
+            if (!pendingCard) {
+                pendingCard = document.createElement('div');
+                pendingCard.className = 'pending-payment-card';
+                pendingCard.innerHTML = `
+                    <div class="pending-payment-content">
+                        <span class="pending-payment-text">Pending Payment</span>
+                    </div>
+                `;
+                trackingBody.insertBefore(pendingCard, trackingBody.firstChild);
+            }
+        }
+    } else {
+        // Remove if exists but no longer needed
+        const existingCard = document.querySelector('.pending-payment-card');
+        if (existingCard) {
+            existingCard.remove();
+        }
+    }
 
     // Segmented progress bar — "current" segment uses --status-active
     const track = document.getElementById('trackingProgressTrack');

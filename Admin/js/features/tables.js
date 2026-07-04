@@ -330,7 +330,7 @@ function _kdsCard(o) {
     } else if (st === 'Confirmed' || st === 'Preparing') {
         actionBtn = `<button class="kds-btn kds-btn-ready" data-action="advanceTableOrder" data-id="${escapeHtml(o.id)}" data-next="Ready">Mark Ready</button>`;
     } else if (st === 'Ready') {
-        actionBtn = `<button class="kds-btn kds-btn-serve" data-action="advanceTableOrder" data-id="${escapeHtml(o.id)}" data-next="Delivered">Serve</button>`;
+        actionBtn = `<button class="kds-btn kds-btn-serve" data-action="advanceTableOrder" data-id="${escapeHtml(o.id)}" data-next="Served">Serve</button>`;
     }
     return `
     <div class="kds-card ${urgentCls}" data-order-id="${escapeHtml(o.id)}">
@@ -410,7 +410,7 @@ function _orderActionButtons(o) {
                 <button class="btn-text text-danger btn-small" data-action="advanceTableOrder" data-id="${id}" data-next="Cancelled">Cancel</button>`;
     }
     if (o.status === 'Ready') {
-        return `<button class="btn-action-green btn-small" data-action="advanceTableOrder" data-id="${id}" data-next="Delivered">
+        return `<button class="btn-action-green btn-small" data-action="advanceTableOrder" data-id="${id}" data-next="Served">
                     <i data-lucide="check-check" class="icon-12"></i> Mark Served
                 </button>`;
     }
@@ -495,8 +495,12 @@ function _renderTableDrawer() {
         </div>`;
 
     const btns = [];
+    const allServed = orders.length > 0 && orders.every(o => o.status === 'Served' || o.status === 'Delivered');
     if (sess.status !== 'billing') {
         btns.push(`<button class="btn-action-orange btn-small" data-action="requestBillForTable" data-id="${escapeHtml(t.id)}"><i data-lucide="receipt" class="icon-14"></i> Generate Bill</button>`);
+        if (allServed) {
+            btns.push(`<button class="btn-action-green btn-small" data-action="makePaymentForTable" data-id="${escapeHtml(t.id)}"><i data-lucide="wallet" class="icon-14"></i> Make Payment</button>`);
+        }
     } else {
         btns.push(`<button class="btn-action-green btn-small" data-action="closeSessionForTable" data-id="${escapeHtml(t.id)}"><i data-lucide="check-check" class="icon-14"></i> Close Table (Paid)</button>`);
     }
@@ -654,6 +658,46 @@ async function _closeSessionForTable(tableId) {
     }
 }
 
+async function _makePaymentForTable(tableId) {
+    const t = _tables[tableId];
+    const sess = _sessionForTable(tableId);
+    if (!t || !sess) return;
+
+    const orders = _ordersForSession(sess.sessionId || t.currentSession);
+    const allServed = orders.length > 0 && orders.every(o => o.status === 'Served' || o.status === 'Delivered');
+    if (!allServed) {
+        showToast('All orders must be served before payment', 'warning');
+        return;
+    }
+
+    const total = Number(sess.grandTotal || sess.runningTotal || 0);
+    const method = await showPaymentPicker(total);
+    if (!method) return;
+
+    try {
+        await update(_sessRef(sess.sessionId), { status: 'closed', closedAt: _nowMs(), paymentMethod: method, paidAt: _nowMs() });
+        await update(_tblRef(tableId), { status: 'free', currentSession: null, updatedAt: _nowMs() });
+        for (const o of orders) {
+            if (o.id && o.status !== 'Cancelled') {
+                await update(_ordersRef(o.id), { paymentMethod: method, paymentStatus: 'Paid', updatedAt: _nowMs() });
+            }
+        }
+        await runTransaction(Outlet.ref(`tableAnalytics/${tableId}`), (cur) => {
+            cur = cur || { totalOrders: 0, totalRevenue: 0, avgSessionTime: 0, occupancyRate: 0 };
+            const orderCount = (sess.orders || []).length;
+            const mins = _sessionElapsedMinutes(sess);
+            cur.totalOrders = (cur.totalOrders || 0) + orderCount;
+            cur.totalRevenue = (cur.totalRevenue || 0) + total;
+            cur.avgSessionTime = cur.avgSessionTime ? Math.round((cur.avgSessionTime + mins) / 2) : mins;
+            return cur;
+        });
+        if (_drawerTableId === tableId) _closeTableDrawer();
+        showToast(`Table closed — ₹${total.toLocaleString('en-IN')} via ${method}`, 'success');
+        haptic(30);
+    } catch (e) {
+        showToast('Failed: ' + (e?.message || e), 'error');
+    }
+}
 async function _cancelSessionForTable(tableId) {
     const t = _tables[tableId];
     const sess = _sessionForTable(tableId);
@@ -675,22 +719,20 @@ async function _cancelSessionForTable(tableId) {
 // ---------------------------------------------------------------------
 async function _advanceOrder(orderId, nextStatus) {
     try {
-        let paymentMethod, paymentStatus;
-        if (nextStatus === 'Delivered') {
-            const o = _orders[orderId];
-            const total = Number(o?.total || 0);
-            const method = await showPaymentPicker(total);
-            if (!method) return;
-            paymentMethod = method;
-            paymentStatus = 'Paid';
-        }
         const updates = { status: nextStatus, updatedAt: _nowMs() };
-        if (paymentMethod) updates.paymentMethod = paymentMethod;
-        if (paymentStatus) updates.paymentStatus = paymentStatus;
         await update(_ordersRef(orderId), updates);
         if (_orders[orderId]) {
             _orders[orderId] = { ..._orders[orderId], ...updates };
         }
+
+        // Auto-print KOT on Accept (Placed -> Confirmed)
+        if (nextStatus === 'Confirmed') {
+            const o = _orders[orderId];
+            if (o?.tableId) {
+                setTimeout(() => _printTableKOT(o.tableId), 500);
+            }
+        }
+
         showToast(`Order moved to ${nextStatus}`, 'success');
         haptic(20);
         _renderKDS();
@@ -1142,6 +1184,7 @@ export function loadTableManagement() {
                 case 'advanceTableOrder': _advanceOrder(id, btn.dataset.next); break;
                 case 'requestBillForTable': _requestBillForTable(id); break;
                 case 'closeSessionForTable': _closeSessionForTable(id); break;
+                case 'makePaymentForTable': _makePaymentForTable(id); break;
                 case 'cancelSessionForTable': _cancelSessionForTable(id); break;
                 case 'printTableKOT': _printTableKOT(id); break;
                 case 'printSessionBill': _printSessionBill(id); break;
