@@ -5,7 +5,7 @@
       "namespace": "android_app",
       "package_name": "com.roshani.rider",
       "sha256_cert_fingerprints": [
-        "PASTE_YOUR_REAL_SHA256_FINGERPRINT_HERE"
+        "REPLACE_WITH_REAL_SHA256"
       ]
     }
   }
