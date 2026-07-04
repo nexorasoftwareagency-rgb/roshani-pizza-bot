@@ -494,7 +494,7 @@ export function renderOrders(snap) {
         const safeCustomerName = escapeHtml(o.customerName || "Customer");
         const safeStatus = escapeHtml(o.status || "Unknown");
         const safeStatusClass = safeStatus.replace(/ /g, '');
-        const truncatedAddress = o.address ? (o.address.length > 30 ? o.address.substring(0, 30) + "..." : o.address) : "Counter Sale";
+        const truncatedAddress = o.address ? (o.address.length > 30 ? o.address.substring(0, 30) + "..." : o.address) : (o.type || 'Walk-in');
 
         if (activeTab === 'dashboard') {
             const itemSummary = items.length > 0 ? `${items.length} Items` : "No Items";

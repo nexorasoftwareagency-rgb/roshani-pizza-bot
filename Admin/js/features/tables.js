@@ -98,7 +98,7 @@ function _ordersForSession(sessionId) {
 function _dineInOrders() {
     return Object.entries(_orders)
         .map(([id, o]) => ({ id, ...o }))
-        .filter(o => o.type === 'Dine-in' && o.status !== 'Delivered' && o.status !== 'Cancelled')
+        .filter(o => o.type === 'Dine-in' && o.status !== 'Delivered' && o.status !== 'Cancelled' && o.status !== 'Served')
         .sort((a, b) => _ms(b.createdAt) - _ms(a.createdAt));
 }
 
