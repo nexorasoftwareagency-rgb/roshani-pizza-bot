@@ -194,6 +194,7 @@
         ".write": "auth != null && (root.child('admins').child(auth.uid).exists())",
         ".indexOn": ["storeName", "shopStatus"],
         "Store": {
+          ".read": "true",
           "storeName": { ".read": "true" },
           "customerMenuBgImage": { ".read": "true" },
           "instagram": { ".read": "true" },

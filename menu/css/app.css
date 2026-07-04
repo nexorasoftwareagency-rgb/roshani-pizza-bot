@@ -494,9 +494,6 @@ img{max-width:100%; display:block;}
 
 /* ---------- Hover feedback ---------- */
 .dish-card:hover{ box-shadow:0 10px 22px rgba(243,107,33,.12); border-color:var(--primary); }
-@media (max-width:360px){
-.dish-list{ grid-template-columns:1fr; }
-}
 .category-pill:hover{ transform:translateY(-1px); }
 .size-opt{ cursor:pointer; transition: border-color .15s ease, background .15s ease; }
 .size-opt:hover{ border-color:var(--primary); background:rgba(232,73,8,.04); }
