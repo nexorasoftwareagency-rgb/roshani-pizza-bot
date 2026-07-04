@@ -1266,7 +1266,7 @@
         overflow: visible !important;
     }
     #tab-dashboard .recent-section .glass-card {
-        max-height: 60vh !important;
+        max-height: 80vh !important;
         overflow-y: auto !important;
     }
 
@@ -1836,7 +1836,7 @@
 
     /* Recent section stays full width of main column */
     #tab-dashboard .recent-section .glass-card {
-        max-height: 50vh !important;
+        max-height: 70vh !important;
         overflow-y: auto !important;
     }
 
