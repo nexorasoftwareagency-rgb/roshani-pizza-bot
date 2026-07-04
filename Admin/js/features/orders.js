@@ -774,10 +774,10 @@ function updateDashboardStats(orders) {
     });
 
     const revenue = todayOrders
-        .filter(o => o.status === "Delivered")
+        .filter(o => ['Delivered', 'Served'].includes(o.status))
         .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
-    const activeToday = todayOrders.filter(o => !['Delivered', 'Cancelled'].includes(o.status)).length;
+    const activeToday = todayOrders.filter(o => !['Delivered', 'Served', 'Cancelled'].includes(o.status)).length;
     const pending = orders.filter(o => ["Placed", "Confirmed"].includes(o.status)).length;
 
     // Update UI
