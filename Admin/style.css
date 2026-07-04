@@ -8606,3 +8606,60 @@ body.pos-selection-mode .walkin-picker {
         flex-basis: 200px;
     }
 }
+
+
+/* ----------------------------------------------------------------
+   3) RECENT ORDER HISTORY — tighter column layout so all data
+      fits without truncation in the main column.
+   ---------------------------------------------------------------- */
+
+#tab-dashboard .recent-section .premium-table-v4 {
+    table-layout: fixed;
+    width: 100%;
+}
+#tab-dashboard .recent-section .premium-table-v4 th:nth-child(1),
+#tab-dashboard .recent-section .premium-table-v4 td:nth-child(1) { width: 14%; }
+#tab-dashboard .recent-section .premium-table-v4 th:nth-child(2),
+#tab-dashboard .recent-section .premium-table-v4 td:nth-child(2) { width: 15%; }
+#tab-dashboard .recent-section .premium-table-v4 th:nth-child(3),
+#tab-dashboard .recent-section .premium-table-v4 td:nth-child(3) { width: 20%; }
+#tab-dashboard .recent-section .premium-table-v4 th:nth-child(4),
+#tab-dashboard .recent-section .premium-table-v4 td:nth-child(4) { width: 9%; }
+#tab-dashboard .recent-section .premium-table-v4 th:nth-child(5),
+#tab-dashboard .recent-section .premium-table-v4 td:nth-child(5) { width: 10%; }
+#tab-dashboard .recent-section .premium-table-v4 th:nth-child(6),
+#tab-dashboard .recent-section .premium-table-v4 td:nth-child(6) { width: 10%; }
+#tab-dashboard .recent-section .premium-table-v4 th:nth-child(7),
+#tab-dashboard .recent-section .premium-table-v4 td:nth-child(7) { width: 9%; }
+#tab-dashboard .recent-section .premium-table-v4 th:nth-child(8),
+#tab-dashboard .recent-section .premium-table-v4 td:nth-child(8) { width: 13%; }
+
+#tab-dashboard .recent-section .premium-table-v4 td,
+#tab-dashboard .recent-section .premium-table-v4 th {
+    padding: 10px 8px !important;
+    vertical-align: middle;
+}
+#tab-dashboard .recent-section .premium-table-v4 .text-muted-small {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#tab-dashboard .recent-section .premium-table-v4 .status {
+    white-space: nowrap;
+    font-size: 11px;
+    padding: 3px 8px;
+}
+#tab-dashboard .recent-section .premium-table-v4 .badge-payment-v4 {
+    font-size: 11px;
+    padding: 2px 6px;
+}
+#tab-dashboard .recent-section .premium-table-v4 .identity-info-v4 .name {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#tab-dashboard .recent-section .premium-table-v4 .identity-info-v4 .sub {
+    font-size: 11px;
+}

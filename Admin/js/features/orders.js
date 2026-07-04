@@ -522,8 +522,9 @@ export function renderOrders(snap) {
                     </div>
                 </td>
                 <td data-label="Details">
-                    <div class="flex-col">
+                    <div class="flex-row flex-center flex-gap-6">
                         <span class="font-600 fs-13">${itemSummary}</span>
+                        <span class="text-muted-small">·</span>
                         <span class="text-muted-small">${escapeHtml(truncatedAddress)}</span>
                     </div>
                 </td>
