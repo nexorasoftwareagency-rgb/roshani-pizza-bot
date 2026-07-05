@@ -649,36 +649,7 @@ async function _requestBillForTable(tableId) {
 }
 
 async function _closeSessionForTable(tableId) {
-    const t = _tables[tableId];
-    const sess = _sessionForTable(tableId);
-    if (!t || !sess) return;
-    const total = Number(sess.grandTotal || sess.runningTotal || 0);
-    const method = await showPaymentPicker(total);
-    if (!method) return;
-    try {
-        await update(_sessRef(sess.sessionId), { status: 'closed', closedAt: _nowMs(), paymentMethod: method, paidAt: _nowMs() });
-        await update(_tblRef(tableId), { status: 'free', currentSession: null, updatedAt: _nowMs() });
-        const ordersInSession = _ordersForSession(sess.sessionId);
-        for (const o of ordersInSession) {
-            if (o.id && o.status !== 'Cancelled') {
-                await update(_ordersRef(o.id), { paymentMethod: method, paymentStatus: 'Paid', updatedAt: _nowMs() });
-            }
-        }
-        await runTransaction(Outlet.ref(`tableAnalytics/${tableId}`), (cur) => {
-            cur = cur || { totalOrders: 0, totalRevenue: 0, avgSessionTime: 0, occupancyRate: 0 };
-            const orderCount = (sess.orders || []).length;
-            const mins = _sessionElapsedMinutes(sess);
-            cur.totalOrders = (cur.totalOrders || 0) + orderCount;
-            cur.totalRevenue = (cur.totalRevenue || 0) + total;
-            cur.avgSessionTime = cur.avgSessionTime ? Math.round((cur.avgSessionTime + mins) / 2) : mins;
-            return cur;
-        });
-        if (_drawerTableId === tableId) _closeTableDrawer();
-        showToast(`Table closed — ₹${total.toLocaleString('en-IN')} via ${method}`, 'success');
-        haptic(30);
-    } catch (e) {
-        showToast('Failed to close table: ' + (e?.message || e), 'error');
-    }
+    return _makePaymentForTable(tableId);
 }
 
 async function _makePaymentForTable(tableId) {
@@ -725,10 +696,18 @@ async function _cancelSessionForTable(tableId) {
     const t = _tables[tableId];
     const sess = _sessionForTable(tableId);
     if (!t) return;
-    const ok = await showConfirm('Cancel this session and free the table? Existing orders remain in Orders history but the running bill is discarded.', 'Cancel Session');
+    const ok = await showConfirm('Cancel this session and free the table? All pending orders will also be cancelled.', 'Cancel Session');
     if (!ok) return;
     try {
-        if (sess) await update(_sessRef(sess.sessionId), { status: 'closed', closedAt: _nowMs() });
+        if (sess) {
+            const ordersInSession = _ordersForSession(sess.sessionId);
+            for (const o of ordersInSession) {
+                if (o.id && o.status !== 'Cancelled') {
+                    await update(_ordersRef(o.id), { status: 'Cancelled', updatedAt: _nowMs() });
+                }
+            }
+            await update(_sessRef(sess.sessionId), { status: 'closed', closedAt: _nowMs() });
+        }
         await update(_tblRef(tableId), { status: 'free', currentSession: null, updatedAt: _nowMs() });
         if (_drawerTableId === tableId) _closeTableDrawer();
         showToast('Session cancelled, table freed', 'success');
