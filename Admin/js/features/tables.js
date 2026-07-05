@@ -291,7 +291,7 @@ function _renderFloorGrid() {
 // RENDER: Live Orders (Dine-In) panel
 // ---------------------------------------------------------------------
 function _statusPillClass(status) {
-    const map = { Placed: 'badge-placed', Confirmed: 'badge-confirmed', Ready: 'badge-ready', Preparing: 'badge-preparing', Delivered: 'badge-delivered' };
+    const map = { Placed: 'badge-placed', Confirmed: 'badge-confirmed', Ready: 'badge-ready', Preparing: 'badge-preparing', Served: 'badge-delivered', Delivered: 'badge-delivered' };
     return map[status] || 'badge-pending';
 }
 
@@ -630,6 +630,14 @@ async function _requestBillForTable(tableId) {
     const t = _tables[tableId];
     const sess = _sessionForTable(tableId);
     if (!t || !sess) return;
+
+    const orders = _ordersForSession(sess.sessionId || t.currentSession);
+    const allServed = orders.length > 0 && orders.every(o => o.status === 'Served' || o.status === 'Delivered');
+    if (!allServed) {
+        showToast('All orders must be served before generating bill', 'warning');
+        return;
+    }
+
     try {
         await update(_sessRef(sess.sessionId), { status: 'billing' });
         await update(_tblRef(tableId), { status: 'billing', updatedAt: _nowMs() });
