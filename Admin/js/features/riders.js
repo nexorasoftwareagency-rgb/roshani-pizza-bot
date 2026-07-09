@@ -2,7 +2,8 @@ import { db, auth, secondaryAuth, secondaryAuthAvailable, Outlet, serverTimestam
 import { state } from '../state.js';
 import { showDeleteConfirm } from '../ui-utils.js';
 import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm, addRiderNotification, getSkeletonDivs } from '../utils.js';
-import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
+import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
+import { loadLucide } from '../ui.js';
 
 let _ridersUnsub = null;
 let _statsUnsub = null;
@@ -163,7 +164,8 @@ function buildGrid(data) {
     });
 }
 
-export function renderRiders(searchTerm = "") {
+export async function renderRiders(searchTerm = "") {
+    await loadTabulator();
     const activeDashboard = document.getElementById('riderStatusList');
     const statOnline = document.getElementById('rider-stat-online');
     const statBusy = document.getElementById('rider-stat-busy');
@@ -222,6 +224,7 @@ export function renderRiders(searchTerm = "") {
                 ${displayStatus === 'On Delivery' && r.currentOrder ? `<div class="active-task-v4"><i data-lucide="package" style="width:12px;"></i><span>Order #${escapeHtml(String(r.currentOrder).slice(-5))}</span></div>` : `<div class="idle-state-v4 text-muted-small"><i data-lucide="clock" style="width:12px;"></i><span>Waiting for orders...</span></div>`}
             `;
             activeDashboard.appendChild(card);
+            await loadLucide();
             if (window.lucide) window.lucide.createIcons({ root: card });
         }
     });
@@ -235,6 +238,7 @@ export function renderRiders(searchTerm = "") {
     if (statEarnings) statEarnings.innerText = "₹" + totalEarnings.toLocaleString();
 
     const manageTab = document.getElementById('management-tab-container');
+    await loadLucide();
     if (window.lucide) {
         if (manageTab) window.lucide.createIcons({ root: manageTab });
         else window.lucide.createIcons({ root: document.getElementById('tab-riders') || document.body });

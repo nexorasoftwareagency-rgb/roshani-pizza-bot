@@ -191,8 +191,10 @@ export const standardizeOrderData = (o) => {
         subtotal: parseFloat(o.subtotal || o.itemTotal || 0),
         tax: parseFloat(o.tax || 0),
         taxName: o.taxName || '',
+        taxItems: o.taxItems,
         serviceCharge: parseFloat(o.serviceCharge || 0),
         serviceChargeName: o.serviceChargeName || '',
+        serviceChargeRate: o.serviceChargeRate || undefined,
         discount: parseFloat(o.discount || 0),
         deliveryFee: parseFloat(o.deliveryFee || 0),
         total: parseFloat(o.total || 0),
@@ -325,6 +327,22 @@ export function getSkeletonRows(count = 5, colspan = 7) {
     return Array.from({ length: count }, () =>
         `<tr class="skeleton-row"><td colspan="${colspan}"><div class="skeleton" style="height:44px;width:100%;border-radius:6px;margin:3px 0"></div></td></tr>`
     ).join('');
+}
+
+let _xlsxPromise = null;
+
+export function loadXLSX() {
+    if (typeof window.XLSX !== 'undefined') return Promise.resolve(window.XLSX);
+    if (_xlsxPromise) return _xlsxPromise;
+    _xlsxPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js';
+        script.crossOrigin = 'anonymous';
+        script.onload = () => resolve(window.XLSX);
+        script.onerror = () => { _xlsxPromise = null; reject(new Error('Failed to load XLSX library')); };
+        document.head.appendChild(script);
+    });
+    return _xlsxPromise;
 }
 
 export function getSkeletonDivs(count = 5) {

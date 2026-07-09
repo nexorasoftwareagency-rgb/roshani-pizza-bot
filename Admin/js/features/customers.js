@@ -1,11 +1,12 @@
 import { Outlet, get } from '../firebase.js';
 import { escapeHtml, getSkeletonDivs } from '../utils.js';
 import { logger } from '../utils/logger.js';
-import { GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
+import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
 
 let _grid = null;
 
 function buildGrid(data) {
+    await loadTabulator();
     const el = document.getElementById("customersTableBody");
     if (!el) return;
     el.innerHTML = '';

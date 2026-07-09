@@ -2,13 +2,14 @@ import { Outlet, get, update } from '../firebase.js';
 import { ui } from '../ui.js';
 import { showToast, logAudit, escapeHtml, formatDate, haptic, getSkeletonDivs } from '../utils.js';
 import { showBulkDeleteConfirm } from '../ui-utils.js';
-import { createGrid, updateGridData, GRID_DEFAULTS } from '../tabulator-setup.js';
+import { createGrid, updateGridData, GRID_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
 
 let _allLostSales = [];
 let _grid = null;
 let _outletFilter = 'all';
 
-function buildGrid(data) {
+async function buildGrid(data) {
+    await loadTabulator();
     const el = document.getElementById('lostSalesTableBody');
     if (!el) return;
     el.innerHTML = '';

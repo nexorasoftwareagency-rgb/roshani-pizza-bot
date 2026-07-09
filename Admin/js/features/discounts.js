@@ -6,8 +6,9 @@
 import { Outlet, ref, get, onValue, set, update, remove, push, runTransaction, isConnected, onConnectionChange } from '../firebase.js';
 import { state } from '../state.js';
 import { showToast, showConfirm } from '../ui-utils.js';
-import { haptic } from '../utils.js';
+import { haptic, escapeHtml, formatDate } from '../utils.js';
 import { clearDiscountCache } from './discount-evaluator.js';
+import { loadLucide } from '../ui.js';
 
 const DISCOUNT_TYPES = ['global', 'category', 'firstOrder', 'coupon'];
 
@@ -17,15 +18,8 @@ let _categoriesSnap = [];
 let _editingId = null;
 let _connUnsub = null;
 
-function _outlet() { return state.currentOutlet || 'pizza'; }
 function _ref(path) { return Outlet.ref(path); }
 function _discRef(sub) { return Outlet.ref(`discounts/${sub}`); }
-function _nowMs() { return Date.now(); }
-function _esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-function _fmtDate(ms) {
-    if (!ms) return '—';
-    return new Date(ms).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 function _toLocalInputValue(ms) {
     if (!ms) return '';
     const d = new Date(ms);
@@ -35,7 +29,7 @@ function _toLocalInputValue(ms) {
 function _toIsoNoZ(str) { return str ? new Date(str).getTime() : 0; }
 
 function _status(d) {
-    const now = _nowMs();
+    const now = Date.now();
     if (d.enabled === false) return 'disabled';
     if (d.startsAt && now < d.startsAt) return 'scheduled';
     if (d.endsAt && d.endsAt > 0 && now > d.endsAt) return 'expired';
@@ -50,7 +44,7 @@ function _typeBadge(type) {
         coupon: ['🎟️', 'Coupon']
     };
     const [icon, label] = map[type] || ['?', type];
-    return `<span class="discount-type-badge discount-type-${_esc(type)}">${icon} ${_esc(label)}</span>`;
+    return `<span class="discount-type-badge discount-type-${escapeHtml(type)}">${icon} ${escapeHtml(label)}</span>`;
 }
 
 function _valueBadge(d) {
@@ -61,8 +55,8 @@ function _valueBadge(d) {
 
 function _windowLine(d) {
     if (d.type === 'firstOrder') return '<em>Always on for new customers</em>';
-    const s = d.startsAt ? _fmtDate(d.startsAt) : 'now';
-    const e = (!d.endsAt || d.endsAt === 0) ? 'no end' : _fmtDate(d.endsAt);
+    const s = d.startsAt ? formatDate(d.startsAt) : 'now';
+    const e = (!d.endsAt || d.endsAt === 0) ? 'no end' : formatDate(d.endsAt);
     return `${s} → ${e}`;
 }
 
@@ -70,7 +64,7 @@ function _renderCard(d) {
     const status = _status(d);
     const used = d.stats?.usedCount || 0;
     const given = d.stats?.totalDiscountGiven || 0;
-    const lastUsed = d.stats?.lastUsedAt ? _fmtDate(d.stats.lastUsedAt) : null;
+    const lastUsed = d.stats?.lastUsedAt ? formatDate(d.stats.lastUsedAt) : null;
 
     // Expiry countdown
     let expiryBadge = '';
@@ -93,20 +87,20 @@ function _renderCard(d) {
     }
 
     return `
-    <div class="discount-card" data-id="${_esc(d.id)}">
+    <div class="discount-card" data-id="${escapeHtml(d.id)}">
         <div class="flex-between flex-center flex-wrap-mobile">
             <div style="flex:1; min-width:200px;">
                 <div class="flex-row flex-gap-10 flex-center flex-wrap-mobile">
-                    <strong>${_esc(d.name || d.id)}</strong>
+                    <strong>${escapeHtml(d.name || d.id)}</strong>
                     ${_typeBadge(d.type)}
-                    <span class="badge badge-${status}">${_esc(status)}</span>
+                    <span class="badge badge-${status}">${escapeHtml(status)}</span>
                     ${d.stackable ? '<span class="badge badge-info">stackable</span>' : ''}
-                    ${d.channel && d.channel !== 'all' ? `<span class="badge badge-secondary">${_esc(d.channel === 'whatsapp' ? 'WhatsApp' : d.channel === 'pos' ? 'POS' : d.channel === 'both' ? 'WA+POS' : d.channel)}</span>` : ''}
+                    ${d.channel && d.channel !== 'all' ? `<span class="badge badge-secondary">${escapeHtml(d.channel === 'whatsapp' ? 'WhatsApp' : d.channel === 'pos' ? 'POS' : d.channel === 'both' ? 'WA+POS' : d.channel)}</span>` : ''}
                     ${expiryBadge}
                 </div>
                 <div class="text-muted-small mt-4">
                     ${_valueBadge(d)}${d.maxCap ? ` (cap ₹${Number(d.maxCap).toFixed(0)})` : ''}
-                    ${d.type === 'coupon' && d.couponCode ? ` · code <code>${_esc(d.couponCode)}</code>` : ''}
+                    ${d.type === 'coupon' && d.couponCode ? ` · code <code>${escapeHtml(d.couponCode)}</code>` : ''}
                     ${d.type === 'category' && Array.isArray(d.categoryIds) ? ` · ${d.categoryIds.length} categor${d.categoryIds.length === 1 ? 'y' : 'ies'}` : ''}
                 </div>
                 <div class="text-muted-small">${_windowLine(d)}</div>
@@ -115,13 +109,13 @@ function _renderCard(d) {
             </div>
             <div class="flex-row flex-gap-6 flex-center">
                 <label class="promo-switch" title="Enable / disable">
-                    <input type="checkbox" class="discount-toggle" data-id="${_esc(d.id)}" ${d.enabled !== false ? 'checked' : ''}>
+                    <input type="checkbox" class="discount-toggle" data-id="${escapeHtml(d.id)}" ${d.enabled !== false ? 'checked' : ''}>
                     <span class="promo-slider" style="${d.enabled !== false ? '' : 'background:#94a3b8;'}"></span>
                 </label>
-                <button class="btn-text" data-action="editDiscount" data-id="${_esc(d.id)}" title="Edit">
+                <button class="btn-text" data-action="editDiscount" data-id="${escapeHtml(d.id)}" title="Edit">
                     <i data-lucide="pencil"></i>
                 </button>
-                <button class="btn-text text-danger" data-action="deleteDiscount" data-id="${_esc(d.id)}" title="Delete">
+                <button class="btn-text text-danger" data-action="deleteDiscount" data-id="${escapeHtml(d.id)}" title="Delete">
                     <i data-lucide="trash-2"></i>
                 </button>
             </div>
@@ -158,7 +152,8 @@ function _renderList() {
     set('discountCountScheduled', groups.scheduled.length);
     set('discountCountExpired',   groups.expired.length);
 
-    if (window.lucide) window.lucide.createIcons({ root: document.getElementById('tab-discounts') });
+    await loadLucide();
+    window.lucide.createIcons({ root: document.getElementById('tab-discounts') });
 }
 
 function _switchList(mode) {
@@ -187,8 +182,8 @@ function _renderCategoryChips(selectedIds = []) {
         return;
     }
     el.innerHTML = _categoriesSnap.map(c => `
-        <button type="button" class="disc-cat-chip ${selectedIds.includes(c.id) ? 'selected' : ''}" data-cat-id="${_esc(c.id)}">
-            ${_esc(c.name)}
+        <button type="button" class="disc-cat-chip ${selectedIds.includes(c.id) ? 'selected' : ''}" data-cat-id="${escapeHtml(c.id)}">
+            ${escapeHtml(c.name)}
         </button>
     `).join('');
     // Use event delegation to avoid listener accumulation
@@ -279,9 +274,9 @@ async function _save() {
         enabled,
         channel: (document.getElementById('discChannel')?.value || 'whatsapp'),
         engineVersion: 1,
-        updatedAt: _nowMs()
+        updatedAt: Date.now()
     };
-    if (!_editingId) { doc.createdAt = _nowMs(); doc.createdBy = window.currentAdmin?.uid || 'admin'; doc.stats = { usedCount: 0, totalDiscountGiven: 0 }; }
+    if (!_editingId) { doc.createdAt = Date.now(); doc.createdBy = window.currentAdmin?.uid || 'admin'; doc.stats = { usedCount: 0, totalDiscountGiven: 0 }; }
     else { doc.id = id; }
 
     try {
@@ -297,7 +292,7 @@ async function _save() {
 
 async function _toggle(id, enabled) {
     try {
-        await update(_discRef(id), { enabled, updatedAt: _nowMs() });
+        await update(_discRef(id), { enabled, updatedAt: Date.now() });
         clearDiscountCache();
     } catch (e) {
         showToast('Toggle failed', 'error');

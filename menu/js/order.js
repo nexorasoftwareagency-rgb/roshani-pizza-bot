@@ -22,8 +22,8 @@
  * for how to change this if you would rather standardize on "DineIn"
  * and update orders.js's STATUS_SEQUENCES key to match.
  */
-import { outletRef, push, set } from './firebase.js';
-import { Session, attachOrderToSession } from './session.js';
+import { outletRef, push, set, update } from './firebase.js';
+import { Session, attachOrderToSession, ensureSession } from './session.js';
 import { Cart, clearCart, subtotal as cartSubtotal } from './cart.js';
 
 function round2(n) { return Math.round(n * 100) / 100; }
@@ -41,7 +41,13 @@ function round2(n) { return Math.round(n * 100) / 100; }
  * @param {string} [opts.discount.label] - Discount label
  * @param {string} [opts.discount.source] - Source string (e.g. "coupon:WELCOME20")
  * @param {string} [opts.discount.discountId] - Firebase discount ID */
-export async function placeOrder({ taxPercent = 5, taxEnabled = true, serviceChargeEnabled = false, serviceChargeRate = 0, customerName = '', customerPhone = '', discount = null } = {}) {
+export async function placeOrder({ taxPercent = 5, taxEnabled = true, taxRates, serviceChargeEnabled = false, serviceChargeRate = 0, customerName = '', customerPhone = '', discount = null } = {}) {
+    const sessResult = await ensureSession();
+    if (!sessResult.ok) throw new Error('Session not available');
+    if (sessResult.isNewSession) {
+        clearCart();
+        throw new Error('Session expired — please review your cart and try again');
+    }
     if (Object.keys(Cart.lines).length === 0) throw new Error('Cart is empty');
 
     const items = {};
@@ -56,16 +62,19 @@ export async function placeOrder({ taxPercent = 5, taxEnabled = true, serviceCha
     });
 
     const subtotal = round2(cartSubtotal());
-    const tax = taxEnabled ? round2(subtotal * (taxPercent / 100)) : 0;
+    const rates = (taxRates && Array.isArray(taxRates) && taxRates.length > 0) ? taxRates : (taxEnabled ? [{ name: 'Tax', rate: taxPercent }] : []);
+    const taxItems = rates.map(r => ({ name: r.name, rate: r.rate, amount: round2(subtotal * (r.rate / 100)) }));
+    const tax = taxItems.reduce((s, t) => s + t.amount, 0);
     const serviceCharge = serviceChargeEnabled ? round2(subtotal * (serviceChargeRate / 100)) : 0;
     const discountAmount = discount && discount.amount > 0 ? Math.min(round2(discount.amount), subtotal + tax + serviceCharge) : 0;
     const total = round2(subtotal + tax + serviceCharge - discountAmount);
+    const taxName = rates.map(r => r.name).join(' + ');
 
     const orderPayload = {
         // --- Standard fields every existing order has ---
         status: 'Placed',
         items,
-        subtotal, tax, serviceCharge, total,
+        subtotal, tax, taxItems, taxName, serviceCharge, total,
         paymentStatus: 'Pending',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -76,27 +85,56 @@ export async function placeOrder({ taxPercent = 5, taxEnabled = true, serviceCha
         table: String(Session.table.number),
         tableId: Session.tableId,
         sessionId: Session.sessionId,
+        orderGroupId: Session.currentGroupId || '',
 
         // --- Optional contact, collected at checkout only ---
-        customerName: customerName || '',
-        customerPhone: customerPhone || '',
-        phone: customerPhone,
-
-        // --- Discount (if applied) ---
-        ...(discountAmount > 0 ? {
-            discountAmount,
-            discountLabel: discount.label || '',
-            discountSource: discount.source || '',
-            discountId: discount.discountId || ''
-        } : {})
+        customerName: customerName || ''
+        // PII (phone) intentionally omitted — written to tableSessionsContact instead
     };
+    // --- Discount (if applied) ---
+    if (discountAmount > 0) {
+        orderPayload.discountAmount = discountAmount;
+        orderPayload.discountLabel = discount.label || '';
+        orderPayload.discountSource = discount.source || '';
+        orderPayload.discountId = discount.discountId || '';
+    }
 
     const newOrderRef = push(outletRef('orders'));
-    await set(newOrderRef, orderPayload);
+    // Write as 'Pending' first so the order is never visible as 'Placed' in KDS if the session attach fails
+    var writeData = {};
+    for (var k in orderPayload) { writeData[k] = orderPayload[k]; }
+    writeData.status = 'Pending';
+    await set(newOrderRef, writeData);
 
     // Fold this order's totals into the session's running bill
-    await attachOrderToSession(newOrderRef.key, { subtotal, tax, serviceCharge, total, discountAmount });
+    const attached = await attachOrderToSession(newOrderRef.key, { subtotal, tax, serviceCharge, total, discountAmount }, Session.currentGroupId);
+    if (!attached) {
+        // Transaction aborted: session/group is no longer active. Order is orphaned in /orders.
+        update(newOrderRef, { status: 'Cancelled', cancelledReason: 'Session inactive at placement' }).catch(() => {});
+        throw new Error('Session or group is no longer active — order could not be linked');
+    }
+    // Promote to 'Placed' only after successful session attachment
+    try {
+        await update(newOrderRef, { status: 'Placed' });
+    } catch (err) {
+        update(newOrderRef, { status: 'Cancelled', cancelledReason: 'Promotion failed' }).catch(() => {});
+        console.error('[Order] Promotion failed:', err);
+        throw new Error('Could not place order. Please try again.');
+    }
 
+    // Clear cart immediately so the user can start a new order
     clearCart();
+
+    // Write order-level guest record (fire-and-forget; must not reject the caller)
+    const cleanPhone = (customerPhone || '').replace(/[^\d]/g, '');
+    if (cleanPhone.length >= 10) {
+        set(outletRef(`guests/${cleanPhone}/orders/${newOrderRef.key}`), {
+            name: customerName || '',
+            total,
+            placedAt: new Date().toISOString(),
+            source: 'QR'
+        }).catch(e => console.warn('[Order] Guest record write failed:', e));
+    }
+
     return { orderId: newOrderRef.key, ...orderPayload };
 }

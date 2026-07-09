@@ -4,11 +4,12 @@
  */
 
 import { escapeHtml } from '../utils.js';
-import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
+import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
 
 let _grid = null;
 
-function buildGrid(data) {
+async function buildGrid(data) {
+    await loadTabulator();
     const el = document.getElementById('paymentsTable');
     if (!el) return;
 

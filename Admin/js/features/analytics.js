@@ -1,7 +1,8 @@
 import { Outlet, db, ref, get, query, orderByChild, startAt, endAt } from '../firebase.js';
 import { ui } from '../ui.js';
 import { showToast, escapeHtml, formatDate, getISTDateString, getSkeletonDivs } from '../utils.js';
-import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
+import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
+import { loadJSPDF } from './printing.js';
 
 let salesData = [];
 let prevPeriodData = [];
@@ -12,6 +13,13 @@ let _currentStatusFilter = 'delivered';
 let _currentOutletFilter = 'current';
 let _compareMode = false;
 let _grid = null;
+let _chartJSPromise = null;
+
+async function loadChartJS() {
+    if (_chartJSPromise) return _chartJSPromise;
+    _chartJSPromise = import('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/+esm');
+    await _chartJSPromise;
+}
 
 const STATUS_OPTIONS = {
     delivered: { label: 'Delivered Only', match: (o) => o.status === 'Delivered' },
@@ -53,7 +61,9 @@ export function toggleCompare(enabled) {
     }
 }
 
-export function loadReports() {
+export async function loadReports() {
+    await loadChartJS();
+
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
@@ -75,6 +85,7 @@ export function loadReports() {
 }
 
 function buildGrid(data) {
+    await loadTabulator();
     const el = document.getElementById('reportTableBody');
     if (!el) return;
     el.innerHTML = '';
@@ -533,11 +544,10 @@ export function downloadExcel() {
     }
 }
 
-export function downloadPDF() {
+export async function downloadPDF() {
+    await loadJSPDF();
     const filtered = _filteredForExport();
     if (filtered.length === 0) { ui.showToast('No data available to export. Generate a report first.', 'warning'); return; }
-    if (!window.jspdf) { ui.showToast('PDF export library not ready. Please refresh and try again.', 'error'); return; }
-
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     if (typeof doc.autoTable !== 'function') { ui.showToast('PDF table plugin not ready.', 'error'); return; }

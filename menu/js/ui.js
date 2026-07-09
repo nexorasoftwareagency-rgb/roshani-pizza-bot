@@ -20,6 +20,34 @@ export function haptic(pattern = 15) {
     } catch (_) { /* no-op */ }
 }
 
+let _audioCtx = null;
+
+// Prime AudioContext on first user gesture (browser autoplay policy requires this)
+// Firebase callbacks are non-gesture, so AudioContext created there stays suspended.
+document.addEventListener('click', () => {
+    if (!_audioCtx) {
+        try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
+    }
+    if (_audioCtx && _audioCtx.state === 'suspended') _audioCtx.resume();
+}, { once: true });
+
+function _notifySound() {
+    try {
+        const ctx = _audioCtx;
+        if (!ctx || ctx.state !== 'running') return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.2);
+    } catch (_) {}
+}
+
 export function updateGreeting(name) {
     const el = document.getElementById('menuGreeting');
     if (!el) return;
@@ -36,10 +64,17 @@ const BOTTOM_NAV_SCREENS = {
     screenHistory: 'screenHistory', screenPromotions: 'screenPromotions'
 };
 
+const _screenStack = [];
+let _skipPushState = false;
+const _bootQuery = window.location.search;
+
 export function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id)?.classList.add('active');
     window.scrollTo(0, 0);
+
+    // Clean up tracking timer when navigating away from tracking screen
+    if (id !== 'screenTracking') clearTrackingTimer();
 
     const nav = document.getElementById('bottomNav');
     if (!nav) return;
@@ -48,15 +83,52 @@ export function showScreen(id) {
     nav.querySelectorAll('.bottom-nav-item').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.bottomTab === id);
     });
+
+    // Push screen history for browser back button support (interstitial only)
+    if (!_skipPushState && id !== 'screenWelcome' && id !== 'screenChooseGroup') {
+        _screenStack.push(id);
+        history.pushState({ screen: id }, '', window.location.pathname + _bootQuery + '#');
+    }
+    _skipPushState = false;
 }
 
-export function showToast(msg) {
+export function handlePopState() {
+    _skipPushState = true;
+    _screenStack.pop();
+    const prev = _screenStack[_screenStack.length - 1];
+    if (prev) showScreen(prev);
+}
+
+export function getPreviousScreen() {
+    return _screenStack.length > 1 ? _screenStack[_screenStack.length - 2] : null;
+}
+
+const _toastQueue = [];
+let _toastShowing = false;
+
+function _showNextToast() {
+    if (_toastQueue.length === 0) { _toastShowing = false; return; }
+    _toastShowing = true;
+    const entry = _toastQueue.shift();
+    const msg = typeof entry === 'string' ? entry : entry.msg;
+    const type = typeof entry === 'string' ? 'info' : (entry.type || 'info');
     const t = document.getElementById('toast');
     if (!t) return;
     t.textContent = msg;
     t.classList.add('show');
+    if (type === 'success' || type === 'error') _notifySound();
+    if (type === 'error') haptic([30, 40, 30]);
+    else if (type === 'success') haptic([10, 30, 10]);
     clearTimeout(t.__hideTimer);
-    t.__hideTimer = setTimeout(() => t.classList.remove('show'), 2200);
+    t.__hideTimer = setTimeout(() => {
+        t.classList.remove('show');
+        setTimeout(_showNextToast, 200);
+    }, 2000);
+}
+
+export function showToast(msg, type) {
+    _toastQueue.push({ msg, type: type || 'info' });
+    if (!_toastShowing) _showNextToast();
 }
 
 export function updateCartBadges(count) {
@@ -83,16 +155,19 @@ export function updateCartBar(count, total) {
     if (totalEl) totalEl.textContent = fmtMoney(total);
 }
 
-export function updateRunningBillStrip(session) {
+export function updateRunningBillStrip(session, groupOrders, groupTotal) {
     const strip = document.getElementById('runningBillStrip');
     if (!strip) return;
-    const hasOrders = session && (session.orders || []).length > 0 && session.status !== 'closed';
+    const orderIds = groupOrders || session?.orders || [];
+    const hasOrders = orderIds.length > 0 && session?.status !== 'closed';
     strip.classList.toggle('hidden', !hasOrders);
     if (hasOrders) {
         const countEl = document.getElementById('runningBillOrderCount');
         const amountEl = document.getElementById('runningBillAmount');
-        if (countEl) countEl.textContent = `${session.orders.length} order${session.orders.length !== 1 ? 's' : ''} this session`;
-        if (amountEl) amountEl.textContent = fmtMoney(session.grandTotal || session.runningTotal || 0);
+        const label = groupOrders && session?.orderGroups ? ' in your group' : ' this session';
+        if (countEl) countEl.textContent = `${orderIds.length} order${orderIds.length !== 1 ? 's' : ''}${label}`;
+        const displayTotal = groupTotal != null ? groupTotal : (session.grandTotal || session.runningTotal || 0);
+        if (amountEl) amountEl.textContent = fmtMoney(displayTotal);
     }
 }
 
@@ -113,13 +188,12 @@ export function renderDishList(dishes, { searchTerm, activeCategoryName }, onOpe
     title.textContent = searchTerm ? `Results for "${searchTerm}"` : (activeCategoryName || 'Popular Items');
 
     if (dishes.length === 0) {
-        list.innerHTML = '<div class="empty-cart">No dishes found.</div>';
+        list.textContent = '';
+        list.insertAdjacentHTML('beforeend', '<div class="empty-cart">No dishes found.</div>');
         return;
     }
-    // Card structure ported from the real Admin POS's .pos-dish-btn-v4
-    // (image with a price-chip overlay, name + category below) so the
-    // customer menu matches the staff POS visually.
-    list.innerHTML = dishes.map(d => `
+    list.textContent = '';
+    list.insertAdjacentHTML('beforeend', dishes.map(d => `
         <div class="dish-card" data-dish-id="${esc(d.id)}">
             <div class="dish-visual">
                 <img src="${esc(d.image || '')}" alt="${esc(d.name)}" loading="lazy" onerror="this.style.visibility='hidden'">
@@ -129,7 +203,7 @@ export function renderDishList(dishes, { searchTerm, activeCategoryName }, onOpe
                 <div class="dish-card-name">${esc(d.name)}</div>
                 <div class="dish-card-category">${esc(d.category || '')}</div>
             </div>
-        </div>`).join('');
+        </div>`).join(''));
 
     list.querySelectorAll('.dish-card').forEach(card => card.addEventListener('click', () => onOpenDish(card.dataset.dishId)));
 }
@@ -195,10 +269,10 @@ export function renderCartList(lines, { onStep }) {
     });
 }
 
-export function updateCartTotals(subtotal, taxPercent, taxName, taxEnabled, serviceChargeEnabled, serviceChargeName, serviceChargeRate, discount = null) {
-    const taxRow = document.getElementById('cartTaxRow');
-    const taxEnabledVal = taxEnabled !== false;
-    const tax = taxEnabledVal ? Math.round(subtotal * (taxPercent / 100) * 100) / 100 : 0;
+export function updateCartTotals(subtotal, taxPercent, taxName, taxEnabled, serviceChargeEnabled, serviceChargeName, serviceChargeRate, discount = null, taxRates) {
+    const rates = (taxRates && Array.isArray(taxRates) && taxRates.length > 0) ? taxRates : (taxEnabled !== false ? [{ name: taxName || 'Tax', rate: taxPercent || 5 }] : []);
+    const taxItems = rates.map(r => ({ name: r.name, rate: r.rate, amount: Math.round(subtotal * (r.rate / 100) * 100) / 100 }));
+    const tax = taxItems.reduce((s, t) => s + t.amount, 0);
     const scEnabled = serviceChargeEnabled === true;
     const scRate = typeof serviceChargeRate === 'number' ? serviceChargeRate : 0;
     const sc = scEnabled ? Math.round(subtotal * (scRate / 100) * 100) / 100 : 0;
@@ -206,11 +280,12 @@ export function updateCartTotals(subtotal, taxPercent, taxName, taxEnabled, serv
     const el = (id) => document.getElementById(id);
     if (el('cartSubtotal')) el('cartSubtotal').textContent = fmtMoney(subtotal);
 
-    // Tax row
-    if (taxRow) taxRow.classList.toggle('hidden', !taxEnabledVal);
-    if (el('cartTaxName')) el('cartTaxName').textContent = taxName || 'Tax';
-    if (el('cartTaxPct')) el('cartTaxPct').textContent = String(taxPercent);
-    if (el('cartTax')) el('cartTax').textContent = fmtMoney(tax);
+    // Tax rows
+    const taxRows = document.getElementById('cartTaxRows');
+    if (taxRows) {
+        taxRows.innerHTML = taxItems.map(t => `<div class="cart-summary-row"><span>${esc(t.name)} (${t.rate}%)</span><span>${fmtMoney(t.amount)}</span></div>`).join('');
+        taxRows.classList.toggle('hidden', taxItems.length === 0);
+    }
 
     // Service charge row
     const scRow = document.getElementById('cartServiceChargeRow');
@@ -230,12 +305,17 @@ export function updateCartTotals(subtotal, taxPercent, taxName, taxEnabled, serv
     return { tax, serviceCharge: sc, discount: discountAmount, total: subtotal + tax + sc - discountAmount };
 }
 
-export function updateSessionNoteInCart(session) {
+export function updateSessionNoteInCart(session, groupOrders, groupTotal) {
     const note = document.getElementById('cartSessionNote');
     if (!note) return;
-    const hasOrders = session && (session.orders || []).length > 0;
+    const orderIds = groupOrders || session?.orders || [];
+    const hasOrders = orderIds.length > 0;
     note.classList.toggle('hidden', !hasOrders);
-    if (hasOrders) note.textContent = `This will be added to your running bill (currently ${fmtMoney(session.grandTotal || session.runningTotal || 0)} across ${session.orders.length} order${session.orders.length !== 1 ? 's' : ''}).`;
+    if (hasOrders) {
+        const total = groupTotal != null ? groupTotal : (session.grandTotal || session.runningTotal || 0);
+        const label = groupOrders && session?.orderGroups ? ' in your group' : ' this session';
+        note.textContent = `This will be added to your running bill (currently ${fmtMoney(total)} across ${orderIds.length} order${orderIds.length !== 1 ? 's' : ''}${label}).`;
+    }
 }
 
 const DINE_IN_STEPS = [
@@ -270,6 +350,9 @@ const TRACKING_HEADLINES = [
 // Module-level (not per-order) so a single 1s interval is reused across
 // re-renders instead of leaking a new setInterval every time the order
 // snapshot updates. `renderTracking()` just refreshes `_trackMeta`.
+export function clearTrackingTimer() {
+    if (_trackClockHandle) { clearInterval(_trackClockHandle); _trackClockHandle = null; }
+}
 let _trackClockHandle = null;
 let _trackMeta = null; // { createdAt, status }
 
@@ -435,10 +518,13 @@ export function resetRequestCard(btn) {
     btn.disabled = false;
 }
 
-export function renderSessionBillCard(session, ordersMap, taxName, taxPercent, taxEnabled, serviceChargeEnabled, serviceChargeName, serviceChargeRate) {
+export function renderSessionBillCard(session, ordersMap, taxName, taxPercent, taxEnabled, serviceChargeEnabled, serviceChargeName, serviceChargeRate, taxRates, groupOrders) {
     const card = document.getElementById('sessionBillCard');
     if (!card) return;
-    const orderIds = session?.orders || [];
+    const orderIds = (groupOrders || session?.orders || []).filter(oid => {
+        const o = ordersMap[oid];
+        return !o || o.status !== 'Cancelled';
+    });
     card.classList.toggle('hidden', orderIds.length <= 1);
     if (orderIds.length <= 1) return;
 
@@ -469,34 +555,38 @@ export function renderSessionBillCard(session, ordersMap, taxName, taxPercent, t
         return `<div class="session-bill-order-section"><div class="session-bill-order-title">Order ${i + 1}</div>${itemRows}</div>`;
     }).join('');
 
-    // Compute totals from session
-    let subtotal = 0, totalTax = 0, totalSC = 0;
+    // Compute totals from group orders
+    let subtotal = 0, totalTax = 0, totalSC = 0, grandTotal = 0;
     orderIds.forEach(oid => {
         const o = ordersMap[oid];
         if (!o) return;
         subtotal += Number(o.subtotal || 0);
         totalTax += Number(o.tax || 0);
         totalSC += Number(o.serviceCharge || 0);
+        grandTotal += Number(o.total || 0);
     });
 
     const tEnabled = taxEnabled !== false;
     const scEnabled = serviceChargeEnabled === true;
     const scRate = typeof serviceChargeRate === 'number' ? serviceChargeRate : 0;
+    const rates = (taxRates && Array.isArray(taxRates) && taxRates.length > 0) ? taxRates : (tEnabled ? [{ name: taxName || 'Tax', rate: taxPercent || 5 }] : []);
 
     const el = (id) => document.getElementById(id);
     if (el('sessionBillSubtotal')) el('sessionBillSubtotal').textContent = fmtMoney(subtotal);
 
-    const taxRow = document.getElementById('sessionBillTaxRow');
-    if (taxRow) taxRow.classList.toggle('hidden', !tEnabled);
-    if (el('sessionBillTaxLabel')) el('sessionBillTaxLabel').textContent = `${taxName || 'Tax'} (${taxPercent || 5}%)`;
-    if (el('sessionBillTax')) el('sessionBillTax').textContent = fmtMoney(totalTax);
+    const taxRows = document.getElementById('sessionBillTaxRows');
+    if (taxRows) {
+        const combinedLabel = rates.map(r => `${esc(r.name)} (${r.rate}%)`).join(' + ');
+        taxRows.innerHTML = `<div class="session-bill-summary-row"><span>${combinedLabel}</span><span>${fmtMoney(totalTax)}</span></div>`;
+        taxRows.classList.toggle('hidden', !tEnabled || rates.length === 0);
+    }
 
     const scRow = document.getElementById('sessionBillSCRow');
     if (scRow) scRow.classList.toggle('hidden', !scEnabled);
     if (el('sessionBillSCLabel')) el('sessionBillSCLabel').textContent = `${serviceChargeName || 'Service Charge'} (${scRate}%)`;
     if (el('sessionBillSC')) el('sessionBillSC').textContent = fmtMoney(totalSC);
 
-    if (el('sessionBillTotal')) el('sessionBillTotal').textContent = fmtMoney(session.grandTotal || session.runningTotal || 0);
+    if (el('sessionBillTotal')) el('sessionBillTotal').textContent = fmtMoney(grandTotal || session.grandTotal || session.runningTotal || 0);
 }
 
 const HISTORY_STATUS_LABEL = { Placed: 'Placed', Confirmed: 'Confirmed', Preparing: 'Preparing', Ready: 'Ready', Delivered: 'Delivered', Cancelled: 'Cancelled' };

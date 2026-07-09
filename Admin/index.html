@@ -25,6 +25,7 @@
     <meta name="msapplication-TileColor" content="#E84908">
 
     <title>Roshani ERP | Admin Dashboard</title>
+    <meta name="description" content="Admin dashboard for Roshani Pizza ERP — manage orders, tables, menu, riders, and real-time restaurant operations.">
 
 
 
@@ -37,6 +38,10 @@
             document.documentElement.classList.add('seamless-mode');
 
         }
+        // ponytail: hide authOverlay in seamless-mode to prevent login flash
+        const style = document.createElement('style');
+        style.textContent = 'html.seamless-mode #authOverlay { display: none !important; }';
+        document.head.appendChild(style);
 
 
 
@@ -173,17 +178,10 @@
 
 
 
-    <!-- Dynamic Branding Engine -->
+    <link rel="preload" href="style.css?v=5.3.7" as="style" onload="this.rel='stylesheet'">
+    <link rel="stylesheet" href="style.css?v=5.3.7" media="print" onload="this.media='all'">
 
-    <script src="branding.js?v=5.3.6"></script>
-
-    <script src="firebase-config.js?v=5.3.6"></script>
-
-
-
-    <link rel="stylesheet" href="style.css?v=5.3.6">
-
-    <link rel="stylesheet" href="mobile-overrides.css?v=5.3.6">
+    <link rel="stylesheet" href="mobile-overrides.css?v=5.3.6" media="print" onload="this.media='all'">
 
     <link rel="manifest" href="manifest.json?v=3">
 
@@ -195,43 +193,7 @@
 
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <link rel="preload" href="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" as="script" crossorigin="anonymous">
-
-    <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" crossorigin="anonymous"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js" crossorigin="anonymous"></script>
-
-
-
-    <!-- Firebase moduler SDK is imported via js/firebase.js as ES modules -->
-
-
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js" crossorigin="anonymous"></script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js" crossorigin="anonymous"></script>
-
-    <!-- Tabulator Spreadsheet Grid -->
-    <link href="https://unpkg.com/tabulator-tables@6.4.0/dist/css/tabulator.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/tabulator-tables@6.4.0/dist/js/tabulator.min.js" crossorigin="anonymous"></script>
-
-
-
-    <!-- Leaflet Mapping -->
-
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
-
-
-
-    <!-- Global bot-status listener (ES module, deferred — loads after firebase.js is ready) -->
-
-    <script type="module" src="js/bot-status.js?v=5.3.6"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 
 </head>
 
@@ -1837,13 +1799,18 @@
 
                     </div>
 
-
+                    <div class="settings-subtabs">
+                        <button class="settings-subtab active" data-subtab="general">General</button>
+                        <button class="settings-subtab" data-subtab="tax-services">Tax & Services</button>
+                        <button class="settings-subtab" data-subtab="whatsapp-bot">WhatsApp Bot & Promos</button>
+                        <button class="settings-subtab" data-subtab="marketing">Marketing</button>
+                    </div>
 
                     <div class="settings-grid">
 
                         <!-- Receipt & Store Information -->
 
-                        <div class="glass-card p-20 grid-full">
+                        <div class="glass-card p-20 grid-full" data-settings-section="general">
 
                             <div class="flex-between flex-center mb-14">
 
@@ -2027,9 +1994,13 @@
 
                                     </div>
 
+                                </div>
+                            </div>
+                        </div>
 
+                        <div class="glass-card p-20" data-settings-section="marketing">
 
-                                    <div class="settings-section-card">
+                            <div class="settings-section-card">
 
                                         <h5 class="section-card-heading"><i data-lucide="wifi" class="icon-14"></i> Marketing & Connectivity</h5>
 
@@ -2175,7 +2146,13 @@
 
                                     </div>
 
+                        </div>
 
+                        <div class="glass-card p-20 grid-full" data-settings-section="general">
+
+                            <div class="flex-row flex-gap-24">
+
+                                <div class="flex-2">
 
                                     <div class="settings-section-card">
 
@@ -2419,7 +2396,7 @@
 
                         <!-- Store Coordinates -->
 
-                        <div class="glass-card p-20">
+                        <div class="glass-card p-20" data-settings-section="general">
 
                             <h4 class="mb-14"><i data-lucide="map-pin" class="icon-16"></i> Store Location</h4>
 
@@ -2451,7 +2428,7 @@
 
                         <!-- Admin Notifications -->
 
-                        <div class="glass-card p-20">
+                        <div class="glass-card p-20" data-settings-section="general">
 
                             <h4 class="mb-14"><i data-lucide="bell-ring" class="icon-16"></i> Order Notifications</h4>
 
@@ -2485,7 +2462,7 @@
 
                                 <label class="form-label-small">Verification Backup Code (Admin Fallback)</label>
 
-                                <input type="text" id="settingDeliveryBackupCode" class="form-input mb-8"
+                                <input type="password" id="settingDeliveryBackupCode" class="form-input mb-8"
 
                                     placeholder="e.g. 1234"
 
@@ -2547,7 +2524,7 @@
 
                         <!-- WhatsApp Bot Aesthetics & Promotions -->
 
-                        <div class="glass-card p-20">
+                        <div class="glass-card p-20" data-settings-section="whatsapp-bot">
 
                             <h4 class="mb-14"><i data-lucide="bot" class="icon-16"></i> WhatsApp Bot Aesthetics & Promotions</h4>
 
@@ -2685,62 +2662,6 @@
 
 
 
-                            <div class="divider-dashed mb-20"></div>
-
-
-
-                            <h5 class="mb-12 text-muted-small text-upper ls-sm">Promotional Social Links</h5>
-
-                            <div class="flex-row flex-gap-12 mb-14">
-
-                                <div class="flex-1">
-
-                                    <label class="form-label-small">Instagram Profile URL</label>
-
-                                    <input type="text" id="botSocialInsta" class="form-input"
-
-                                        placeholder="https://instagram.com/your-brand">
-
-                                </div>
-
-                                <div class="flex-1">
-
-                                    <label class="form-label-small">Facebook Page URL</label>
-
-                                    <input type="text" id="botSocialFb" class="form-input"
-
-                                        placeholder="https://facebook.com/your-page">
-
-                                </div>
-
-                            </div>
-
-                            <div class="flex-row flex-gap-12 mb-10">
-
-                                <div class="flex-1">
-
-                                    <label class="form-label-small">Google Review Link</label>
-
-                                    <input type="text" id="botSocialReview" class="form-input"
-
-                                        placeholder="https://g.page/r/your-id/review">
-
-                                </div>
-
-                                <div class="flex-1">
-
-                                    <label class="form-label-small">Website / Store Link</label>
-
-                                    <input type="text" id="botSocialWebsite" class="form-input"
-
-                                        placeholder="https://yourwebsite.com">
-
-                                </div>
-
-                            </div>
-
-
-
                             <div class="migration-card premium-row-v4 p-20 br-16 mb-20">
 
                                 <div class="flex-row flex-center flex-gap-15 mb-14">
@@ -2781,34 +2702,28 @@
 
                         <!-- Dine-In Charges (Tax & Service Charge) -->
 
-                        <div class="glass-card p-20">
+                        <div class="glass-card p-20" data-settings-section="tax-services">
 
                             <h4 class="mb-14"><i data-lucide="utensils-crossed" class="icon-16"></i> Dine-In Charges & QR Ordering</h4>
 
                             <p class="text-secondary-small mb-14">Configure tax, service charge and the QR ordering link. These are displayed on the diner's bill.</p>
 
-                            <div class="settings-grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="settings-grid" style="grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 16px;">
 
-                                <!-- Tax Section -->
+                                <!-- Tax Section (multiple rates) -->
                                 <div class="settings-section-card" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
 
                                     <div class="flex-between flex-center mb-10">
-                                        <h5 style="margin:0;">Tax</h5>
+                                        <h5 style="margin:0;">Taxes</h5>
                                         <label class="toggle-switch" style="margin:0;">
                                             <input type="checkbox" id="dineinTaxEnabled">
                                             <span class="toggle-slider"></span>
                                         </label>
                                     </div>
 
-                                    <div class="form-group-mini mb-10">
-                                        <label>Tax Name</label>
-                                        <input type="text" id="dineinTaxName" placeholder="GST" maxlength="20">
-                                    </div>
+                                    <div id="dineinTaxRates"></div>
 
-                                    <div class="form-group-mini">
-                                        <label>Tax Rate (%)</label>
-                                        <input type="number" id="dineinTaxRate" placeholder="5" min="0" max="100" step="0.5">
-                                    </div>
+                                    <button type="button" id="btnAddTaxRate" class="btn-secondary btn-small mt-8">+ Add Tax</button>
 
                                 </div>
 
@@ -2846,7 +2761,7 @@
                         </div>
 
                         <!-- Today's Offers -->
-                        <div class="glass-card p-20">
+                        <div class="glass-card p-20" data-settings-section="general">
                             <div class="flex-between flex-center mb-14">
                                 <h4><i data-lucide="tag" class="icon-16"></i> Today's Offers (QR Welcome Screen)</h4>
                                 <button id="btnAddOffer" class="btn-secondary btn-small"><i data-lucide="plus" class="icon-14"></i> Add Offer</button>
@@ -2858,7 +2773,7 @@
 
                         <!-- Delivery Fees -->
 
-                        <div class="glass-card p-20">
+                        <div class="glass-card p-20" data-settings-section="general">
 
                             <div class="flex-between flex-center mb-14">
 
@@ -2908,7 +2823,7 @@
 
                         <!-- Danger Zone -->
 
-                        <div class="glass-card p-20 grid-full" style="border:1px dashed rgba(239,68,68,0.35);background:rgba(239,68,68,0.03);">
+                        <div class="glass-card p-20 grid-full" data-settings-section="general" style="border:1px dashed rgba(239,68,68,0.35);background:rgba(239,68,68,0.03);">
 
                             <h4 class="mb-8" style="color:var(--error);display:flex;align-items:center;gap:8px;"><i data-lucide="alert-triangle" class="icon-16"></i> Danger Zone</h4>
 
@@ -3768,6 +3683,16 @@
                                     <span class="text-danger font-800">Discount Allotted</span>
 
                                     <span id="walkinDiscountVal" class="text-danger font-800">-₹0</span>
+
+                                </div>
+
+                                <div id="walkinTaxRows"></div>
+
+                                <div id="walkinServiceChargeRow" class="flex-between mb-8 hidden">
+
+                                    <span id="walkinServiceChargeLabel" class="text-muted-small font-800">Service Charge</span>
+
+                                    <span id="walkinServiceChargeVal" class="font-800">₹0</span>
 
                                 </div>
 
@@ -6091,7 +6016,17 @@
         </div>
     </div>
 
-    <script src="receipt-templates.js?v=5.3.6"></script>
+    <script src="branding.js?v=5.3.6" defer></script>
+
+    <script src="firebase-config.js?v=5.3.6" defer></script>
+
+    <script src="receipt-templates.js?v=5.3.6" defer></script>
+
+    <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" crossorigin="anonymous" defer></script>
+
+    <script async src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js" crossorigin="anonymous"></script>
+
+    <script type="module" src="js/bot-status.js?v=5.3.6"></script>
 
     <script type="module" src="js/main.js?v=5.3.6"></script>
 

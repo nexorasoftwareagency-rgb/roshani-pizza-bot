@@ -595,7 +595,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
             const type = (order.type || order.orderType || "Walk-in");
             if (order.phone !== "Walk-in") {
                 console.warn(`[BOT] ⚠️ Skipping Notification for #${id.slice(-5)} (${type}): No valid phone. Value: "${order.phone}"`);
-                updateData(`bot/logs/${id}`, { error: "No valid JID", phone: order.phone, type, timestamp: Date.now() }).catch(() => { });
+                updateData(`bot/logs/${id}`, { error: "No valid JID", phone: order.phone || null, type, timestamp: Date.now() }).catch(() => { });
             }
             return;
         }
@@ -1504,7 +1504,7 @@ async function startBot() {
                             discountId: user.discountId || null,
                             discountLabel: user.discountLabel || null,
                             discountSource: user.discountSource || (user.discount ? 'manual' : 'none'),
-                            discountMode: user.discountMode || 'flat',
+                            discountMode: user.discountMode || 'fixed',
                             discountValue: user.discountValue || 0
                         };
 
@@ -1629,7 +1629,7 @@ async function handleCheckoutFinal(sock, sender, user) {
                 user.discountId = discountEval.discount.id;
                 user.discountLabel = discountEval.label;
                 user.discountSource = discountEval.source;
-                user.discountMode = discountEval.discount.mode || 'flat';
+                user.discountMode = discountEval.discount.mode || 'fixed';
                 user.discountValue = discountEval.discount.value || 0;
             } else {
                 user.discount = 0;

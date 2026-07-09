@@ -181,9 +181,12 @@ export function initAuth() {
                 overlay.appendChild(modal);
             }
             
-            setTimeout(() => signOut(auth), 3000);
-            return;
-        }
+setTimeout(() => signOut(auth), 3000);
+        return;
+    }
+
+    // ponytail: clear seamless-mode on logout so login screen shows
+    document.documentElement.classList.remove('seamless-mode');
 
         // Initialize Session
         state.adminData = adminData;
@@ -382,14 +385,22 @@ export async function doLogin(email, pass) {
         await signInWithEmailAndPassword(auth, email, pass);
     } catch (error) {
         console.error("Login Error:", error);
+        const friendly = {
+            'auth/user-not-found': 'No account found with this email',
+            'auth/wrong-password': 'Incorrect password',
+            'auth/invalid-credential': 'Invalid email or password',
+            'auth/invalid-email': 'Please enter a valid email address',
+            'auth/too-many-requests': 'Too many attempts. Please try again later',
+            'auth/user-disabled': 'This account has been disabled'
+        }[error.code] || 'Login failed. Please try again';
         if (errEl && errMsg) {
-            errMsg.innerText = error.message;
+            errMsg.innerText = friendly;
             errEl.classList.remove('hidden');
         } else if (errEl) {
-            errEl.innerText = error.message;
+            errEl.innerText = friendly;
             errEl.classList.remove('hidden');
         } else {
-            showToast(error.message, "error");
+            showToast(friendly, "error");
         }
         
         if (btn) {

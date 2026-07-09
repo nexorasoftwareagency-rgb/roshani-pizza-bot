@@ -11,6 +11,7 @@ import { showPaymentPicker } from '../ui-utils.js';
 import { autoDeductStock } from './inventory.js';
 import { logger } from '../utils/logger.js';
 import { renderPayments } from './payments.js';
+import { loadLucide } from '../ui.js';
 
 const RIDER_STALE_MS = 5 * 60 * 1000;
 function isRiderFresh(r) {
@@ -84,6 +85,14 @@ export function initRealtimeListeners() {
     _ordersChangedUnsub = onChildChanged(currentOrdersRef, snap => {
         const order = snap.val();
         if (order) {
+            // Handle Pending→Placed transition for QR/dine-in orders
+            if (order.status === "Placed" && !state.unacknowledgedOrders.has(snap.key)) {
+                showAlert(order);
+                addNotification(`New Order #${snap.key.slice(-5)}`, `Order for ₹${order.total} is placed.`, 'new', state.currentOutlet);
+                state.unacknowledgedOrders.add(snap.key);
+                startContinuousSound();
+                setTimeout(() => { highlightOrder(snap.key); }, 1000);
+            }
             // Stop continuous sound when order is no longer "Placed"
             if (order.status !== "Placed") {
                 state.unacknowledgedOrders.delete(snap.key);
@@ -111,7 +120,7 @@ export function initRealtimeListeners() {
 
     console.log(`[Orders] Initializing listeners for: ${ordersRef} (Filter: ${fromDate || 'ALL'} to ${toDate || 'ALL'})`);
 
-    _ordersUnsub = onValue(buildOrdersQuery(ordersRef, fromDate, toDate, 50), snap => {
+    _ordersUnsub = onValue(buildOrdersQuery(ordersRef, fromDate, toDate, 500), snap => {
         firstLoad = false;
         console.log(`[Orders] Received snapshot: ${Object.keys(snap.val() || {}).length} orders at ${ordersRef}`);
         state.lastOrdersSnap = snap;
@@ -439,14 +448,16 @@ export function renderOrders(snap) {
             containers['orders'].innerHTML = '<tr><td colspan="7"><div class="flex-center p-20"><div class="spinner"></div><span class="text-muted ml-10">Loading orders...</span></div></td></tr>';
         } else {
             containers['orders'].innerHTML = '<tr><td colspan="7" class="empty-state-cell"><div class="empty-state"><i data-lucide="inbox"></i><p>No orders yet</p><span>New orders will appear here in real-time</span></div></td></tr>';
-            if (window.lucide) window.lucide.createIcons();
+            await loadLucide();
+            window.lucide.createIcons();
         }
     }
 
     // Empty state for dashboard tab
     if (activeTab === 'dashboard' && sortedOrders.length === 0 && containers['dashboard']) {
         containers['dashboard'].innerHTML = '<tr><td colspan="8" class="empty-state-cell"><div class="empty-state"><i data-lucide="layout-dashboard"></i><p>No orders yet</p><span>Orders will appear here in real-time</span></div></td></tr>';
-        if (window.lucide) window.lucide.createIcons();
+        await loadLucide();
+        window.lucide.createIcons();
     }
     
     // Empty state for live tab
@@ -456,7 +467,8 @@ export function renderOrders(snap) {
         return _liveStatusList.some(s => s.toLowerCase() === status.toLowerCase());
     }).length === 0 && containers['live']) {
         containers['live'].innerHTML = '<tr><td colspan="7" class="empty-state-cell"><div class="empty-state"><i data-lucide="activity"></i><p>No live orders</p><span>Active orders will appear here</span></div></td></tr>';
-        if (window.lucide) window.lucide.createIcons();
+        await loadLucide();
+        window.lucide.createIcons();
     }
 
     let liveCount = 0;
@@ -760,7 +772,8 @@ export function renderOrders(snap) {
     }
 
     // Refresh icons only for the active container to reduce lag
-    if (window.lucide && containers[activeTab]) {
+    await loadLucide();
+    if (containers[activeTab]) {
         window.lucide.createIcons({
             nameAttr: 'data-lucide',
             root: containers[activeTab]
@@ -870,7 +883,8 @@ function renderPriorityOrders(orders) {
         `;
     }).join('');
 
-    if (window.lucide) window.lucide.createIcons({ root: container });
+    await loadLucide();
+    window.lucide.createIcons({ root: container });
 }
 
 function renderTopItems(orders) {
@@ -910,7 +924,8 @@ function renderTopItems(orders) {
         </div>
     `).join('');
 
-    if (typeof lucide !== 'undefined') lucide.createIcons({ root: container });
+    await loadLucide();
+    window.lucide.createIcons({ root: container });
 }
 
 function renderTopCustomers(orders) {
@@ -947,7 +962,8 @@ function renderTopCustomers(orders) {
         </div>
     `).join('');
 
-    if (typeof lucide !== 'undefined') lucide.createIcons({ root: container });
+    await loadLucide();
+    window.lucide.createIcons({ root: container });
 }
 
 
@@ -1157,10 +1173,9 @@ export async function assignRider(id, riderId) {
         }
 
         // Manual assignment only - Rider will handle status advancement via "PICKUP"
-        showToast(`Rider ${rider.name} assigned. Status updated if needed.`, "success");
-
         logger.firebase('ORDERS', `Saving rider assignment: orders/${id}`);
         await update(Outlet.ref(`orders/${id}`), updateData);
+        showToast(`Rider ${rider.name} assigned. Status updated if needed.`, "success");
         
         // Notify Rider (in-app notification; FCM push handled by Cloud Function)
         await addRiderNotification(riderId, "New Order Assigned!", `Order #${id.slice(-5)} for ₹${order.total} assigned to you.`, 'new');
@@ -1335,6 +1350,8 @@ export async function openOrderDrawer(id) {
             <!-- Pricing Summary -->
             <div class="drawer-summary-panel">
                 <div class="summary-row"><span class="label">Subtotal</span><span class="value">₹${order.subtotal || 0}</span></div>
+                ${order.taxItems && Array.isArray(order.taxItems) && order.taxItems.length > 0 ? order.taxItems.map(t => `<div class="summary-row"><span class="label">${escapeHtml(t.name)} (${t.rate}%)</span><span class="value">₹${Number(t.amount).toFixed(2)}</span></div>`).join('') : ((order.tax && Number(order.tax) > 0) ? `<div class="summary-row"><span class="label">${escapeHtml(order.taxName || 'Tax')}</span><span class="value">₹${order.tax}</span></div>` : '')}
+                ${(order.serviceCharge && Number(order.serviceCharge) > 0) ? `<div class="summary-row"><span class="label">${escapeHtml(order.serviceChargeName || 'Service Charge')}${order.serviceChargeRate ? ` (${escapeHtml(String(order.serviceChargeRate))}%)` : ''}</span><span class="value">₹${order.serviceCharge}</span></div>` : ''}
                 ${(order.discount && Number(order.discount) > 0) ? `<div class="summary-row discount"><span class="label">Discount${order.discountLabel ? ` (${escapeHtml(order.discountLabel)})` : ''}</span><span class="value">-₹${order.discount}</span></div>` : ''}
                 ${(order.deliveryFee && Number(order.deliveryFee) > 0) ? `<div class="summary-row"><span class="label">Delivery Fee</span><span class="value">₹${order.deliveryFee}</span></div>` : ''}
                 <div class="summary-total">
@@ -1389,6 +1406,9 @@ export async function openOrderDrawer(id) {
             <button class="btn-drawer-action primary" data-action="printReceiptById" data-id="${id}">
                 <i data-lucide="printer" style="width:15px;height:15px;"></i> Print
             </button>
+            <button class="btn-drawer-action secondary" data-action="printKotById" data-id="${id}">
+                <i data-lucide="clipboard-list" style="width:15px;height:15px;"></i> KOT
+            </button>
             ${order.phone ? `<a class="btn-drawer-action whatsapp" href="https://wa.me/${escapeHtml(order.phone.replace(/[^0-9]/g, ''))}" target="_blank" style="text-decoration:none;">
                 <i data-lucide="message-circle" style="width:15px;height:15px;"></i> WhatsApp
             </a>` : ''}
@@ -1398,7 +1418,8 @@ export async function openOrderDrawer(id) {
         </div>
     `;
 
-    if (window.lucide) window.lucide.createIcons({ root: content });
+    await loadLucide();
+    window.lucide.createIcons({ root: content });
 
     const overlay = document.getElementById('orderDrawerOverlay');
     if (drawer) drawer.classList.add('active');

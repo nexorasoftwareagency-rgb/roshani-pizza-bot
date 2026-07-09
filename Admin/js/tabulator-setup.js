@@ -5,6 +5,46 @@
 
 import { escapeHtml } from '../../shared/dom/escape.js';
 
+let _tabulatorLoaded = false;
+let _tabulatorLoadPromise = null;
+
+/**
+ * Dynamically load Tabulator from CDN.
+ * Returns a promise that resolves when Tabulator is available globally.
+ * @returns {Promise<void>}
+ */
+export async function loadTabulator() {
+    if (_tabulatorLoaded) return;
+    if (_tabulatorLoadPromise) return _tabulatorLoadPromise;
+
+    _tabulatorLoadPromise = (async () => {
+        // Load CSS
+        if (!document.querySelector('link[href*="tabulator.min.css"]')) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'https://unpkg.com/tabulator-tables@6.4.0/dist/css/tabulator.min.css';
+            document.head.appendChild(link);
+        }
+
+        // Load JS
+        if (!window.Tabulator) {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/tabulator-tables@6.4.0/dist/js/tabulator.min.js';
+                script.crossOrigin = 'anonymous';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        _tabulatorLoaded = true;
+    })();
+
+    return _tabulatorLoadPromise;
+}
+
+
 // --- EXCEL-LIKE DEFAULTS ---
 export const GRID_DEFAULTS = {
     layout: "fitColumns",
@@ -150,9 +190,11 @@ export function starEmojiFormatter(cell) {
  * @param {string} elementId - DOM element ID (without #)
  * @param {Array} columns - Column definitions
  * @param {Object} extraOptions - Additional Tabulator options (merged with defaults)
- * @returns {Tabulator} table instance
+ * @returns {Promise<Tabulator>} table instance
  */
-export function createGrid(elementId, columns, extraOptions = {}) {
+export async function createGrid(elementId, columns, extraOptions = {}) {
+    await loadTabulator();
+
     const el = document.getElementById(elementId);
     if (!el) {
         console.warn(`[Tabulator] Element #${elementId} not found`);

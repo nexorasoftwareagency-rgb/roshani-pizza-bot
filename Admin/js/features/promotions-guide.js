@@ -3,6 +3,8 @@
  * Renders a 6-step "How to use" article inside the guide modal.
  */
 
+import { loadLucide } from '../ui.js';
+
 const STEPS = [
     {
         icon: 'edit-3',
@@ -56,5 +58,6 @@ export function renderPromotionsGuide(container) {
             Recipients are capped at 300 per campaign.
         </p>
     `;
+    await loadLucide();
     if (window.lucide) window.lucide.createIcons({ root: container });
 }

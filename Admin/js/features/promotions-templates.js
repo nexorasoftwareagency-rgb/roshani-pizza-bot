@@ -1,4 +1,6 @@
 import { showToast } from '../ui-utils.js';
+import { escapeHtml } from '../utils.js';
+import { loadLucide } from '../ui.js';
 
 const TEMPLATES = [
 {
@@ -174,16 +176,16 @@ container.innerHTML = `
 <div style="max-height:60vh; overflow-y:auto; padding-right:4px;">
 ${TEMPLATES.map(group => `
 <div class="mb-16">
-<h4 class="template-category-title">${escHtml(group.category)}</h4>
+<h4 class="template-category-title">${escapeHtml(group.category)}</h4>
 <div class="template-grid">
 ${group.items.map(t => `
-<div class="template-card" data-template="${escHtml(t.body)}" data-title="${escHtml(t.title)}">
+<div class="template-card" data-template="${escapeHtml(t.body)}" data-title="${escapeHtml(t.title)}">
 <div class="template-card-header">
-<span class="template-card-title">${escHtml(t.title)}</span>
+<span class="template-card-title">${escapeHtml(t.title)}</span>
 <button class="btn-primary btn-small template-use-btn">Use</button>
 </div>
-<p class="template-card-body">${escHtml(truncate(t.body, 120))}</p>
-${t.note ? `<p class="template-card-note">💡 ${escHtml(t.note)}</p>` : ''}
+<p class="template-card-body">${escapeHtml(truncate(t.body, 120))}</p>
+${t.note ? `<p class="template-card-note">💡 ${escapeHtml(t.note)}</p>` : ''}
 </div>
 `).join('')}
 </div>
@@ -191,7 +193,8 @@ ${t.note ? `<p class="template-card-note">💡 ${escHtml(t.note)}</p>` : ''}
 `).join('')}
 </div>
 `;
-if (window.lucide) window.lucide.createIcons({ root: container });
+await loadLucide();
+    if (window.lucide) window.lucide.createIcons({ root: container });
 
 container.querySelectorAll('.template-use-btn').forEach(btn => {
 btn.addEventListener('click', () => {
@@ -212,7 +215,4 @@ if (s.length <= max) return s;
 return s.substring(0, max).replace(/\s+\S*$/, '') + '…';
 }
 
-function escHtml(s) {
-return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
-({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
+

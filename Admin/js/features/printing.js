@@ -2,6 +2,35 @@ import { Outlet, get, query, orderByChild, equalTo, limitToLast } from '../fireb
 import { updateStatus } from './orders.js';
 import { standardizeOrderData, showToast } from '../utils.js';
 
+let _jspdfLoaded = false;
+let _jspdfPromise = null;
+
+export function loadJSPDF() {
+    if (_jspdfLoaded) return Promise.resolve();
+    if (_jspdfPromise) return _jspdfPromise;
+
+    _jspdfPromise = new Promise((resolve, reject) => {
+        const script1 = document.createElement('script');
+        script1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script1.crossOrigin = 'anonymous';
+        script1.onload = () => {
+            const script2 = document.createElement('script');
+            script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js';
+            script2.crossOrigin = 'anonymous';
+            script2.onload = () => {
+                _jspdfLoaded = true;
+                resolve();
+            };
+            script2.onerror = reject;
+            document.head.appendChild(script2);
+        };
+        script1.onerror = reject;
+        document.head.appendChild(script1);
+    });
+
+    return _jspdfPromise;
+}
+
 // Settings Cache to reduce lag on subsequent prints
 let settingsCache = {
     store: null,
@@ -213,6 +242,7 @@ export function printReceiptFromPreview() {
  * @param {String} orderId - The order ID to print
  */
 export async function printReceiptById(orderId) {
+    await loadJSPDF();
     try {
         const snap = await get(query(Outlet.ref("orders"), orderByChild("orderId"), equalTo(orderId)));
         let order;
@@ -245,6 +275,56 @@ export async function printReceiptById(orderId) {
 /**
  * Reprint the most recent Dine-in (POS) order
  */
+/**
+ * Print a Kitchen Order Ticket (KOT) — no prices, just items for kitchen staff
+ */
+export async function printKotById(orderId) {
+    await loadJSPDF();
+    try {
+        const snap = await get(Outlet.ref(`orders/${orderId}`));
+        if (!snap.exists()) { showToast("Order not found!", "error"); return; }
+        const o = snap.val();
+        const items = Array.isArray(o.items) ? o.items : (o.cart || []);
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const storeName = Outlet.current === 'pizza' ? 'ROSHANI PIZZA' : 'ROSHANI CAKES';
+        const itemRows = items.map(i => {
+            const addons = [];
+            if (i.addon && i.addon !== 'None') addons.push(i.addon);
+            if (i.addons) i.addons.forEach(a => { if (a.name) addons.push(a.name); });
+            return `<tr><td style="font-size:14px;font-weight:700;padding:4px 0;">${i.qty || 1}x</td><td style="font-size:14px;padding:4px 0 4px 8px;">${i.name || 'Item'} ${i.size && i.size !== '- Default -' ? `(${i.size})` : ''}${addons.length ? `<br><span style="font-size:11px;color:#666;">+ ${addons.join(', ')}</span>` : ''}</td></tr>`;
+        }).join('');
+
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+            body{width:80mm;margin:0;padding:8mm 3mm;font-family:'Courier New',monospace;font-size:13px;color:#222;}
+            h2{text-align:center;font-size:18px;margin:0 0 4px;}
+            .sub{text-align:center;font-size:11px;color:#666;margin:0 0 8px;}
+            .divider{border-top:1px dashed #999;margin:8px 0;}
+            table{width:100%;border-collapse:collapse;}
+            .note{margin-top:8px;padding:6px;border:1px dashed #999;font-size:12px;color:#555;}
+            .footer{text-align:center;font-size:11px;color:#999;margin-top:12px;}
+        </style></head><body>
+            <h2>${storeName}</h2>
+            <div class="sub">KITCHEN ORDER TICKET</div>
+            <div class="divider"></div>
+            <div style="font-size:12px;"><b>Order:</b> #${o.orderId || orderId.slice(-8).toUpperCase()}</div>
+            <div style="font-size:12px;"><b>Date:</b> ${dateStr} ${timeStr}</div>
+            ${o.tableNo ? `<div style="font-size:12px;"><b>Table:</b> ${o.tableNo}</div>` : ''}
+            ${o.customerName ? `<div style="font-size:12px;"><b>Customer:</b> ${o.customerName}</div>` : ''}
+            <div class="divider"></div>
+            <table>${itemRows}</table>
+            ${o.customerNote ? `<div class="note"><b>Notes:</b> ${o.customerNote}</div>` : ''}
+            <div class="divider"></div>
+            <div class="footer">--- KOT ---</div>
+        </body></html>`;
+        printWithIframe(html);
+    } catch (e) {
+        console.error("KOT Print Error:", e);
+        showToast("Failed to print KOT.", "error");
+    }
+}
+
 export async function reprintLastPosReceipt() {
     try {
         const snap = await get(query(Outlet.ref("orders"), orderByChild("type"), equalTo("Dine-in"), limitToLast(1)));

@@ -34,7 +34,22 @@
         </div>
     </div>
 
-    <!-- ============== SCREEN 2: MENU CATEGORIES ============== -->
+    <!-- ============== SCREEN 2: GROUP CHOICE (Multi-Bill) ============== -->
+    <div id="screenChooseGroup" class="screen">
+        <div class="group-choice-body">
+            <svg class="icon" style="width:48px;height:48px;color:var(--accent);margin-bottom:8px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <h3 style="margin:0 0 4px;">Split or Share?</h3>
+            <p style="font-size:13px;color:var(--text-sub);margin-bottom:20px;">Another guest is already ordering. Do you want to share the bill or start your own?</p>
+            <button class="btn-start" id="btnStartOwnGroup" style="margin-bottom:10px;">Start My Own Bill</button>
+            <div id="joinGroupSection" class="hidden">
+                <p style="font-size:12px;color:var(--text-sub);margin:12px 0 8px;">Or join an existing bill:</p>
+                <div id="existingGroupsList"></div>
+            </div>
+            <button id="btnCancelGroupChoice" style="margin-top:16px;background:none;border:none;color:var(--text-sub);font-size:13px;cursor:pointer;text-decoration:underline;padding:8px;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- ============== SCREEN 3: MENU CATEGORIES ============== -->
     <div id="screenMenu" class="screen">
         <div class="topbar">
             <div class="topbar-brand">
@@ -174,7 +189,7 @@
 
         <div class="cart-summary" id="cartSummaryWrap">
             <div class="cart-summary-row"><span>This Order</span><span id="cartSubtotal">₹0</span></div>
-            <div class="cart-summary-row" id="cartTaxRow"><span><span id="cartTaxName">Tax</span> (<span id="cartTaxPct">5</span>%)</span><span id="cartTax">₹0</span></div>
+            <div id="cartTaxRows"></div>
             <div class="cart-summary-row hidden" id="cartServiceChargeRow"><span><span id="cartServiceChargeName">Service Charge</span> (<span id="cartServiceChargePct">10</span>%)</span><span id="cartServiceCharge">₹0</span></div>
             <div class="cart-summary-row cart-summary-discount hidden" id="cartDiscountRow"><span id="cartDiscountLabel">Discount</span><span id="cartDiscount">-₹0</span></div>
             <div class="cart-summary-row cart-summary-total"><span>Total</span><span id="cartTotal">₹0</span></div>
@@ -193,6 +208,9 @@
             <span style="width:38px;"></span>
         </div>
         <div class="tracking-body">
+
+            <!-- Billing status banner — shown when bill has been requested -->
+            <div id="billingStatusBanner" class="billing-status-banner hidden"></div>
 
             <!-- Hero status card — current status highlighted in the
                  complementary blue (--status-active), not the brand orange,
@@ -261,7 +279,7 @@
                 <div class="session-bill-divider"></div>
                 <div class="session-bill-summary">
                     <div class="session-bill-summary-row"><span>Subtotal</span><span id="sessionBillSubtotal">₹0</span></div>
-                    <div class="session-bill-summary-row" id="sessionBillTaxRow"><span id="sessionBillTaxLabel">Tax (5%)</span><span id="sessionBillTax">₹0</span></div>
+                    <div id="sessionBillTaxRows"></div>
                     <div class="session-bill-summary-row hidden" id="sessionBillSCRow"><span id="sessionBillSCLabel">Service Charge (10%)</span><span id="sessionBillSC">₹0</span></div>
                 </div>
                 <div class="session-bill-total-row">
@@ -278,7 +296,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h16v20l-3-2-3 2-3-2-3 2-3-2-1 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
                     Request Bill
                 </button>
-                <button class="tracking-call-waiter-link" id="btnGotoCallWaiter">
+                <button class="btn-call-waiter" id="btnGotoCallWaiter">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                     Need help? Call Waiter
                 </button>
@@ -380,6 +398,17 @@
             <svg class="icon" style="width:48px;height:48px;color:var(--error);" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
             <h3>This QR code is invalid</h3>
             <p>The table link could not be verified, or this table is no longer available. Please ask a staff member for assistance.</p>
+            <button class="btn-start" onclick="location.reload()">Try Again</button>
+        </div>
+    </div>
+
+    <!-- ============== SESSION EXPIRED ============== -->
+    <div id="screenSessionExpired" class="screen">
+        <div class="invalid-token-body">
+            <svg class="icon" style="width:48px;height:48px;color:var(--text-sub);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <h3>Session Expired</h3>
+            <p>Your dining session has ended due to inactivity. Please scan the QR code on your table again to continue ordering.</p>
+            <button class="btn-start" onclick="location.reload()">Scan Again</button>
         </div>
     </div>
 

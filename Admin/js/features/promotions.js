@@ -12,9 +12,10 @@ import {
 } from '../firebase.js';
 import { state } from '../state.js';
 import { showToast, showConfirm } from '../ui-utils.js';
-import { haptic } from '../utils.js';
+import { haptic, escapeHtml, formatDate } from '../utils.js';
 import { renderPromotionsGuide } from './promotions-guide.js';
 import { logger } from '../utils/logger.js';
+import { loadLucide } from '../ui.js';
 
 const PROMO_MAX_PER_CAMPAIGN = 300;
 const PHONE_HINTS = ['whatsapp', 'phone', 'mobile', 'number', 'cell', 'contact', 'tel', 'msisdn'];
@@ -39,15 +40,6 @@ let _connUnsub = null;
 function _outlet() { return state.currentOutlet || 'pizza'; }
 function _ref(path) { return Outlet.ref(path); }
 function _promoRef(sub) { return ref(db, `bot/${_outlet()}/promotions/${sub}`); }
-function _nowMs() { return Date.now(); }
-function _fmtDate(ms) {
-    if (!ms) return '—';
-    const d = new Date(ms);
-    return d.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-}
-function _esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
 function _cleanPhone(p) { return String(p || '').replace(/\D/g, '').slice(-10); }
 
 /* ============ SPREADSHEET PARSING (CSV + XLSX) ============ */
@@ -181,7 +173,7 @@ async function _buildRecipients() {
             showToast('Permission denied reading customers. Apply the updated database rules, or use the Excel/CSV upload option.', 'error', 6000);
         }
         if (customers) {
-            const cutoff = _nowMs() - 30 * 24 * 60 * 60 * 1000;
+            const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
             for (const [phone, c] of Object.entries(customers)) {
                 if (!c) continue;
                 if (c.promotionalConsent !== true) continue;
@@ -245,6 +237,7 @@ function _setKillSwitchUi(on) {
     btn.innerHTML = on
         ? `<i data-lucide="octagon"></i> <span>EMERGENCY STOP ENGAGED — click to release</span>`
         : `<i data-lucide="octagon"></i> <span>EMERGENCY STOP ALL</span>`;
+    await loadLucide();
     if (window.lucide) window.lucide.createIcons({ root: btn.parentNode });
 }
 
@@ -343,30 +336,31 @@ function _renderActivePane() {
     container.innerHTML = list.map(c => {
         const pct = c.recipients && c.recipients.length ? Math.min(100, Math.round((c.currentIndex || 0) / c.recipients.length * 100)) : 0;
         return `
-        <div class="promo-campaign-card" data-cid="${_esc(c.id)}">
+        <div class="promo-campaign-card" data-cid="${escapeHtml(c.id)}">
             <div class="flex-between flex-center flex-wrap-mobile">
                 <div>
-                    <strong>${_esc(c.id)}</strong>
-                    <span class="badge badge-${_esc(c.status)}">${_esc(c.status)}</span>
-                    ${c.runAt ? `<span class="text-muted-small">scheduled ${_esc(_fmtDate(c.runAt))}</span>` : ''}
+                    <strong>${escapeHtml(c.id)}</strong>
+                    <span class="badge badge-${escapeHtml(c.status)}">${escapeHtml(c.status)}</span>
+                    ${c.runAt ? `<span class="text-muted-small">scheduled ${escapeHtml(formatDate(c.runAt))}</span>` : ''}
                     ${c.menuText ? `<span class="text-muted-small" title="Has menu footer">• 🍴 menu</span>` : ''}
                 </div>
                 <div class="flex-row flex-gap-6">
-                    <button class="btn-text" data-action="clonePromoCampaign" data-id="${_esc(c.id)}" title="Clone">
+                    <button class="btn-text" data-action="clonePromoCampaign" data-id="${escapeHtml(c.id)}" title="Clone">
                         <i data-lucide="copy"></i>
                     </button>
-                    ${c.status === 'running' || c.status === 'paused' ? `<button class="btn-text text-danger" data-action="stopPromoCampaign" data-id="${_esc(c.id)}" title="Stop"><i data-lucide="stop-circle"></i></button>` : ''}
+                    ${c.status === 'running' || c.status === 'paused' ? `<button class="btn-text text-danger" data-action="stopPromoCampaign" data-id="${escapeHtml(c.id)}" title="Stop"><i data-lucide="stop-circle"></i></button>` : ''}
                 </div>
             </div>
             <div class="mt-8">
                 <div class="progress-bar"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
                 <div class="flex-between mt-4">
                     <span class="text-muted-small">${c.currentIndex || 0} / ${c.recipients ? c.recipients.length : '?'} • sent ${c.totalSent || 0} • failed ${c.totalFailed || 0}</span>
-                    <span class="text-muted-small">${_esc(_fmtDate(c.lastHeartbeat || c.startedAt))}</span>
+                    <span class="text-muted-small">${escapeHtml(formatDate(c.lastHeartbeat || c.startedAt))}</span>
                 </div>
             </div>
         </div>`;
     }).join('');
+    await loadLucide();
     if (window.lucide) window.lucide.createIcons({ root: container });
     _setKillSwitchUi(_killSwitchLocal);
 }
@@ -387,22 +381,23 @@ function _renderHistoryPane() {
         <div class="promo-campaign-card">
             <div class="flex-between flex-center flex-wrap-mobile">
                 <div>
-                    <strong>${_esc(c.id)}</strong>
-                    <span class="badge badge-${_esc(c.status)}">${_esc(c.status)}</span>
-                    ${c.reason ? `<span class="text-muted-small">${_esc(c.reason)}</span>` : ''}
+                    <strong>${escapeHtml(c.id)}</strong>
+                    <span class="badge badge-${escapeHtml(c.status)}">${escapeHtml(c.status)}</span>
+                    ${c.reason ? `<span class="text-muted-small">${escapeHtml(c.reason)}</span>` : ''}
                 </div>
                 <div class="flex-row flex-gap-6">
-                    <button class="btn-text" data-action="clonePromoCampaign" data-id="${_esc(c.id)}" title="Clone">
+                    <button class="btn-text" data-action="clonePromoCampaign" data-id="${escapeHtml(c.id)}" title="Clone">
                         <i data-lucide="copy"></i>
                     </button>
-                    <button class="btn-text" data-action="exportPromoLog" data-id="${_esc(c.id)}" title="Export log">
+                    <button class="btn-text" data-action="exportPromoLog" data-id="${escapeHtml(c.id)}" title="Export log">
                         <i data-lucide="download"></i>
                     </button>
                 </div>
             </div>
-            <div class="text-muted-small mt-4">sent ${c.totalSent || 0} • failed ${c.totalFailed || 0} • completed ${_esc(_fmtDate(c.completedAt || c.startedAt))}</div>
+            <div class="text-muted-small mt-4">sent ${c.totalSent || 0} • failed ${c.totalFailed || 0} • completed ${escapeHtml(formatDate(c.completedAt || c.startedAt))}</div>
         </div>
     `).join('');
+    await loadLucide();
     if (window.lucide) window.lucide.createIcons({ root: container });
 }
 
@@ -458,23 +453,24 @@ export async function _preview() {
     const bodyEl = document.getElementById('promoPreviewBody');
     const attachMenuImg = !!document.getElementById('promoAttachMenuImage')?.checked;
     bodyEl.innerHTML = `
-        ${_mediaDataUrl ? `<div style="margin-bottom:12px;"><img src="${_esc(_mediaDataUrl)}" alt="Attached media" style="max-width:100%; border-radius:8px; display:block;"></div>` : ''}
-        <div style="white-space:pre-wrap; background:#0b1220; color:#e5e7eb; padding:12px; border-radius:8px; font-family:monospace; font-size:13px;">${_esc(body)}</div>
+        ${_mediaDataUrl ? `<div style="margin-bottom:12px;"><img src="${escapeHtml(_mediaDataUrl)}" alt="Attached media" style="max-width:100%; border-radius:8px; display:block;"></div>` : ''}
+        <div style="white-space:pre-wrap; background:#0b1220; color:#e5e7eb; padding:12px; border-radius:8px; font-family:monospace; font-size:13px;">${escapeHtml(body)}</div>
         ${sendStop ? '' : '<div class="text-muted-small mt-8" style="font-size:11px;">ℹ️ STOP footer is OFF — no opt-out message will be sent.</div>'}
         ${attachMenu && menuText ? `
             <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
                 <div class="text-muted-small" style="margin-bottom:6px;">— followed by a 2nd message with the menu text —</div>
-                <div style="white-space:pre-wrap; background:#0b1220; color:#e5e7eb; padding:12px; border-radius:8px; font-family:monospace; font-size:13px;">${_esc(menuText)}</div>
+                <div style="white-space:pre-wrap; background:#0b1220; color:#e5e7eb; padding:12px; border-radius:8px; font-family:monospace; font-size:13px;">${escapeHtml(menuText)}</div>
             </div>
         ` : ''}
         ${attachMenuImg && _menuImageDataUrl ? `
             <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
                 <div class="text-muted-small" style="margin-bottom:6px;">— followed by a message with the menu image —</div>
-                <div><img src="${_esc(_menuImageDataUrl)}" alt="Menu image" style="max-width:100%; max-height:120px; border-radius:8px;"></div>
+                <div><img src="${escapeHtml(_menuImageDataUrl)}" alt="Menu image" style="max-width:100%; max-height:120px; border-radius:8px;"></div>
             </div>
         ` : ''}
     `;
     modal.classList.add('active');
+    await loadLucide();
     if (window.lucide) window.lucide.createIcons({ root: modal });
 }
 
@@ -525,12 +521,12 @@ async function _launchCampaign() {
         sendStopMsg: sendStop,
         recipients, delayMs: delaySec * 1000, generateCoupons,
         runAt, quietHours, requestedBy: window.currentAdmin?.uid || 'admin',
-        createdAt: _nowMs(),
+        createdAt: Date.now(),
     };
-    if (mode !== 'schedule') campaignDoc.startedAt = _nowMs();
+    if (mode !== 'schedule') campaignDoc.startedAt = Date.now();
 
     const confirm = await showConfirm(
-        `Send to ${recipients.length} recipients${mode === 'schedule' ? ` at ${_fmtDate(runAt)}` : ' now'}${attachMenu && menuText ? ' (+ menu footer)' : ''}?`,
+        `Send to ${recipients.length} recipients${mode === 'schedule' ? ` at ${formatDate(runAt)}` : ' now'}${attachMenu && menuText ? ' (+ menu footer)' : ''}?`,
         'Confirm campaign'
     );
     if (!confirm) return;
@@ -539,7 +535,7 @@ async function _launchCampaign() {
     await set(_promoRef(`campaigns/${campaignId}`), campaignDoc);
 
     if (mode === 'schedule') {
-        showToast(`Scheduled ${campaignId} for ${_fmtDate(runAt)}`, 'success');
+        showToast(`Scheduled ${campaignId} for ${formatDate(runAt)}`, 'success');
     } else {
         const cmdRef = push(_ref(`bot/${_outlet()}/commands`));
         await set(cmdRef, {
@@ -652,7 +648,7 @@ async function _togglePromoEnabled(value) {
 async function _stopCampaign(id) {
     const ok = await showConfirm(`Stop campaign ${id}? Already-sent messages will not be recalled.`, 'Stop campaign');
     if (!ok) return;
-    await update(_promoRef(`campaigns/${id}`), { status: 'stopped', stoppedAt: _nowMs() });
+    await update(_promoRef(`campaigns/${id}`), { status: 'stopped', stoppedAt: Date.now() });
 }
 
 async function _cloneCampaign(id) {
@@ -724,6 +720,7 @@ function _switchMode(mode) {
         btn.innerHTML = mode === 'schedule'
             ? `<i data-lucide="calendar"></i> <span>Schedule campaign</span>`
             : `<i data-lucide="send"></i> <span>Launch campaign</span>`;
+        await loadLucide();
         if (window.lucide) window.lucide.createIcons({ root: btn.parentNode });
     }
 }

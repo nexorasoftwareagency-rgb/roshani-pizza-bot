@@ -16,6 +16,7 @@ export const Session = {
     tableId: null,
     session: null,     // { sessionId, tableId, status, orders:[...], runningTotal, grandTotal, ... }
     sessionId: null,
+    currentGroupId: null, // which order group this browser belongs to
     _sessionUnsub: null,
 };
 
@@ -55,13 +56,30 @@ async function validateToken(token) {
  * Uses a transaction on the table's currentSession field to avoid a
  * race when two people scan the same QR within the same second.
  */
+/** Set to true when joinOrCreateSession creates a brand-new session (not joining existing). */
+let _isNewSession = false;
+
 async function joinOrCreateSession(table) {
     const sessionsSnap = await get(outletRef(`tableSessions`));
     const allSessions = sessionsSnap.val() || {};
 
     // If the table already has a currentSession AND it's still active, join it.
-    if (table.currentSession && allSessions[table.currentSession] && allSessions[table.currentSession].status !== 'closed') {
+    if (table.currentSession && allSessions[table.currentSession] && allSessions[table.currentSession].status !== 'closed' && allSessions[table.currentSession].status !== 'expired') {
+        _isNewSession = false;
         return { id: table.currentSession, ...allSessions[table.currentSession] };
+    }
+
+    // If the existing session is expired/closed, clear the table's currentSession
+    // pointer so the transaction below can create a fresh session.
+    // Must set status:'free' to match the DB write rule for unauthenticated users.
+    if (table.currentSession && allSessions[table.currentSession] &&
+        (allSessions[table.currentSession].status === 'expired' || allSessions[table.currentSession].status === 'closed')) {
+        try {
+            await update(outletRef(`tables/${table.id}`), { status: 'free', currentSession: null, updatedAt: Date.now() });
+        } catch (e) {
+            // Table write failed (permission / race) — let the transaction below retry
+            console.warn('[Session] Could not clear expired session pointer:', e?.message || e);
+        }
     }
 
     // Otherwise create a new session via a transaction on the table's
@@ -70,38 +88,59 @@ async function joinOrCreateSession(table) {
     let createdSessionId = null;
     let createdSessionData = null;
 
-    await runTransaction(outletRef(`tables/${table.id}/currentSession`), (current) => {
-        if (current) {
-            // Someone else's transaction already created a session —
-            // abort this one (return undefined cancels the transaction).
-            return undefined;
-        }
-        const newRef = push(outletRef('tableSessions'));
-        createdSessionId = newRef.key;
-        createdSessionData = {
-            sessionId: newRef.key,
-            tableId: table.id,
-            tableNumber: table.number,
-            tableToken: table.token,
-            status: 'active',
-            openedAt: Date.now(),
-            closedAt: null,
-            customerName: '',
-            customerPhone: '',
-            guestCount: 1,
-            specialNote: '',
-            orders: [],
-            runningTotal: 0,
-            discount: 0,
-            tax: 0,
-            grandTotal: 0
-        };
-        return newRef.key;
-    });
+    try {
+        await runTransaction(outletRef(`tables/${table.id}/currentSession`), (current) => {
+            if (current) {
+                // Someone else's transaction already created a session —
+                // abort this one (return undefined cancels the transaction).
+                return undefined;
+            }
+            const newRef = push(outletRef('tableSessions'));
+            createdSessionId = newRef.key;
+            const now = Date.now();
+                createdSessionData = {
+                    sessionId: newRef.key,
+                    tableId: table.id,
+                    tableNumber: table.number,
+                    // tableToken deliberately omitted — tables node is
+                    // world-readable by design (QR validation), but
+                    // re-exposing the token in the session record is
+                    // unnecessary surface area.
+                    status: 'active',
+                openedAt: now,
+                closedAt: null,
+                lastActivityAt: now,
+                expiresAt: now + 7200000,
+                customerName: '',
+                guestCount: 1,
+                specialNote: '',
+                orders: [],
+                runningTotal: 0,
+                discount: 0,
+                tax: 0,
+                grandTotal: 0
+            };
+            return newRef.key;
+        });
+    } catch (e) {
+        console.warn('[Session] Transaction failed:', e?.message || e);
+        return null;
+    }
 
     if (createdSessionId && createdSessionData) {
-        await set(outletRef(`tableSessions/${createdSessionId}`), createdSessionData);
-        await update(outletRef(`tables/${table.id}`), { status: 'occupied', updatedAt: Date.now() });
+        _isNewSession = true;
+        try {
+            await set(outletRef(`tableSessions/${createdSessionId}`), createdSessionData);
+        } catch (e) {
+            // Session data write failed — roll back the table pointer to avoid orphan
+            await set(outletRef(`tables/${table.id}/currentSession`), null).catch(() => {});
+            throw e; // re-throw so caller knows creation failed
+        }
+        try {
+            await update(outletRef(`tables/${table.id}`), { status: 'occupied', updatedAt: Date.now() });
+        } catch (e) {
+            console.warn('[Session] Status update failed after creation:', e?.message || e);
+        }
         return { id: createdSessionId, ...createdSessionData };
     }
 
@@ -111,11 +150,14 @@ async function joinOrCreateSession(table) {
     const freshTable = freshSnap.val();
     if (!freshTable || !freshTable.currentSession) return null;
     const sessSnap = await get(outletRef(`tableSessions/${freshTable.currentSession}`));
+    _isNewSession = false; // another scan created it, we just joined
     return { id: freshTable.currentSession, ...sessSnap.val() };
 }
 
 /**
- * Bootstraps the session for the current page load.
+ * Phase A: validates the QR token and sets Session.table / Session.tableId.
+ * Session creation is deferred to ensureSession() (Phase B) so that a
+ * QR scan alone never creates a stale session (Phase 3 / Session Timing).
  * Returns { ok: true } on success or { ok: false, reason } on failure.
  */
 export async function initSession() {
@@ -127,13 +169,83 @@ export async function initSession() {
     Session.table = table;
     Session.tableId = table.id;
 
-    const session = await joinOrCreateSession(table);
+    // Session + order groups are created lazily by ensureSession()
+    return { ok: true };
+}
+
+/**
+ * Phase B: idempotent session creation — creates (or joins) a table
+ * session, initialises order groups, and starts the live listener.
+ *
+ * Safe to call multiple times — returns immediately if a session already
+ * exists. Call this from every code path that needs a session
+ * (btnAddToOrder, btnPlaceOrder, placeOrder).
+ *
+ * Returns { ok: true, groupChoiceNeeded: bool, isNewSession: bool }
+ *   groupChoiceNeeded → the caller should show the group choice screen
+ *   isNewSession → the session was created just now (not joined from existing)
+ */
+export async function ensureSession() {
+    if (Session.sessionId && Session.currentGroupId) {
+        const st = Session.session?.status;
+        if (st === 'closed' || st === 'expired') {
+            Session.sessionId = null;
+            Session.session = null;
+            Session.currentGroupId = null;
+        } else {
+            _isNewSession = false;
+            return { ok: true, isNewSession: false };
+        }
+    }
+
+    // If sessionId is set but no group, reset so the full init path runs cleanly
+    if (Session.sessionId && !Session.currentGroupId) {
+        Session.sessionId = null;
+        Session.session = null;
+    }
+
+    const session = await joinOrCreateSession(Session.table);
     if (!session) return { ok: false, reason: 'session-creation-failed' };
     Session.session = session;
     Session.sessionId = session.id;
 
-    watchSession();
-    return { ok: true };
+    // --- Order Group initialization (moved from initSession) ---
+    _groupCounter = session.orderGroups ? Object.keys(session.orderGroups).length : 0;
+    if (!session.orderGroups || Object.keys(session.orderGroups).length === 0) {
+        const groupId = await createOrderGroup('Group A');
+        if (!groupId) {
+            Session.sessionId = null;
+            Session.session = null;
+            return { ok: false, reason: 'group-creation-failed' };
+        }
+        // Migrate any pre-existing session orders (from before Phase 2) into Group A
+        if (Array.isArray(session.orders) && session.orders.length > 0) {
+            try {
+                await set(outletRef(`tableSessions/${Session.sessionId}/orderGroups/${groupId}/orders`), session.orders);
+                if (Session.session?.orderGroups?.[groupId]) {
+                    Session.session.orderGroups[groupId].orders = [...session.orders];
+                }
+            } catch (e) {
+                console.warn('[Session] Legacy order migration failed:', e);
+            }
+        }
+        Session.currentGroupId = groupId;
+        localStorage.setItem(`_pizza_group_${session.id}`, groupId);
+        watchSession();
+        return { ok: true, groupChoiceNeeded: false, isNewSession: _isNewSession };
+    } else {
+        const savedGroupId = localStorage.getItem(`_pizza_group_${session.id}`);
+        if (savedGroupId && session.orderGroups[savedGroupId] && session.orderGroups[savedGroupId].status === 'active') {
+            Session.currentGroupId = savedGroupId;
+            watchSession();
+            return { ok: true, groupChoiceNeeded: false, isNewSession: _isNewSession };
+        } else {
+            Session.currentGroupId = null;
+            watchSession();
+            return { ok: true, groupChoiceNeeded: true, isNewSession: _isNewSession };
+        }
+    }
+    // --- END ---
 }
 
 /**
@@ -152,39 +264,142 @@ function watchSession() {
 }
 
 /**
+ * Creates a new order group under the current session.
+ * Order groups let multiple customers at the same table split
+ * their orders into separate bills (Multi-Bill / Order Groups).
+ * Returns the new group's Firebase push key.
+ */
+let _groupCounter = 0;
+let _creatingGroup = false;
+export async function createOrderGroup(label) {
+    if (!Session.sessionId) return null;
+    if (_creatingGroup) return null; // guard against concurrent calls (race from two browsers)
+    _creatingGroup = true;
+    try {
+    const groupsRef = outletRef(`tableSessions/${Session.sessionId}/orderGroups`);
+    const newRef = push(groupsRef);
+    const groupId = newRef.key;
+    const now = Date.now();
+    const groupData = {
+        label: label || `Group ${String.fromCharCode(64 + _groupCounter + 1)}`,
+        createdAt: now,
+        status: 'active',
+        orders: []
+    };
+    await set(newRef, groupData);
+    _groupCounter++;
+    // Update local session cache so watchSession() picks it up
+    if (!Session.session.orderGroups) Session.session.orderGroups = {};
+    Session.session.orderGroups[groupId] = groupData;
+    Session.currentGroupId = groupId;
+    localStorage.setItem(`_pizza_group_${Session.sessionId}`, groupId);
+    return groupId;
+    } finally {
+        _creatingGroup = false;
+    }
+}
+
+/**
+ * Returns the order IDs belonging to the current group,
+ * or falls back to all session orders if no group context.
+ */
+export function getCurrentGroupOrders() {
+    if (!Session.session) return [];
+    if (Session.currentGroupId && Session.session.orderGroups && Session.session.orderGroups[Session.currentGroupId]) {
+        return Session.session.orderGroups[Session.currentGroupId].orders || [];
+    }
+    // When no group is selected (group choice needed), return empty list
+    // to avoid leaking other groups' orders via the session-level orders fallback.
+    return [];
+}
+
+/**
  * Appends a newly placed order's id into the session's orders[] array
  * and recomputes the running totals — this is what turns "3 separate
  * orders" into "1 running bill" (Decision #4).
  */
-export async function attachOrderToSession(orderId, orderTotals) {
-    await runTransaction(outletRef(`tableSessions/${Session.sessionId}`), (sess) => {
-        if (!sess) return sess;
+export async function attachOrderToSession(orderId, orderTotals, groupId) {
+    // Single atomic transaction: session-level totals + group-level orders updated together
+    // Abort if session or group is in billing/paid/closed/expired state (race condition guard)
+    // Returns true if the order was attached, false if aborted (session/group no longer active)
+    const result = await runTransaction(outletRef(`tableSessions/${Session.sessionId}`), (sess) => {
+        if (!sess) return undefined;
+        if (sess.status === 'billing' || sess.status === 'closed' || sess.status === 'expired') return undefined;
+        if (groupId) {
+            const g = sess.orderGroups?.[groupId];
+            if (g && (g.status === 'billing' || g.status === 'paid')) return undefined;
+        }
+        const now = Date.now();
         sess.orders = Array.isArray(sess.orders) ? sess.orders : [];
-        sess.orders.push(orderId);
+        if (!sess.orders.includes(orderId)) sess.orders.push(orderId);
         sess.runningTotal = (sess.runningTotal || 0) + (orderTotals.subtotal || 0);
         sess.tax = (sess.tax || 0) + (orderTotals.tax || 0);
         sess.serviceCharge = (sess.serviceCharge || 0) + (orderTotals.serviceCharge || 0);
+        // Apply discount per order onto session discount
+        sess.discount = (sess.discount || 0) + (orderTotals.discountAmount || 0);
         sess.grandTotal = (sess.grandTotal || 0) + (orderTotals.total || 0);
+        sess.lastActivityAt = now;
+        sess.expiresAt = now + 7200000;
+        // Also push the order ID into the group's orders array in the same transaction
+        if (groupId) {
+            if (!sess.orderGroups) sess.orderGroups = {};
+            if (!sess.orderGroups[groupId]) return undefined; // group missing — abort transaction
+            sess.orderGroups[groupId].orders = Array.isArray(sess.orderGroups[groupId].orders) ? sess.orderGroups[groupId].orders : [];
+            if (!sess.orderGroups[groupId].orders.includes(orderId)) sess.orderGroups[groupId].orders.push(orderId);
+        }
         return sess;
     });
+    // result is the committed value or null if aborted
+    return result != null;
 }
 
-/** Customer-initiated "Request Bill" — flips session + table to billing. */
-export async function requestBill() {
+/**
+ * Heartbeat — refreshes the session's inactivity timer so the session
+ * does not expire while the customer is actively using the app.
+ * Debounced client-side: at most one write per 60 seconds.
+ */
+const HEARTBEAT_MS = 60000;
+let _lastHeartbeat = 0;
+
+export async function touchSession() {
+    const now = Date.now();
+    if (now - _lastHeartbeat < HEARTBEAT_MS) return;
     if (!Session.sessionId) return;
-    await update(outletRef(`tableSessions/${Session.sessionId}`), { status: 'billing' });
-    await update(outletRef(`tables/${Session.tableId}`), { status: 'billing', updatedAt: Date.now() });
+    await update(outletRef(`tableSessions/${Session.sessionId}`), {
+        lastActivityAt: now,
+        expiresAt: now + 7200000
+    });
+    _lastHeartbeat = now;
 }
 
 /** Saves customer name, phone, guest count, and special note on the session record. */
 export async function saveCheckoutContact(name, phone, guestCount, specialNote) {
     if (!Session.sessionId) return;
-    const updates = { customerName: name || '', customerPhone: phone || '' };
+    const now = Date.now();
+    const cleanPhone = (phone || '').replace(/[^\d]/g, '');
+    const updates = { lastActivityAt: now, expiresAt: now + 7200000 };
     if (typeof guestCount === 'number' && guestCount > 0) updates.guestCount = guestCount;
     if (specialNote) updates.specialNote = specialNote;
     await update(outletRef(`tableSessions/${Session.sessionId}`), updates);
+    // Write PII to a restricted path (world-readable tableSessions no longer gets phone data)
+    const contactPayload = { customerName: name || '', customerPhone: phone || '', guestPhone: cleanPhone };
+    if (typeof guestCount === 'number' && guestCount > 0) contactPayload.guestCount = guestCount;
+    if (specialNote) contactPayload.specialNote = specialNote;
+    try {
+        await update(outletRef(`tableSessionsContact/${Session.sessionId}`), contactPayload);
+    } catch (e) {
+        console.warn('[Session] PII write failed', e?.message || e);
+    }
 }
 
 export function cleanupSession() {
     if (Session._sessionUnsub) { Session._sessionUnsub(); Session._sessionUnsub = null; }
+    if (Session.sessionId) {
+        localStorage.removeItem(`_pizza_group_${Session.sessionId}`);
+    }
+    sessionStorage.removeItem('_pizza_draft');
+    Session.sessionId = null;
+    Session.session = null;
+    Session.currentGroupId = null;
+    Session.table = null;
 }

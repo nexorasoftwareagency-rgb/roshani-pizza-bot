@@ -750,7 +750,7 @@ window.initRealtimeListeners = function initRealtimeListeners() {
         };
 
         // 1. Available for Pickup (Unassigned)
-        const q1 = query(ref(db, ordersPath), orderByChild('assignedRider'), equalTo(""));
+        const q1 = query(ref(db, ordersPath), orderByChild('assignedRider'), equalTo(null));
         const unsub1 = onValue(q1, snap => updateCache(snap.val() || {}, 'unassigned'), error => {
             console.error(`[Firebase] Pickup Sync Error (${outletId}):`, error);
             if (error.code === 'PERMISSION_DENIED') {

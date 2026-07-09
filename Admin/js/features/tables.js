@@ -32,6 +32,7 @@ import { state } from '../state.js';
 import { showToast, showConfirm, showDeleteConfirm, showPaymentPicker } from '../ui-utils.js';
 import { printOrderReceipt } from './printing.js';
 import { haptic, escapeHtml, playNotificationSound } from '../utils.js';
+import { loadLucide } from '../ui.js';
 
 // ---------------------------------------------------------------------
 // Module-level cache
@@ -43,6 +44,7 @@ let _requestsListener = null;
 let _connUnsub = null;
 let _ordersListenerAttached = false;
 let _kdsTickInterval = null;
+let _policeInterval = null;
 
 let _tables = {};
 let _sessions = {};
@@ -52,14 +54,12 @@ let _seenRequestIds = null;
 let _drawerTableId = null;
 let _qrModalOpening = false; // guard against double-fire from #tab-tables + main.js
 
-function _outlet() { return state.currentOutlet || 'pizza'; }
 function _tblRef(sub) { return Outlet.ref(`tables${sub ? '/' + sub : ''}`); }
 function _ms(v) { return typeof v === 'number' ? v : new Date(v || 0).getTime(); }
 function _sessRef(sub) { return Outlet.ref(`tableSessions${sub ? '/' + sub : ''}`); }
 function _ordersRef(sub) { return Outlet.ref(`orders${sub ? '/' + sub : ''}`); }
 function _settingsRef(sub) { return Outlet.ref(`dineinSettings${sub ? '/' + sub : ''}`); }
 function _reqRef(sub) { return Outlet.ref(`tableRequests${sub ? '/' + sub : ''}`); }
-function _nowMs() { return Date.now(); }
 function _pad2(n) { return String(n).padStart(2, '0'); }
 
 // Secure token generator — NEVER a sequential/guessable value (Decision #6)
@@ -89,16 +89,39 @@ function _sessionForTable(tableId) {
     return _sessions[t.currentSession] || null;
 }
 
+/** Compute session total from individual non-cancelled orders (avoids inflated sess.grandTotal). */
+function _effectiveTotal(sess) {
+    if (!sess?.orders && !sess?.orderGroups) return 0;
+    const orderIds = new Set([...(sess.orders || [])]);
+    if (sess.orderGroups) {
+        Object.values(sess.orderGroups).forEach(g => (g.orders || []).forEach(oid => orderIds.add(oid)));
+    }
+    const orders = Array.from(orderIds).map(oid => _orders[oid]).filter(Boolean);
+    return orders.reduce((sum, o) => o.status !== 'Cancelled' ? sum + Number(o.total || 0) : sum, 0);
+}
+
 function _ordersForSession(sessionId) {
     const sess = _sessions[sessionId];
     if (!sess?.orders) return [];
     return sess.orders.map(oid => ({ id: oid, ...(_orders[oid] || {}) })).filter(o => o.id);
 }
 
+function _orderGroupsForSession(sessionId) {
+    const sess = _sessions[sessionId];
+    if (!sess?.orderGroups) return [];
+    return Object.entries(sess.orderGroups).map(([id, g]) => ({ id, ...g }));
+}
+
+function _ordersForGroup(sessionId, groupId) {
+    const sess = _sessions[sessionId];
+    if (!sess?.orderGroups?.[groupId]?.orders) return [];
+    return sess.orderGroups[groupId].orders.map(oid => ({ id: oid, ...(_orders[oid] || {}) })).filter(o => o.id);
+}
+
 function _dineInOrders() {
     return Object.entries(_orders)
         .map(([id, o]) => ({ id, ...o }))
-        .filter(o => o.type === 'Dine-in' && o.status !== 'Delivered' && o.status !== 'Cancelled' && o.status !== 'Served')
+        .filter(o => o.type === 'Dine-in' && o.status !== 'Delivered' && o.status !== 'Cancelled' && o.status !== 'Served' && o.status !== 'Pending')
         .sort((a, b) => _ms(b.createdAt) - _ms(a.createdAt));
 }
 
@@ -109,7 +132,21 @@ function _syncCustomersFromOrders(orders) {
         if (_customerSyncedOrderIds.has(id)) return;
         if (o.type !== 'Dine-in' || o.source !== 'QR') return;
         const phone = String(o.customerPhone || '').replace(/[^\d]/g, '');
-        if (phone.length < 10) return;
+        if (phone.length < 10) {
+            // Phone no longer stored on order (moved to tableSessionsContact for PII safety)
+            // Try async lookup from the restricted path — fire-and-forget to avoid blocking.
+            if (o.sessionId) {
+                get(Outlet.ref(`tableSessionsContact/${o.sessionId}`)).then(snap => {
+                    const contact = snap.val();
+                    if (!contact) return;
+                    const cp = String(contact.customerPhone || contact.guestPhone || '').replace(/[^\d]/g, '');
+                    if (cp.length < 10) return;
+                    _customerSyncedOrderIds.add(id);
+                    _syncCustomerFromOrder({ ...o, customerPhone: cp, id });
+                }).catch(() => {});
+            }
+            return;
+        }
         _customerSyncedOrderIds.add(id);
         _syncCustomerFromOrder({ ...o, customerPhone: phone, id });
     });
@@ -124,7 +161,7 @@ async function _syncCustomerFromOrder(o) {
     try {
         await runTransaction(custRef, (c) => {
             if (!c) {
-                return { name, phone, orderCount: 1, totalSpent: total, lastSeen: _nowMs(), lastAddress: tableLabel };
+                return { name, phone, orderCount: 1, totalSpent: total, lastSeen: Date.now(), lastAddress: tableLabel };
             }
             return {
                 ...c,
@@ -134,7 +171,7 @@ async function _syncCustomerFromOrder(o) {
                 promotionalConsent: c.promotionalConsent !== undefined ? c.promotionalConsent : true,
                 orderCount: (c.orderCount || 0) + 1,
                 totalSpent: (c.totalSpent || 0) + total,
-                lastSeen: _nowMs(),
+                lastSeen: Date.now(),
                 lastAddress: tableLabel
             };
         });
@@ -145,7 +182,7 @@ async function _syncCustomerFromOrder(o) {
 
 function _sessionElapsedMinutes(sess) {
     if (!sess?.openedAt) return 0;
-    return Math.floor((_nowMs() - sess.openedAt) / 60000);
+    return Math.floor((Date.now() - sess.openedAt) / 60000);
 }
 
 const REQUEST_TYPE_META = {
@@ -164,7 +201,7 @@ function _pendingRequests() {
 
 function _requestChip(r) {
     const meta = REQUEST_TYPE_META[r.type] || { label: r.type || 'Request', icon: 'bell' };
-    const mins = Math.max(0, Math.floor((_nowMs() - (r.createdAt || _nowMs())) / 60000));
+    const mins = Math.max(0, Math.floor((Date.now() - (r.createdAt || Date.now())) / 60000));
     return `
     <div class="table-request-chip" data-id="${escapeHtml(r.id)}">
         <i data-lucide="${meta.icon}" class="icon-14"></i>
@@ -184,6 +221,7 @@ function _renderRequestsBanner() {
         } else {
             banner.classList.remove('hidden');
             banner.innerHTML = pending.map(_requestChip).join('');
+            await loadLucide();
             if (window.lucide) window.lucide.createIcons({ root: banner });
         }
     }
@@ -202,7 +240,7 @@ function _renderRequestsBanner() {
 
 async function _resolveTableRequest(reqId) {
     try {
-        await update(_reqRef(reqId), { status: 'resolved', resolvedAt: _nowMs() });
+        await update(_reqRef(reqId), { status: 'resolved', resolvedAt: Date.now() });
         showToast('Request resolved', 'success');
         haptic(15);
     } catch (e) {
@@ -219,7 +257,7 @@ function _renderKpis() {
     tables.forEach(t => { if (counts[t.status] !== undefined) counts[t.status]++; });
 
     const activeSessions = Object.entries(_sessions).filter(([id, s]) => {
-        if (s.status === 'closed') return false;
+        if (s.status === 'closed' || s.status === 'expired') return false;
         const linkedTable = Object.values(_tables).find(t => t.currentSession === id);
         return !!linkedTable;
     });
@@ -232,7 +270,9 @@ function _renderKpis() {
         const linkedTable = Object.values(_tables).find(t => t.currentSession === id);
         const activeToday = linkedTable && sess.openedAt && sess.openedAt >= todayMs && sess.status !== 'closed';
         const paidToday = sess.paidAt && sess.paidAt >= todayMs;
-        if (activeToday || paidToday) return sum + (sess.grandTotal || 0);
+        if (activeToday || paidToday) {
+            return sum + (_effectiveTotal(sess) || sess.grandTotal || 0);
+        }
         return sum;
     }, 0);
 
@@ -257,20 +297,26 @@ function _tableCard(t) {
     const meta = _statusMeta(t.status);
     const sess = _sessionForTable(t.id);
     let metaLine = '';
-    if (sess && t.status !== 'free') {
-        const orderCount = (sess.orders || []).length;
-        const mins = _sessionElapsedMinutes(sess);
-        metaLine = `<div class="table-card-bill">₹${Number(sess.grandTotal || sess.runningTotal || 0).toLocaleString('en-IN')}</div>
+    if (sess && t.status !== 'free' && sess.status !== 'closed') {
+        if (sess.status === 'expired') {
+            metaLine = `<div class="table-card-expired-badge">⏰ Expired</div>`;
+        } else {
+            const orderCount = (sess.orders || []).length;
+            const mins = _sessionElapsedMinutes(sess);
+            metaLine = `<div class="table-card-bill">₹${_effectiveTotal(sess).toLocaleString('en-IN')}</div>
                      <div class="table-card-meta-row">${orderCount} Order${orderCount !== 1 ? 's' : ''} · ${mins} min</div>`;
+        }
     }
     const disabledAttr = t.status === 'disabled' ? 'disabled' : '';
+    const disabledSuffix = t.status === 'disabled' ? ' (Disabled)' : '';
     return `
-    <button type="button" class="table-grid-card ${meta.cls}" data-action="openTableDrawer" data-id="${escapeHtml(t.id)}" ${disabledAttr} title="Table ${escapeHtml(t.number)} — ${meta.label}">
+    <button type="button" class="table-grid-card ${meta.cls}" data-action="openTableDrawer" data-id="${escapeHtml(t.id)}" ${disabledAttr} title="Table ${escapeHtml(t.number)} — ${meta.label}${disabledSuffix}">
         <div class="table-card-top">
             <span class="table-card-number">${escapeHtml(t.number)}</span>
         </div>
         <div class="table-card-seats">${t.capacity || 0} Seats</div>
-        ${metaLine || `<span class="table-card-status-pill"><i data-lucide="${meta.icon}" class="icon-12"></i> ${meta.label}</span>`}
+        <span class="table-card-status-pill"><i data-lucide="${meta.icon}" class="icon-12"></i> ${meta.label}</span>
+        ${metaLine}
     </button>`;
 }
 
@@ -284,6 +330,7 @@ function _renderFloorGrid() {
     } else {
         grid.innerHTML = tables.map(_tableCard).join('');
     }
+    await loadLucide();
     if (window.lucide) window.lucide.createIcons({ root: grid });
 }
 
@@ -299,13 +346,13 @@ function _orderListRow(o) {
     const t = _tables[o.tableId];
     const tNum = t ? escapeHtml(t.number) : (o.table || '--');
     const itemsLine = Object.values(o.items || {}).slice(0, 2).map(it => `${it.qty || 1} × ${escapeHtml(it.name || 'Item')}`).join(', ');
-    const isNew = (_nowMs() - _ms(o.createdAt)) < 120000;
+    const isNew = (Date.now() - _ms(o.createdAt)) < 120000;
     return `
     <div class="live-order-row" data-action="openTableDrawerByOrder" data-order-id="${escapeHtml(o.id)}">
         <div class="live-order-row-main">
             <span class="live-order-table-chip">Table ${tNum}</span>
             <span class="live-order-id">#${escapeHtml(String(o.id).slice(-6).toUpperCase())}</span>
-            <span class="live-order-time">${new Date(o.createdAt || _nowMs()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span class="live-order-time">${new Date(o.createdAt || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
         <div class="live-order-row-items">${itemsLine || 'No items'}</div>
         <span class="badge ${_statusPillClass(o.status)}">${isNew ? 'NEW' : escapeHtml(o.status || 'Placed')}</span>
@@ -321,6 +368,7 @@ function _renderLiveOrdersList() {
     list.innerHTML = orders.length
         ? orders.map(_orderListRow).join('')
         : `<p class="text-muted-small">No active dine-in orders right now.</p>`;
+    await loadLucide();
     if (window.lucide) window.lucide.createIcons({ root: list });
 }
 
@@ -328,7 +376,7 @@ function _renderLiveOrdersList() {
 // RENDER: Kitchen Display System (KDS)
 // ---------------------------------------------------------------------
 function _elapsedLabel(createdAt) {
-    const diff = Math.max(0, _nowMs() - _ms(createdAt));
+    const diff = Math.max(0, Date.now() - _ms(createdAt));
     return `${Math.floor(diff / 60000)}:${_pad2(Math.floor((diff % 60000) / 1000))}`;
 }
 
@@ -336,9 +384,14 @@ function _kdsCard(o) {
     const t = _tables[o.tableId];
     const tNum = t ? escapeHtml(t.number) : (o.table || '--');
     const itemsLines = Object.values(o.items || {}).map(it => `<div class="kds-item-line">${it.qty || 1} × ${escapeHtml(it.name || 'Item')}</div>`).join('');
-    const mins = Math.floor((_nowMs() - _ms(o.createdAt)) / 60000);
+    const mins = Math.floor((Date.now() - _ms(o.createdAt)) / 60000);
     const urgentCls = mins >= 15 ? 'kds-card-urgent' : (mins >= 8 ? 'kds-card-warn' : '');
     const st = o.status || 'Placed';
+    // Look up group label from session data
+    let groupLabel = '';
+    if (o.orderGroupId && o.sessionId && _sessions[o.sessionId]?.orderGroups?.[o.orderGroupId]) {
+        groupLabel = _sessions[o.sessionId].orderGroups[o.orderGroupId].label || '';
+    }
     let actionBtn = '';
     if (st === 'Placed') {
         actionBtn = `<button class="kds-btn kds-btn-accept" data-action="advanceTableOrder" data-id="${escapeHtml(o.id)}" data-next="Confirmed">Accept</button>`;
@@ -350,14 +403,14 @@ function _kdsCard(o) {
     return `
     <div class="kds-card ${urgentCls}" data-order-id="${escapeHtml(o.id)}">
         <div class="kds-card-top">
-            <span class="kds-card-table">Table ${tNum}</span>
+            <span class="kds-card-table">Table ${tNum}${groupLabel ? ` <span class="kds-card-group">· ${escapeHtml(groupLabel)}</span>` : ''}</span>
             <span class="kds-card-id">#${escapeHtml(String(o.id).slice(-6).toUpperCase())}</span>
         </div>
         <div class="kds-card-items">${itemsLines}</div>
         <div class="kds-card-actions">${actionBtn}</div>
         <div class="kds-card-footer">
             <span class="kds-elapsed" data-created-at="${_ms(o.createdAt)}">${_elapsedLabel(o.createdAt)}</span>
-            <span class="kds-time-label">${new Date(o.createdAt || _nowMs()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span class="kds-time-label">${new Date(o.createdAt || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
     </div>`;
 }
@@ -386,11 +439,58 @@ function _renderKDS() {
     setCount('kdsCountReady', groups.Ready.length);
 }
 
+async function _policeExpiredSessions() {
+    const now = Date.now();
+    for (const [id, s] of Object.entries(_sessions)) {
+        if (s.status === 'active' && s.expiresAt && now > s.expiresAt) {
+            // Re-read session from Firebase to beat the heartbeat race:
+            // customer's touchSession() may have extended expiresAt after our
+            // cached copy was written.
+            let fresh;
+            try {
+                const snap = await get(_sessRef(id));
+                fresh = snap.val();
+                if (!fresh || fresh.status !== 'active') continue;
+                if (fresh.expiresAt && now <= fresh.expiresAt) continue;
+            } catch (e) {
+                console.warn('[Police] Read failed for', id, e?.message || e);
+                continue;
+            }
+            // Collect all order IDs from the FRESH read, not the stale cache —
+            // orders attached between cache update and police run must be cancelled too
+            const orderIds = new Set([...(fresh.orders || [])]);
+            const paidOrderIds = new Set();
+            if (fresh.orderGroups) {
+                Object.values(fresh.orderGroups).forEach(g => {
+                    (g.orders || []).forEach(oid => orderIds.add(oid));
+                    if (g.status === 'paid') (g.orders || []).forEach(oid => paidOrderIds.add(oid));
+                });
+            }
+            // Cancel all pending orders so kitchen doesn't prepare phantom orders
+            orderIds.forEach(oid => {
+                if (paidOrderIds.has(oid)) return;
+                update(_ordersRef(oid), { status: 'Cancelled', cancelledReason: 'Session expired', updatedAt: now }).catch(() => {});
+            });
+            // Mark session as expired with empty orders arrays
+            const sessUpdate = { status: 'expired', expiredAt: now, orders: [] };
+            if (fresh.orderGroups) {
+                Object.keys(fresh.orderGroups).forEach(gid => { sessUpdate[`orderGroups/${gid}/orders`] = []; });
+            }
+            update(_sessRef(id), sessUpdate).catch(() => {});
+            // Free the table pointer so new scans can create fresh sessions
+            const linkedTable = Object.values(_tables).find(t => t.currentSession === id);
+            if (linkedTable) {
+                update(_tblRef(linkedTable.id), { status: 'free', currentSession: null, updatedAt: now }).catch(() => {});
+            }
+        }
+    }
+}
+
 function _tickKDS() {
     document.querySelectorAll('.kds-elapsed').forEach(el => {
-        const created = Number(el.getAttribute('data-created-at')) || _nowMs();
+        const created = Number(el.getAttribute('data-created-at')) || Date.now();
         el.textContent = _elapsedLabel(created);
-        const mins = Math.floor((_nowMs() - created) / 60000);
+        const mins = Math.floor((Date.now() - created) / 60000);
         const card = el.closest('.kds-card');
         if (card) {
             card.classList.toggle('kds-card-warn', mins >= 8 && mins < 15);
@@ -411,6 +511,7 @@ function _renderDrawerSessionMeta() {
 }
 
 function _orderActionButtons(o) {
+    if (!o) return '';
     const id = escapeHtml(o.id);
     if (o.status === 'Placed' || !o.status) {
         return `<button class="btn-action-blue btn-small" data-action="advanceTableOrder" data-id="${id}" data-next="Confirmed">
@@ -432,11 +533,13 @@ function _orderActionButtons(o) {
     return '';
 }
 
-function _orderCardInDrawer(o) {
+function _orderCardInDrawer(o, borderColor) {
+    if (!o) return '';
     const items = Object.values(o.items || {});
     const itemLines = items.map(it => `<div class="order-details-item-row"><span>${it.qty || 1} × ${escapeHtml(it.name || 'Item')}</span><span>₹${Number((it.price || 0) * (it.qty || 1)).toFixed(0)}</span></div>`).join('');
+    const bdrStyle = borderColor ? `border-left:4px solid ${borderColor};` : '';
     return `
-    <div class="drawer-order-block">
+    <div class="drawer-order-block" style="${bdrStyle}">
         <div class="drawer-order-block-head">
             <span>#${escapeHtml(String(o.id).slice(-6).toUpperCase())}</span>
             <span class="badge ${_statusPillClass(o.status)}">${escapeHtml(o.status || 'Placed')}</span>
@@ -471,7 +574,7 @@ function _renderTableDrawer() {
     const statusBadge = document.getElementById('tableDrawerStatusBadge');
     statusBadge.textContent = meta.label;
     statusBadge.className = `table-drawer-status-badge ${meta.cls}`;
-    document.getElementById('tableDrawerSessionState').textContent = sess ? (sess.status === 'billing' ? 'Billing requested' : 'Session active') : 'No active session';
+    document.getElementById('tableDrawerSessionState').textContent = sess ? (sess.status === 'billing' ? 'Billing requested' : sess.status === 'expired' ? 'Session expired' : 'Session active') : 'No active session';
 
     document.getElementById('tableDrawerCapacity').textContent = t.capacity || '—';
     document.getElementById('tableDrawerSessionStarted').textContent = sess?.openedAt
@@ -493,25 +596,73 @@ function _renderTableDrawer() {
                 ? `<button class="btn-action-green btn-small" data-action="enableTable" data-id="${escapeHtml(t.id)}"><i data-lucide="check" class="icon-14"></i> Enable Table</button>`
                 : `<button class="btn-text text-danger btn-small" data-action="disableTable" data-id="${escapeHtml(t.id)}"><i data-lucide="ban" class="icon-14"></i> Disable Table</button>`}
             <button class="btn-text text-danger btn-small" data-action="deleteTable" data-id="${escapeHtml(t.id)}"><i data-lucide="trash-2" class="icon-14"></i> Delete Table</button>`;
+        await loadLucide();
         if (window.lucide) window.lucide.createIcons({ root: drawer });
         return;
     }
 
-    const orders = _ordersForSession(sess.sessionId || t.currentSession);
-    ordersWrap.innerHTML = `
-        <h5 class="text-muted-small mb-8" style="margin:0;">Current Orders (${orders.length})</h5>
-        ${orders.map(_orderCardInDrawer).join('') || '<p class="text-muted-small">No orders yet.</p>'}`;
+    const sessionId = sess.sessionId || t.currentSession;
+    const groups = _orderGroupsForSession(sessionId);
+    const ordersAll = _ordersForSession(sessionId);
 
-    const runningTotal = sess.grandTotal ?? sess.runningTotal ?? 0;
+    // Group-wise order display with colored headers and borders
+    const groupColors = ['#2d7d46', '#2b6c9e', '#7d5a2b', '#6d3d7d'];
+    const groupBorders = ['rgba(45,125,70,.25)', 'rgba(43,108,158,.25)', 'rgba(125,90,43,.25)', 'rgba(109,61,125,.25)'];
+    let groupSections = groups.map((g, i) => {
+        const gOrders = _ordersForGroup(sessionId, g.id);
+        if (!gOrders.length) return '';
+        const bg = groupColors[i % groupColors.length];
+        const bdr = groupBorders[i % groupBorders.length];
+        return `<div class="order-group-section" style="border:2px solid ${bg};border-radius:8px;padding:8px;margin-bottom:12px;">
+            <div class="order-group-header" style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:4px;margin-bottom:8px;background:${bg};color:#fff;">
+                <span style="font-weight:600;font-size:.85rem;">${escapeHtml(g.label)}</span>
+                <span style="opacity:.8;font-size:.75rem;">${gOrders.length} order${gOrders.length !== 1 ? 's' : ''} · ${g.status || 'active'}</span>
+            </div>
+            ${gOrders.map(o => _orderCardInDrawer(o, bdr)).join('')}
+        </div>`;
+    }).join('');
+    const groupedOids = new Set(groups.flatMap(g => (sess.orderGroups?.[g.id]?.orders) || []));
+    const ungrouped = ordersAll.filter(o => !groupedOids.has(o.id));
+    if (ungrouped.length) {
+        groupSections += `<div class="order-group-section" style="border:2px solid #4a4a4a;border-radius:8px;padding:8px;margin-bottom:12px;">
+            <div class="order-group-header" style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:4px;margin-bottom:8px;background:#4a4a4a;color:#fff;">
+                <span style="font-weight:600;font-size:.85rem;">Other Orders</span>
+                <span style="opacity:.8;font-size:.75rem;">${ungrouped.length}</span>
+            </div>
+            ${ungrouped.map(_orderCardInDrawer).join('')}
+        </div>`;
+    }
+    ordersWrap.innerHTML = `<h5 class="text-muted-small mb-8" style="margin:0;">Orders (${ordersAll.length})</h5>
+        ${groupSections || '<p class="text-muted-small">No orders yet.</p>'}`;
+
+    // Compute total from all non-cancelled orders
+    const runningTotal = _effectiveTotal(sess);
     totalWrap.innerHTML = `
         <div class="table-drawer-total-card">
-            <div><span class="table-drawer-total-label">Current Total</span><div class="text-muted-small">${orders.length} Order${orders.length !== 1 ? 's' : ''} · Pending Payment</div></div>
+            <div><span class="table-drawer-total-label">Current Total</span><div class="text-muted-small">${ordersAll.length} Order${ordersAll.length !== 1 ? 's' : ''} · Pending Payment</div></div>
             <span class="table-drawer-total-amount">₹${Number(runningTotal).toLocaleString('en-IN')}</span>
         </div>`;
 
     const btns = [];
-    const allServed = orders.length > 0 && orders.every(o => o.status === 'Served' || o.status === 'Delivered');
-    if (sess.status !== 'billing') {
+    const activeOrders = ordersAll.filter(o => o.status !== 'Cancelled');
+    const allServed = activeOrders.length > 0 && activeOrders.every(o => o.status === 'Served' || o.status === 'Delivered');
+    const allGroupsPaid = groups.length > 0 && groups.every(g => g.status === 'paid');
+
+    if (sess.status === 'expired') {
+        btns.push(`<button class="btn-action-green btn-small" data-action="closeExpiredSession" data-id="${escapeHtml(t.id)}"><i data-lucide="check-check" class="icon-14"></i> Close & Free Table</button>`);
+    } else if (groups.length > 1) {
+        // Multi-bill mode: per-group actions
+        groups.forEach(g => {
+            if (g.status === 'active') {
+                btns.push(`<button class="btn-action-orange btn-small" data-action="requestBillForGroup" data-id="${escapeHtml(t.id)}" data-group-id="${escapeHtml(g.id)}"><i data-lucide="receipt" class="icon-14"></i> Bill ${escapeHtml(g.label)}</button>`);
+            } else if (g.status === 'billing') {
+                btns.push(`<button class="btn-action-green btn-small" data-action="makePaymentForGroup" data-id="${escapeHtml(t.id)}" data-group-id="${escapeHtml(g.id)}"><i data-lucide="wallet" class="icon-14"></i> Mark ${escapeHtml(g.label)} Paid</button>`);
+            }
+        });
+        if (allGroupsPaid) {
+            btns.push(`<button class="btn-action-green btn-small" data-action="closeSessionForTable" data-id="${escapeHtml(t.id)}"><i data-lucide="check-check" class="icon-14"></i> Close Table (All Paid)</button>`);
+        }
+    } else if (sess.status !== 'billing') {
         btns.push(`<button class="btn-action-orange btn-small" data-action="requestBillForTable" data-id="${escapeHtml(t.id)}"><i data-lucide="receipt" class="icon-14"></i> Generate Bill</button>`);
         if (allServed) {
             btns.push(`<button class="btn-action-green btn-small" data-action="makePaymentForTable" data-id="${escapeHtml(t.id)}"><i data-lucide="wallet" class="icon-14"></i> Make Payment</button>`);
@@ -520,11 +671,19 @@ function _renderTableDrawer() {
         btns.push(`<button class="btn-action-green btn-small" data-action="closeSessionForTable" data-id="${escapeHtml(t.id)}"><i data-lucide="check-check" class="icon-14"></i> Close Table (Paid)</button>`);
     }
     btns.push(`<button class="btn-secondary btn-small" data-action="printTableKOT" data-id="${escapeHtml(t.id)}"><i data-lucide="printer" class="icon-14"></i> Print KOT</button>`);
-    btns.push(`<button class="btn-secondary btn-small" data-action="printSessionBill" data-id="${escapeHtml(t.id)}"><i data-lucide="receipt-text" class="icon-14"></i> Print Bill</button>`);
+    if (groups.length > 1) {
+        groups.forEach(g => {
+            btns.push(`<button class="btn-secondary btn-small" data-action="printBillForGroup" data-id="${escapeHtml(t.id)}" data-group-id="${escapeHtml(g.id)}"><i data-lucide="receipt-text" class="icon-14"></i> Print ${escapeHtml(g.label)}</button>`);
+        });
+        btns.push(`<button class="btn-secondary btn-small" data-action="printSessionBill" data-id="${escapeHtml(t.id)}"><i data-lucide="printer" class="icon-14"></i> Print All Bills</button>`);
+    } else {
+        btns.push(`<button class="btn-secondary btn-small" data-action="printSessionBill" data-id="${escapeHtml(t.id)}"><i data-lucide="receipt-text" class="icon-14"></i> Print Bill</button>`);
+    }
     btns.push(`<button class="btn-secondary btn-small" data-action="openTableQr" data-id="${escapeHtml(t.id)}"><i data-lucide="qr-code" class="icon-14"></i> View QR</button>`);
     btns.push(`<button class="btn-text text-danger btn-small" data-action="cancelSessionForTable" data-id="${escapeHtml(t.id)}"><i data-lucide="x-circle" class="icon-14"></i> Cancel / Free Table</button>`);
     actionsWrap.innerHTML = btns.join('');
 
+    await loadLucide();
     if (window.lucide) window.lucide.createIcons({ root: drawer });
 }
 
@@ -566,14 +725,14 @@ async function _saveTable() {
 
     try {
         if (_editingTableId) {
-            await update(_tblRef(_editingTableId), { number, capacity, updatedAt: _nowMs() });
+            await update(_tblRef(_editingTableId), { number, capacity, updatedAt: Date.now() });
             showToast('Table updated', 'success');
         } else {
             const newRef = push(_tblRef());
             const token = _secureToken();
             await set(newRef, {
                 id: newRef.key, number, capacity, status: 'free', active: true,
-                token, currentSession: null, createdAt: _nowMs(), updatedAt: _nowMs()
+                token, currentSession: null, createdAt: Date.now(), updatedAt: Date.now()
             });
             showToast(`Table ${number} created`, 'success');
         }
@@ -601,7 +760,7 @@ async function _deleteTable(id) {
 
 async function _setTableEnabled(id, enabled) {
     try {
-        await update(_tblRef(id), { status: enabled ? 'free' : 'disabled', active: enabled, updatedAt: _nowMs() });
+        await update(_tblRef(id), { status: enabled ? 'free' : 'disabled', active: enabled, updatedAt: Date.now() });
         showToast(enabled ? 'Table enabled' : 'Table disabled', 'success');
     } catch (e) {
         showToast('Update failed', 'error');
@@ -632,7 +791,8 @@ async function _requestBillForTable(tableId) {
     if (!t || !sess) return;
 
     const orders = _ordersForSession(sess.sessionId || t.currentSession);
-    const allServed = orders.length > 0 && orders.every(o => o.status === 'Served' || o.status === 'Delivered');
+    const activeOrders = orders.filter(o => o.status !== 'Cancelled');
+    const allServed = activeOrders.length > 0 && activeOrders.every(o => o.status === 'Served' || o.status === 'Delivered');
     if (!allServed) {
         showToast('All orders must be served before generating bill', 'warning');
         return;
@@ -640,7 +800,7 @@ async function _requestBillForTable(tableId) {
 
     try {
         await update(_sessRef(sess.sessionId), { status: 'billing' });
-        await update(_tblRef(tableId), { status: 'billing', updatedAt: _nowMs() });
+        await update(_tblRef(tableId), { status: 'billing', updatedAt: Date.now() });
         showToast('Bill generated — table marked for billing', 'success');
         haptic(20);
     } catch (e) {
@@ -649,6 +809,25 @@ async function _requestBillForTable(tableId) {
 }
 
 async function _closeSessionForTable(tableId) {
+    const t = _tables[tableId];
+    const sess = _sessionForTable(tableId);
+    if (!t || !sess) return;
+    const groups = _orderGroupsForSession(sess.sessionId || t.currentSession);
+    const nonEmptyGroups = groups.filter(g => (sess.orderGroups?.[g.id]?.orders || []).length > 0);
+    // If all non-empty groups paid, close without payment picker
+    if (nonEmptyGroups.length > 0 && nonEmptyGroups.every(g => g.status === 'paid')) {
+        try {
+            const now = Date.now();
+            await update(_sessRef(sess.sessionId), { status: 'closed', closedAt: now });
+            await update(_tblRef(tableId), { status: 'free', currentSession: null, updatedAt: now });
+            if (_drawerTableId === tableId) _closeTableDrawer();
+            showToast('Table closed — all groups paid', 'success');
+            haptic(30);
+        } catch (e) {
+            showToast('Failed to close table: ' + (e?.message || e), 'error');
+        }
+        return;
+    }
     return _makePaymentForTable(tableId);
 }
 
@@ -657,25 +836,39 @@ async function _makePaymentForTable(tableId) {
     const sess = _sessionForTable(tableId);
     if (!t || !sess) return;
 
+    // In multi-bill mode, reject if any non-empty group is unpaid (must bill per-group)
+    const groups = _orderGroupsForSession(sess.sessionId || t.currentSession);
+    const nonEmptyGroups = groups.filter(g => (sess.orderGroups?.[g.id]?.orders || []).length > 0);
+    if (nonEmptyGroups.length > 1 && !nonEmptyGroups.every(g => g.status === 'paid')) {
+        showToast('Each group must be paid individually before closing the session', 'warning');
+        return;
+    }
+
     const orders = _ordersForSession(sess.sessionId || t.currentSession);
-    const allServed = orders.length > 0 && orders.every(o => o.status === 'Served' || o.status === 'Delivered');
+    const activeOrders = orders.filter(o => o.status !== 'Cancelled');
+    const allServed = activeOrders.length > 0 && activeOrders.every(o => o.status === 'Served' || o.status === 'Delivered');
     if (!allServed) {
         showToast('All orders must be served before payment', 'warning');
         return;
     }
 
-    const total = Number(sess.grandTotal || sess.runningTotal || 0);
+    // Compute total from non-cancelled orders (session-level grandTotal may be inflated)
+    const total = activeOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
     const method = await showPaymentPicker(total);
     if (!method) return;
 
+    const sessRef = _sessRef(sess.sessionId);
+    const tblRef = _tblRef(tableId);
     try {
-        await update(_sessRef(sess.sessionId), { status: 'closed', closedAt: _nowMs(), paymentMethod: method, paidAt: _nowMs() });
-        await update(_tblRef(tableId), { status: 'free', currentSession: null, updatedAt: _nowMs() });
+        // Mark all orders as paid first
         for (const o of orders) {
             if (o.id && o.status !== 'Cancelled') {
-                await update(_ordersRef(o.id), { paymentMethod: method, paymentStatus: 'Paid', updatedAt: _nowMs() });
+                await update(_ordersRef(o.id), { paymentMethod: method, paymentStatus: 'Paid', updatedAt: Date.now() });
             }
         }
+        // Close session and free table only after all orders are updated
+        await update(sessRef, { status: 'closed', closedAt: Date.now(), paymentMethod: method, paidAt: Date.now() });
+        await update(tblRef, { status: 'free', currentSession: null, updatedAt: Date.now() });
         await runTransaction(Outlet.ref(`tableAnalytics/${tableId}`), (cur) => {
             cur = cur || { totalOrders: 0, totalRevenue: 0, avgSessionTime: 0, occupancyRate: 0 };
             const orderCount = (sess.orders || []).length;
@@ -689,9 +882,95 @@ async function _makePaymentForTable(tableId) {
         showToast(`Table closed — ₹${total.toLocaleString('en-IN')} via ${method}`, 'success');
         haptic(30);
     } catch (e) {
+        // Rollback: try to restore session + table state on failure
+        try {
+            await update(sessRef, { status: 'billing' });
+            await update(tblRef, { status: 'billing', updatedAt: Date.now() });
+        } catch (_) {}
+        showToast('Payment failed: ' + (e?.message || e), 'error');
+    }
+}
+async function _closeExpiredSession(tableId) {
+    const t = _tables[tableId];
+    const sess = _sessionForTable(tableId);
+    if (!t || !sess) return;
+    const ok = await showConfirm(`Close expired session for Table ${t.number} and free the table?`, 'Close Expired Session');
+    if (!ok) return;
+    try {
+        await update(_sessRef(sess.sessionId), { status: 'closed', closedAt: Date.now() });
+        await update(_tblRef(tableId), { status: 'free', currentSession: null, updatedAt: Date.now() });
+        if (_drawerTableId === tableId) _closeTableDrawer();
+        showToast(`Expired session closed, Table ${t.number} freed`, 'success');
+    } catch (e) {
         showToast('Failed: ' + (e?.message || e), 'error');
     }
 }
+
+async function _makePaymentForGroup(tableId, groupId) {
+    const t = _tables[tableId];
+    const sess = _sessionForTable(tableId);
+    if (!t || !sess || !groupId) return;
+    const group = sess.orderGroups?.[groupId];
+    if (!group || group.status !== 'billing') {
+        showToast('Group must be in billing state first', 'warning');
+        return;
+    }
+    const total = _ordersForGroup(sess.sessionId, groupId)
+        .filter(o => o.status !== 'Cancelled')
+        .reduce((sum, o) => sum + Number(o.total || 0), 0);
+    const method = await showPaymentPicker(total);
+    if (!method) return;
+    try {
+        const now = Date.now();
+        // Mark group's orders as paid first, then update group status
+        const gOrders = sess.orderGroups[groupId].orders || [];
+        const results = await Promise.allSettled(gOrders.map(oid => {
+            if (_orders[oid] && _orders[oid].status !== 'Cancelled') {
+                return update(_ordersRef(oid), { paymentMethod: method, paymentStatus: 'Paid', updatedAt: now });
+            }
+            return Promise.resolve();
+        }));
+        const failures = results.filter(r => r.status === 'rejected');
+        if (failures.length > 0) {
+            showToast(`${failures.length} order(s) failed to update — group not marked paid`, 'error');
+            return;
+        }
+        await update(_sessRef(`${sess.sessionId}/orderGroups/${groupId}`), { status: 'paid', paidAt: now, paymentMethod: method });
+        showToast(`${group.label} paid — ₹${total.toLocaleString('en-IN')} via ${method}`, 'success');
+        haptic(30);
+    } catch (e) {
+        showToast('Failed: ' + (e?.message || e), 'error');
+    }
+}
+
+async function _requestBillForGroup(tableId, groupId) {
+    const t = _tables[tableId];
+    const sess = _sessionForTable(tableId);
+    if (!t || !sess || !groupId) return;
+    const group = sess.orderGroups?.[groupId];
+    if (!group || group.status === 'billing' || group.status === 'paid') {
+        showToast('Group is already billed or paid', 'warning');
+        return;
+    }
+    const gOrders = _ordersForGroup(sess.sessionId, groupId);
+    const activeGOrders = gOrders.filter(o => o.status !== 'Cancelled');
+    const allServed = activeGOrders.length > 0 && activeGOrders.every(o => o.status === 'Served' || o.status === 'Delivered');
+    if (!allServed) {
+        showToast('All orders in this group must be served before billing', 'warning');
+        return;
+    }
+    try {
+        const now = Date.now();
+        await update(_sessRef(`${sess.sessionId}/orderGroups/${groupId}`), { status: 'billing', updatedAt: now });
+        // Update table status to indicate billing in progress
+        await update(_tblRef(tableId), { status: 'billing', updatedAt: now });
+        showToast(`Bill generated for group`, 'success');
+        haptic(20);
+    } catch (e) {
+        showToast('Failed: ' + (e?.message || e), 'error');
+    }
+}
+
 async function _cancelSessionForTable(tableId) {
     const t = _tables[tableId];
     const sess = _sessionForTable(tableId);
@@ -700,15 +979,47 @@ async function _cancelSessionForTable(tableId) {
     if (!ok) return;
     try {
         if (sess) {
-            const ordersInSession = _ordersForSession(sess.sessionId);
-            for (const o of ordersInSession) {
-                if (o.id && o.status !== 'Cancelled') {
-                    await update(_ordersRef(o.id), { status: 'Cancelled', updatedAt: _nowMs() });
-                }
+            // Re-read session from Firebase to beat cache races (same pattern as police)
+            let fresh;
+            try { const snap = await get(_sessRef(sess.sessionId)); fresh = snap.val(); } catch (_) {}
+            const source = fresh || sess;
+            // Collect order IDs from both session-level orders array and all order groups
+            const orderIds = new Set([...(source.orders || [])]);
+            const paidOrderIds = new Set();
+            if (source.orderGroups) {
+                Object.values(source.orderGroups).forEach(g => {
+                    (g.orders || []).forEach(oid => orderIds.add(oid));
+                    if (g.status === 'paid') (g.orders || []).forEach(oid => paidOrderIds.add(oid));
+                });
             }
-            await update(_sessRef(sess.sessionId), { status: 'closed', closedAt: _nowMs() });
+            const results = await Promise.allSettled(Array.from(orderIds).map(oid => {
+                if (paidOrderIds.has(oid)) return Promise.resolve();
+                const o = _orders[oid];
+                if (o && o.status !== 'Cancelled') {
+                    return update(_ordersRef(oid), { status: 'Cancelled', updatedAt: Date.now() });
+                }
+                return Promise.resolve();
+            }));
+            const failures = results.filter(r => r.status === 'rejected');
+            if (failures.length > 0) {
+                console.warn(`[cancelSession] ${failures.length} order cancellation(s) failed`, failures.map(f => f.reason));
+            }
+            // Session-level aggregates (runningTotal, grandTotal, etc.) intentionally
+            // NOT adjusted here — they are write-only sinks in the current architecture.
+            // Every display/billing path uses _effectiveTotal() which reads from
+            // individual non-cancelled order records, so the stored aggregates are
+            // never consumed. Keeping them inflated avoids race conditions from
+            // non-atomic deduction writes.
+            const sessUpdate = {
+                status: 'closed', closedAt: Date.now(),
+                orders: []
+            };
+            if (sess.orderGroups) {
+                Object.keys(sess.orderGroups).forEach(gid => { sessUpdate[`orderGroups/${gid}/orders`] = []; });
+            }
+            await update(_sessRef(sess.sessionId), sessUpdate);
         }
-        await update(_tblRef(tableId), { status: 'free', currentSession: null, updatedAt: _nowMs() });
+        await update(_tblRef(tableId), { status: 'free', currentSession: null, updatedAt: Date.now() });
         if (_drawerTableId === tableId) _closeTableDrawer();
         showToast('Session cancelled, table freed', 'success');
     } catch (e) {
@@ -721,23 +1032,36 @@ async function _cancelSessionForTable(tableId) {
 // ---------------------------------------------------------------------
 async function _advanceOrder(orderId, nextStatus) {
     try {
-        const updates = { status: nextStatus, updatedAt: _nowMs() };
+        const o = _orders[orderId];
+        if (!o) { showToast('Order not found', 'error'); return; }
+        const valid = {
+            'Placed': ['Confirmed', 'Cancelled'],
+            'Confirmed': ['Ready', 'Cancelled'],
+            'Preparing': ['Ready', 'Cancelled'],
+            'Ready': ['Served', 'Delivered', 'Cancelled'],
+            'Served': [], 'Delivered': [], 'Cancelled': []
+        };
+        if (!valid[o.status]?.includes(nextStatus)) {
+            showToast(`Cannot change status from ${o.status} to ${nextStatus}`, 'warning');
+            return;
+        }
+        const updates = { status: nextStatus, updatedAt: Date.now() };
         await update(_ordersRef(orderId), updates);
         if (_orders[orderId]) {
             _orders[orderId] = { ..._orders[orderId], ...updates };
         }
+        _renderAll();
+
+        // Session aggregates intentionally NOT adjusted on cancellation —
+        // see _cancelSessionForTable comment for rationale.
 
         // Auto-print KOT on Accept (Placed -> Confirmed)
-        if (nextStatus === 'Confirmed') {
-            const o = _orders[orderId];
-            if (o?.tableId) {
-                setTimeout(() => _printTableKOT(o.tableId), 500);
-            }
+        if (nextStatus === 'Confirmed' && o?.tableId) {
+            setTimeout(() => _printTableKOT(o.tableId), 500);
         }
 
         showToast(`Order moved to ${nextStatus}`, 'success');
         haptic(20);
-        _renderKDS();
     } catch (e) {
         showToast('Update failed: ' + (e?.message || e), 'error');
     }
@@ -806,17 +1130,83 @@ function _printTableKOT(tableId) {
     w.document.close();
 }
 
+async function _printBillForGroup(tableId, groupId) {
+    const t = _tables[tableId];
+    const sess = _sessionForTable(tableId);
+    if (!t || !sess || !groupId) { showToast('No session for this group', 'warning'); return; }
+    const sessionId = sess.sessionId || t.currentSession;
+    const groups = _orderGroupsForSession(sessionId);
+    const g = groups.find(g => g.id === groupId);
+    if (!g) { showToast('Group not found', 'warning'); return; }
+    const dineSnap = await get(_settingsRef());
+    const dine = dineSnap.val() || {};
+    const taxEnabled = dine.taxEnabled !== false;
+    const scEnabled = dine.serviceChargeEnabled === true;
+    const taxRates = (dine.taxRates && Array.isArray(dine.taxRates) && dine.taxRates.length > 0) ? dine.taxRates : (taxEnabled ? [{ name: dine.taxName || 'Tax', rate: typeof dine.taxRate === 'number' ? dine.taxRate : 5 }] : []);
+    const scRate = typeof dine.serviceChargeRate === 'number' ? dine.serviceChargeRate : 0;
+    const groupOrders = (g.orders || []).map(oid => ({ id: oid, ...(_orders[oid] || {}) })).filter(o => o.id && o.status !== 'Cancelled');
+    if (!groupOrders.length) { showToast('No orders in this group', 'warning'); return; }
+    let subtotal = 0;
+    const allItems = [];
+    groupOrders.forEach(o => {
+        Object.values(o.items || {}).forEach(it => {
+            const qty = Number(it.qty || 1);
+            const price = Number(it.price || 0);
+            allItems.push({ name: it.name || 'Item', qty, price, size: it.size || '', addon: it.addon || '' });
+            subtotal += price * qty;
+        });
+    });
+    const taxItems = taxRates.map(r => ({ name: r.name, rate: r.rate, amount: Math.round(subtotal * (r.rate / 100) * 100) / 100 }));
+    const tax = taxItems.reduce((s, t) => s + t.amount, 0);
+    const serviceCharge = scEnabled ? Math.round(subtotal * (scRate / 100) * 100) / 100 : 0;
+    const grandTotal = subtotal + tax + serviceCharge;
+    await printOrderReceipt({
+        orderId: `TABLE-${t.number}-${g.label.replace(/\s/g, '')}`,
+        type: 'Dine-in', items: allItems,
+        total: grandTotal, subtotal, tax, taxItems,
+        taxName: taxRates.map(r => r.name).join(' + ') || 'Tax',
+        serviceCharge,
+        serviceChargeName: dine.serviceChargeName || 'Service Charge',
+        serviceChargeRate: scRate,
+        discount: 0, deliveryFee: 0,
+        tableNo: String(t.number),
+        createdAt: sess.openedAt || Date.now(),
+        paymentMethod: g.paymentMethod || 'Cash',
+        status: 'Delivered',
+        customerName: `Table ${t.number} · ${g.label}`
+    }, true);
+}
+
 async function _printSessionBill(tableId) {
     const t = _tables[tableId];
     const sess = _sessionForTable(tableId);
     if (!t || !sess) { showToast('No active session to print', 'warning'); return; }
 
-    const orders = _ordersForSession(sess.sessionId || t.currentSession);
+    const sessionId = sess.sessionId || t.currentSession;
+    const groups = _orderGroupsForSession(sessionId);
+    const dineSnap = await get(_settingsRef());
+    const dine = dineSnap.val() || {};
+    const taxEnabled = dine.taxEnabled !== false;
+    const scEnabled = dine.serviceChargeEnabled === true;
+    const taxRates = (dine.taxRates && Array.isArray(dine.taxRates) && dine.taxRates.length > 0) ? dine.taxRates : (taxEnabled ? [{ name: dine.taxName || 'Tax', rate: typeof dine.taxRate === 'number' ? dine.taxRate : 5 }] : []);
+    const scRate = typeof dine.serviceChargeRate === 'number' ? dine.serviceChargeRate : 0;
+
+    if (groups.length > 1) {
+        const billableGroups = groups.filter(g => g.status === 'billing' || g.status === 'paid');
+        if (!billableGroups.length) { showToast('No billed groups to print', 'warning'); return; }
+        for (const g of billableGroups) {
+            await _printBillForGroup(tableId, g.id);
+        }
+        return;
+    }
+
+    // Single-bill mode: existing behavior
+    const orders = _ordersForSession(sessionId);
     if (!orders.length) { showToast('No orders to bill', 'warning'); return; }
 
     let subtotal = 0;
     const allItems = [];
-    orders.forEach(o => {
+    orders.filter(o => o.status !== 'Cancelled').forEach(o => {
         Object.values(o.items || {}).forEach(it => {
             const qty = Number(it.qty || 1);
             const price = Number(it.price || 0);
@@ -825,28 +1215,21 @@ async function _printSessionBill(tableId) {
         });
     });
 
-    const dineSnap = await get(_settingsRef());
-    const dine = dineSnap.val() || {};
-    const taxEnabled = dine.taxEnabled !== false;
-    const scEnabled = dine.serviceChargeEnabled === true;
-    const taxRate = typeof dine.taxRate === 'number' ? dine.taxRate : 5;
-    const scRate = typeof dine.serviceChargeRate === 'number' ? dine.serviceChargeRate : 0;
-    const tax = Number(sess.tax ?? 0) || (taxEnabled ? Math.round(subtotal * (taxRate / 100) * 100) / 100 : 0);
+    const taxItems = taxRates.map(r => ({ name: r.name, rate: r.rate, amount: Math.round(subtotal * (r.rate / 100) * 100) / 100 }));
+    const tax = Number(sess.tax ?? 0) || taxItems.reduce((s, t) => s + t.amount, 0);
     const serviceCharge = Number(sess.serviceCharge ?? 0) || (scEnabled ? Math.round(subtotal * (scRate / 100) * 100) / 100 : 0);
-    const grandTotal = Number(sess.grandTotal ?? (subtotal + tax + serviceCharge));
+    const grandTotal = _effectiveTotal(sess);
 
     const combinedOrder = {
         orderId: `TABLE-${t.number}`,
         type: 'Dine-in',
         items: allItems,
-        total: grandTotal,
-        subtotal,
-        tax,
-        taxName: dine.taxName || 'Tax',
+        total: grandTotal, subtotal, tax, taxItems,
+        taxName: taxRates.map(r => r.name).join(' + ') || 'Tax',
         serviceCharge,
         serviceChargeName: dine.serviceChargeName || 'Service Charge',
-        discount: 0,
-        deliveryFee: 0,
+        serviceChargeRate: scRate,
+        discount: 0, deliveryFee: 0,
         tableNo: String(t.number),
         createdAt: sess.openedAt || Date.now(),
         paymentMethod: sess.paymentMethod || 'Cash',
@@ -1065,7 +1448,7 @@ function _exportTablesCsv() {
     const rows = [['Table', 'Capacity', 'Status', 'Current Session', 'Running Total']];
     Object.values(_tables).sort((a, b) => Number(a.number) - Number(b.number)).forEach(t => {
         const sess = _sessionForTable(t.id);
-        rows.push([t.number, t.capacity, t.status, sess?.sessionId || '', sess ? (sess.grandTotal ?? sess.runningTotal ?? 0) : '']);
+        rows.push([t.number, t.capacity, t.status, sess?.sessionId || '', sess ? _effectiveTotal(sess) : '']);
     });
     const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -1098,6 +1481,9 @@ function _attachListeners() {
     _sessionsListener = onValue(_sessRef(), (snap) => {
         _sessions = snap.val() || {};
         _renderAll();
+    }, (err) => {
+        console.error('[Tables] Sessions read error:', err);
+        document.getElementById('tblKpiRevenue').textContent = '—';
     });
 
     // Always attach an /orders listener so KDS status updates
@@ -1112,6 +1498,8 @@ function _attachListeners() {
             _orders = snap.val() || {};
             _syncCustomersFromOrders(_orders);
             _renderAll();
+        }, (err) => {
+            console.error('[Tables] Orders read error:', err);
         });
     }
 
@@ -1140,6 +1528,7 @@ export function cleanupTables() {
     if (_requestsListener) { _requestsListener(); _requestsListener = null; }
     if (_connUnsub) { _connUnsub(); _connUnsub = null; }
     if (_kdsTickInterval) { clearInterval(_kdsTickInterval); _kdsTickInterval = null; }
+    if (_policeInterval) { clearInterval(_policeInterval); _policeInterval = null; }
     _seenRequestIds = null;
     _customerSyncedOrderIds.clear();
     _closeTableDrawer();
@@ -1163,6 +1552,7 @@ export function loadTableManagement() {
     }
 
     if (!_kdsTickInterval) _kdsTickInterval = setInterval(_tickKDS, 1000);
+    if (!_policeInterval) _policeInterval = setInterval(_policeExpiredSessions, 30000);
 
     const tabRoot = document.getElementById('tab-tables');
     if (tabRoot && !tabRoot.__tablesWired) {
@@ -1185,11 +1575,15 @@ export function loadTableManagement() {
                 case 'exportTables': _exportTablesCsv(); break;
                 case 'advanceTableOrder': _advanceOrder(id, btn.dataset.next); break;
                 case 'requestBillForTable': _requestBillForTable(id); break;
+                case 'requestBillForGroup': _requestBillForGroup(id, btn.dataset.groupId); break;
+                case 'makePaymentForGroup': _makePaymentForGroup(id, btn.dataset.groupId); break;
                 case 'closeSessionForTable': _closeSessionForTable(id); break;
                 case 'makePaymentForTable': _makePaymentForTable(id); break;
                 case 'cancelSessionForTable': _cancelSessionForTable(id); break;
+                case 'closeExpiredSession': _closeExpiredSession(id); break;
                 case 'printTableKOT': _printTableKOT(id); break;
                 case 'printSessionBill': _printSessionBill(id); break;
+                case 'printBillForGroup': _printBillForGroup(id, btn.dataset.groupId); break;
                 case 'resolveTableRequest': _resolveTableRequest(btn.dataset.id); break;
                 case 'jumpToOrderInOrdersTab': _jumpToOrderInOrdersTab(id); break;
                 case 'closeTableDrawer': _closeTableDrawer(); break;
@@ -1215,8 +1609,13 @@ window.__tables = {
     delete: _deleteTable, openDrawer: _openTableDrawer, closeDrawer: _closeTableDrawer,
     openQr: _openQrModal, closeQr: _closeQrModal, bulkPrint: _bulkQrPrint, exportCsv: _exportTablesCsv,
     openDrawerByOrder: _openTableDrawerByOrder, requestBill: _requestBillForTable,
+    requestBillForGroup: _requestBillForGroup,
+    makePaymentForGroup: _makePaymentForGroup,
     printKOT: _printTableKOT, jumpToOrder: _jumpToOrderInOrdersTab,
     closeSession: _closeSessionForTable, cancelSession: _cancelSessionForTable,
+    closeExpiredSession: _closeExpiredSession,
+    makePaymentForTable: _makePaymentForTable,
     printSessionBill: _printSessionBill,
+    printBillForGroup: _printBillForGroup,
     editTable: _openTableEditor, setTableEnabled: _setTableEnabled
 };

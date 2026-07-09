@@ -317,8 +317,9 @@ img{max-width:100%; display:block;}
 .btn-request-bill{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; background:var(--text); color:#fff; padding:14px; border-radius:14px; font-weight:800; font-size:13.5px; }
 .btn-request-bill svg{ width:16px; height:16px; }
 .btn-request-bill:active{ opacity:.85; }
-.tracking-call-waiter-link{ display:flex; align-items:center; justify-content:center; gap:6px; text-align:center; margin-top:2px; font-size:12.5px; font-weight:700; color:var(--text-sub); padding:8px; }
-.tracking-call-waiter-link svg{ width:13px; height:13px; }
+.btn-call-waiter{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; background:var(--danger,#d32f2f); color:#fff; padding:14px; border-radius:14px; font-weight:800; font-size:13.5px; }
+.btn-call-waiter svg{ width:16px; height:16px; }
+.btn-call-waiter:active{ opacity:.85; }
 
 /* Pending Payment Status Card */
 .pending-payment-card {
@@ -331,6 +332,20 @@ img{max-width:100%; display:block;}
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    animation: pendingPulse 2s ease-in-out infinite;
+}
+.billing-status-banner {
+    background: var(--primary, #E84908);
+    color: #fff;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin: 0 16px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(232, 73, 8, 0.3);
     animation: pendingPulse 2s ease-in-out infinite;
 }
 .pending-payment-content {
@@ -406,6 +421,11 @@ img{max-width:100%; display:block;}
 .invalid-token-body{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:40px 28px; text-align:center; }
 .invalid-token-body h3{font-size:17px; font-weight:800;}
 .invalid-token-body p{font-size:13px; color:var(--text-sub); line-height:1.6;}
+.group-choice-body{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 28px; text-align:center; }
+.group-choice-body .group-card{ width:100%; padding:14px 16px; border:1.5px solid var(--border); border-radius:var(--radius-sm); background:var(--card); text-align:left; margin-bottom:8px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:border-color var(--transition-fast); }
+.group-choice-body .group-card:hover{ border-color:var(--accent); }
+.group-card-label{ font-size:15px; font-weight:700; }
+.group-card-sub{ font-size:12px; color:var(--text-sub); }
 .bill-generated-body{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:40px 28px; text-align:center; }
 .bill-generated-icon{ width:64px; height:64px; border-radius:50%; background:var(--success); color:#fff; font-size:32px; font-weight:900; display:flex; align-items:center; justify-content:center; }
 .bill-generated-title{ font-size:22px; font-weight:900; color:var(--text); }

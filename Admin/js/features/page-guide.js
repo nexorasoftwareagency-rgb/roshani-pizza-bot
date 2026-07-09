@@ -1,4 +1,6 @@
 import { state } from '../state.js';
+import { escapeHtml } from '../utils.js';
+import { loadLucide } from '../ui.js';
 
 const GUIDES = {
 
@@ -519,23 +521,21 @@ export function renderPageGuide(container) {
     }
     const tabName = document.getElementById('currentTabTitle')?.textContent || tab;
     container.innerHTML = `
-        <p class="text-muted-small mb-12">Step-by-step guide for <strong>${escHtml(tabName)}</strong></p>
+        <p class="text-muted-small mb-12">Step-by-step guide for <strong>${escapeHtml(tabName)}</strong></p>
         <ol class="promo-guide-list">
             ${steps.map((s, i) => `
                 <li class="promo-guide-item">
                     <div class="promo-guide-num">${i + 1}</div>
                     <div>
-                        <h4 class="promo-guide-title"><i data-lucide="${s.icon}" class="icon-16"></i> ${escHtml(s.title)}</h4>
+                        <h4 class="promo-guide-title"><i data-lucide="${s.icon}" class="icon-16"></i> ${escapeHtml(s.title)}</h4>
                         <p class="text-muted-small mt-4">${s.body}</p>
                     </div>
                 </li>
             `).join('')}
         </ol>
     `;
-    if (window.lucide) window.lucide.createIcons({ root: container });
+    await loadLucide();
+    window.lucide.createIcons({ root: container });
 }
 
-function escHtml(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
-        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
+

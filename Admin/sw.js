@@ -48,13 +48,7 @@ const ASSETS_TO_CACHE = [
   './js/features/discountsReports.js',
   './js/features/promotions.js',
   './js/features/promotions-guide.js',
-  'https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js',
   './assets/sounds/alert.mp3'
 ];
 

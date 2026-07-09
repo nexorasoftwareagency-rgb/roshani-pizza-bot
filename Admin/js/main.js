@@ -3,7 +3,7 @@ import { escapeHtml } from '../../shared/dom/escape.js';
 import { state } from './state.js';
 import { auth, db, serverTimestamp, ref, push, set } from './firebase.js';
 import { switchOutlet, openOutletInNewTab } from './branding.js';
-import { switchTab, toggleSidebar, toggleMobileCart } from './ui.js';
+import { switchTab, toggleSidebar, toggleMobileCart, loadLucide } from './ui.js';
 import { initGestures } from './gestures.js';
 import { initAuth, userLogout } from './auth.js';
 import { installPWA, completeSiteRefresh } from './pwa.js';
@@ -116,6 +116,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     break;
                 }
                 case 'printReceiptById': logger.info('PRINT', `Print receipt: ${id}`); (await useMod('orders')).closeOrderDrawer(); (await useMod('printing')).printReceiptById(id); break;
+                case 'printKotById': logger.info('PRINT', `Print KOT: ${id}`); (await useMod('printing')).printKotById(id); break;
                 case 'closeReceiptPreview': logger.info('PRINT', 'Close receipt preview'); (await useMod('printing')).closeReceiptPreview(); break;
                 case 'printReceiptFromPreview': logger.info('PRINT', 'Print from preview'); (await useMod('printing')).printReceiptFromPreview(); break;
                 case 'updateStatus': { const v = val || (el.tagName === 'SELECT' ? el.value : null); logger.info('ORDERS', `Update status: ${id} → ${v}`); (await useMod('orders')).updateStatus(id, v); break; }
@@ -304,8 +305,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'enableTable': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Enable table'); window.__tables?.setTableEnabled?.(id, true); break;
                 case 'disableTable': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Disable table'); window.__tables?.setTableEnabled?.(id, false); break;
                 case 'requestBillForTable': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Request bill'); window.__tables?.requestBill?.(id); break;
+                case 'requestBillForGroup': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Request bill for group'); window.__tables?.requestBillForGroup?.(id, el.getAttribute('data-group-id')); break;
+                case 'makePaymentForGroup': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Mark group paid'); window.__tables?.makePaymentForGroup?.(id, el.getAttribute('data-group-id')); break;
+                case 'makePaymentForTable': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Make payment'); window.__tables?.makePaymentForTable?.(id); break;
+                case 'closeExpiredSession': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Close expired session'); window.__tables?.closeExpiredSession?.(id); break;
                 case 'printTableKOT': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Print KOT'); window.__tables?.printKOT?.(id); break;
                 case 'printSessionBill': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Print session bill'); window.__tables?.printSessionBill?.(id); break;
+                case 'printBillForGroup': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Print bill for group'); window.__tables?.printBillForGroup?.(id, el.getAttribute('data-group-id')); break;
+                case 'advanceTableOrder': break;
+                case 'resolveTableRequest': break;
                 case 'jumpToOrderInOrdersTab': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Jump to order'); window.__tables?.jumpToOrder?.(id); break;
                 case 'openTableQr': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Open table QR'); window.__tables?.openQr?.(id); break;
                 case 'closeSessionForTable': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Close session'); window.__tables?.closeSession?.(id); break;
@@ -323,13 +331,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     (await useMod('rider-analytics')).initRiderAnalytics();
     (await useMod('inventory')).initInventory();
 
-    if (window.lucide) {
-        const overlay = document.getElementById('authOverlay');
-        const layout = document.querySelector('.layout');
-        
-        if (overlay) window.lucide.createIcons({ root: overlay });
-        if (layout) window.lucide.createIcons({ root: layout });
-    }
+    await loadLucide();
+    const overlay = document.getElementById('authOverlay');
+    const layout = document.querySelector('.layout');
+    if (overlay) window.lucide.createIcons({ root: overlay });
+    if (layout) window.lucide.createIcons({ root: layout });
 
     let _staticListenersBound = false;
     const setupStaticListeners = () => {
@@ -473,7 +479,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const isPass = input.type === 'password';
                     input.type = isPass ? 'text' : 'password';
                     btn.innerHTML = isPass ? '<i data-lucide="eye-off" class="icon-16"></i>' : '<i data-lucide="eye" class="icon-16"></i>';
-                    if (window.lucide) window.lucide.createIcons({ root: btn });
+                    await loadLucide();
+                    window.lucide.createIcons({ root: btn });
                 });
             }
         };
@@ -696,10 +703,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (logCount()) logCount().textContent = `${filtered.length} of ${entries.length} entries`;
     }
 
-    if (window.lucide) {
-        const layout = document.querySelector('.layout');
-        window.lucide.createIcons({ root: layout || document.body });
-    }
+    await loadLucide();
+    const layout = document.querySelector('.layout');
+    window.lucide.createIcons({ root: layout || document.body });
 
     window.addEventListener('beforeunload', (e) => {
         if (state.adminData && !window.location.search.includes('nuclear')) {

@@ -9,6 +9,17 @@ function mod(name) {
     return _modCache[name];
 }
 
+let _lucidePromise = null;
+export async function loadLucide() {
+    if (window.lucide) return window.lucide;
+    if (!_lucidePromise) {
+        _lucidePromise = import('https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js')
+            .then(() => window.lucide)
+            .catch(() => { _lucidePromise = null; throw new Error('Failed to load Lucide'); });
+    }
+    return _lucidePromise;
+}
+
 
 
 export const toggleSidebar = () => {
@@ -124,7 +135,8 @@ export const switchTab = async (tabId, skipHistory = false) => {
                 switchTab('dashboard');
             };
             posTab.prepend(backBtn);
-            if (window.lucide) window.lucide.createIcons({ root: posTab });
+            await loadLucide();
+            window.lucide.createIcons({ root: posTab });
         }
     } else {
         body.classList.remove('pos-immersion-active');
@@ -282,7 +294,8 @@ export const switchTab = async (tabId, skipHistory = false) => {
             window.__adminLogger?.error('TAB', `Load error for ${tabId}: ${loadErr.message}`, loadErr);
         }
 
-        if (window.lucide) window.lucide.createIcons({ root: target });
+        await loadLucide();
+        window.lucide.createIcons({ root: target });
 
         applyDataLabels();
 
@@ -321,6 +334,8 @@ const observerTarget = document.getElementById('main-content') || document.body;
 tableObserver.observe(observerTarget, { childList: true, subtree: true });
 
 export const toggleMobileCart = (state) => import('./features/pos.js').then(m => m.toggleMobileCart(state));
+
+export { loadLucide };
 
 export const ui = {
     showConfirm,

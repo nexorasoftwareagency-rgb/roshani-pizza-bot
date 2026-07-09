@@ -5,6 +5,34 @@
 
 import { db, ref, onValue } from '../firebase.js';
 import { escapeHtml } from '../utils.js';
+import { loadLucide } from '../ui.js';
+
+let leafletLoaded = false;
+
+async function loadLeaflet() {
+    if (leafletLoaded) return;
+    await Promise.all([
+        import('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'),
+        new Promise(resolve => {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+            link.crossOrigin = 'anonymous';
+            link.onload = resolve;
+            document.head.appendChild(link);
+        })
+    ]);
+    leafletLoaded = true;
+    // Fix Leaflet marker images
+    if (window.L) {
+        delete window.L.Icon.Default.prototype._getIconUrl;
+        window.L.Icon.Default.mergeOptions({
+            iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+        });
+    }
+}
 
 let adminTrackerMap = null;
 let riderMarkersMap = new Map();
@@ -181,6 +209,7 @@ function renderSidebar(allRiders) {
             : '<div class="tracker-chip-empty">No riders online</div>';
     }
 
+    await loadLucide();
     if (window.lucide) window.lucide.createIcons();
 }
 
@@ -254,6 +283,7 @@ function bindUi() {
             if (layout) layout.classList.toggle('tracker-layout-collapsed', _sidebarCollapsed);
             if (icon) {
                 icon.setAttribute('data-lucide', _sidebarCollapsed ? 'panel-right-open' : 'panel-right-close');
+                await loadLucide();
                 if (window.lucide) window.lucide.createIcons();
             }
         });
@@ -270,6 +300,7 @@ function bindUi() {
             const icon = offlineToggle.querySelector('[data-lucide]');
             if (icon) {
                 icon.setAttribute('data-lucide', expanded ? 'chevron-down' : 'chevron-up');
+                await loadLucide();
                 if (window.lucide) window.lucide.createIcons();
             }
         });
@@ -322,10 +353,12 @@ function stopLastUpdatedTicker() {
  */
 export function initLiveRiderTracker() {
     if (mapInitTimeout) clearTimeout(mapInitTimeout);
-    mapInitTimeout = setTimeout(() => {
+    mapInitTimeout = setTimeout(async () => {
         mapInitTimeout = null;
         const mapDiv = document.getElementById('adminLiveMap');
         if (!mapDiv) return;
+
+        await loadLeaflet();
 
         if (adminTrackerMap) {
             try { adminTrackerMap.remove(); } catch (e) { /* ignore */ }

@@ -5,13 +5,14 @@
 
 import { Outlet, onValue, isConnected, onConnectionChange } from '../firebase.js';
 import { escapeHtml, getSkeletonDivs } from '../utils.js';
-import { createGrid, updateGridData, GRID_DEFAULTS } from '../tabulator-setup.js';
+import { createGrid, updateGridData, GRID_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
 
 let _feedbackUnsub = null;
 let _grid = null;
 let _connUnsub = null;
 
-function buildGrid(data) {
+async function buildGrid(data) {
+    await loadTabulator();
     const el = document.getElementById('feedbackTableBody');
     if (!el) return;
     el.innerHTML = '';

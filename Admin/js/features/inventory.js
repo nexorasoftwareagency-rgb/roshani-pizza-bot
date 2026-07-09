@@ -4,7 +4,8 @@ import { showDeleteConfirm, showConfirm } from '../ui-utils.js';
 import { logAudit, showToast, escapeHtml, getSkeletonDivs } from '../utils.js';
 import { pushLog, maybeNotifyLowStock } from './inventory-extras.js';
 import { t, localize } from '../l10n.js';
-import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS } from '../tabulator-setup.js';
+import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
+import { loadLucide } from '../ui.js';
 
 let inventoryListener = null;
 let _grid = null;
@@ -100,7 +101,8 @@ function _invKeyHandler(e) {
     }
 }
 
-function buildGrid(data) {
+async function buildGrid(data) {
+    await loadTabulator();
     const el = document.getElementById('inventoryTableBody');
     if (!el) return;
     el.innerHTML = '';
@@ -533,7 +535,8 @@ function paintMenuPage() {
     if (!container) return;
     const start = (_menuPage - 1) * MENU_PAGE_SIZE;
     container.innerHTML = _menuAllRows.slice(start, start + MENU_PAGE_SIZE).join('');
-    if (window.lucide) window.lucide.createIcons({ root: container });
+    await loadLucide();
+    window.lucide.createIcons({ root: container });
     attachInventoryMenuListeners(container);
 }
 

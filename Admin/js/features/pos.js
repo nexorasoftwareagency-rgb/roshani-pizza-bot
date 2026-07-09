@@ -7,13 +7,14 @@ import { state } from '../state.js';
 import { db, auth, Outlet, serverTimestamp, get, set, runTransaction, ref, isConnected, onConnectionChange } from '../firebase.js';
 import { standardizeOrderData, haptic, escapeHtml, playSuccessSound, logAudit } from '../utils.js';
 import { autoDeductStock } from './inventory.js';
-import { ui } from '../ui.js';
+import { ui, loadLucide } from '../ui.js';
 import { printOrderReceipt } from './printing.js';
 import { t } from '../l10n.js';
 import { evaluateDiscount, recordDiscountUsage, clearDiscountCache } from './discount-evaluator.js';
 import { logger } from '../utils/logger.js';
 
 let _connUnsub = null;
+let _dineinSettings = {};
 
 /**
  * Loads the menu for the Walk-in POS view
@@ -60,6 +61,9 @@ export async function loadWalkinMenu() {
             });
             logger.firebase('POS', `Loaded ${state.categories.length} categories`);
         }
+
+        // Cache dine-in settings for tax/SC display
+        try { const s = await get(Outlet.ref("dineinSettings")); _dineinSettings = s.val() || {}; } catch (e) {}
 
         renderWalkinCategoryTabs();
         applyWalkinFilters();
@@ -247,7 +251,8 @@ export async function openPOSSelectionModal(dishId) {
         document.body.classList.add('pos-selection-mode');
         
         // Ensure all icons (including ones in headers and the button) are rendered
-        if (window.lucide) window.lucide.createIcons({ root: modal });
+        await loadLucide();
+        window.lucide.createIcons({ root: modal });
     } else {
         logger.error('POS', 'Modal element #posSelectionModal not found!');
     }
@@ -408,6 +413,10 @@ export function renderWalkinCart() {
         `;
         document.getElementById("walkinSubtotal").innerText = "\u20B90";
         document.getElementById("walkinTotal").innerText = "\u20B90";
+        const _taxRows = document.getElementById("walkinTaxRows");
+        const _scRow = document.getElementById("walkinServiceChargeRow");
+        if (_taxRows) _taxRows.classList.add('hidden');
+        if (_scRow) _scRow.classList.add('hidden');
         updateMobileCartSummaryState(0, 0);
         return;
     }
@@ -451,7 +460,8 @@ export function renderWalkinCart() {
         `;
     }).join('');
 
-    if (window.lucide) window.lucide.createIcons({ root: list });
+    await loadLucide();
+    window.lucide.createIcons({ root: list });
 
     let discountValue = state.walkinDiscount;
     let discountLabel = state.walkinAutoDiscount?.label || null;
@@ -462,10 +472,17 @@ export function renderWalkinCart() {
         discountValue = state.walkinAutoDiscount.amount;
     }
 
-    const finalTotal = Math.max(0, subtotal - discountValue);
+    // Tax & Service Charge from cached dineinSettings
+    const de = _dineinSettings;
+    const taxRates = (de.taxRates && Array.isArray(de.taxRates) && de.taxRates.length > 0) ? de.taxRates : (de.taxEnabled !== false ? [{ name: de.taxName || 'GST', rate: typeof de.taxRate === 'number' ? de.taxRate : 5 }] : []);
+    const scPct = typeof de.serviceChargeRate === 'number' ? de.serviceChargeRate : 0;
+    const taxItems = taxRates.map(r => ({ name: r.name, rate: r.rate, amount: Math.round(subtotal * (r.rate / 100) * 100) / 100 }));
+    const tax = taxItems.reduce((s, t) => s + t.amount, 0);
+    const sc = de.serviceChargeEnabled === true ? Math.round(subtotal * (scPct / 100) * 100) / 100 : 0;
+    const finalTotal = Math.max(0, subtotal - discountValue + tax + sc);
 
     document.getElementById("walkinSubtotal").innerText = `₹${subtotal.toLocaleString()}`;
-    
+
     const discRow = document.getElementById("walkinDiscountRow");
     const discVal = document.getElementById("walkinDiscountVal");
     if (discountValue > 0) {
@@ -476,6 +493,19 @@ export function renderWalkinCart() {
     } else {
         if (discRow) discRow.classList.add('hidden');
     }
+
+    // Tax & Service Charge display
+    const taxRows = document.getElementById("walkinTaxRows");
+    if (taxRows) {
+        taxRows.innerHTML = taxItems.map(t => `<div class="flex-between mb-8"><span class="text-muted-small font-800">${escapeHtml(t.name)} (${t.rate}%)</span><span class="font-800">₹${t.amount.toLocaleString()}</span></div>`).join('');
+        taxRows.classList.toggle('hidden', tax === 0);
+    }
+    const scRow = document.getElementById("walkinServiceChargeRow");
+    const scVal = document.getElementById("walkinServiceChargeVal");
+    const scLabel = document.getElementById("walkinServiceChargeLabel");
+    if (scRow) scRow.classList.toggle('hidden', sc === 0);
+    if (scVal) scVal.innerText = `₹${sc.toLocaleString()}`;
+    if (scLabel && de.serviceChargeName) scLabel.innerText = de.serviceChargeName + (de.serviceChargeRate ? ` (${de.serviceChargeRate}%)` : '');
 
     document.getElementById("walkinTotal").innerText = `₹${finalTotal.toLocaleString()}`;
 
@@ -685,9 +715,10 @@ export async function submitWalkinSale() {
 
     try {
         // --- PHASE 3.22: PRICE VALIDATION ---
-        const [dishesSnap, categoriesSnap] = await Promise.all([
+        const [dishesSnap, categoriesSnap, dineinSnap] = await Promise.all([
             get(Outlet.ref("dishes")),
-            get(Outlet.ref("categories"))
+            get(Outlet.ref("categories")),
+            get(Outlet.ref("dineinSettings"))
         ]);
         
         const freshDishes = dishesSnap.val() || {};
@@ -732,6 +763,18 @@ export async function submitWalkinSale() {
         }
 
         const subtotal = validatedSubtotal;
+
+        // Tax & Service Charge from dineinSettings (matches QR menu pattern)
+        const dine = dineinSnap.val() || {};
+        const taxRates = (dine.taxRates && Array.isArray(dine.taxRates) && dine.taxRates.length > 0) ? dine.taxRates : (dine.taxEnabled !== false ? [{ name: dine.taxName || 'GST', rate: typeof dine.taxRate === 'number' ? dine.taxRate : 5 }] : []);
+        const taxItems = taxRates.map(r => ({ name: r.name, rate: r.rate, amount: Math.round(subtotal * (r.rate / 100) * 100) / 100 }));
+        const tax = taxItems.reduce((s, t) => s + t.amount, 0);
+        const taxName = taxRates.map(r => r.name).join(' + ') || 'Tax';
+        const scEnabled = dine.serviceChargeEnabled === true;
+        const scPct = typeof dine.serviceChargeRate === 'number' ? dine.serviceChargeRate : 0;
+        const scName = dine.serviceChargeName || 'Service Charge';
+        const sc = scEnabled ? Math.round(subtotal * (scPct / 100) * 100) / 100 : 0;
+
         // Determine final discount: manual overrides auto
         let discountValue = 0;
         let discountId = null;
@@ -770,7 +813,7 @@ export async function submitWalkinSale() {
             }
         }
         discountValue = Math.max(0, Math.round(discountValue));
-        const total = Math.max(0, subtotal - discountValue);
+        const total = Math.max(0, subtotal + tax + sc - discountValue);
 
         const today = new Date();
         const dateStr = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
@@ -785,6 +828,12 @@ export async function submitWalkinSale() {
             orderId,
             items,
             subtotal,
+            tax,
+            taxName,
+            taxItems,
+            serviceCharge: sc,
+            serviceChargeName: scName,
+            serviceChargeRate: scPct,
             discount: discountValue,
             discountId,
             discountLabel,
@@ -793,7 +842,6 @@ export async function submitWalkinSale() {
             paymentMethod: state.walkinPayMethod || "Cash",
             paymentStatus: "Paid",
             customerName: name,
-            phone: phone || "Walk-in",
             customerNote: combinedNote,
             tableNo: tableNo,
             status: "Confirmed",

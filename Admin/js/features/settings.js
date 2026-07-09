@@ -1,6 +1,7 @@
 import { state } from '../state.js';
 import { db, Outlet, ref, get, update, set } from '../firebase.js';
 import { logAudit, showToast, getSkeletonRows } from '../utils.js';
+import { loadLucide } from '../ui.js';
 
 // --- STATE & UTILS ---
 const SETTINGS_PATHS = {
@@ -144,8 +145,12 @@ export async function loadStoreSettings() {
         const dineSnap = await get(Outlet.ref('dineinSettings'));
         const dine = dineSnap.val() || {};
         setChecked('dineinTaxEnabled', dine.taxEnabled !== false);
-        setVal('dineinTaxName', dine.taxName || 'GST');
-        setVal('dineinTaxRate', typeof dine.taxRate === 'number' ? dine.taxRate : 5);
+        // Migrate legacy single tax to taxRates array
+        let taxRates = dine.taxRates;
+        if (!taxRates || !Array.isArray(taxRates) || taxRates.length === 0) {
+            taxRates = dine.taxEnabled !== false ? [{ name: dine.taxName || 'GST', rate: typeof dine.taxRate === 'number' ? dine.taxRate : 5 }] : [];
+        }
+        _renderTaxRates(taxRates);
         setChecked('dineinServiceChargeEnabled', dine.serviceChargeEnabled === true);
         setVal('dineinServiceChargeName', dine.serviceChargeName || 'Service Charge');
         setVal('dineinServiceChargeRate', typeof dine.serviceChargeRate === 'number' ? dine.serviceChargeRate : 10);
@@ -172,10 +177,6 @@ export async function loadStoreSettings() {
         }
 
         // 4. Social & Promotions
-        setVal('botSocialInsta', b.socialInsta || '');
-        setVal('botSocialFb', b.socialFb || '');
-        setVal('botSocialReview', b.socialReview || '');
-        setVal('botSocialWebsite', b.socialWebsite || '');
         setVal('settingFeedbackReason1', b.reason1 || 'Delicious Taste');
         setVal('settingFeedbackReason2', b.reason2 || 'Fast Delivery');
         setVal('settingFeedbackReason3', b.reason3 || 'Premium Packaging');
@@ -252,7 +253,8 @@ export async function saveStoreSettings() {
     const saveBtnOriginalHTML = saveBtn ? saveBtn.innerHTML : '';
     if (saveBtn) {
         saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i data-lucide="loader-circle" class="icon-16 spin-icon"></i> Saving...';
+        saveBtn.innerHTML = '<i data-lucide="loader" class="icon-16 spin-icon"></i> Saving...';
+        await loadLucide();
         if (window.lucide) window.lucide.createIcons({ root: saveBtn });
     }
 
@@ -298,10 +300,6 @@ export async function saveStoreSettings() {
             imgFeedback: document.getElementById('botImgFeedbackPreview')?.src || '',
             greetingImage: val('settingGreetingUrl'),
             menuImage: val('settingMenuUrl'),
-            socialInsta: val('botSocialInsta'),
-            socialFb: val('botSocialFb'),
-            socialReview: val('botSocialReview'),
-            socialWebsite: val('botSocialWebsite'),
             reason1: val('settingFeedbackReason1'),
             reason2: val('settingFeedbackReason2'),
             reason3: val('settingFeedbackReason3')
@@ -320,11 +318,13 @@ export async function saveStoreSettings() {
         updates[`${Outlet.current}/settings/Delivery`] = deliveryData;
         updates[`${Outlet.current}/settings/Bot`] = botData;
         updates[`${Outlet.current}/settings/Display`] = displayData;
+        const taxRates = _readTaxRates();
         updates[`${Outlet.current}/dineinSettings`] = {
             qrBaseUrl: val('settingQrBaseUrl'),
             taxEnabled: isChecked('dineinTaxEnabled'),
-            taxName: val('dineinTaxName').trim() || 'GST',
-            taxRate: parseFloat(val('dineinTaxRate')) || 0,
+            taxName: taxRates.length > 0 ? taxRates.map(t => t.name).join(' + ') : 'GST',
+            taxRate: taxRates.reduce((s, t) => s + (parseFloat(t.rate) || 0), 0),
+            taxRates,
             serviceChargeEnabled: isChecked('dineinServiceChargeEnabled'),
             serviceChargeName: val('dineinServiceChargeName').trim() || 'Service Charge',
             serviceChargeRate: parseFloat(val('dineinServiceChargeRate')) || 0,
@@ -345,6 +345,7 @@ export async function saveStoreSettings() {
         if (saveBtn) {
             saveBtn.disabled = false;
             saveBtn.innerHTML = saveBtnOriginalHTML;
+            await loadLucide();
             if (window.lucide) window.lucide.createIcons({ root: saveBtn });
         }
     }
@@ -382,6 +383,7 @@ function renderFeeSlabs(slabs) {
         `;
         tbody.appendChild(tr);
     });
+    await loadLucide();
     if (window.lucide) window.lucide.createIcons({ root: tbody });
 }
 
@@ -411,6 +413,7 @@ export function addFeeSlab() {
         </td>
     `;
     tbody.appendChild(tr);
+    await loadLucide();
     if (window.lucide) window.lucide.createIcons({ root: tr });
     state.settingsDirty = true;
 }
@@ -490,6 +493,7 @@ function showStatusAlert(newStatus) {
         <div class="alert-sub">The WhatsApp bot and ordering system will respect this status immediately.</div>
     `;
     alertContainer.appendChild(div);
+    await loadLucide();
     if (window.lucide) window.lucide.createIcons({ root: div });
     
     setTimeout(() => {
@@ -510,14 +514,14 @@ window.updateOutletStatusIndicator = function(status) {
 // Bind image uploads for Settings
 document.addEventListener('change', (e) => {
     if (e.target.id === 'settingQRFile') previewSettingsImage('settingQRFile', 'qrPreview', 'settingQRUrl');
-    if (e.target.id === 'settingGreetingFile') previewSettingsImage('settingGreetingFile', 'greetingImgPreview', 'settingGreetingUrl');
-    if (e.target.id === 'settingMenuFile') previewSettingsImage('settingMenuFile', 'menuImgPreview', 'settingMenuUrl');
-    
-    if (e.target.id.startsWith('botImg')) {
+    else if (e.target.id === 'settingGreetingFile') previewSettingsImage('settingGreetingFile', 'greetingImgPreview', 'settingGreetingUrl');
+    else if (e.target.id === 'settingMenuFile') previewSettingsImage('settingMenuFile', 'menuImgPreview', 'settingMenuUrl');
+    else if (e.target.id.startsWith('botImg')) {
         const id = e.target.id;
         const previewId = id.replace('File', 'Preview');
         previewSettingsImage(id, previewId);
-    }
+    } else return;
+    state.settingsDirty = true;
 });
 
 document.addEventListener('click', (e) => {
@@ -548,6 +552,23 @@ document.addEventListener('input', (e) => {
             state.settingsDirty = true;
         }
     }
+});
+
+// Settings sub-tab switching
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.settings-subtab');
+    if (!btn) return;
+    document.querySelectorAll('.settings-subtab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.subtab;
+    document.querySelectorAll('[data-settings-section]').forEach(el => {
+        el.style.display = el.dataset.settingsSection === tab ? '' : 'none';
+    });
+});
+
+// Set initial sub-tab state (General visible, Tax & Services hidden)
+document.querySelectorAll('[data-settings-section]').forEach(el => {
+    el.style.display = el.dataset.settingsSection === 'general' ? '' : 'none';
 });
 
 // -------------------------------------------------------------------
@@ -581,6 +602,7 @@ function _renderOffers(offers) {
             </button>
         </div>`).join('');
 
+    await loadLucide();
     if (window.lucide) window.lucide.createIcons({ root: list });
 
     // Bind input changes
@@ -613,3 +635,53 @@ document.getElementById('btnAddOffer')?.addEventListener('click', () => {
 });
 
 function _getOffers() { return _offers.filter(o => o.title && o.title.trim()); }
+
+// --- MULTI-TAX RATES ---
+function _renderTaxRates(rates) {
+    const container = document.getElementById('dineinTaxRates');
+    if (!container) return;
+    const arr = Array.isArray(rates) ? rates : [];
+    if (arr.length === 0) {
+        container.innerHTML = '<div class="text-muted fs-12 mb-8">No tax rates configured. Tax is disabled or add a rate below.</div>';
+        return;
+    }
+container.innerHTML = arr.map((r, i) => `
+        <div class="flex-row flex-center flex-gap-8 mb-8" data-tax-idx="${i}">
+            <input type="text" class="form-input mb-0 tax-rate-name" data-idx="${i}" value="${(r.name || '').replace(/"/g, '"')}" placeholder="Name (e.g. CGST)" maxlength="20" style="flex:1;min-width:0;">
+            <input type="number" class="form-input mb-0 tax-rate-pct" data-idx="${i}" value="${parseFloat(r.rate) || ''}" placeholder="%" min="0" max="100" step="0.5" style="width:70px;">
+            <button type="button" class="btn-icon-danger tax-rate-remove" data-idx="${i}" title="Remove this tax" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;"><i data-lucide="x" class="icon-14"></i></button>
+        </div>`).join('');
+    await loadLucide();
+    if (window.lucide) window.lucide.createIcons({ root: container });
+    container.querySelectorAll('.tax-rate-name, .tax-rate-pct').forEach(el => {
+        el.addEventListener('input', () => state.settingsDirty = true);
+    });
+    container.querySelectorAll('.tax-rate-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = Number(btn.dataset.idx);
+            const rates = _readTaxRates();
+            rates.splice(idx, 1);
+            _renderTaxRates(rates);
+            state.settingsDirty = true;
+        });
+    });
+}
+
+function _readTaxRates() {
+    const container = document.getElementById('dineinTaxRates');
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('[data-tax-idx]')).map(row => ({
+        name: row.querySelector('.tax-rate-name')?.value?.trim() || '',
+        rate: parseFloat(row.querySelector('.tax-rate-pct')?.value) || 0
+    })).filter(r => r.name && r.rate > 0);
+}
+
+document.getElementById('btnAddTaxRate')?.addEventListener('click', () => {
+    const rates = _readTaxRates();
+    rates.push({ name: '', rate: 5 });
+    _renderTaxRates(rates);
+    state.settingsDirty = true;
+    const container = document.getElementById('dineinTaxRates');
+    const lastInput = container?.querySelector('.tax-rate-name:last-of-type');
+    if (lastInput) lastInput.focus();
+});

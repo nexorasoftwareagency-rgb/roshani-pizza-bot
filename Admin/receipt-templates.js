@@ -131,8 +131,8 @@ window.ReceiptTemplates = {
                         <span>Subtotal:</span>
                         <span>₹${Number(order.subtotal || 0).toFixed(2)}</span>
                     </div>
-                    ${order.tax > 0 ? `<div class="summary-row"><span>${this.escapeHtml(order.taxName || 'Tax')}:</span> <span>₹${Number(order.tax).toFixed(2)}</span></div>` : ''}
-                    ${order.serviceCharge > 0 ? `<div class="summary-row"><span>${this.escapeHtml(order.serviceChargeName || 'Service Charge')}:</span> <span>₹${Number(order.serviceCharge).toFixed(2)}</span></div>` : ''}
+                    ${order.taxItems && Array.isArray(order.taxItems) && order.taxItems.length > 0 ? order.taxItems.map(t => `<div class="summary-row"><span>${this.escapeHtml(t.name)} (${t.rate}%):</span> <span>₹${Number(t.amount).toFixed(2)}</span></div>`).join('') : (order.tax > 0 ? `<div class="summary-row"><span>${this.escapeHtml(order.taxName || 'Tax')}:</span> <span>₹${Number(order.tax).toFixed(2)}</span></div>` : '')}
+                    ${order.serviceCharge > 0 ? `<div class="summary-row"><span>${this.escapeHtml(order.serviceChargeName || 'Service Charge')}${order.serviceChargeRate ? ` (${String(order.serviceChargeRate)}%)` : ''}:</span> <span>₹${Number(order.serviceCharge).toFixed(2)}</span></div>` : ''}
                     ${order.deliveryFee > 0 ? `<div class="summary-row"><span>Delivery:</span> <span>₹${Number(order.deliveryFee).toFixed(2)}</span></div>` : ''}
                     ${order.discount > 0 ? `<div class="summary-row"><span class="bold">Discount${order.discountLabel ? ` (${this.escapeHtml(order.discountLabel)})` : ''}:</span> <span class="bold">-₹${Number(order.discount).toFixed(2)}</span></div>` : ''}
                     

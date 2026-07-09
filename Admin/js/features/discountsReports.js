@@ -9,7 +9,8 @@
  */
 import { db, Outlet, get } from '../firebase.js';
 import { escapeHtml, logAudit, showToast } from '../utils.js';
-import { ui } from '../ui.js';
+import { ui, loadLucide } from '../ui.js';
+import { loadJSPDF } from './printing.js';
 
 const REPORT_STATE = {
     range: 7,                       // days; 0 = all time
@@ -47,7 +48,8 @@ export async function openDiscountsReports() {
     if (!modal) return;
     modal.classList.add('active');
     modal.setAttribute('aria-hidden', 'false');
-    setTimeout(() => { if (window.lucide) window.lucide.createIcons({ root: modal }); }, 0);
+    await loadLucide();
+    window.lucide.createIcons({ root: modal });
     await refreshDiscountsReport();
 }
 
@@ -213,13 +215,13 @@ async function renderReport() {
         }
     }
 
-    if (window.lucide) {
-        const modal = document.getElementById('discountsReportsModal');
-        if (modal) window.lucide.createIcons({ root: modal });
-    }
+    await loadLucide();
+    const modal = document.getElementById('discountsReportsModal');
+    if (modal) window.lucide.createIcons({ root: modal });
 }
 
-export function exportDiscountsReport() {
+export async function exportDiscountsReport() {
+    await loadJSPDF();
     const filtered = _filterUsageByRange(REPORT_STATE.usage);
     const perDiscount = new Map();
     for (const u of filtered) {

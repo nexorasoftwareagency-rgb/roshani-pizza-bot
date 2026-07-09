@@ -3,6 +3,7 @@ import { showToast, escapeHtml, logAudit, getSkeletonRows } from '../utils.js';
 import { state } from '../state.js';
 import { requireAdminReauth } from '../auth.js';
 import { showConfirm, showDeleteConfirm } from '../ui-utils.js';
+import { loadLucide } from '../ui.js';
 
 let _categoriesUnsub = null;
 let _dishesUnsub = null;
@@ -276,7 +277,8 @@ export function loadMenu() {
                     </div>
                 </div>`;
 
-            if (window.lucide) window.lucide.createIcons({ root: card });
+            await loadLucide();
+            window.lucide.createIcons({ root: card });
             grid.appendChild(card);
         });
 
