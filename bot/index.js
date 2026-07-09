@@ -98,6 +98,7 @@ let firebaseListenersInitialized = false;
 // Crypto/session error monitoring (for auto-healing and visibility)
 let cryptoErrorCount = 0;
 let reconnectAttempts = 0;
+let reconnectTimer = null;
 const MAX_CRYPTO_ERRORS = 500; // Triggers session reset if exceeded rapidly
 
 const SESSION_TTL = 30 * 60; // Redis TTL is in seconds (30 mins)
@@ -781,6 +782,7 @@ async function startBot() {
     console.log(`🚀 Starting ${OUTLET_NAME} WhatsApp Bot (${OUTLET})...`);
 
     // Clean up previous socket on reconnect
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
     if (currentSock) {
         try { currentSock.end(undefined); } catch (_) {}
         currentSock = null;
@@ -905,7 +907,7 @@ async function startBot() {
                 // Exponential backoff: 5s, 15s, 45s, 120s max
                 const delay = Math.min(5000 * Math.pow(3, Math.min(reconnectAttempts - 1, 3)), 120000);
                 console.log(`🔌 Disconnected (attempt ${reconnectAttempts}). Reconnecting in ${(delay / 1000).toFixed(0)}s...`);
-                setTimeout(startBot, delay);
+                if (!reconnectTimer) reconnectTimer = setTimeout(() => { reconnectTimer = null; startBot(); }, delay);
             } else {
                 console.log("❌ Logged out. Delete session folder and restart.");
             }
@@ -1028,6 +1030,8 @@ async function startBot() {
             // Run message logic in an IIFE to capture all early returns,
             // so we can safely save the user session to Redis at the end.
             await (async () => {
+
+                console.log(`[FLOW] step=${user.step || "null"} text="${text.slice(0, 40)}" sid=${user.msgCount}`);
 
                 // --- RATE LIMITING ---
                 const now = Date.now();
