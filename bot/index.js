@@ -964,6 +964,7 @@ async function startBot() {
             const sender = msg.key.remoteJid;
             const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
             const pushName = msg.pushName || "";
+            console.log(`[IN] ${maskJid(sender)}: "${text.slice(0, 80)}"`);
 
             // --- PROMOTIONAL OPT-OUT / OPT-IN HANDLER ---
             // Detect STOP / START from non-admin senders BEFORE the order-flow
