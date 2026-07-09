@@ -130,7 +130,7 @@ function formatCartSummary(cart) {
     let lines = '';
     let subtotal = 0;
     cart.forEach((item, i) => {
-        const itemTotal = item.total;
+        const itemTotal = item.total || 0;
         subtotal += itemTotal;
         lines += `${i + 1}. *${item.name}* (${item.size})\n`;
         if (item.addons && item.addons.length > 0) {
@@ -215,8 +215,8 @@ function generateCouponCode(prefix = '') {
 
 function isSocketDead(sock) {
     if (!sock) return true;
-    if (typeof sock.ws === 'undefined') return true;
-    if (sock.ws.readyState === 3) return true; // CLOSED
+    if (!sock.ws) return true;
+    if (sock.ws.readyState >= 2) return true; // CLOSING or CLOSED
     return false;
 }
 

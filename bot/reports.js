@@ -3,11 +3,12 @@
  * Requires: OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids, getISTDateInfo, getISTDateString.
  */
 
-const { getISTDateInfo, getISTDateString } = require('./utils');
+const { getISTDateInfo, getISTDateString, isSocketDead } = require('./utils');
 
 async function sendDailyReport(sock, ctx, targetDate = null) {
     const { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids } = ctx;
     try {
+        if (!sock || isSocketDead(sock)) return;
         const ist = getISTDateInfo();
         const dateStr = targetDate || ist.dateStr;
 
@@ -62,9 +63,7 @@ async function sendDailyReport(sock, ctx, targetDate = null) {
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
             `_Sent automatically by ${OUTLET_NAME} Bot_`;
 
-        for (const jid of jids) {
-            await sock.sendMessage(jid, { text: msg });
-        }
+        await Promise.allSettled(jids.map(jid => sock.sendMessage(jid, { text: msg })));
         console.log(`📊 Daily report for ${dateStr} broadcast to ${jids.length} numbers`);
     } catch (err) { console.error("Daily Report Error:", err); }
 }
@@ -72,6 +71,7 @@ async function sendDailyReport(sock, ctx, targetDate = null) {
 async function sendMonthlyReport(sock, ctx) {
     const { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids } = ctx;
     try {
+        if (!sock || isSocketDead(sock)) return;
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
@@ -95,7 +95,7 @@ async function sendMonthlyReport(sock, ctx) {
             });
 
             if (outletOrders > 0) {
-                reportDetails += `\n🎂 *${OUTLET.toUpperCase()} OUTLET:*\n`;
+                reportDetails += `\n${OUTLET === 'pizza' ? '🍕' : '🎂'} *${OUTLET.toUpperCase()} OUTLET:*\n`;
                 reportDetails += `   📦 Orders: ${outletOrders}\n`;
                 reportDetails += `   💰 Revenue: ₹${outletRevenue.toLocaleString()}\n`;
             }
@@ -113,9 +113,7 @@ async function sendMonthlyReport(sock, ctx) {
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
             `_Sent automatically by ${OUTLET_NAME} Bot_`;
 
-        for (const jid of jids) {
-            await sock.sendMessage(jid, { text: msg });
-        }
+        await Promise.allSettled(jids.map(jid => sock.sendMessage(jid, { text: msg })));
         console.log(`📈 Monthly report broadcast to ${jids.length} numbers`);
     } catch (err) { console.error("Monthly Report Error:", err); }
 }
@@ -123,6 +121,7 @@ async function sendMonthlyReport(sock, ctx) {
 async function sendWeeklyReport(sock, ctx) {
     const { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids } = ctx;
     try {
+        if (!sock || isSocketDead(sock)) return;
         const now = new Date();
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - 7);
@@ -148,7 +147,7 @@ async function sendWeeklyReport(sock, ctx) {
             });
 
             if (outletOrders > 0) {
-                reportDetails += `\n🍕 *${OUTLET.toUpperCase()} OUTLET:*\n`;
+                reportDetails += `\n${OUTLET === 'pizza' ? '🍕' : '🎂'} *${OUTLET.toUpperCase()} OUTLET:*\n`;
                 reportDetails += `   📦 Orders: ${outletOrders}\n`;
                 reportDetails += `   💰 Revenue: ₹${outletRevenue.toLocaleString()}\n`;
             }
@@ -166,9 +165,7 @@ async function sendWeeklyReport(sock, ctx) {
             `📦 *TOTAL ORDERS:* ${totalOrders}\n\n` +
             `_Sent automatically by ${OUTLET_NAME} Bot_`;
 
-        for (const jid of jids) {
-            await sock.sendMessage(jid, { text: msg });
-        }
+        await Promise.allSettled(jids.map(jid => sock.sendMessage(jid, { text: msg })));
         console.log(`📊 Weekly report broadcast to ${jids.length} numbers`);
     } catch (err) { console.error("Weekly Report Error:", err); }
 }

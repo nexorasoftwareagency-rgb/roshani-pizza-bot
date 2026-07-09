@@ -1479,7 +1479,8 @@ async function startBot() {
                         return sock.sendMessage(sender, { text: await appendContactInfo("❌ Order Cancelled. We hope to serve you next time! 🙏", outlet) });
                     }
                     if (text === "1") {
-                        user = await processOrderPlacement(sock, sender, user, "COD");
+                        await processOrderPlacement(sock, sender, user, "COD");
+                        user = null;
                         return;
                     }
                     return sendInvalidInputHelp(sock, sender, user);
@@ -1524,7 +1525,7 @@ async function startBot() {
                         successMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                         successMsg += `*Please wait while the admin confirms your order!* ⏳\n\n`;
                         successMsg += `Total: ₹${finalOrder.total}`;
-                        sock.sendMessage(sender, { text: await appendContactInfo(successMsg, user.outlet) }).catch(() => {});
+                        await sock.sendMessage(sender, { text: await appendContactInfo(successMsg, user.outlet) });
 
                         // Fire-and-forget: all side effects (non-blocking)
                         notifyAdmin(sock, orderId, finalOrder, 'NEW').catch(() => {});
@@ -1587,7 +1588,7 @@ async function startBot() {
                         return null;
                     } catch (e) {
                         console.error("Order Placement Error:", e);
-                        return sock.sendMessage(sender, { text: "❌ Error placing your order. Please try again." });
+                        await sock.sendMessage(sender, { text: "❌ Error placing your order. Please try again." });
                     }
                 }
 

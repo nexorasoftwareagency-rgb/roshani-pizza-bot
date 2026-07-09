@@ -3,11 +3,11 @@
  * Requires: formatJid, addInAppNotification, getData.
  */
 
-const { formatJid } = require('./utils');
+const { formatJid, isSocketDead } = require('./utils');
 
 async function notifyRiderPickup(sock, order, addInAppNotification) {
     try {
-        if (!sock) return;
+        if (!sock || isSocketDead(sock)) return;
         const riderPhone = order.riderPhone;
         const riderId = order.riderId || order.assignedRiderUid;
         if (!riderPhone) return;
@@ -68,7 +68,7 @@ async function notifyRiderPickup(sock, order, addInAppNotification) {
 
 async function notifyRiderAssignment(sock, orderId, order, addInAppNotification) {
     try {
-        if (!sock) return;
+        if (!sock || isSocketDead(sock)) return;
         const riderPhone = order.riderPhone;
         const riderId = order.riderId || order.assignedRiderUid;
         if (!riderPhone) {
@@ -137,7 +137,7 @@ async function notifyRiderAssignment(sock, orderId, order, addInAppNotification)
 
 async function broadcastPickupAvailable(sock, orderId, order, getData, addInAppNotification) {
     try {
-        if (!sock) return;
+        if (!sock || isSocketDead(sock)) return;
         const outlet = order.outlet || 'pizza';
         const riders = await getData("riders", outlet) || {};
 
