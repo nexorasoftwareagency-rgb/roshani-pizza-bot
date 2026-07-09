@@ -792,7 +792,11 @@ async function startBot() {
         auth: state,
         printQRInTerminal: true,
         logger: pino({ level: 'silent' }),
-        browser: ['Roshani ERP', 'Chrome', '1.0.0']
+        browser: ['Roshani ERP', 'Chrome', '1.0.0'],
+        connectTimeoutMs: 90000,
+        defaultQueryTimeoutMs: 120000,
+        keepAliveIntervalMs: 15000,
+        markOnlineOnConnect: false
     });
     currentSock = sock;
 
