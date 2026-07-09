@@ -468,9 +468,12 @@ async function sendInvalidInputHelp(sock, sender, user) {
         default:
             helpMsg += "Please follow the instructions in the message above or reply *RESET* to start over.";
     }
-    const wsOk = sock.ws?.isOpen;
-    console.log(`[SEND] to ${maskJid(sender)} ws=${wsOk}: "${helpMsg.slice(0, 50)}..."`);
-    return sock.sendMessage(sender, { text: helpMsg });
+    try {
+        const result = await sock.sendMessage(sender, { text: helpMsg });
+        console.log(`[SEND OK] to ${maskJid(sender)} id=${result?.key?.id} fromMe=${result?.key?.fromMe}`);
+    } catch (err) {
+        console.error(`[SEND ERR] to ${maskJid(sender)}:`, err.message);
+    }
 }
 
 // =============================
@@ -899,6 +902,7 @@ async function startBot() {
         if (qr) qrcode.generate(qr, { small: true });
         if (connection === 'open') {
             console.log(`✅ ${OUTLET_NAME.toUpperCase()} BOT IS ONLINE`);
+            console.log(`[AUTH] user=${JSON.stringify(sock.user)}`);
             reconnectAttempts = 0;
             cryptoErrorCount = 0;
         }
