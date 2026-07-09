@@ -5,7 +5,6 @@
 - Ubuntu 24.04 LTS EC2 instance
 - Domain pointing to EC2 (optional, for SSL)
 - Firebase project: `prashant-pizza-e86e4`
-- Firebase hosting targets: `roshani-sudha-admin`, `roshani-sudha-rider`, `roshani-sudha-menu`
 
 ---
 
@@ -24,14 +23,10 @@ node -v   # v20.x
 npm -v    # 10.x
 ```
 
-## 2. Install Global Tools
+## 2. Install PM2
 
 ```bash
-# PM2 process manager
 sudo npm install -g pm2
-
-# Firebase CLI
-sudo npm install -g firebase-tools
 ```
 
 ## 3. Clone Repository
@@ -49,17 +44,11 @@ npm install
 cd ..
 ```
 
-## 5. Set Up Firebase Auth (Bot)
+## 5. Add Firebase Service Account
 
-```bash
-# Login to Firebase
-firebase login --no-localhost
+The bot uses `firebase-admin` npm package (already in dependencies) — no CLI needed.
 
-# List projects to verify
-firebase projects:list
-```
-
-Place `service-account.json` in both `bot/` and `Cake-bot/` directories.
+Place `service-account.json` in the `bot/` directory. (Cake-bot shares the same file or symlink.)
 
 ## 6. Fix Known Prod Bugs Before Starting
 
@@ -98,24 +87,11 @@ pm2 logs pizza-bot --lines 20
 pm2 logs cake-bot --lines 20
 ```
 
-## 8. Deploy Firebase Hosting
+## 8. Deploy (from Your Dev Machine, Not EC2)
 
 ```bash
-cd ~/roshani-pizza-bot
-firebase deploy --only hosting
-```
-
-For specific targets:
-```bash
-firebase deploy --only hosting:admin
-firebase deploy --only hosting:rider
-firebase deploy --only hosting:menu
-```
-
-## 9. Deploy Firebase Database Rules
-
-```bash
-firebase deploy --only database
+# Run locally, not on EC2
+firebase deploy --only database,hosting
 ```
 
 ## 10. Daily Operations
