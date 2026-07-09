@@ -48,7 +48,7 @@ cd ..
 
 The bot uses `firebase-admin` npm package (already in dependencies) — no CLI needed.
 
-Place `service-account.json` in the `bot/` directory. (Cake-bot shares the same file or symlink.)
+Place `service-account.json` in the `bot/` directory.
 
 ## 6. Fix Known Prod Bugs Before Starting
 
@@ -64,12 +64,11 @@ phone: order.phone || null,
 
 ### Bug 2: Rogue Cake-bot entry point on production
 
-**Root cause**: Production has a standalone `Cake-bot/index.js` that `require('qrcode')` but only `qrcode-terminal` is installed. The local `ecosystem.config.js` correctly runs both bots from `./bot/index.js` with `OUTLET` env var.
+**Root cause**: Production has a standalone `Cake-bot/index.js` that `require('qrcode')` but only `qrcode-terminal` is installed. Both bots run from `bot/index.js` with `OUTLET` env var — the `Cake-bot/` dir should not contain code.
 
 **Fix on production**:
 ```bash
-# Remove the rogue file — cake-bot runs from bot/index.js with OUTLET=cake
-rm /home/ubuntu/roshani-pizza-bot/Cake-bot/index.js
+rm -rf /home/ubuntu/roshani-pizza-bot/Cake-bot
 pm2 restart cake-bot
 ```
 
