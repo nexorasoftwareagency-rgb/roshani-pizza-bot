@@ -1126,27 +1126,31 @@ async function startBot() {
 
 
                 if (user.step === "CATEGORY") {
-                    if (text === "0") {
-                        // Go back to welcome/start
-                        user.step = "START";
-                        return sock.sendMessage(sender, { text: `🏠 *Main Menu* — Send any message to restart.` });
+                    try {
+                        if (text === "0") {
+                            user.step = "START";
+                            return sock.sendMessage(sender, { text: `🏠 *Main Menu* — Send any message to restart.` });
+                        }
+                        if (text === "9") return sendCartView(sock, sender, user);
+                        const cat = user.categoryList[parseInt(text) - 1];
+                        if (!cat) return sendInvalidInputHelp(sock, sender, user);
+
+                        const dishes = await getData(`dishes`, user.outlet) || {};
+                        user.dishList = Object.entries(dishes)
+                            .filter(([id, d]) => d.category === cat.name && d.stock !== false)
+                            .map(([id, d]) => ({ id, ...d }));
+
+                        if (user.dishList.length === 0) return sock.sendMessage(sender, { text: "❌ No items in this category." });
+
+                        let dMsg = `🍽️ *${cat.name.toUpperCase()}*\n\n`;
+                        user.dishList.forEach((d, i) => { dMsg += `${i + 1}️⃣  *${d.name}*\n\n`; });
+                        dMsg += `🛒 *9* View Cart\n0️⃣ *Take one step Back* 🔙`;
+                        user.step = "DISH";
+                        return await sendImage(sock, sender, cat.image, dMsg);
+                    } catch (catErr) {
+                        console.error("[CATEGORY ERR]", catErr);
+                        return sock.sendMessage(sender, { text: "❌ Something went wrong. Please try again." });
                     }
-                    if (text === "9") return sendCartView(sock, sender, user);
-                    const cat = user.categoryList[parseInt(text) - 1];
-                    if (!cat) return sendInvalidInputHelp(sock, sender, user);
-
-                    const dishes = await getData(`dishes`, user.outlet) || {};
-                    user.dishList = Object.entries(dishes)
-                        .filter(([id, d]) => d.category === cat.name && d.stock !== false)
-                        .map(([id, d]) => ({ id, ...d }));
-
-                    if (user.dishList.length === 0) return sock.sendMessage(sender, { text: "❌ No items in this category." });
-
-                    let dMsg = `🍽️ *${cat.name.toUpperCase()}*\n\n`;
-                    user.dishList.forEach((d, i) => { dMsg += `${i + 1}️⃣  *${d.name}*\n\n`; });
-                    dMsg += `🛒 *9* View Cart\n0️⃣ *Take one step Back* 🔙`;
-                    user.step = "DISH";
-                    return await sendImage(sock, sender, cat.image, dMsg);
                 }
 
                 if (user.step === "DISH") {
