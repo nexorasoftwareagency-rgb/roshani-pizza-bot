@@ -552,6 +552,7 @@ async function sendFCMToAdmins(orderId, order) {
 
 async function notifyAdmin(sock, orderId, order, type = 'NEW') {
     try {
+        if (!sock || isSocketDead(sock)) return;
         const outlet = order.outlet || 'pizza';
         const jids = await getCachedAdminJids();
         if (!jids || jids.length === 0) return;
@@ -572,6 +573,7 @@ async function notifyAdmin(sock, orderId, order, type = 'NEW') {
 
 async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
     try {
+        if (!sock || isSocketDead(sock)) return;
         // FIX: Robust JID resolution for both Online and POS orders.
         // POS orders usually store the phone in 'order.phone'. 
         // Online orders store the JID in 'order.whatsappNumber'.
@@ -595,7 +597,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
             const type = (order.type || order.orderType || "Walk-in");
             if (order.phone !== "Walk-in") {
                 console.warn(`[BOT] ⚠️ Skipping Notification for #${id.slice(-5)} (${type}): No valid phone. Value: "${order.phone}"`);
-                updateData(`bot/logs/${id}`, { error: "No valid JID", phone: order.phone || null, type, timestamp: Date.now() }).catch(() => { });
+                updateData(`bot/logs/${id}`, { error: "No valid JID", phone: order.phone && order.phone !== 'undefined' ? order.phone : null, type, timestamp: Date.now() }).catch(() => { });
             }
             return;
         }
