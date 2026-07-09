@@ -468,7 +468,8 @@ async function sendInvalidInputHelp(sock, sender, user) {
         default:
             helpMsg += "Please follow the instructions in the message above or reply *RESET* to start over.";
     }
-    console.log(`[SEND] to ${maskJid(sender)}: "${helpMsg.slice(0, 50)}..."`);
+    const wsOk = sock.ws?.isOpen;
+    console.log(`[SEND] to ${maskJid(sender)} ws=${wsOk}: "${helpMsg.slice(0, 50)}..."`);
     return sock.sendMessage(sender, { text: helpMsg });
 }
 
