@@ -50,9 +50,12 @@ let redisClient;
 let cachedAdminJids = null;
 let cachedAdminJidsExpiry = 0;
 const ADMIN_CACHE_TTL = 300000;
-const redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+const redisUrl = process.env.REDIS_URL || '';
 
-if (redisUrl.includes('clustercfg')) {
+if (!redisUrl) {
+    redisClient = { get: async () => null, setEx: async () => {}, del: async () => {} };
+    console.log('⚠️ Redis not configured — using in-memory only');
+} else if (redisUrl.includes('clustercfg')) {
     // AWS ElastiCache Cluster Mode
     redisClient = redis.createCluster({
         rootNodes: [{ url: redisUrl }],
@@ -70,18 +73,18 @@ if (redisUrl.includes('clustercfg')) {
     console.log('🚀 Redis initialized in STANDALONE mode');
 }
 
-redisClient.on('error', (err) => console.log('Redis Client Error', err));
-
 // Track Redis health for degraded-mode fallbacks
 let redisReady = false;
 
-redisClient.on('ready', () => { redisReady = true; });
-redisClient.on('end', () => { redisReady = false; });
-
-redisClient.connect().then(() => {
-    redisReady = true;
-    console.log('✅ Connected to Redis');
-}).catch(console.error);
+if (redisUrl) {
+    redisClient.on('error', (err) => console.log('Redis Client Error', err));
+    redisClient.on('ready', () => { redisReady = true; });
+    redisClient.on('end', () => { redisReady = false; });
+    redisClient.connect().then(() => {
+        redisReady = true;
+        console.log('✅ Connected to Redis');
+    }).catch(console.error);
+}
 
 // --- GLOBAL STATE (Migrating to Redis) ---
 // We keep local variables for temporary locks if needed, but primary state moves to Redis
