@@ -38,7 +38,8 @@ const {
     getISTDateInfo, getISTDateString, parseTime, isShopOpen, randomBetween,
     calculateDistance, getFeeFromSlabs,
     formatCartSummary, formatOrderInvoice, getFunnyFoodJoke, getFoodFunnyProgress,
-    generateCouponCode, isSocketDead
+    generateCouponCode, isSocketDead,
+    normalizeJid, lidJidMap
 } = require('./utils');
 const promo = require('./promotions');
 const { sendDailyReport, sendMonthlyReport, sendWeeklyReport } = require('./reports');
@@ -110,6 +111,8 @@ const STATUS_TTL = 24 * 60 * 60; // 24 hours
 // In-memory dedup fallback used when Redis is offline
 const localStatusCache = new Map();
 const LOCAL_CACHE_TTL = 3600000; // 1 hour
+// In-memory session fallback when Redis is unavailable
+const localSessionCache = new Map();
 
 // ── Auto-cleanup stale session files (prevents Bad MAC errors) ──────────────
 // Baileys stores Signal Protocol session files in session_data_{OUTLET}/.
@@ -151,13 +154,23 @@ setInterval(cleanupStaleSessions, 24 * 60 * 60 * 1000);
 async function getSession(sender) {
     try {
         const data = await redisClient.get(`session:${sender}`);
-        return data ? JSON.parse(data) : null;
-    } catch (e) { return null; }
+        if (data) return JSON.parse(data);
+    } catch (e) { }
+    // Fallback to in-memory when Redis unavailable
+    const cached = localSessionCache.get(sender);
+    if (cached && cached._expiry > Date.now()) return cached;
+    return null;
 }
 async function saveSession(sender, data) {
     try {
-        if (data) await redisClient.setEx(`session:${sender}`, SESSION_TTL, JSON.stringify(data));
-        else await redisClient.del(`session:${sender}`);
+        if (data) {
+            data._expiry = Date.now() + SESSION_TTL * 1000;
+            localSessionCache.set(sender, data);
+            await redisClient.setEx(`session:${sender}`, SESSION_TTL, JSON.stringify(data));
+        } else {
+            localSessionCache.delete(sender);
+            await redisClient.del(`session:${sender}`);
+        }
     } catch (e) { }
 }
 
@@ -596,7 +609,7 @@ async function handleOrderStatusUpdate(sock, id, order, isNew = false) {
         } else {
             // Fallback to phone field (POS orders, incomplete profiles, or @lid cases)
             const rawPhone = order.phone || order.whatsappNumber;
-            if (rawPhone && rawPhone !== "Walk-in") {
+            if (rawPhone && rawPhone !== "Walk-in" && !String(rawPhone).endsWith('@lid')) {
                 jid = formatJid(rawPhone);
             }
         }
@@ -804,12 +817,28 @@ async function startBot() {
         auth: state,
         printQRInTerminal: true,
         logger: pino({ level: 'silent' }),
-        browser: ['Roshani ERP', 'Chrome', '1.0.0'],
+        browser: ['Windows', 'Chrome', '10'],
         connectTimeoutMs: 90000,
         defaultQueryTimeoutMs: 120000,
         keepAliveIntervalMs: 15000,
-        markOnlineOnConnect: false
+        markOnlineOnConnect: false,
+        emitOwnEvents: true
     });
+    // Patch sendMessage to log every send attempt with delivery diagnostics
+    const _origSendMessage = sock.sendMessage.bind(sock);
+    sock.sendMessage = async function(jid, content, opts) {
+        const textPreview = content?.text ? content.text.slice(0, 60) : (content?.caption ? content.caption.slice(0, 60) : 'non-text');
+        try {
+            const result = await _origSendMessage(jid, content, opts);
+            const msgId = result?.key?.id || result;
+            const cryptoWarn = cryptoErrorCount > 10 ? ` cryptoErrs=${cryptoErrorCount}` : '';
+            console.log(`[SEND OK] to ${maskJid(jid)} text="${textPreview}" wsOpen=${sock.ws?.isOpen} msgId=${msgId}${cryptoWarn}`);
+            return result;
+        } catch (err) {
+            console.error(`[SEND ERR] to ${maskJid(jid)} text="${textPreview}":`, err.message || err);
+            throw err;
+        }
+    };
     currentSock = sock;
 
     sock.ev.on('creds.update', saveCreds);
@@ -915,7 +944,7 @@ async function startBot() {
                 reconnectAttempts++;
                 // Exponential backoff: 5s, 15s, 45s, 120s max
                 const delay = Math.min(5000 * Math.pow(3, Math.min(reconnectAttempts - 1, 3)), 120000);
-                console.log(`🔌 Disconnected (attempt ${reconnectAttempts}). Reconnecting in ${(delay / 1000).toFixed(0)}s...`);
+                console.log(`🔌 Disconnected (attempt ${reconnectAttempts}, code=${code}). Reconnecting in ${(delay / 1000).toFixed(0)}s...`);
                 if (!reconnectTimer) reconnectTimer = setTimeout(() => { reconnectTimer = null; startBot(); }, delay);
             } else {
                 console.log("❌ Logged out. Delete session folder and restart.");
@@ -972,7 +1001,10 @@ async function startBot() {
             // Mark as read (fire-and-forget — don't block processing)
             sock.readMessages([msg.key]).catch(() => {});
 
-            const sender = msg.key.remoteJid;
+            let sender = msg.key.remoteJid;
+            // Baileys 6.x supports @lid natively — keep the JID as-is from WhatsApp
+            // for consistent session keys and correct routing via relayMessage's isLid path.
+            // Prevents session fragmentation between @lid and @s.whatsapp.net formats.
             const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
             const pushName = msg.pushName || "";
             console.log(`[IN] ${maskJid(sender)}: "${text.slice(0, 80)}"`);

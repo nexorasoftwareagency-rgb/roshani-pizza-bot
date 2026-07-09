@@ -216,8 +216,35 @@ function generateCouponCode(prefix = '') {
 function isSocketDead(sock) {
     if (!sock) return true;
     if (!sock.ws) return true;
-    if (sock.ws.readyState >= 2) return true; // CLOSING or CLOSED
+    // Baileys 6.x uses custom WebSocketClient (not standard ws library):
+    // .isOpen (bool), .isClosing (bool), .isClosed (bool) — NOT .readyState
+    if (sock.ws.isClosed || sock.ws.isClosing) return true;
     return false;
+}
+
+// ── LID → JID resolution ───────────────────────────────────────────────────
+// Global mapping @lid → resolved @s.whatsapp.net JID, populated on incoming message.
+const lidJidMap = new Map();
+
+function normalizeJid(jid) {
+    if (!jid || typeof jid !== 'string') return jid;
+    if (!jid.endsWith('@lid')) return jid;
+    // Check in-memory mapping first
+    const mapped = lidJidMap.get(jid);
+    if (mapped) return mapped;
+    // Fallback: try extracting last 10 digits as phone number
+    const digits = jid.replace(/[^0-9]/g, '').slice(-10);
+    if (digits.length === 10) {
+        const resolved = formatJid(digits);
+        if (resolved) {
+            lidJidMap.set(jid, resolved);
+            return resolved;
+        }
+    }
+    // Last resort: swap server suffix (may still not work, but matches Baileys' own behavior)
+    const withPhone = jid.replace('@lid', '@s.whatsapp.net');
+    lidJidMap.set(jid, withPhone);
+    return withPhone;
 }
 
 module.exports = {
@@ -225,5 +252,6 @@ module.exports = {
     getISTDateInfo, getISTDateString, parseTime, isShopOpen, randomBetween,
     calculateDistance, getFeeFromSlabs,
     formatCartSummary, formatOrderInvoice, getFunnyFoodJoke, getFoodFunnyProgress,
-    generateCouponCode, isSocketDead
+    generateCouponCode, isSocketDead,
+    normalizeJid, lidJidMap
 };

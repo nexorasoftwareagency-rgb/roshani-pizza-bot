@@ -475,7 +475,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const btn = document.getElementById(btnId);
             const input = document.getElementById(inputId);
             if (btn && input) {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', async () => {
                     const isPass = input.type === 'password';
                     input.type = isPass ? 'text' : 'password';
                     btn.innerHTML = isPass ? '<i data-lucide="eye-off" class="icon-16"></i>' : '<i data-lucide="eye" class="icon-16"></i>';
