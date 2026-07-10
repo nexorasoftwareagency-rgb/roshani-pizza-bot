@@ -298,7 +298,10 @@ export function updateCartTotals(subtotal, taxPercent, taxName, taxEnabled, serv
     const discountRow = document.getElementById('cartDiscountRow');
     const discountAmount = discount && discount.amount > 0 ? Math.min(discount.amount, subtotal + tax + sc) : 0;
     if (discountRow) discountRow.classList.toggle('hidden', discountAmount <= 0);
-    if (el('cartDiscountLabel')) el('cartDiscountLabel').textContent = discount?.label || 'Discount';
+    if (el('cartDiscountLabel')) {
+        const pctInfo = discount?.mode === 'percent' && discount?.value ? ` (${discount.value}% off)` : '';
+        el('cartDiscountLabel').textContent = (discount?.label || 'Discount') + pctInfo;
+    }
     if (el('cartDiscount')) el('cartDiscount').textContent = '-' + fmtMoney(discountAmount);
 
     if (el('cartTotal')) el('cartTotal').textContent = fmtMoney(subtotal + tax + sc - discountAmount);
@@ -689,12 +692,13 @@ export function setDiscountInputLoading(loading) {
     if (input) input.disabled = loading;
 }
 
-export function showAppliedDiscount(label, amount) {
+export function showAppliedDiscount(label, amount, mode, value) {
     const btn = document.getElementById('btnApplyDiscount');
     const input = document.getElementById('discountCodeInput');
     if (btn) { btn.textContent = 'Remove'; btn.classList.add('discount-applied'); }
     if (input) { input.disabled = true; input.value = label; }
-    showDiscountMsg(`✓ ${label} applied — ${fmtMoney(amount)} off`, 'success');
+    const pctInfo = mode === 'percent' && value ? ` (${value}% off)` : '';
+    showDiscountMsg(`✓ ${label} applied — ${fmtMoney(amount)} off${pctInfo}`, 'success');
 }
 
 export function resetDiscountInput() {

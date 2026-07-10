@@ -484,7 +484,7 @@ document.getElementById('btnAddToOrder')?.addEventListener('click', async () => 
 // ---------------------------------------------------------------
 function _refreshDiscountInput() {
     if (M.appliedDiscount) {
-        UI.showAppliedDiscount(M.appliedDiscount.name || M.appliedDiscount.couponCode, M.appliedDiscount.amount);
+        UI.showAppliedDiscount(M.appliedDiscount.name || M.appliedDiscount.couponCode, M.appliedDiscount.amount, M.appliedDiscount.mode, M.appliedDiscount.value);
     } else {
         UI.resetDiscountInput();
     }
@@ -525,7 +525,7 @@ document.getElementById('btnApplyDiscount')?.addEventListener('click', async () 
         }
         M.appliedDiscount = result;
         UI.updateCartTotals(cartSubtotal(), M.taxPercent, M.taxName, M.taxEnabled, M.serviceChargeEnabled, M.serviceChargeName, M.serviceChargeRate, M.appliedDiscount, M.taxRates);
-        UI.showAppliedDiscount(result.name || result.couponCode, result.amount);
+        UI.showAppliedDiscount(result.name || result.couponCode, result.amount, result.mode, result.value);
         UI.setDiscountInputLoading(false);
         haptic([10, 30, 10]);
     } catch (e) {

@@ -60,20 +60,23 @@ async function validateToken(token) {
 let _isNewSession = false;
 
 async function joinOrCreateSession(table) {
-    const sessionsSnap = await get(outletRef(`tableSessions`));
-    const allSessions = sessionsSnap.val() || {};
+    // Only read the specific session the table points to, never the whole node
+    let existingSession = null;
+    if (table.currentSession) {
+        const snap = await get(outletRef(`tableSessions/${table.currentSession}`));
+        existingSession = snap.val();
+    }
 
     // If the table already has a currentSession AND it's still active, join it.
-    if (table.currentSession && allSessions[table.currentSession] && allSessions[table.currentSession].status !== 'closed' && allSessions[table.currentSession].status !== 'expired') {
+    if (existingSession && existingSession.status !== 'closed' && existingSession.status !== 'expired') {
         _isNewSession = false;
-        return { id: table.currentSession, ...allSessions[table.currentSession] };
+        return { id: table.currentSession, ...existingSession };
     }
 
     // If the existing session is expired/closed, clear the table's currentSession
     // pointer so the transaction below can create a fresh session.
     // Must set status:'free' to match the DB write rule for unauthenticated users.
-    if (table.currentSession && allSessions[table.currentSession] &&
-        (allSessions[table.currentSession].status === 'expired' || allSessions[table.currentSession].status === 'closed')) {
+    if (existingSession) {
         try {
             await update(outletRef(`tables/${table.id}`), { status: 'free', currentSession: null, updatedAt: Date.now() });
         } catch (e) {

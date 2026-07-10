@@ -1600,7 +1600,8 @@ async function sendDailyReportSafely(dateOverride = null) {
                             discountLabel: user.discountLabel || null,
                             discountSource: user.discountSource || (user.discount ? 'manual' : 'none'),
                             discountMode: user.discountMode || 'fixed',
-                            discountValue: user.discountValue || 0
+                            discountValue: user.discountValue || 0,
+                            discountGlobalLimit: user.discountGlobalLimit || 0
                         };
 
                         await setData(`orders/${orderId}`, finalOrder, user.outlet);
@@ -1662,6 +1663,7 @@ async function sendDailyReportSafely(dateOverride = null) {
                                 customerPhone: finalOrder.phone,
                                 amountGiven: finalOrder.discount,
                                 channel: 'whatsapp',
+                                globalLimit: finalOrder.discountGlobalLimit,
                                 discountLabel: finalOrder.discountLabel,
                                 discountSource: finalOrder.discountSource
                             }).catch(() => {});
@@ -1672,8 +1674,6 @@ async function sendDailyReportSafely(dateOverride = null) {
                             console.error("[BOT] Stock deduction failed:", e)
                         );
 
-                        // Return null to signify session should be cleared
-                        return null;
                     } catch (e) {
                         console.error("Order Placement Error:", e);
                         await sock.sendMessage(sender, { text: "❌ Error placing your order. Please try again." });
@@ -1726,6 +1726,7 @@ async function handleCheckoutFinal(sock, sender, user) {
                 user.discountSource = discountEval.source;
                 user.discountMode = discountEval.discount.mode || 'fixed';
                 user.discountValue = discountEval.discount.value || 0;
+                user.discountGlobalLimit = discountEval.discount.globalLimit || 0;
             } else {
                 user.discount = 0;
                 user.discountId = null;

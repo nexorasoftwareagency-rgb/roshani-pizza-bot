@@ -97,6 +97,8 @@ export async function placeOrder({ taxPercent = 5, taxEnabled = true, taxRates, 
         orderPayload.discountLabel = discount.label || '';
         orderPayload.discountSource = discount.source || '';
         orderPayload.discountId = discount.discountId || '';
+        orderPayload.discountMode = discount.mode || 'fixed';
+        orderPayload.discountValue = discount.value || 0;
     }
 
     const newOrderRef = push(outletRef('orders'));
