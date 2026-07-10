@@ -210,7 +210,7 @@ function _requestChip(r) {
     </div>`;
 }
 
-function _renderRequestsBanner() {
+async function _renderRequestsBanner() {
     const banner = document.getElementById('tableRequestsBanner');
     const pending = _pendingRequests();
 
@@ -320,7 +320,7 @@ function _tableCard(t) {
     </button>`;
 }
 
-function _renderFloorGrid() {
+async function _renderFloorGrid() {
     const grid = document.getElementById('tableManagementGrid');
     if (!grid) return;
     const tables = Object.values(_tables).sort((a, b) => Number(a.number) - Number(b.number));
@@ -359,7 +359,7 @@ function _orderListRow(o) {
     </div>`;
 }
 
-function _renderLiveOrdersList() {
+async function _renderLiveOrdersList() {
     const list = document.getElementById('tableLiveOrdersList');
     const countEl = document.getElementById('tableLiveOrdersCount');
     if (!list) return;
@@ -552,7 +552,7 @@ function _orderCardInDrawer(o, borderColor) {
     </div>`;
 }
 
-function _renderTableDrawer() {
+async function _renderTableDrawer() {
     const drawer = document.getElementById('tableDrawer');
     const overlay = document.getElementById('tableDrawerOverlay');
     if (!drawer) return;
@@ -1159,16 +1159,17 @@ async function _printBillForGroup(tableId, groupId) {
     const taxItems = taxRates.map(r => ({ name: r.name, rate: r.rate, amount: Math.round(subtotal * (r.rate / 100) * 100) / 100 }));
     const tax = taxItems.reduce((s, t) => s + t.amount, 0);
     const serviceCharge = scEnabled ? Math.round(subtotal * (scRate / 100) * 100) / 100 : 0;
-    const grandTotal = subtotal + tax + serviceCharge;
+    const groupDiscount = groupOrders.reduce((sum, o) => sum + Number(o.discount || 0), 0);
+    const grandTotalAfterDiscount = subtotal + tax + serviceCharge - groupDiscount;
     await printOrderReceipt({
         orderId: `TABLE-${t.number}-${g.label.replace(/\s/g, '')}`,
         type: 'Dine-in', items: allItems,
-        total: grandTotal, subtotal, tax, taxItems,
+        total: grandTotalAfterDiscount, subtotal, tax, taxItems,
         taxName: taxRates.map(r => r.name).join(' + ') || 'Tax',
         serviceCharge,
         serviceChargeName: dine.serviceChargeName || 'Service Charge',
         serviceChargeRate: scRate,
-        discount: 0, deliveryFee: 0,
+        discount: groupDiscount, deliveryFee: 0,
         tableNo: String(t.number),
         createdAt: sess.openedAt || Date.now(),
         paymentMethod: g.paymentMethod || 'Cash',
@@ -1219,6 +1220,7 @@ async function _printSessionBill(tableId) {
     const tax = Number(sess.tax ?? 0) || taxItems.reduce((s, t) => s + t.amount, 0);
     const serviceCharge = Number(sess.serviceCharge ?? 0) || (scEnabled ? Math.round(subtotal * (scRate / 100) * 100) / 100 : 0);
     const grandTotal = _effectiveTotal(sess);
+    const sessionDiscount = orders.reduce((sum, o) => sum + Number(o.discount || 0), 0);
 
     const combinedOrder = {
         orderId: `TABLE-${t.number}`,
@@ -1229,7 +1231,7 @@ async function _printSessionBill(tableId) {
         serviceCharge,
         serviceChargeName: dine.serviceChargeName || 'Service Charge',
         serviceChargeRate: scRate,
-        discount: 0, deliveryFee: 0,
+        discount: sessionDiscount, deliveryFee: 0,
         tableNo: String(t.number),
         createdAt: sess.openedAt || Date.now(),
         paymentMethod: sess.paymentMethod || 'Cash',

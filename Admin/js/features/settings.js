@@ -353,7 +353,7 @@ export async function saveStoreSettings() {
 
 // --- FEE SLABS LOGIC ---
 
-function renderFeeSlabs(slabs) {
+async function renderFeeSlabs(slabs) {
     const tbody = document.getElementById('feeSlabsTable');
     if (!tbody) return;
     tbody.innerHTML = '';
@@ -387,7 +387,7 @@ function renderFeeSlabs(slabs) {
     if (window.lucide) window.lucide.createIcons({ root: tbody });
 }
 
-export function addFeeSlab() {
+export async function addFeeSlab() {
     const tbody = document.getElementById('feeSlabsTable');
     if (!tbody) return;
     const tr = document.createElement('tr');
@@ -471,7 +471,7 @@ export function quickUpdateOutletStatus() {
         });
 }
 
-function showStatusAlert(newStatus) {
+async function showStatusAlert(newStatus) {
     const alertContainer = document.getElementById('alertContainer');
     if (!alertContainer) return;
 
@@ -576,7 +576,7 @@ document.querySelectorAll('[data-settings-section]').forEach(el => {
 // -------------------------------------------------------------------
 let _offers = [];
 
-function _renderOffers(offers) {
+async function _renderOffers(offers) {
     const arr = Array.isArray(offers) ? offers : (offers && typeof offers === 'object' ? Object.values(offers) : []);
     _offers = arr.map(o => ({ ...o }));
     const list = document.getElementById('offersList');
@@ -637,7 +637,7 @@ document.getElementById('btnAddOffer')?.addEventListener('click', () => {
 function _getOffers() { return _offers.filter(o => o.title && o.title.trim()); }
 
 // --- MULTI-TAX RATES ---
-function _renderTaxRates(rates) {
+async function _renderTaxRates(rates) {
     const container = document.getElementById('dineinTaxRates');
     if (!container) return;
     const arr = Array.isArray(rates) ? rates : [];

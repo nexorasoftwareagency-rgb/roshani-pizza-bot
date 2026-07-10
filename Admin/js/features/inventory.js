@@ -530,7 +530,7 @@ export async function loadInventoryMenu() {
     }
 }
 
-function paintMenuPage() {
+async function paintMenuPage() {
     const container = document.getElementById('inventoryMenuGrid');
     if (!container) return;
     const start = (_menuPage - 1) * MENU_PAGE_SIZE;

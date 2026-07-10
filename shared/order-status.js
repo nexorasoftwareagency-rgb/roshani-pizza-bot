@@ -26,7 +26,7 @@ export const STATUS_SEQUENCE = [
  */
 export const STATUS_SEQUENCES = {
     'Online': STATUS_SEQUENCE,
-    'Dine-in': ["Confirmed", "Ready", "Delivered"],
+    'Dine-in': ["Placed", "Confirmed", "Ready", "Delivered"],
     'Default': STATUS_SEQUENCE
 };
 

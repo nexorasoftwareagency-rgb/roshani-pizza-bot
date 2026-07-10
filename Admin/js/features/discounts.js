@@ -123,7 +123,7 @@ function _renderCard(d) {
     </div>`;
 }
 
-function _renderList() {
+async function _renderList() {
     const all = Object.entries(_allDiscountsSnap).map(([id, d]) => ({ id, ...d }));
     const groups = { active: [], scheduled: [], expired: [] };
     for (const d of all) {

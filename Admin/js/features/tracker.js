@@ -173,7 +173,7 @@ function updateStats(allRiders) {
     el('trackerOfflineCount', offline);
 }
 
-function renderSidebar(allRiders) {
+async function renderSidebar(allRiders) {
     const onlineList = document.getElementById('trackerOnlineList');
     const offlineList = document.getElementById('trackerOfflineList');
     const chips = document.getElementById('trackerMobileChips');
@@ -272,11 +272,11 @@ window.trackerLocateRider = function (id) {
     if (chip) chip.classList.add('is-active');
 };
 
-function bindUi() {
+async function bindUi() {
     const collapseBtn = document.getElementById('btnToggleTrackerSidebar');
     if (collapseBtn && !collapseBtn.dataset.bound) {
         collapseBtn.dataset.bound = '1';
-        collapseBtn.addEventListener('click', () => {
+        collapseBtn.addEventListener('click', async () => {
             _sidebarCollapsed = !_sidebarCollapsed;
             const layout = document.querySelector('.tracker-layout');
             const icon = collapseBtn.querySelector('[data-lucide]');
@@ -293,7 +293,7 @@ function bindUi() {
     const offlineSection = document.getElementById('trackerOfflineSection');
     if (offlineToggle && offlineSection && !offlineToggle.dataset.bound) {
         offlineToggle.dataset.bound = '1';
-        offlineToggle.addEventListener('click', () => {
+        offlineToggle.addEventListener('click', async () => {
             const expanded = offlineToggle.getAttribute('aria-expanded') === 'true';
             offlineToggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
             offlineSection.classList.toggle('hidden', expanded);

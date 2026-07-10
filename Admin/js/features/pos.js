@@ -402,7 +402,7 @@ export function clearWalkinCart() {
     renderWalkinCart();
 }
 
-export function renderWalkinCart() {
+export async function renderWalkinCart() {
     const list = document.getElementById("walkinCartItems");
     if (!list) return;
 

@@ -509,9 +509,9 @@ icon: 'dollar-sign',
 title: 'Pricing & Fees',
 body: 'Configure additional fees and charges: <strong>packaging fee</strong>, <strong>service charge</strong> (percentage), and <strong>tax rate</strong>. These are applied automatically to all orders. The fee slab system allows different fees for different order value ranges.'
 },
-];
+]};
 
-export function renderPageGuide(container) {
+export async function renderPageGuide(container) {
     if (!container) return;
     const tab = state.currentActiveTab || 'dashboard';
     const steps = GUIDES[tab];

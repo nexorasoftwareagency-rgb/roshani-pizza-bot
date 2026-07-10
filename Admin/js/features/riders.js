@@ -5,11 +5,11 @@ import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConf
 import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
 import { loadLucide } from '../ui.js';
 
+import { uploadImage } from '../firebase.js';
+import { populateRiderSelect } from './rider-analytics.js';
 let _ridersUnsub = null;
 let _statsUnsub = null;
 let _grid = null;
-import { uploadImage } from '../firebase.js';
-import { populateRiderSelect } from './rider-analytics.js';
 
 export function loadRiders() {
     cleanupRiders();
@@ -184,7 +184,7 @@ export async function renderRiders(searchTerm = "") {
     };
 
     const riders = [];
-    state.ridersList.forEach(r => {
+    state.ridersList.forEach(async r => {
         const stats = state.riderStatsData[r.id] || { totalOrders: 0, avgDeliveryTime: 0, totalEarnings: 0 };
         totalEarnings += (stats.totalEarnings || 0);
 

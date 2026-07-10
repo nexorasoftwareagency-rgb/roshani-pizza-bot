@@ -43,7 +43,7 @@ export function startContinuousBeep(intervalMs = 10000) {
     _continuousAudio = new Audio(BEEP_PATH);
     _continuousAudio.play().catch(e => console.warn('[Audio] Continuous beep failed:', e));
     _continuousInterval = setInterval(() => {
-        _continuousAudio = new Audio(BEEP_PATH);
+        _continuousAudio.currentTime = 0;
         _continuousAudio.play().catch(() => {});
     }, intervalMs);
     return stopContinuousBeep;

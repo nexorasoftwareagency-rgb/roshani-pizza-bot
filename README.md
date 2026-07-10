@@ -1485,7 +1485,6 @@ Prasant-Pizza-ERP/
 │       ├── cart.js            # Cart state management
 │       └── order.js           # Order placement
 │
-├── Cake-bot/                  # Cake outlet bot variant (legacy)
 ├── functions/                 # Firebase Cloud Functions (reference only — requires Blaze plan to deploy)
 │
 ├── assets/                    # Static assets (images, sounds, icons)

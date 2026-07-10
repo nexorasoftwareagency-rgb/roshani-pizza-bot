@@ -95,11 +95,22 @@ async function getData(path, outlet = 'pizza') {
     }
 }
 
+function stripUndefined(obj) {
+    if (obj === undefined) return null;
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(stripUndefined);
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) {
+        out[k] = v === undefined ? null : stripUndefined(v);
+    }
+    return out;
+}
+
 async function setData(path, data, outlet = 'pizza') {
     try {
         const resolved = resolvePath(path, outlet);
-        _cache.delete(resolved); // Invalidate cache
-        await db.ref(resolved).set(data);
+        _cache.delete(resolved);
+        await db.ref(resolved).set(stripUndefined(data));
         return true;
     } catch (err) {
         console.error("SET ERROR:", err, "Path:", path);
@@ -109,8 +120,8 @@ async function setData(path, data, outlet = 'pizza') {
 async function updateData(path, data, outlet = 'pizza') {
     try {
         const resolved = resolvePath(path, outlet);
-        _cache.delete(resolved); // Invalidate cache
-        await db.ref(resolved).update(data);
+        _cache.delete(resolved);
+        await db.ref(resolved).update(stripUndefined(data));
     } catch (err) {
         console.error("UPDATE ERROR:", err, "Path:", path);
     }
@@ -119,8 +130,8 @@ async function updateData(path, data, outlet = 'pizza') {
 async function pushData(path, data, outlet = 'pizza') {
     try {
         const resolved = resolvePath(path, outlet);
-        _cache.delete(resolved); // Invalidate cache (parent list changed)
-        await db.ref(resolved).push(data);
+        _cache.delete(resolved);
+        await db.ref(resolved).push(stripUndefined(data));
     } catch (err) {
         console.error("PUSH ERROR:", err, "Path:", path);
     }
@@ -161,5 +172,6 @@ module.exports = {
     deleteData,
     pushData,
     getUserProfile,
-    saveUserProfile
+    saveUserProfile,
+    stripUndefined
 };

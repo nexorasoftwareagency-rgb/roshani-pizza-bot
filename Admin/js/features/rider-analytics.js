@@ -14,3 +14,22 @@ let riderEarningsChart = null;
 let _grid = null;
 
 export async function generateRiderPerformanceReport() {
+    // ponytail: stub — populate with actual rider KPIs when feature is built
+}
+
+export function populateRiderSelect() {
+    const sel = document.getElementById('riderSelectAnalytics');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Select Rider</option>';
+    state.ridersList.forEach(r => {
+        sel.innerHTML += `<option value="${r.id}">${escapeHtml(r.name || 'Unknown')}</option>`;
+    });
+}
+
+export function cleanupRiderAnalytics() {
+    // ponytail: stub
+}
+
+export function initRiderAnalytics() {
+    // ponytail: stub — called by main.js on startup
+}

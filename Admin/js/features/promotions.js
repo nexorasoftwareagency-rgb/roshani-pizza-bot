@@ -227,7 +227,7 @@ function _setOfflineBanner(offline) {
 
 /* ============ KILL SWITCH + DASHBOARD WIDGET ============ */
 
-function _setKillSwitchUi(on) {
+async function _setKillSwitchUi(on) {
     const btn = document.getElementById('btnPromoKillAll');
     if (!btn) return;
     _killSwitchLocal = !!on;
@@ -319,7 +319,7 @@ export function cleanupPromotions() {
 
 /* ============ RENDERERS ============ */
 
-function _renderActivePane() {
+async function _renderActivePane() {
     const container = document.getElementById('promoCampaignList');
     if (!container) return;
     const list = Object.entries(_allCampaignsSnap)
@@ -365,7 +365,7 @@ function _renderActivePane() {
     _setKillSwitchUi(_killSwitchLocal);
 }
 
-function _renderHistoryPane() {
+async function _renderHistoryPane() {
     const container = document.getElementById('promoHistoryList');
     if (!container) return;
     const list = Object.entries(_allCampaignsSnap)
@@ -708,7 +708,7 @@ async function _exportCsv(id) {
     URL.revokeObjectURL(url);
 }
 
-function _switchMode(mode) {
+async function _switchMode(mode) {
     _activeMode = mode;
     document.querySelectorAll('.promo-mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
     document.getElementById('promoComposePane')?.classList.toggle('hidden', mode === 'active' || mode === 'history');

@@ -170,7 +170,7 @@ note: 'Send in the evening (6-8 PM) for dinner rush boost'
 },
 ];
 
-export function renderTemplatePicker(container) {
+export async function renderTemplatePicker(container) {
 if (!container) return;
 container.innerHTML = `
 <div style="max-height:60vh; overflow-y:auto; padding-right:4px;">

@@ -84,7 +84,7 @@ export async function loadReports() {
     generateCustomReport();
 }
 
-function buildGrid(data) {
+async function buildGrid(data) {
     await loadTabulator();
     const el = document.getElementById('reportTableBody');
     if (!el) return;

@@ -335,7 +335,7 @@ function renderStatusDropdown(currentStatus, type, orderId, order) {
 /**
  * RENDER ORDERS
  */
-export function renderOrders(snap) {
+export async function renderOrders(snap) {
     const activeTab = state.currentActiveTab || 'dashboard';
     const containers = {
         'dashboard': document.getElementById('ordersTable'),
@@ -817,7 +817,7 @@ function updateDashboardStats(orders) {
     });
 }
 
-function renderPriorityOrders(orders) {
+async function renderPriorityOrders(orders) {
     const container = document.getElementById('priorityOrderList');
     if (!container) return;
 
@@ -887,7 +887,7 @@ function renderPriorityOrders(orders) {
     window.lucide.createIcons({ root: container });
 }
 
-function renderTopItems(orders) {
+async function renderTopItems(orders) {
     const container = document.getElementById('topItemsList');
     if (!container) return;
 
@@ -928,7 +928,7 @@ function renderTopItems(orders) {
     window.lucide.createIcons({ root: container });
 }
 
-function renderTopCustomers(orders) {
+async function renderTopCustomers(orders) {
     const container = document.getElementById('topCustomersList');
     if (!container) return;
 
@@ -1108,8 +1108,8 @@ export async function updateStatus(id, status) {
         }
     }
 
-    // Handle Stock Deduction on Delivered (online orders only; POS deducts at sale time)
-    if (status === "Delivered" && !order.stockDeducted && !isPosSale) {
+    // Handle Stock Deduction on Delivered (POS already deducts at sale time; stockDeducted guard prevents double-deduction)
+    if (status === "Delivered" && !order.stockDeducted) {
         const items = order.normalizedItems || order.cart || [];
         if (items.length > 0) {
             logger.info('ORDERS', `Auto-deducting stock on Delivered: ${items.length} items`);

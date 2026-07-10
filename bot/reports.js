@@ -32,7 +32,8 @@ async function sendDailyReport(sock, ctx, targetDate = null) {
                     const s = order.status || "Unknown";
                     statusBreakdown[s] = (statusBreakdown[s] || 0) + 1;
                     if (order.status === "Delivered" || order.status === "Confirmed" || order.paymentStatus === "Paid") {
-                        outletRevenue += parseFloat(order.total || 0);
+                        const cleanTotal = Number(String(order.total ?? 0).replace(/,/g, ''));
+                outletRevenue += Number.isFinite(cleanTotal) ? cleanTotal : 0;
                     }
                 }
             });
@@ -89,7 +90,8 @@ async function sendMonthlyReport(sock, ctx) {
                 if (orderTime >= startOfMonth) {
                     outletOrders++;
                     if (order.status === "Delivered" || order.status === "Confirmed" || order.paymentStatus === "Paid") {
-                        outletRevenue += parseFloat(order.total || 0);
+                        const cleanTotal = Number(String(order.total ?? 0).replace(/,/g, ''));
+                outletRevenue += Number.isFinite(cleanTotal) ? cleanTotal : 0;
                     }
                 }
             });
@@ -141,7 +143,8 @@ async function sendWeeklyReport(sock, ctx) {
                 if (orderTime >= weekStartTime) {
                     outletOrders++;
                     if (order.status === "Delivered" || order.status === "Confirmed" || order.paymentStatus === "Paid") {
-                        outletRevenue += parseFloat(order.total || 0);
+                        const cleanTotal = Number(String(order.total ?? 0).replace(/,/g, ''));
+                outletRevenue += Number.isFinite(cleanTotal) ? cleanTotal : 0;
                     }
                 }
             });

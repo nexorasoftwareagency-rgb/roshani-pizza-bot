@@ -703,10 +703,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (logCount()) logCount().textContent = `${filtered.length} of ${entries.length} entries`;
     }
 
-    await loadLucide();
-    const layout = document.querySelector('.layout');
-    window.lucide.createIcons({ root: layout || document.body });
-
     window.addEventListener('beforeunload', (e) => {
         if (state.adminData && !window.location.search.includes('nuclear')) {
             e.preventDefault();

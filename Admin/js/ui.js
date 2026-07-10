@@ -335,8 +335,6 @@ tableObserver.observe(observerTarget, { childList: true, subtree: true });
 
 export const toggleMobileCart = (state) => import('./features/pos.js').then(m => m.toggleMobileCart(state));
 
-export { loadLucide };
-
 export const ui = {
     showConfirm,
     showToast,

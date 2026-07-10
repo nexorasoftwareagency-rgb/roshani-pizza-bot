@@ -2,6 +2,7 @@
  * ROSHANI ERP | WHATSAPP BOT CORE v4.0
  * Single-Outlet Instance (Pizza-Bot / Cake-Bot)
  */
+require('dotenv').config();
 
 // =============================
 // OUTLET CONFIGURATION (UNIFIED CORE)
@@ -38,8 +39,7 @@ const {
     getISTDateInfo, getISTDateString, parseTime, isShopOpen, randomBetween,
     calculateDistance, getFeeFromSlabs,
     formatCartSummary, formatOrderInvoice, getFunnyFoodJoke, getFoodFunnyProgress,
-    generateCouponCode, isSocketDead,
-    normalizeJid, lidJidMap
+    generateCouponCode, isSocketDead
 } = require('./utils');
 const promo = require('./promotions');
 const { sendDailyReport, sendMonthlyReport, sendWeeklyReport } = require('./reports');
@@ -97,6 +97,28 @@ const startupTime = Date.now();
 
 // Track current socket to clean up on reconnect
 let currentSock = null;
+
+// =============================
+// HEALTH CHECK ENDPOINT
+// =============================
+const http = require('http');
+const HEALTH_PORT = process.env.HEALTH_PORT || (OUTLET === 'pizza' ? 3001 : 3002);
+
+http.createServer((req, res) => {
+    if (req.url !== '/health') { res.writeHead(404); return res.end(); }
+    const isConnected = currentSock && !isSocketDead(currentSock);
+    const body = JSON.stringify({
+        outlet: OUTLET,
+        whatsapp: isConnected ? 'connected' : 'disconnected',
+        redis: redisClient ? 'configured' : 'not_configured',
+        uptimeSeconds: Math.floor(process.uptime()),
+        cryptoErrorCount,
+        timestamp: new Date().toISOString()
+    });
+    res.writeHead(isConnected ? 200 : 503, { 'Content-Type': 'application/json' });
+    res.end(body);
+}).listen(HEALTH_PORT, () => console.log(`🩺 Health check listening on :${HEALTH_PORT}/health`));
+
 let firebaseListenersInitialized = false;
 
 // Crypto/session error monitoring (for auto-healing and visibility)
@@ -812,11 +834,12 @@ async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('session_data_' + OUTLET);
     const { version } = await fetchLatestBaileysVersion();
 
+    const baileysLogger = pino({ level: process.env.BAILEYS_LOG_LEVEL || 'warn' });
     const sock = makeWASocket({
         version,
         auth: state,
         printQRInTerminal: true,
-        logger: pino({ level: 'silent' }),
+        logger: baileysLogger,
         browser: ['Windows', 'Chrome', '10'],
         connectTimeoutMs: 90000,
         defaultQueryTimeoutMs: 120000,
@@ -869,18 +892,28 @@ async function startBot() {
         const hour = ist.hour;
         const minute = ist.minute;
 
+async function sendDailyReportSafely(dateOverride = null) {
+    try {
+        await sendDailyReport(currentSock, { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids }, dateOverride);
+        dailyReportSent = true;
+    } catch (err) {
+        console.error('[REPORT] ❌ Daily report failed:', err);
+        const jids = await getCachedAdminJids().catch(() => []);
+        const alertMsg = `⚠️ *Daily report failed to generate* for ${OUTLET_NAME} (${dateOverride || 'today'}).\nCheck \`pm2 logs ${OUTLET === 'pizza' ? 'pizza-bot' : 'cake-bot'}\` for details.`;
+        await Promise.all((jids || []).map(jid => sock.sendMessage(jid, { text: alertMsg }).catch(() => {})));
+    }
+}
+
         // 1. Daily Report at 9:30 PM (21:30)
         if (hour === 21 && minute === 30 && !dailyReportSent) {
-            await sendDailyReport(currentSock, { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids });
-            dailyReportSent = true;
+            await sendDailyReportSafely();
         }
 
         // 2. Late Night Catch-up (If bot was off at 21:30, send it at 1:30 AM for YESTERDAY)
         if (hour === 1 && minute === 30 && !dailyReportSent) {
             const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
             const yDateStr = getISTDateString(yesterday.toISOString());
-            await sendDailyReport(currentSock, { OUTLET, OUTLET_NAME, OUTLET_EMOJI, getData, getCachedAdminJids }, yDateStr);
-            dailyReportSent = true;
+            await sendDailyReportSafely(yDateStr);
         }
 
         // Reset flags at 4 AM IST
@@ -938,16 +971,21 @@ async function startBot() {
             reconnectAttempts = 0;
             cryptoErrorCount = 0;
         }
+        const DISCONNECT_REASON_NAMES = Object.fromEntries(
+            Object.entries(DisconnectReason).map(([name, code]) => [code, name])
+        );
+
         if (connection === 'close') {
             const code = lastDisconnect?.error?.output?.statusCode;
+            const reasonName = DISCONNECT_REASON_NAMES[code] || `unknown(${code})`;
             if (code !== DisconnectReason.loggedOut) {
                 reconnectAttempts++;
                 // Exponential backoff: 5s, 15s, 45s, 120s max
                 const delay = Math.min(5000 * Math.pow(3, Math.min(reconnectAttempts - 1, 3)), 120000);
-                console.log(`🔌 Disconnected (attempt ${reconnectAttempts}, code=${code}). Reconnecting in ${(delay / 1000).toFixed(0)}s...`);
+                console.log(`🔌 Disconnected [${reasonName}, code=${code}] (attempt ${reconnectAttempts}). Reconnecting in ${(delay / 1000).toFixed(0)}s...`);
                 if (!reconnectTimer) reconnectTimer = setTimeout(() => { reconnectTimer = null; startBot(); }, delay);
             } else {
-                console.log("❌ Logged out. Delete session folder and restart.");
+                console.log(`❌ Logged out [${reasonName}]. Delete session folder and restart.`);
             }
         }
     });

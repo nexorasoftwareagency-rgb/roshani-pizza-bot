@@ -202,7 +202,7 @@ export function loadMenu() {
         '<div class="skeleton-dish-card" style="animation: skeleton-pulse 1.2s ease-in-out infinite alternate;"></div>'
     ).join('');
     console.log("[Catalog] Loading menu...");
-    _dishesUnsub = onValue(Outlet.ref(`dishes`), snap => {
+    _dishesUnsub = onValue(Outlet.ref(`dishes`), async snap => {
         grid.innerHTML = "";
         const dishes = [];
         snap.forEach(child => {
@@ -213,7 +213,7 @@ export function loadMenu() {
         dishes.sort((a, b) => (a.order || 0) - (b.order || 0));
         state.dishes = dishes;
 
-        dishes.forEach(d => {
+        dishes.forEach(async d => {
             const dishId = d.id;
             let sizesHtml = "";
             if (d.sizes) {

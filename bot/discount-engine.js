@@ -139,29 +139,40 @@ async function validateCouponCode(OUTLET, code) {
 /**
  * Persist a usage record + bump the discount's stats atomically.
  */
-async function recordDiscountUsage({ OUTLET, discountId, orderId, customerPhone, amountGiven, channel, discountLabel, discountSource }) {
+async function recordDiscountUsage({ OUTLET, discountId, orderId, customerPhone, amountGiven, globalLimit, channel, discountLabel, discountSource }) {
     try {
+        let reserved = true;
+        const txResult = await db.ref(`${OUTLET}/discounts/${discountId}/stats`).transaction((cur) => {
+            cur = cur || {};
+            const nextCount = (cur.usedCount || 0) + 1;
+            if (globalLimit && nextCount > globalLimit) {
+                reserved = false;
+                return;
+            }
+            return {
+                usedCount: nextCount,
+                totalDiscountGiven: (cur.totalDiscountGiven || 0) + Math.round(Number(amountGiven) || 0),
+                lastUsedAt: Date.now()
+            };
+        });
+
+        if (!reserved || !txResult.committed) {
+            console.warn(`[Discounts] Redemption cap reached for ${discountId} — usage not recorded.`);
+            return false;
+        }
+
         const usageId = db.ref(`${OUTLET}/discountsUsage`).push().key;
-        const usage = {
+        await db.ref(`${OUTLET}/discountsUsage/${usageId}`).set({
             discountId, discountLabel: discountLabel || '',
             orderId: orderId || '', customerPhone: customerPhone || '',
             amountGiven: Math.round(Number(amountGiven) || 0),
             appliedAt: Date.now(), channel: channel || 'whatsapp',
             source: discountSource || ''
-        };
-        await Promise.all([
-            db.ref(`${OUTLET}/discountsUsage/${usageId}`).set(usage),
-            db.ref(`${OUTLET}/discounts/${discountId}/stats`).transaction((cur) => {
-                cur = cur || {};
-                return {
-                    usedCount: (cur.usedCount || 0) + 1,
-                    totalDiscountGiven: (cur.totalDiscountGiven || 0) + Math.round(Number(amountGiven) || 0),
-                    lastUsedAt: Date.now()
-                };
-            })
-        ]);
+        });
+        return true;
     } catch (e) {
         console.warn('[Discounts] recordDiscountUsage failed:', e?.message || e);
+        return false;
     }
 }
 

@@ -38,7 +38,7 @@ const STEPS = [
     },
 ];
 
-export function renderPromotionsGuide(container) {
+export async function renderPromotionsGuide(container) {
     if (!container) return;
     container.innerHTML = `
         <ol class="promo-guide-list">
