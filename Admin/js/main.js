@@ -120,7 +120,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'closeReceiptPreview': logger.info('PRINT', 'Close receipt preview'); (await useMod('printing')).closeReceiptPreview(); break;
                 case 'printReceiptFromPreview': logger.info('PRINT', 'Print from preview'); (await useMod('printing')).printReceiptFromPreview(); break;
                 case 'updateStatus': { const v = val || (el.tagName === 'SELECT' ? el.value : null); logger.info('ORDERS', `Update status: ${id} → ${v}`); (await useMod('orders')).updateStatus(id, v); break; }
-                case 'toggleStatus': { const dd = el.closest('.status-dropdown'); if (dd) dd.classList.toggle('open'); break; }
+                case 'toggleStatus': {
+                    const dd = el.closest('.status-dropdown');
+                    if (!dd) break;
+                    const menu = dd.querySelector('.status-dropdown-menu');
+                    if (!menu) { dd.classList.toggle('open'); break; }
+                    const wasOpen = dd.classList.contains('open');
+                    dd.classList.remove('open');
+                    if (!wasOpen) {
+                        menu.style.top = ''; menu.style.bottom = '';
+                        dd.classList.add('open');
+                        const rect = menu.getBoundingClientRect();
+                        if (rect.bottom > window.innerHeight) {
+                            menu.style.top = 'auto';
+                            menu.style.bottom = 'calc(100% + 4px)';
+                        }
+                    }
+                    break;
+                }
                 case 'pickStatus': { const dd = el.closest('.status-dropdown'); if (dd) dd.classList.remove('open'); logger.info('ORDERS', `Status picked: ${id} → ${val}`); (await useMod('orders')).updateStatus(id, val); break; }
                 case 'assignRider': logger.info('ORDERS', `Assign rider: ${id} → ${val}`); (await useMod('orders')).assignRider(id, val); break;
                 case 'openOrderDrawer': logger.info('ORDERS', `Open order drawer: ${id}`); (await useMod('orders')).openOrderDrawer(id); break;
@@ -703,11 +720,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (logCount()) logCount().textContent = `${filtered.length} of ${entries.length} entries`;
     }
 
-    window.addEventListener('beforeunload', (e) => {
-        if (state.adminData && !window.location.search.includes('nuclear')) {
-            e.preventDefault();
-            e.returnValue = '';
-        }
+    // bfcache: no beforeunload listener — use pagehide instead
+    window.addEventListener('pagehide', () => {
+        // cleanup handled by visibilitychange in individual modules
     });
 
     logAudit('SYSTEM_INIT', { 

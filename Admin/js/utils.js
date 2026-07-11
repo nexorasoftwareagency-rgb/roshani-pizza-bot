@@ -124,7 +124,8 @@ export function stopContinuousSound() {
     }
 }
 
-window.addEventListener('beforeunload', () => {
+// bfcache: cleanup handled via visibilitychange/pagehide
+window.addEventListener('pagehide', () => {
     stopContinuousSound();
 });
 

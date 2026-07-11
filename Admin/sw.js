@@ -3,10 +3,38 @@ if (self.location.protocol !== 'https:' && self.location.hostname !== 'localhost
   throw new Error('Service Worker requires HTTPS');
 }
 
-// Firebase Messaging is handled by firebase-messaging-sw.js (auto-registered by Firebase SDK)
+// Firebase FCM background messaging
+importScripts(
+  'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js'
+);
+firebase.initializeApp({
+  apiKey: "AIzaSyDcx-SN5eak8PAs-8NtTGelJ_sICr5yb7Y",
+  authDomain: "prashant-pizza-e86e4.firebaseapp.com",
+  databaseURL: "https://prashant-pizza-e86e4-default-rtdb.firebaseio.com",
+  projectId: "prashant-pizza-e86e4",
+  storageBucket: "prashant-pizza-e86e4.firebasestorage.app",
+  messagingSenderId: "857471482885",
+  appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c"
+});
+firebase.messaging().onBackgroundMessage((payload) => {
+  const data = payload.data || {};
+  const title = data.title || payload.notification?.title || 'New Order Alert';
+  self.registration.showNotification(title, {
+    body: data.body || payload.notification?.body || 'Open dashboard to view details.',
+    icon: './icon-erp-logo.jpeg',
+    badge: './icon-erp-logo.jpeg',
+    sound: './assets/sounds/alert.mp3',
+    vibrate: [200, 100, 200],
+    requireInteraction: true,
+    tag: `order-${data.orderId || Date.now()}`,
+    data: { url: './index.html' }
+  });
+});
+
 // This SW handles caching, navigation, and offline support only.
 
-const CACHE_NAME = 'prasant-pizza-erp-shell-v5.3.7';
+const CACHE_NAME = 'prasant-pizza-erp-shell-v5.3.8';
 const ASSETS_TO_CACHE = [
   './index.html',
   './style.css',
@@ -133,4 +161,16 @@ self.addEventListener('fetch', (event) => {
       });
     })
   );
+});
+
+// Notification click: open admin dashboard
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || './index.html';
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+    for (const c of clientList) {
+      if (c.url === url && 'focus' in c) return c.focus();
+    }
+    if (clients.openWindow) return clients.openWindow(url);
+  }));
 });

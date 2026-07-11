@@ -1,0 +1,61 @@
+/* ================================================================
+   DASHBOARD REDESIGN — MOBILE GAP FIX
+   Append to the END of mobile-overrides.css (this belongs here, not
+   in style.css — it's a device-width override, same as everything
+   else in this file).
+
+   ROOT CAUSE — confirmed by reading the file, not assumed:
+   .dashboard-grid (main content + sidebar) only collapses to a
+   single column in TWO existing places:
+     • ~line 1257 — inside the big `@media (max-width: 360px)` block
+       → `.dashboard-grid { grid-template-columns: 1fr !important; }`
+     • ~line 1823 — `@media (min-width: 769px) and (max-width: 1200px)`
+       (tablet band) → `.dashboard-grid { grid-template-columns: 1fr 260px !important; }`
+
+   Nothing covers 361px–768px. That's not a narrow edge case — it's
+   where most real phones report their CSS viewport width (375px on
+   many iPhones, 390–428px on most modern Android). On those devices
+   the BASE rule in style.css (`grid-template-columns: 1fr
+   minmax(280px,340px)`) is still active, which is what forced the
+   Top Spenders sidebar to visually collide with Priority Orders in
+   your screenshot. This was already true before the dashboard
+   redesign patch — confirmed by testing the original grid rule in
+   isolation. The redesign didn't cause it, but since we're already
+   in this tab, it's the right time to close the gap.
+
+   (Correction to something I said earlier in this chat: I initially
+   said mobile-overrides.css had no dashboard-specific rules at all.
+   That was wrong — it has quite a few, I just missed them the first
+   time because I piped my grep through `head -100` and the real
+   hits were further down the file than that cutoff. The rules
+   above are the ones that actually exist, confirmed on a second,
+   unfiltered pass.)
+   ================================================================ */
+
+@media (min-width: 361px) and (max-width: 768px) {
+    #tab-dashboard .dashboard-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+    #tab-dashboard .dashboard-sidebar {
+        margin-top: 4px;
+    }
+}
+/* NOTE: .dashboard-grid is also used by #tab-categories and
+   #tab-riderAnalytics (confirmed via grep of index.html) — both
+   likely have this exact same 361–768px gap. Left untouched here
+   since you scoped this pass to the Dashboard tab only; flag for a
+   follow-up if you want the same fix applied there too. */
+
+/* Priority rail — smooth momentum scrolling on touch devices.
+   No column-count breakpoints are needed for the rail itself (unlike
+   the old grid-based .priority-order-list, which is why the existing
+   tablet-band rule at ~line 1844 sets
+   `.priority-order-list { grid-template-columns: repeat(2,1fr) !important; }`
+   — that rule is now a harmless no-op under this patch, since
+   display:flex ignores grid-template-columns entirely). */
+@media (max-width: 768px) {
+    #priorityOrderList.priority-order-list {
+        -webkit-overflow-scrolling: touch;
+    }
+}

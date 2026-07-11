@@ -1,0 +1,255 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation "Main Navigation" [ref=e3]:
+      - generic [ref=e5]:
+        - generic "Roshani ERP" [ref=e6]:
+          - img [ref=e7]:
+            - generic [ref=e9]: R
+        - generic [ref=e10]:
+          - heading "ROSHANI ERP" [level=1] [ref=e11]
+          - generic [ref=e12]: Premium v5.3.6
+      - list [ref=e13]:
+        - listitem: Operations
+        - listitem "View Main Dashboard Snapshot" [ref=e14]:
+          - button "Dashboard" [ref=e15] [cursor=pointer]
+        - listitem "Manage Customer Orders" [ref=e22]:
+          - button "Orders" [ref=e23] [cursor=pointer]
+        - listitem "Monitor Live Store Operations" [ref=e29]:
+          - button "Live Ops 1" [ref=e30] [cursor=pointer]:
+            - generic [ref=e33]: Live Ops
+            - generic [ref=e34]: "1"
+        - listitem "Open Point of Sale (POS) Interface" [ref=e35]:
+          - button "POS Control" [ref=e36] [cursor=pointer]
+        - listitem "Manage Dine-In Tables, Sessions, QR Codes & Kitchen Display" [ref=e40]:
+          - button "Tables" [ref=e41] [cursor=pointer]
+        - listitem: Marketing
+        - listitem "Compose & Send Promotional Campaigns" [ref=e48]:
+          - button "Promotions" [ref=e49] [cursor=pointer]
+        - listitem "Schedule & Manage Discounts" [ref=e54]:
+          - button "Discounts" [ref=e55] [cursor=pointer]
+        - listitem: Catalogue
+        - listitem "Manage Product Menu and Items" [ref=e61]:
+          - button "Menu" [ref=e62] [cursor=pointer]
+        - listitem "Organize Menu Categories" [ref=e67]:
+          - button "Categories" [ref=e68] [cursor=pointer]
+        - listitem "Manage Stock Levels and Supplies" [ref=e75]:
+          - button "Inventory" [ref=e76] [cursor=pointer]
+        - listitem: People
+        - listitem "Manage Delivery Staff and Status" [ref=e82]:
+          - button "Riders" [ref=e83] [cursor=pointer]
+        - listitem "View and Manage Customer Records" [ref=e90]:
+          - button "Customers" [ref=e91] [cursor=pointer]
+        - listitem: Insights
+        - listitem "View Orders Abandoned at Checkout" [ref=e98]:
+          - button "Lost Sales" [ref=e99] [cursor=pointer]
+        - listitem "View Detailed Business Analytics" [ref=e104]:
+          - button "Analytics" [ref=e105] [cursor=pointer]
+        - listitem "Monitor Rider Performance & Earnings" [ref=e109]:
+          - button "Rider Insights" [ref=e110] [cursor=pointer]
+        - listitem "View and Manage Customer Reviews" [ref=e115]:
+          - button "Feedback" [ref=e116] [cursor=pointer]
+        - listitem "Track Live Deliveries on Map" [ref=e120]:
+          - button "Live Tracking Live" [ref=e121] [cursor=pointer]:
+            - generic [ref=e125]: Live Tracking
+            - generic "Live" [ref=e126]
+        - listitem "View Recent System Alerts" [ref=e127]:
+          - button "Notifications" [ref=e128] [cursor=pointer]
+        - listitem "View Payment Transactions" [ref=e133]:
+          - button "Payments" [ref=e134] [cursor=pointer]
+        - listitem: System
+        - listitem "Download Portal as App" [ref=e140]:
+          - button "Download App" [ref=e141] [cursor=pointer]
+        - listitem "Manage Store & Delivery Configuration" [ref=e146]:
+          - button "Settings" [ref=e147] [cursor=pointer]
+        - listitem "Sign Out of Dashboard" [ref=e152]:
+          - button "Logout" [ref=e153] [cursor=pointer]
+      - generic "Open Store Settings" [ref=e159] [cursor=pointer]:
+        - generic "Admin user" [ref=e160]: A
+        - generic [ref=e162]:
+          - generic [ref=e163]: Store Admin
+          - generic [ref=e164]: Superuser
+    - generic [ref=e165]:
+      - generic [ref=e166]:
+        - generic "Toggle Sidebar Navigation View" [ref=e167]
+        - generic [ref=e169]:
+          - generic [ref=e170]:
+            - heading "Dashboard Overview" [level=2] [ref=e171]
+            - generic [ref=e172]: PIZZA
+          - combobox "Switch Active Outlet" [ref=e174] [cursor=pointer]:
+            - option "🍕 Pizza ERP" [selected]
+            - option "🎂 Cakes ERP"
+        - generic [ref=e175]:
+          - 'generic "Firebase: Connected" [ref=e176]'
+          - text: roshanisudha@gmail.com
+          - button "Logout" [ref=e177] [cursor=pointer]
+          - button "How to use this page" [ref=e178]
+      - generic [ref=e182]:
+        - generic [ref=e183]:
+          - generic [ref=e188]:
+            - generic [ref=e189]: Promotional messages
+            - generic [ref=e190]: Sending is ON — all campaigns running normally.
+            - generic [ref=e191]: 🔴 Bot offline — 3m ago
+          - generic [ref=e192]:
+            - checkbox
+        - generic [ref=e194]:
+          - generic [ref=e195]:
+            - generic [ref=e201]:
+              - generic [ref=e202]: "0"
+              - generic [ref=e203]: Active Orders
+            - generic [ref=e204]: Today
+          - generic [ref=e208]:
+            - generic [ref=e213]:
+              - generic [ref=e214]: "0"
+              - generic [ref=e215]: In Progress
+            - generic [ref=e216]: "--"
+          - generic [ref=e217]:
+            - generic [ref=e222]:
+              - generic [ref=e223]: ₹0
+              - generic [ref=e224]: Total Revenue
+            - generic [ref=e225]: Today
+          - generic [ref=e226]:
+            - generic [ref=e233]:
+              - generic [ref=e234]: "0"
+              - generic [ref=e235]: Riders Online
+            - generic [ref=e236]: Online
+        - generic [ref=e237]:
+          - generic [ref=e238]:
+            - generic [ref=e239]:
+              - generic [ref=e240]:
+                - heading "Priority Orders (Action Required)" [level=3] [ref=e241]
+                - button "View All" [ref=e244] [cursor=pointer]
+              - generic [ref=e246] [cursor=pointer]:
+                - generic [ref=e247]:
+                  - generic [ref=e248]: "#-0002"
+                  - generic [ref=e249]: 07:29 PM
+                - generic [ref=e251]:
+                  - generic [ref=e252]: Shah Nilesh Rakesh
+                  - generic [ref=e253]: "9724649971"
+                - generic [ref=e254]: undefinedx Simply Veg Pizza
+                - generic [ref=e255]:
+                  - generic [ref=e256]: Placed
+                  - generic [ref=e257]: ₹348
+            - generic [ref=e258]:
+              - heading "Recent Order History" [level=3] [ref=e259]
+              - table [ref=e262]:
+                - rowgroup [ref=e263]:
+                  - row [ref=e264]:
+                    - columnheader "Order" [ref=e265]
+                    - columnheader "Customer" [ref=e266]
+                    - columnheader "Details" [ref=e267]
+                    - columnheader "Total" [ref=e268]
+                    - columnheader "Payment" [ref=e269]
+                    - columnheader "Status" [ref=e270]
+                    - columnheader "Rider" [ref=e271]
+                    - columnheader "Actions" [ref=e272]
+                - rowgroup [ref=e273]:
+                  - row [ref=e274]:
+                    - cell "#20260709-0002 Online" [ref=e275]:
+                      - generic [ref=e281]:
+                        - generic [ref=e282]: "#20260709-0002"
+                        - generic [ref=e283]: Online
+                    - cell "Shah Nilesh Rakesh 9724649971" [ref=e284]:
+                      - generic [ref=e285]:
+                        - generic [ref=e286]: Shah Nilesh Rakesh
+                        - generic [ref=e287]: "9724649971"
+                    - cell "1 Items · Apex Public School" [ref=e288]:
+                      - generic [ref=e289]:
+                        - generic [ref=e290]: 1 Items
+                        - generic [ref=e291]: ·
+                        - generic [ref=e292]: Apex Public School
+                    - cell "₹348" [ref=e293]
+                    - cell [ref=e294]
+                    - cell "Placed" [ref=e298]
+                    - cell [ref=e300]:
+                      - combobox [ref=e307] [cursor=pointer]:
+                        - option "Assign" [selected]
+                    - cell [ref=e308]:
+                      - generic [ref=e309]:
+                        - button "Placed ▾" [ref=e311] [cursor=pointer]
+                        - button "Print Receipt" [ref=e312] [cursor=pointer]
+                  - row [ref=e317]:
+                    - cell "#20260709-0001 Dine-in" [ref=e318]:
+                      - generic [ref=e326]:
+                        - generic [ref=e327]: "#20260709-0001"
+                        - generic [ref=e328]: Dine-in
+                    - cell "Guest Guest" [ref=e329]:
+                      - generic [ref=e330]:
+                        - generic [ref=e331]: Guest
+                        - generic [ref=e332]: Guest
+                    - cell "1 Items · Dine-in" [ref=e333]:
+                      - generic [ref=e334]:
+                        - generic [ref=e335]: 1 Items
+                        - generic [ref=e336]: ·
+                        - generic [ref=e337]: Dine-in
+                    - cell "₹159.42999999999998" [ref=e338]
+                    - cell [ref=e339]
+                    - cell "Served" [ref=e344]
+                    - cell [ref=e346]:
+                      - combobox [disabled] [ref=e353] [cursor=pointer]:
+                        - option "Assign" [selected]
+                    - cell [ref=e354]:
+                      - generic [ref=e355]:
+                        - generic [ref=e356]: Paid
+                        - button "Print Receipt" [ref=e360] [cursor=pointer]
+          - generic [ref=e365]:
+            - generic [ref=e366]:
+              - heading "Top Spenders" [level=3] [ref=e368]
+              - generic [ref=e371]:
+                - generic [ref=e372]:
+                  - generic [ref=e373]:
+                    - generic [ref=e374]: "#1"
+                    - generic [ref=e375]:
+                      - generic [ref=e376]: Shah Nilesh Rakesh
+                      - generic [ref=e377]: 1 Orders Placed
+                  - generic [ref=e378]: ₹348
+                - generic [ref=e379]:
+                  - generic [ref=e380]:
+                    - generic [ref=e381]: "#2"
+                    - generic [ref=e382]:
+                      - generic [ref=e383]: Guest
+                      - generic [ref=e384]: 1 Orders Placed
+                  - generic [ref=e385]: ₹159.43
+            - generic [ref=e386]:
+              - heading "Top Selling Items" [level=3] [ref=e388]
+              - generic [ref=e393]:
+                - generic [ref=e394]:
+                  - generic [ref=e395]: "#1"
+                  - generic [ref=e396]:
+                    - generic [ref=e397]: Simply Veg Pizza
+                    - generic [ref=e398]: Popular Choice
+                - generic [ref=e399]: 2 SOLD
+            - generic [ref=e400]:
+              - generic [ref=e401]:
+                - heading "Rider Status" [level=3] [ref=e402]
+                - generic [ref=e408]:
+                  - generic "Toggle show all riders" [ref=e409] [cursor=pointer]: Online
+                  - button "Manage" [ref=e412] [cursor=pointer]
+              - generic [ref=e415]: 0 ON
+  - option "Choose Category..." [selected]
+  - generic:
+    - generic:
+      - generic:
+        - heading "Table —" [level=3]
+        - generic:
+          - generic: —
+          - generic: —
+      - button "Close table details"
+    - generic:
+      - generic:
+        - generic:
+          - generic: Capacity
+          - strong: —
+        - generic:
+          - generic: Session Started
+          - strong: —
+        - generic:
+          - generic: Running Time
+          - strong: —
+      - generic:
+        - heading "Table QR Code" [level=5]
+        - paragraph: Customers scan this code to order from this table. Use "View QR" above to print or copy the link.
+  - option "Each" [selected]
+  - option "Grams (g)"
+  - option "Kilograms (kg)"
+  - option "Milliliters (ml)"
+  - option "Liters (l)"

@@ -1,0 +1,318 @@
+- generic [active] [ref=f18e1]:
+  - generic [ref=f18e2]:
+    - navigation "Main Navigation" [ref=f18e3]:
+      - generic [ref=f18e5]:
+        - generic "Roshani ERP" [ref=f18e6]:
+          - img [ref=f18e7]:
+            - generic [ref=f18e9]: R
+        - generic [ref=f18e10]:
+          - heading "ROSHANI ERP" [level=1] [ref=f18e11]
+          - generic [ref=f18e12]: Premium v5.3.6
+      - list [ref=f18e13]:
+        - listitem: Operations
+        - listitem "View Main Dashboard Snapshot" [ref=f18e14]:
+          - button "Dashboard" [ref=f18e15] [cursor=pointer]:
+            - img [ref=f18e596]
+            - generic [ref=f18e21]: Dashboard
+        - listitem "Manage Customer Orders" [ref=f18e22]:
+          - button "Orders" [ref=f18e23] [cursor=pointer]:
+            - img [ref=f18e601]
+            - generic [ref=f18e28]: Orders
+        - listitem "Monitor Live Store Operations" [ref=f18e29]:
+          - button "Live Ops 3" [ref=f18e30] [cursor=pointer]:
+            - img [ref=f18e605]
+            - generic [ref=f18e33]: Live Ops
+            - generic [ref=f18e34]: "3"
+        - listitem "Open Point of Sale (POS) Interface" [ref=f18e35]:
+          - button "POS Control" [ref=f18e36] [cursor=pointer]:
+            - img [ref=f18e607]
+            - generic [ref=f18e39]: POS Control
+        - listitem "Manage Dine-In Tables, Sessions, QR Codes & Kitchen Display" [ref=f18e40]:
+          - button "Tables" [ref=f18e41] [cursor=pointer]:
+            - img [ref=f18e609]
+            - generic [ref=f18e47]: Tables
+        - listitem: Marketing
+        - listitem "Compose & Send Promotional Campaigns" [ref=f18e48]:
+          - button "Promotions" [ref=f18e49] [cursor=pointer]:
+            - img [ref=f18e614]
+            - generic [ref=f18e53]: Promotions
+        - listitem "Schedule & Manage Discounts" [ref=f18e54]:
+          - button "Discounts" [ref=f18e55] [cursor=pointer]:
+            - img [ref=f18e617]
+            - generic [ref=f18e60]: Discounts
+        - listitem: Catalogue
+        - listitem "Manage Product Menu and Items" [ref=f18e61]:
+          - button "Menu" [ref=f18e62] [cursor=pointer]:
+            - img [ref=f18e621]
+            - generic [ref=f18e66]: Menu
+        - listitem "Organize Menu Categories" [ref=f18e67]:
+          - button "Categories" [ref=f18e68] [cursor=pointer]:
+            - img [ref=f18e624]
+            - generic [ref=f18e74]: Categories
+        - listitem "Manage Stock Levels and Supplies" [ref=f18e75]:
+          - button "Inventory" [ref=f18e76] [cursor=pointer]:
+            - img [ref=f18e629]
+            - generic [ref=f18e81]: Inventory
+        - listitem: People
+        - listitem "Manage Delivery Staff and Status" [ref=f18e82]:
+          - button "Riders" [ref=f18e83] [cursor=pointer]:
+            - img [ref=f18e633]
+            - generic [ref=f18e89]: Riders
+        - listitem "View and Manage Customer Records" [ref=f18e90]:
+          - button "Customers" [ref=f18e91] [cursor=pointer]:
+            - img [ref=f18e638]
+            - generic [ref=f18e97]: Customers
+        - listitem: Insights
+        - listitem "View Orders Abandoned at Checkout" [ref=f18e98]:
+          - button "Lost Sales" [ref=f18e99] [cursor=pointer]:
+            - img [ref=f18e643]
+            - generic [ref=f18e103]: Lost Sales
+        - listitem "View Detailed Business Analytics" [ref=f18e104]:
+          - button "Analytics" [ref=f18e105] [cursor=pointer]:
+            - img [ref=f18e646]
+            - generic [ref=f18e108]: Analytics
+        - listitem "Monitor Rider Performance & Earnings" [ref=f18e109]:
+          - button "Rider Insights" [ref=f18e110] [cursor=pointer]:
+            - img [ref=f18e648]
+            - generic [ref=f18e114]: Rider Insights
+        - listitem "View and Manage Customer Reviews" [ref=f18e115]:
+          - button "Feedback" [ref=f18e116] [cursor=pointer]:
+            - img [ref=f18e651]
+            - generic [ref=f18e119]: Feedback
+        - listitem "Track Live Deliveries on Map" [ref=f18e120]:
+          - button "Live Tracking Live" [ref=f18e121] [cursor=pointer]:
+            - img [ref=f18e653]
+            - generic [ref=f18e125]: Live Tracking
+            - generic "Live" [ref=f18e126]
+        - listitem "View Recent System Alerts" [ref=f18e127]:
+          - button "Notifications" [ref=f18e128] [cursor=pointer]:
+            - img [ref=f18e656]
+            - generic [ref=f18e132]: Notifications
+        - listitem "View Payment Transactions" [ref=f18e133]:
+          - button "Payments" [ref=f18e134] [cursor=pointer]:
+            - img [ref=f18e659]
+            - generic [ref=f18e139]: Payments
+        - listitem: System
+        - listitem "Download Portal as App" [ref=f18e140]:
+          - button "Download App" [ref=f18e141] [cursor=pointer]:
+            - img [ref=f18e663]
+            - generic [ref=f18e145]: Download App
+        - listitem "Manage Store & Delivery Configuration" [ref=f18e146]:
+          - button "Settings" [ref=f18e147] [cursor=pointer]:
+            - img [ref=f18e666]
+            - generic [ref=f18e151]: Settings
+        - listitem "Sign Out of Dashboard" [ref=f18e152]:
+          - button "Logout" [ref=f18e153] [cursor=pointer]:
+            - img [ref=f18e669]
+            - generic [ref=f18e157]: Logout
+      - generic "Open Store Settings" [ref=f18e159] [cursor=pointer]:
+        - generic "Admin user" [ref=f18e160]:
+          - generic [ref=f18e161]: A
+        - generic [ref=f18e162]:
+          - generic [ref=f18e163]: Store Admin
+          - generic [ref=f18e164]: Superuser
+    - generic [ref=f18e165]:
+      - generic [ref=f18e166]:
+        - generic "Toggle Sidebar Navigation View" [ref=f18e167]:
+          - img [ref=f18e672]
+        - generic [ref=f18e169]:
+          - generic [ref=f18e170]:
+            - heading "Dashboard Overview" [level=2] [ref=f18e171]
+            - generic [ref=f18e172]: PIZZA
+          - combobox "Switch Active Outlet" [ref=f18e174] [cursor=pointer]:
+            - option "🍕 Pizza ERP" [selected]
+            - option "🎂 Cakes ERP"
+        - generic [ref=f18e175]:
+          - 'generic "Firebase: Connected" [ref=f18e176]'
+          - text: roshanisudha@gmail.com
+          - button "Logout" [ref=f18e177] [cursor=pointer]
+          - button "How to use this page" [ref=f18e178]:
+            - img [ref=f18e673]
+      - generic [ref=f18e676]:
+        - generic [ref=f18e677]:
+          - generic [ref=f18e678]:
+            - heading "Tables Management" [level=3] [ref=f18e679]:
+              - img [ref=f18e680]
+              - text: Tables Management
+            - paragraph [ref=f18e685]: Live view of all tables, their status and running orders
+          - generic [ref=f18e686]:
+            - button "Export" [ref=f18e687] [cursor=pointer]:
+              - img [ref=f18e688]
+              - text: Export
+            - button "Bulk QR Print" [ref=f18e691] [cursor=pointer]:
+              - img [ref=f18e692]
+              - text: Bulk QR Print
+            - button "Add Table" [ref=f18e696] [cursor=pointer]:
+              - img [ref=f18e697]
+              - text: Add Table
+        - generic [ref=f18e698]:
+          - generic [ref=f18e699]:
+            - img [ref=f18e700]
+            - generic [ref=f18e703]:
+              - generic [ref=f18e704]: "3"
+              - generic [ref=f18e705]: Free Tables
+          - generic [ref=f18e706]:
+            - img [ref=f18e707]
+            - generic [ref=f18e710]:
+              - generic [ref=f18e711]: "1"
+              - generic [ref=f18e712]: Occupied Tables
+          - generic [ref=f18e713]:
+            - img [ref=f18e714]
+            - generic [ref=f18e717]:
+              - generic [ref=f18e718]: "0"
+              - generic [ref=f18e719]: Billing Tables
+          - generic [ref=f18e720]:
+            - img [ref=f18e721]
+            - generic [ref=f18e724]:
+              - generic [ref=f18e725]: "1"
+              - generic [ref=f18e726]: Active Sessions
+          - generic [ref=f18e727]:
+            - img [ref=f18e728]
+            - generic [ref=f18e733]:
+              - generic [ref=f18e734]: "1"
+              - generic [ref=f18e735]: Current Guests
+          - generic [ref=f18e736]:
+            - img [ref=f18e737]
+            - generic [ref=f18e740]:
+              - generic [ref=f18e741]: ₹894
+              - generic [ref=f18e742]: Revenue Today
+          - generic [ref=f18e743]:
+            - img [ref=f18e744]
+            - generic [ref=f18e747]:
+              - generic [ref=f18e748]: 114 min
+              - generic [ref=f18e749]: Avg. Session Time
+          - generic [ref=f18e750]:
+            - img [ref=f18e751]
+            - generic [ref=f18e756]:
+              - generic [ref=f18e757]: "0"
+              - generic [ref=f18e758]: Pending Requests
+        - generic [ref=f18e759]:
+          - generic [ref=f18e760]:
+            - generic [ref=f18e761]:
+              - heading "Restaurant Floor Plan" [level=4] [ref=f18e762]:
+                - img [ref=f18e763]
+                - text: Restaurant Floor Plan
+              - paragraph [ref=f18e765]: Click on any table to view details and take actions
+            - generic [ref=f18e766]:
+              - generic [ref=f18e767]: Free
+              - generic [ref=f18e769]: Occupied
+              - generic [ref=f18e771]: Billing
+              - generic [ref=f18e773]: Disabled
+          - generic [ref=f18e775]:
+            - button "01 4 Seats Free" [ref=f18e776] [cursor=pointer]:
+              - generic [ref=f18e777]: "01"
+              - generic [ref=f18e778]: 4 Seats
+              - generic [ref=f18e779]:
+                - img [ref=f18e780]
+                - text: Free
+            - button "02 4 Seats Occupied ₹894 5 Orders · 114 min" [ref=f18e783] [cursor=pointer]:
+              - generic [ref=f18e784]: "02"
+              - generic [ref=f18e785]: 4 Seats
+              - generic [ref=f18e786]:
+                - img [ref=f18e787]
+                - text: Occupied
+              - generic [ref=f18e792]: ₹894
+              - generic [ref=f18e793]: 5 Orders · 114 min
+            - button "03 4 Seats Free" [ref=f18e794] [cursor=pointer]:
+              - generic [ref=f18e795]: "03"
+              - generic [ref=f18e796]: 4 Seats
+              - generic [ref=f18e797]:
+                - img [ref=f18e798]
+                - text: Free
+            - button "04 4 Seats Free" [ref=f18e801] [cursor=pointer]:
+              - generic [ref=f18e802]: "04"
+              - generic [ref=f18e803]: 4 Seats
+              - generic [ref=f18e804]:
+                - img [ref=f18e805]
+                - text: Free
+        - generic [ref=f18e808]:
+          - generic [ref=f18e809]:
+            - generic [ref=f18e810]:
+              - heading "Live Orders (Dine In)" [level=4] [ref=f18e811]:
+                - img [ref=f18e812]
+                - text: Live Orders (Dine In)
+              - generic [ref=f18e815]: "1"
+            - generic [ref=f18e817] [cursor=pointer]:
+              - generic [ref=f18e818]:
+                - generic [ref=f18e819]: Table 02
+                - generic [ref=f18e820]: "#KV2V4W"
+                - generic [ref=f18e821]: 06:39 am
+              - generic [ref=f18e822]: 1 × Cheese Pizza (Medium)
+              - generic [ref=f18e823]: Confirmed
+          - generic [ref=f18e824]:
+            - heading "Kitchen Display (KDS)" [level=4] [ref=f18e825]:
+              - img [ref=f18e826]
+              - text: Kitchen Display (KDS)
+            - generic [ref=f18e828]:
+              - generic [ref=f18e829]:
+                - generic [ref=f18e830]:
+                  - generic [ref=f18e831]: New Orders
+                  - generic [ref=f18e832]: "0"
+                - paragraph [ref=f18e834]: No new orders
+              - generic [ref=f18e835]:
+                - generic [ref=f18e836]:
+                  - generic [ref=f18e837]: Preparing
+                  - generic [ref=f18e838]: "1"
+                - generic [ref=f18e840]:
+                  - generic [ref=f18e841]:
+                    - generic [ref=f18e842]: Table 02 · Group A
+                    - generic [ref=f18e843]: "#KV2V4W"
+                  - generic [ref=f18e845]: 1 × Cheese Pizza (Medium)
+                  - button "Mark Ready" [ref=f18e847] [cursor=pointer]
+                  - generic [ref=f18e848]:
+                    - generic [ref=f18e849]: 111:34
+                    - generic [ref=f18e850]: 06:39 am
+              - generic [ref=f18e851]:
+                - generic [ref=f18e852]:
+                  - generic [ref=f18e853]: Ready to Serve
+                  - generic [ref=f18e854]: "0"
+                - paragraph [ref=f18e856]: Nothing ready
+  - option "Choose Category..." [selected]
+  - generic:
+    - generic:
+      - generic:
+        - heading "Table 03" [level=3]
+        - generic:
+          - generic: Free
+          - generic: No active session
+      - button "Close table details":
+        - img
+    - generic:
+      - generic:
+        - generic:
+          - img
+          - generic: Capacity
+          - strong: "4"
+        - generic:
+          - img
+          - generic: Session Started
+          - strong: —
+        - generic:
+          - img
+          - generic: Running Time
+          - strong: —
+      - generic:
+        - paragraph: No active session for this table.
+      - generic:
+        - button "View / Print QR":
+          - img
+          - text: View / Print QR
+        - button "Edit Table":
+          - img
+          - text: Edit Table
+        - button "Disable Table":
+          - img
+          - text: Disable Table
+        - button "Delete Table":
+          - img
+          - text: Delete Table
+      - generic:
+        - heading "Table QR Code" [level=5]:
+          - img
+          - text: Table QR Code
+        - paragraph: Customers scan this code to order from this table. Use "View QR" above to print or copy the link.
+  - option "Each" [selected]
+  - option "Grams (g)"
+  - option "Kilograms (kg)"
+  - option "Milliliters (ml)"
+  - option "Liters (l)"

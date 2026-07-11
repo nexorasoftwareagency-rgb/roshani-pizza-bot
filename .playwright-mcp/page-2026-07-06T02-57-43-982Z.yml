@@ -1,0 +1,508 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e49]:
+    - navigation "Main Navigation" [ref=e50]:
+      - generic [ref=e52]:
+        - generic "Roshani ERP" [ref=e53]:
+          - img [ref=e54]:
+            - generic [ref=e56]: R
+        - generic [ref=e57]:
+          - heading "ROSHANI ERP" [level=1] [ref=e58]
+          - generic [ref=e59]: Premium v5.3.6
+      - list [ref=e60]:
+        - listitem: Operations
+        - listitem "View Main Dashboard Snapshot" [ref=e61]:
+          - button "Dashboard" [ref=e62] [cursor=pointer]:
+            - img [ref=e63]
+            - generic [ref=e68]: Dashboard
+        - listitem "Manage Customer Orders" [ref=e69]:
+          - button "Orders" [ref=e70] [cursor=pointer]:
+            - img [ref=e71]
+            - generic [ref=e75]: Orders
+        - listitem "Monitor Live Store Operations" [ref=e76]:
+          - button "Live Ops 5" [ref=e77] [cursor=pointer]:
+            - img [ref=e78]
+            - generic [ref=e80]: Live Ops
+            - generic [ref=e81]: "5"
+        - listitem "Open Point of Sale (POS) Interface" [ref=e82]:
+          - button "POS Control" [ref=e83] [cursor=pointer]:
+            - img [ref=e84]
+            - generic [ref=e86]: POS Control
+        - listitem "Manage Dine-In Tables, Sessions, QR Codes & Kitchen Display" [ref=e87]:
+          - button "Tables" [ref=e88] [cursor=pointer]:
+            - img [ref=e89]
+            - generic [ref=e94]: Tables
+        - listitem: Marketing
+        - listitem "Compose & Send Promotional Campaigns" [ref=e95]:
+          - button "Promotions" [ref=e96] [cursor=pointer]:
+            - img [ref=e97]
+            - generic [ref=e100]: Promotions
+        - listitem "Schedule & Manage Discounts" [ref=e101]:
+          - button "Discounts" [ref=e102] [cursor=pointer]:
+            - img [ref=e103]
+            - generic [ref=e107]: Discounts
+        - listitem: Catalogue
+        - listitem "Manage Product Menu and Items" [ref=e108]:
+          - button "Menu" [ref=e109] [cursor=pointer]:
+            - img [ref=e110]
+            - generic [ref=e113]: Menu
+        - listitem "Organize Menu Categories" [ref=e114]:
+          - button "Categories" [ref=e115] [cursor=pointer]:
+            - img [ref=e116]
+            - generic [ref=e121]: Categories
+        - listitem "Manage Stock Levels and Supplies" [ref=e122]:
+          - button "Inventory" [ref=e123] [cursor=pointer]:
+            - img [ref=e124]
+            - generic [ref=e128]: Inventory
+        - listitem: People
+        - listitem "Manage Delivery Staff and Status" [ref=e129]:
+          - button "Riders" [ref=e130] [cursor=pointer]:
+            - img [ref=e131]
+            - generic [ref=e136]: Riders
+        - listitem "View and Manage Customer Records" [ref=e137]:
+          - button "Customers" [ref=e138] [cursor=pointer]:
+            - img [ref=e139]
+            - generic [ref=e144]: Customers
+        - listitem: Insights
+        - listitem "View Orders Abandoned at Checkout" [ref=e145]:
+          - button "Lost Sales" [ref=e146] [cursor=pointer]:
+            - img [ref=e147]
+            - generic [ref=e150]: Lost Sales
+        - listitem "View Detailed Business Analytics" [ref=e151]:
+          - button "Analytics" [ref=e152] [cursor=pointer]:
+            - img [ref=e153]
+            - generic [ref=e155]: Analytics
+        - listitem "Monitor Rider Performance & Earnings" [ref=e156]:
+          - button "Rider Insights" [ref=e157] [cursor=pointer]:
+            - img [ref=e158]
+            - generic [ref=e161]: Rider Insights
+        - listitem "View and Manage Customer Reviews" [ref=e162]:
+          - button "Feedback" [ref=e163] [cursor=pointer]:
+            - img [ref=e164]
+            - generic [ref=e166]: Feedback
+        - listitem "Track Live Deliveries on Map" [ref=e167]:
+          - button "Live Tracking Live" [ref=e168] [cursor=pointer]:
+            - img [ref=e169]
+            - generic [ref=e172]: Live Tracking
+            - generic "Live" [ref=e173]
+        - listitem "View Recent System Alerts" [ref=e174]:
+          - button "Notifications" [ref=e175] [cursor=pointer]:
+            - img [ref=e176]
+            - generic [ref=e179]: Notifications
+        - listitem "View Payment Transactions" [ref=e180]:
+          - button "Payments" [ref=e181] [cursor=pointer]:
+            - img [ref=e182]
+            - generic [ref=e186]: Payments
+        - listitem: System
+        - listitem "Download Portal as App" [ref=e187]:
+          - button "Download App" [ref=e188] [cursor=pointer]:
+            - img [ref=e189]
+            - generic [ref=e192]: Download App
+        - listitem "Manage Store & Delivery Configuration" [ref=e193]:
+          - button "Settings" [ref=e194] [cursor=pointer]:
+            - img [ref=e195]
+            - generic [ref=e198]: Settings
+        - listitem "Sign Out of Dashboard" [ref=e199]:
+          - button "Logout" [ref=e200] [cursor=pointer]:
+            - img [ref=e201]
+            - generic [ref=e204]: Logout
+      - generic "Open Store Settings" [ref=e206] [cursor=pointer]:
+        - generic "Admin user" [ref=e207]:
+          - generic [ref=e208]: A
+        - generic [ref=e209]:
+          - generic [ref=e210]: Store Admin
+          - generic [ref=e211]: Superuser
+    - generic [ref=e212]:
+      - generic [ref=e213]:
+        - generic "Toggle Sidebar Navigation View" [ref=e214]:
+          - img [ref=e215]
+        - generic [ref=e216]:
+          - generic [ref=e217]:
+            - heading "Dashboard Overview" [level=2] [ref=e218]
+            - generic [ref=e219]: PIZZA
+          - combobox "Switch Active Outlet" [ref=e221] [cursor=pointer]:
+            - option "🍕 Pizza ERP" [selected]
+            - option "🎂 Cakes ERP"
+        - generic [ref=e222]:
+          - 'generic "Firebase: Connected" [ref=e223]'
+          - text: roshanisudha@gmail.com
+          - button "Logout" [ref=e224] [cursor=pointer]
+          - button "How to use this page" [ref=e225]:
+            - img [ref=e226]
+      - generic [ref=e229]:
+        - generic [ref=e230]:
+          - generic [ref=e231]:
+            - img [ref=e232]
+            - generic [ref=e235]:
+              - generic [ref=e236]: Promotional messages
+              - generic [ref=e237]: Sending is ON — all campaigns running normally.
+              - generic [ref=e238]: 🟢 Bot online
+          - generic [ref=e239]:
+            - checkbox
+        - generic [ref=e241]:
+          - generic [ref=e242]:
+            - img [ref=e244]
+            - generic [ref=e248]:
+              - generic [ref=e249]: "5"
+              - generic [ref=e250]: Active Orders
+            - generic [ref=e251]:
+              - img [ref=e252]
+              - text: Today
+          - generic [ref=e255]:
+            - img [ref=e257]
+            - generic [ref=e260]:
+              - generic [ref=e261]: "0"
+              - generic [ref=e262]: In Progress
+            - generic [ref=e263]: "--"
+          - generic [ref=e264]:
+            - img [ref=e266]
+            - generic [ref=e269]:
+              - generic [ref=e270]: ₹0
+              - generic [ref=e271]: Total Revenue
+            - generic [ref=e272]: Today
+          - generic [ref=e273]:
+            - img [ref=e275]
+            - generic [ref=e280]:
+              - generic [ref=e281]: "0"
+              - generic [ref=e282]: Riders Online
+            - generic [ref=e283]: Online
+        - generic [ref=e284]:
+          - generic [ref=e285]:
+            - generic [ref=e286]:
+              - generic [ref=e287]:
+                - heading "Priority Orders (Action Required)" [level=3] [ref=e288]:
+                  - img [ref=e289]
+                  - text: Priority Orders (Action Required)
+                - button "View All" [ref=e291] [cursor=pointer]
+              - generic [ref=e292]:
+                - generic [ref=e293] [cursor=pointer]:
+                  - generic [ref=e294]:
+                    - generic [ref=e295]: "#IFLFJ"
+                    - generic [ref=e296]: 06:38 AM
+                  - generic [ref=e298]:
+                    - generic [ref=e299]: Shah Nilesh Rakesh
+                    - generic [ref=e300]: "9724649971"
+                  - generic [ref=e301]: 1x Simply Veg Pizza (Medium)
+                  - generic [ref=e302]:
+                    - generic [ref=e303]: Pending
+                    - generic [ref=e304]: ₹149
+                - generic [ref=e305] [cursor=pointer]:
+                  - generic [ref=e306]:
+                    - generic [ref=e307]: "#T5RMR"
+                    - generic [ref=e308]: 06:39 AM
+                  - generic [ref=e310]:
+                    - generic [ref=e311]: Shah Nilesh Rakesh
+                    - generic [ref=e312]: "9724649971"
+                  - generic [ref=e313]: 1x Simply Veg Pizza (Medium)
+                  - generic [ref=e314]:
+                    - generic [ref=e315]: Pending
+                    - generic [ref=e316]: ₹149
+                - generic [ref=e317] [cursor=pointer]:
+                  - generic [ref=e318]:
+                    - generic [ref=e319]: "#NNWTL"
+                    - generic [ref=e320]: 06:39 AM
+                  - generic [ref=e322]:
+                    - generic [ref=e323]: Shah Nilesh Rakesh
+                    - generic [ref=e324]: "9724649971"
+                  - generic [ref=e325]: 1x Simply Veg Pizza (Medium)
+                  - generic [ref=e326]:
+                    - generic [ref=e327]: Pending
+                    - generic [ref=e328]: ₹149
+                - generic [ref=e329] [cursor=pointer]:
+                  - generic [ref=e330]:
+                    - generic [ref=e331]: "#V2V4W"
+                    - generic [ref=e332]: 06:39 AM
+                  - generic [ref=e334]:
+                    - generic [ref=e335]: Nilesh Shah
+                    - generic [ref=e336]: "9724649971"
+                  - generic [ref=e337]: 1x Cheese Pizza (Medium)
+                  - generic [ref=e338]:
+                    - generic [ref=e339]: Pending
+                    - generic [ref=e340]: ₹119
+                - generic [ref=e341] [cursor=pointer]:
+                  - generic [ref=e342]:
+                    - generic [ref=e343]: "#BQIHL"
+                    - generic [ref=e344]: 06:46 AM
+                  - generic [ref=e346]:
+                    - generic [ref=e347]: APEX PUBLIC SCHOOL
+                    - generic [ref=e348]: "9724649971"
+                  - generic [ref=e349]: 1x Farmhouse Pizza (Medium), 1x Onion Tomato Pizza (Medium)
+                  - generic [ref=e350]:
+                    - generic [ref=e351]: Pending
+                    - generic [ref=e352]: ₹328
+            - generic [ref=e353]:
+              - heading "Recent Order History" [level=3] [ref=e354]
+              - table [ref=e357]:
+                - rowgroup [ref=e358]:
+                  - row "Order Customer Details Total Payment Status Rider Actions" [ref=e359]:
+                    - columnheader "Order" [ref=e360]
+                    - columnheader "Customer" [ref=e361]
+                    - columnheader "Details" [ref=e362]
+                    - columnheader "Total" [ref=e363]
+                    - columnheader "Payment" [ref=e364]
+                    - columnheader "Status" [ref=e365]
+                    - columnheader "Rider" [ref=e366]
+                    - columnheader "Actions" [ref=e367]
+                - rowgroup [ref=e368]:
+                  - row "#bQIhl Dine-in APEX PUBLIC SCHOOL 9724649971 2 Items · Dine-in ₹328 --- Pending Assign Pending ▾ Print Receipt" [ref=e369]:
+                    - cell "#bQIhl Dine-in" [ref=e370]:
+                      - generic [ref=e371]:
+                        - img [ref=e373]
+                        - generic [ref=e378]:
+                          - generic [ref=e379]: "#bQIhl"
+                          - generic [ref=e380]: Dine-in
+                    - cell "APEX PUBLIC SCHOOL 9724649971" [ref=e381]:
+                      - generic [ref=e382]:
+                        - generic [ref=e383]: APEX PUBLIC SCHOOL
+                        - generic [ref=e384]: "9724649971"
+                    - cell "2 Items · Dine-in" [ref=e385]:
+                      - generic [ref=e386]:
+                        - generic [ref=e387]: 2 Items
+                        - generic [ref=e388]: ·
+                        - generic [ref=e389]: Dine-in
+                    - cell "₹328" [ref=e390]
+                    - cell "---" [ref=e391]:
+                      - generic [ref=e392]:
+                        - img [ref=e393]
+                        - text: "---"
+                    - cell "Pending" [ref=e395]:
+                      - generic [ref=e396]: Pending
+                    - cell "Assign" [ref=e397]:
+                      - generic [ref=e398]:
+                        - img [ref=e399]
+                        - combobox [disabled] [ref=e404] [cursor=pointer]:
+                          - option "Assign" [selected]
+                    - cell "Pending ▾ Print Receipt" [ref=e405]:
+                      - generic [ref=e406]:
+                        - button "Pending ▾" [ref=e408] [cursor=pointer]
+                        - button "Print Receipt" [ref=e409] [cursor=pointer]:
+                          - img [ref=e410]
+                  - row "#V2V4w Dine-in Nilesh Shah 9724649971 1 Items · Dine-in ₹119 --- Pending Assign Pending ▾ Print Receipt" [ref=e414]:
+                    - cell "#V2V4w Dine-in" [ref=e415]:
+                      - generic [ref=e416]:
+                        - img [ref=e418]
+                        - generic [ref=e423]:
+                          - generic [ref=e424]: "#V2V4w"
+                          - generic [ref=e425]: Dine-in
+                    - cell "Nilesh Shah 9724649971" [ref=e426]:
+                      - generic [ref=e427]:
+                        - generic [ref=e428]: Nilesh Shah
+                        - generic [ref=e429]: "9724649971"
+                    - cell "1 Items · Dine-in" [ref=e430]:
+                      - generic [ref=e431]:
+                        - generic [ref=e432]: 1 Items
+                        - generic [ref=e433]: ·
+                        - generic [ref=e434]: Dine-in
+                    - cell "₹119" [ref=e435]
+                    - cell "---" [ref=e436]:
+                      - generic [ref=e437]:
+                        - img [ref=e438]
+                        - text: "---"
+                    - cell "Pending" [ref=e440]:
+                      - generic [ref=e441]: Pending
+                    - cell "Assign" [ref=e442]:
+                      - generic [ref=e443]:
+                        - img [ref=e444]
+                        - combobox [disabled] [ref=e449] [cursor=pointer]:
+                          - option "Assign" [selected]
+                    - cell "Pending ▾ Print Receipt" [ref=e450]:
+                      - generic [ref=e451]:
+                        - button "Pending ▾" [ref=e453] [cursor=pointer]
+                        - button "Print Receipt" [ref=e454] [cursor=pointer]:
+                          - img [ref=e455]
+                  - row "#NNWtl Dine-in Shah Nilesh Rakesh 9724649971 1 Items · Dine-in ₹149 --- Pending Assign Pending ▾ Print Receipt" [ref=e459]:
+                    - cell "#NNWtl Dine-in" [ref=e460]:
+                      - generic [ref=e461]:
+                        - img [ref=e463]
+                        - generic [ref=e468]:
+                          - generic [ref=e469]: "#NNWtl"
+                          - generic [ref=e470]: Dine-in
+                    - cell "Shah Nilesh Rakesh 9724649971" [ref=e471]:
+                      - generic [ref=e472]:
+                        - generic [ref=e473]: Shah Nilesh Rakesh
+                        - generic [ref=e474]: "9724649971"
+                    - cell "1 Items · Dine-in" [ref=e475]:
+                      - generic [ref=e476]:
+                        - generic [ref=e477]: 1 Items
+                        - generic [ref=e478]: ·
+                        - generic [ref=e479]: Dine-in
+                    - cell "₹149" [ref=e480]
+                    - cell "---" [ref=e481]:
+                      - generic [ref=e482]:
+                        - img [ref=e483]
+                        - text: "---"
+                    - cell "Pending" [ref=e485]:
+                      - generic [ref=e486]: Pending
+                    - cell "Assign" [ref=e487]:
+                      - generic [ref=e488]:
+                        - img [ref=e489]
+                        - combobox [disabled] [ref=e494] [cursor=pointer]:
+                          - option "Assign" [selected]
+                    - cell "Pending ▾ Print Receipt" [ref=e495]:
+                      - generic [ref=e496]:
+                        - button "Pending ▾" [ref=e498] [cursor=pointer]
+                        - button "Print Receipt" [ref=e499] [cursor=pointer]:
+                          - img [ref=e500]
+                  - row "#t5RMR Dine-in Shah Nilesh Rakesh 9724649971 1 Items · Dine-in ₹149 --- Pending Assign Pending ▾ Print Receipt" [ref=e504]:
+                    - cell "#t5RMR Dine-in" [ref=e505]:
+                      - generic [ref=e506]:
+                        - img [ref=e508]
+                        - generic [ref=e513]:
+                          - generic [ref=e514]: "#t5RMR"
+                          - generic [ref=e515]: Dine-in
+                    - cell "Shah Nilesh Rakesh 9724649971" [ref=e516]:
+                      - generic [ref=e517]:
+                        - generic [ref=e518]: Shah Nilesh Rakesh
+                        - generic [ref=e519]: "9724649971"
+                    - cell "1 Items · Dine-in" [ref=e520]:
+                      - generic [ref=e521]:
+                        - generic [ref=e522]: 1 Items
+                        - generic [ref=e523]: ·
+                        - generic [ref=e524]: Dine-in
+                    - cell "₹149" [ref=e525]
+                    - cell "---" [ref=e526]:
+                      - generic [ref=e527]:
+                        - img [ref=e528]
+                        - text: "---"
+                    - cell "Pending" [ref=e530]:
+                      - generic [ref=e531]: Pending
+                    - cell "Assign" [ref=e532]:
+                      - generic [ref=e533]:
+                        - img [ref=e534]
+                        - combobox [disabled] [ref=e539] [cursor=pointer]:
+                          - option "Assign" [selected]
+                    - cell "Pending ▾ Print Receipt" [ref=e540]:
+                      - generic [ref=e541]:
+                        - button "Pending ▾" [ref=e543] [cursor=pointer]
+                        - button "Print Receipt" [ref=e544] [cursor=pointer]:
+                          - img [ref=e545]
+                  - row "#iFLfj Dine-in Shah Nilesh Rakesh 9724649971 1 Items · Dine-in ₹149 --- Pending Assign Pending ▾ Print Receipt" [ref=e549]:
+                    - cell "#iFLfj Dine-in" [ref=e550]:
+                      - generic [ref=e551]:
+                        - img [ref=e553]
+                        - generic [ref=e558]:
+                          - generic [ref=e559]: "#iFLfj"
+                          - generic [ref=e560]: Dine-in
+                    - cell "Shah Nilesh Rakesh 9724649971" [ref=e561]:
+                      - generic [ref=e562]:
+                        - generic [ref=e563]: Shah Nilesh Rakesh
+                        - generic [ref=e564]: "9724649971"
+                    - cell "1 Items · Dine-in" [ref=e565]:
+                      - generic [ref=e566]:
+                        - generic [ref=e567]: 1 Items
+                        - generic [ref=e568]: ·
+                        - generic [ref=e569]: Dine-in
+                    - cell "₹149" [ref=e570]
+                    - cell "---" [ref=e571]:
+                      - generic [ref=e572]:
+                        - img [ref=e573]
+                        - text: "---"
+                    - cell "Pending" [ref=e575]:
+                      - generic [ref=e576]: Pending
+                    - cell "Assign" [ref=e577]:
+                      - generic [ref=e578]:
+                        - img [ref=e579]
+                        - combobox [disabled] [ref=e584] [cursor=pointer]:
+                          - option "Assign" [selected]
+                    - cell "Pending ▾ Print Receipt" [ref=e585]:
+                      - generic [ref=e586]:
+                        - button "Pending ▾" [ref=e588] [cursor=pointer]
+                        - button "Print Receipt" [ref=e589] [cursor=pointer]:
+                          - img [ref=e590]
+          - generic [ref=e594]:
+            - generic [ref=e595]:
+              - heading "Top Spenders" [level=3] [ref=e597]:
+                - img [ref=e598]
+                - text: Top Spenders
+              - generic [ref=e601]:
+                - generic [ref=e602]:
+                  - generic [ref=e603]: "#1"
+                  - generic [ref=e604]:
+                    - generic [ref=e605]: Nilesh Shah
+                    - generic [ref=e606]: 8 Orders Placed
+                - generic [ref=e607]: ₹1,231
+            - generic [ref=e608]:
+              - heading "Top Selling Items" [level=3] [ref=e610]:
+                - img [ref=e611]
+                - text: Top Selling Items
+              - generic [ref=e614]:
+                - generic [ref=e615]:
+                  - generic [ref=e616]:
+                    - generic [ref=e617]: "#1"
+                    - generic [ref=e618]:
+                      - generic [ref=e619]: Simply Veg Pizza (Medium)
+                      - generic [ref=e620]: Popular Choice
+                  - generic [ref=e621]: 3 SOLD
+                - generic [ref=e622]:
+                  - generic [ref=e623]:
+                    - generic [ref=e624]: "#2"
+                    - generic [ref=e625]:
+                      - generic [ref=e626]: Farmhouse Pizza (Medium)
+                      - generic [ref=e627]: Popular Choice
+                  - generic [ref=e628]: 2 SOLD
+                - generic [ref=e629]:
+                  - generic [ref=e630]:
+                    - generic [ref=e631]: "#3"
+                    - generic [ref=e632]:
+                      - generic [ref=e633]: Cheese Pizza (Medium)
+                      - generic [ref=e634]: Popular Choice
+                  - generic [ref=e635]: 2 SOLD
+                - generic [ref=e636]:
+                  - generic [ref=e637]:
+                    - generic [ref=e638]: "#4"
+                    - generic [ref=e639]:
+                      - generic [ref=e640]: Cheese Pizza (Small)
+                      - generic [ref=e641]: Popular Choice
+                  - generic [ref=e642]: 1 SOLD
+                - generic [ref=e643]:
+                  - generic [ref=e644]:
+                    - generic [ref=e645]: "#5"
+                    - generic [ref=e646]:
+                      - generic [ref=e647]: Onion Tomato Pizza (Medium)
+                      - generic [ref=e648]: Popular Choice
+                  - generic [ref=e649]: 1 SOLD
+            - generic [ref=e650]:
+              - generic [ref=e651]:
+                - heading "Rider Status" [level=3] [ref=e652]:
+                  - img [ref=e653]
+                  - text: Rider Status
+                - generic [ref=e658]:
+                  - generic "Toggle show all riders" [ref=e659] [cursor=pointer]:
+                    - generic [ref=e660]: Online
+                  - button "Manage" [ref=e662] [cursor=pointer]:
+                    - text: Manage
+                    - img [ref=e663]
+              - generic [ref=e665]: 0 ON
+  - option "Choose Category..." [selected]
+  - generic:
+    - generic:
+      - generic:
+        - heading "Table —" [level=3]
+        - generic:
+          - generic: —
+          - generic: —
+      - button "Close table details":
+        - img
+    - generic:
+      - generic:
+        - generic:
+          - img
+          - generic: Capacity
+          - strong: —
+        - generic:
+          - img
+          - generic: Session Started
+          - strong: —
+        - generic:
+          - img
+          - generic: Running Time
+          - strong: —
+      - generic:
+        - heading "Table QR Code" [level=5]:
+          - img
+          - text: Table QR Code
+        - paragraph: Customers scan this code to order from this table. Use "View QR" above to print or copy the link.
+  - option "Each" [selected]
+  - option "Grams (g)"
+  - option "Kilograms (kg)"
+  - option "Milliliters (ml)"
+  - option "Liters (l)"

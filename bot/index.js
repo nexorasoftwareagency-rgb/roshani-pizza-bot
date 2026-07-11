@@ -579,15 +579,13 @@ async function sendFCMToAdmins(orderId, order) {
         const tokens = Object.values(admins).map(a => a.fcmToken).filter(Boolean);
         if (tokens.length === 0) return;
         const unique = [...new Set(tokens)];
-        const payload = {
-            notification: {
+        const results = await admin.messaging().sendEachForMulticast({
+            tokens: unique,
+            data: {
+                orderId, outlet, type: 'new_order',
                 title: `🆕 New Order #${orderId.slice(-5)}`,
                 body: `${order.customerName || 'Customer'} · ₹${order.total || 0} · ${outlet.toUpperCase()}`
             },
-            data: { orderId, outlet, type: 'new_order' }
-        };
-        const results = await admin.messaging().sendEachForMulticast({
-            tokens: unique, ...payload,
             android: { priority: "high" },
             webpush: { headers: { TTL: "300" } }
         });

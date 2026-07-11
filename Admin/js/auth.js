@@ -8,30 +8,12 @@ import { updateBranding } from './branding.js';
 import { setupAdminFCM } from './fcm-init.js';
 import { setupCapacitorFCM } from './capacitor-fcm.js';
 
-let idleTimer;
-const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const ADMIN_CONFIG = {
     SUPREME_ADMIN_EMAIL: "nexorasoftware@gmail.com",
     SUPER_ADMIN_EMAIL: "roshanisudha@gmail.com"
 };
 
-function resetIdleTimer() {
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => {
-        showToast("Session expired due to inactivity", "info");
-        userLogout();
-    }, IDLE_TIMEOUT);
-}
-
-function initActivityListeners() {
-    const events = ['mousemove', 'keydown', 'click', 'touchstart', 'visibilitychange'];
-    events.forEach(e => window.addEventListener(e, resetIdleTimer, { passive: true }));
-}
-
-function removeActivityListeners() {
-    const events = ['mousemove', 'keydown', 'click', 'touchstart', 'visibilitychange'];
-    events.forEach(e => window.removeEventListener(e, resetIdleTimer));
-    // Cleanup new order notification listener
+function cleanupSession() {
     if (_newOrderUnsub) { _newOrderUnsub(); _newOrderUnsub = null; }
     _lastNewOrder = '';
 }
@@ -196,9 +178,6 @@ setTimeout(() => signOut(auth), 3000);
             logAudit('LOGIN_ATTEMPT_SUCCESS', { email: user.email });
             sessionStorage.removeItem('PENDING_LOGIN_AUDIT');
         }
-        resetIdleTimer();
-        initActivityListeners();
-
         const savedOutlet = sessionStorage.getItem('adminSelectedOutlet') || adminData.outlet || 'pizza';
         window.currentOutlet = savedOutlet.toLowerCase();
         state.currentOutlet = window.currentOutlet;
@@ -328,8 +307,7 @@ export function requireAdminReauth(onSuccess) {
  */
 export function userLogout() {
     logAudit('LOGOUT', { email: auth.currentUser?.email });
-    removeActivityListeners();
-    clearTimeout(idleTimer);
+    cleanupSession();
     signOut(auth);
 }
 

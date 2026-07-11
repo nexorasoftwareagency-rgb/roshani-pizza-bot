@@ -1,4 +1,4 @@
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+import { getMessaging, getToken, deleteToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 import { app, auth, db, ref, update } from './firebase.js';
 import { showToast } from '../../shared/dom/modal.js';
 
@@ -34,13 +34,21 @@ function initFCM() {
   fcmInitDone = true;
 
   onMessage(msg, (payload) => {
-    const title = payload.notification?.title || 'New Alert';
-    const body = payload.notification?.body || '';
+    const data = payload.data || {};
+    const title = data.title || payload.notification?.title || 'New Alert';
+    const body = data.body || payload.notification?.body || '';
     showToast(`${title}: ${body}`, 'info');
   });
 }
 
 initFCM();
+
+// When a new SW takes over, refresh FCM token for the next login
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    console.log('[FCM] New SW activated, token will refresh on next setup');
+  });
+}
 
 export async function setupAdminFCM(userId) {
   if (!('Notification' in window) || !userId) return;
@@ -53,6 +61,8 @@ export async function setupAdminFCM(userId) {
     // Don't call requestPermission() here — it must be triggered by a user gesture.
     const permission = Notification.permission;
     if (permission === 'granted') {
+      // Force delete old token so we get a fresh one bound to the current SW
+      try { await deleteToken(m); } catch (_) {}
       if ('serviceWorker' in navigator) {
         try {
           const reg = await Promise.race([

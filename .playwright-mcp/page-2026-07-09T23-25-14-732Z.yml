@@ -1,0 +1,20 @@
+- generic [ref=f21e1]:
+  - generic "Loading Admin Dashboard..." [ref=f21e2]: ROSHANI ERP
+  - generic "Admin Login Screen" [ref=f21e8]:
+    - generic "Sign into the Admin Dashboard" [ref=f21e10]:
+      - generic [ref=f21e14]:
+        - heading "Roshani ERP" [level=2] [ref=f21e15]
+        - paragraph [ref=f21e16]: Secure Admin Management Portal
+      - generic [ref=f21e17]:
+        - generic [ref=f21e18]: Admin Email
+        - textbox "Admin Email" [ref=f21e21]:
+          - /placeholder: admin@roshani.com
+          - text: roshanisudha@gmail.com
+      - generic [ref=f21e22]:
+        - generic [ref=f21e23]: Secret Key
+        - textbox "Secret Key" [ref=f21e26]:
+          - /placeholder: ••••••••
+          - text: "989515"
+      - button "Access Dashboard" [ref=f21e28] [cursor=pointer]
+      - generic [ref=f21e29]: Enterprise Security Level 4
+  - text: Swipe → Swipe → Swipe → Swipe → Swipe → Swipe → Swipe → Swipe →

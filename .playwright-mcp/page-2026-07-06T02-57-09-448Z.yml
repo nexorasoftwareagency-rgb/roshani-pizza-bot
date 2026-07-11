@@ -1,0 +1,63 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]:
+    - img [ref=e3]
+    - generic [ref=e10]: No internet connection — changes may not save
+  - generic "Loading Admin Dashboard..." [ref=e11]:
+    - img [ref=e13]
+    - generic [ref=e16]: ROSHANI ERP
+  - generic "Admin Login Screen" [ref=e19]:
+    - generic "Sign into the Admin Dashboard" [ref=e21]:
+      - img [ref=e24]
+      - generic [ref=e27]:
+        - heading "Roshani ERP" [level=2] [ref=e28]
+        - paragraph [ref=e29]: Secure Admin Management Portal
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - img [ref=e32]
+          - text: Admin Email
+        - textbox "Admin Email" [ref=e36]:
+          - /placeholder: admin@roshani.com
+          - text: roshanisudha@gmail.com
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - img [ref=e39]
+          - text: Secret Key
+        - textbox "Secret Key" [ref=e43]:
+          - /placeholder: ••••••••
+          - text: "989515"
+      - button "Access Dashboard" [ref=e45] [cursor=pointer]: Access Dashboard
+      - generic [ref=e47]: Enterprise Security Level 4
+  - option "Choose Category..." [selected]
+  - generic:
+    - generic:
+      - generic:
+        - heading "Table —" [level=3]
+        - generic:
+          - generic: —
+          - generic: —
+      - button "Close table details":
+        - img
+    - generic:
+      - generic:
+        - generic:
+          - img
+          - generic: Capacity
+          - strong: —
+        - generic:
+          - img
+          - generic: Session Started
+          - strong: —
+        - generic:
+          - img
+          - generic: Running Time
+          - strong: —
+      - generic:
+        - heading "Table QR Code" [level=5]:
+          - img
+          - text: Table QR Code
+        - paragraph: Customers scan this code to order from this table. Use "View QR" above to print or copy the link.
+  - option "Each" [selected]
+  - option "Grams (g)"
+  - option "Kilograms (kg)"
+  - option "Milliliters (ml)"
+  - option "Liters (l)"
