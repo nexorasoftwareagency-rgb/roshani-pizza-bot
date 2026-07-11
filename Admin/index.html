@@ -235,6 +235,7 @@
 
     
 
+    <main>
     <!-- Initial Loader (Premium v4) -->
 
     <div id="initial-loader" title="Loading Admin Dashboard...">
@@ -376,7 +377,7 @@
         </div>
 
     </div>
-
+    </main>
 
 
     <div class="layout hidden">
@@ -747,7 +748,7 @@
 
                         <select id="outletSwitcherMobile" class="outlet-switcher-admin hidden"
 
-                            data-action="switchOutlet" title="Switch Active Outlet">
+                            data-action="switchOutlet" title="Switch Active Outlet" aria-label="Switch Active Outlet">
 
                             <!-- Populated via JS -->
 
@@ -787,7 +788,7 @@
 
                         <select id="outletSwitcher" class="outlet-switcher-admin hidden" data-action="switchOutlet"
 
-                            title="Switch Active Outlet">
+                            title="Switch Active Outlet" aria-label="Switch Active Outlet">
 
                             <!-- Populated via JS for Super Admins -->
 
@@ -1128,9 +1129,9 @@
 
                         <div class="flex-row flex-center flex-gap-10 flex-wrap-mobile">
 
-                            <input type="date" id="orderFrom" class="search-input-group w-130" title="Filter orders from date">
+                            <input type="date" id="orderFrom" class="search-input-group w-130" title="Filter orders from date" aria-label="Filter orders from date">
 
-                            <input type="date" id="orderTo" class="search-input-group w-130" title="Filter orders to date">
+                            <input type="date" id="orderTo" class="search-input-group w-130" title="Filter orders to date" aria-label="Filter orders to date">
 
                             <div class="input-icon-wrap flex-1">
 
@@ -1358,7 +1359,7 @@
 
                                         <input type="file" id="catFile" accept="image/*" class="hidden"
 
-                                            title="Select category photo">
+                                            title="Select category photo" aria-label="Select category photo">
 
                                         <button id="btnChangeCatPhoto" class="btn-secondary btn-small mb-8">Change
 
@@ -1368,7 +1369,7 @@
 
                                             <input id="newCatName" placeholder="Category Name" class="form-input mb-0 flex-2"
 
-                                                title="Category Name">
+                                                title="Category Name" aria-label="Category Name">
 
                                             <input id="newCatOrder" type="number" placeholder="Serial" class="form-input mb-0 flex-1"
 
@@ -4439,8 +4440,8 @@
                     </div>
                 </div>
             </div>
+        </main>
 
-        </div>
 
     </div>
 
@@ -5273,7 +5274,7 @@
 
                     <div class="form-group">
 
-                        <label data-i18n="discount.editor.type">Type</label>
+                        <label data-i18n="discount.editor.type" for="discType">Type</label>
 
                         <select id="discType" class="search-input-group">
 
@@ -5291,7 +5292,7 @@
 
                     <div class="form-group">
 
-                        <label data-i18n="discount.editor.mode">Mode</label>
+                        <label data-i18n="discount.editor.mode" for="discMode">Mode</label>
 
                         <select id="discMode" class="search-input-group">
 
@@ -5731,7 +5732,7 @@
 
                     <div class="flex-1">
 
-                        <label class="form-label-small">Unit</label>
+                        <label class="form-label-small" for="invItemUnit">Unit</label>
 
                         <select id="invItemUnit" class="form-input">
 
