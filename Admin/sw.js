@@ -6,7 +6,8 @@ if (self.location.protocol !== 'https:' && self.location.hostname !== 'localhost
 // Firebase FCM background messaging
 importScripts(
   'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js'
+  'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js',
+  'https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js'
 );
 firebase.initializeApp({
   apiKey: "AIzaSyDcx-SN5eak8PAs-8NtTGelJ_sICr5yb7Y",

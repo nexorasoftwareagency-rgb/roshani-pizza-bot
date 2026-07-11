@@ -50,37 +50,37 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-export async function setupAdminFCM(userId) {
-  if (!('Notification' in window) || !userId) return;
-
+async function subscribeAndStore(userId) {
   try {
     const m = getMessagingInstance();
-    if (!m) return;
+    if (!m || !userId) return;
+    if ('serviceWorker' in navigator) {
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 4000))
+      ]);
+      const token = await getToken(m, { serviceWorkerRegistration: reg });
+      if (token) await storeToken(userId, token);
+    } else {
+      const token = await getToken(m);
+      if (token) await storeToken(userId, token);
+    }
+  } catch (e) {
+    console.warn('[FCM] push subscribe error:', e);
+  }
+}
 
-    // Only proceed if permission is already granted.
-    // Don't call requestPermission() here — it must be triggered by a user gesture.
+export async function setupAdminFCM(userId) {
+  if (!('Notification' in window) || !userId) return;
+  try {
+    // Always try to subscribe to push (works regardless of notification permission)
+    await subscribeAndStore(userId);
+    // Also request notification permission if not yet decided
     const permission = Notification.permission;
-    if (permission === 'granted') {
-      if ('serviceWorker' in navigator) {
-        try {
-          const reg = await Promise.race([
-            navigator.serviceWorker.ready,
-            new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 4000))
-          ]);
-          const token = await getToken(m, { serviceWorkerRegistration: reg });
-          if (token) await storeToken(userId, token);
-        } catch (swErr) {
-          console.warn('[FCM] No active service worker; push notifications disabled. Foreground messages still work via onMessage.');
-        }
-      } else {
-        const token = await getToken(m);
-        if (token) await storeToken(userId, token);
-      }
-    } else if (permission === 'default') {
-      // Schedule a permission request for the next user gesture (click)
+    if (permission === 'default') {
       const requestOnce = () => {
         Notification.requestPermission().then(p => {
-          if (p === 'granted') setupAdminFCM(userId);
+          if (p === 'granted') console.log('[FCM] Notification permission granted');
         });
         document.removeEventListener('click', requestOnce);
       };
@@ -92,25 +92,5 @@ export async function setupAdminFCM(userId) {
 }
 
 export async function refreshFCMToken(userId) {
-  try {
-    const m = getMessagingInstance();
-    if (!m || !userId) return;
-    if ('serviceWorker' in navigator) {
-      try {
-        const reg = await Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 4000))
-        ]);
-        const token = await getToken(m, { serviceWorkerRegistration: reg });
-        if (token) await storeToken(userId, token);
-        return;
-      } catch (swErr) {
-        // fall through
-      }
-    }
-    const token = await getToken(m);
-    if (token) await storeToken(userId, token);
-  } catch (e) {
-    console.error('[FCM] Refresh error:', e);
-  }
+  await subscribeAndStore(userId);
 }
