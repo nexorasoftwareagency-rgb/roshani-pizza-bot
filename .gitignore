@@ -2,6 +2,7 @@ node_modules/
 service-account.json
 bot/service-account.json
 session_data/
+bot/session_data_*/
 *.log
 .env
 
