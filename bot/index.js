@@ -586,7 +586,11 @@ async function sendFCMToAdmins(orderId, order) {
             },
             data: { orderId, outlet, type: 'new_order' }
         };
-        const results = await admin.messaging().sendEachForMulticast({ tokens: unique, ...payload });
+        const results = await admin.messaging().sendEachForMulticast({
+            tokens: unique, ...payload,
+            android: { priority: "high" },
+            webpush: { headers: { TTL: "300" } }
+        });
         const failed = results.responses.filter(r => !r.success).length;
         if (failed > 0) console.warn(`[FCM] ${failed}/${unique.length} admin notifications failed`);
     } catch (e) {
