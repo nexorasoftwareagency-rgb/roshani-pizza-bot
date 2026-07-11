@@ -33,6 +33,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         'color:#8b5cf6;font-family:monospace;'
     );
     initGestures();
+    // ponytail: WCAG 2.5.3 — strip title from sidebar li so accessible name matches visible <span> text
+    document.querySelectorAll('.sidebar-nav li[title]').forEach(li => li.removeAttribute('title'));
 
     document.querySelectorAll('form').forEach(form => {
         form.addEventListener('submit', e => e.preventDefault());
@@ -128,12 +130,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const wasOpen = dd.classList.contains('open');
                     dd.classList.remove('open');
                     if (!wasOpen) {
-                        menu.style.top = ''; menu.style.bottom = '';
+                        menu.style.top = ''; menu.style.left = ''; menu.style.bottom = '';
                         dd.classList.add('open');
-                        const rect = menu.getBoundingClientRect();
-                        if (rect.bottom > window.innerHeight) {
+                        const btn = dd.querySelector('.status-dropdown-trigger');
+                        const r = btn.getBoundingClientRect();
+                        menu.style.top = (r.bottom + 4) + 'px';
+                        menu.style.left = r.left + 'px';
+                        const mr = menu.getBoundingClientRect();
+                        if (mr.right > window.innerWidth) {
+                            menu.style.left = Math.max(4, window.innerWidth - mr.width - 4) + 'px';
+                        }
+                        if (mr.bottom > window.innerHeight) {
                             menu.style.top = 'auto';
-                            menu.style.bottom = 'calc(100% + 4px)';
+                            menu.style.bottom = (window.innerHeight - r.top + 4) + 'px';
                         }
                     }
                     break;

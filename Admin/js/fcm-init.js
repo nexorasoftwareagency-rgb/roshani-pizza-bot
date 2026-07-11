@@ -1,4 +1,4 @@
-import { getMessaging, getToken, deleteToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 import { app, auth, db, ref, update } from './firebase.js';
 import { showToast } from '../../shared/dom/modal.js';
 
@@ -61,8 +61,6 @@ export async function setupAdminFCM(userId) {
     // Don't call requestPermission() here — it must be triggered by a user gesture.
     const permission = Notification.permission;
     if (permission === 'granted') {
-      // Force delete old token so we get a fresh one bound to the current SW
-      try { await deleteToken(m); } catch (_) {}
       if ('serviceWorker' in navigator) {
         try {
           const reg = await Promise.race([

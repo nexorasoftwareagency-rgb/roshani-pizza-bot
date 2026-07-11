@@ -4,7 +4,7 @@
       ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
       "$uid": {
         ".read": "auth != null && (auth.uid == $uid || root.child('admins').child(auth.uid).child('isSuper').val() == true)",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).child('isSuper').val() == true)",
+        ".write": "auth != null && ((root.child('admins').child(auth.uid).child('isSuper').val() == true) || (!data.exists() && auth.uid == $uid))",
         ".validate": "newData.hasChildren(['email', 'outlet'])"
       }
     },

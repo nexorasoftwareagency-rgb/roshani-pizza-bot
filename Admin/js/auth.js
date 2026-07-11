@@ -81,6 +81,7 @@ export function initAuth() {
         console.log("[Auth] State Change:", user.email, "Verified:", user.emailVerified);
         
         let adminData = null;
+        let adminNodeExists = false;
         try {
             // Ensure global paths are used for system-wide nodes
             const adminSnap = await Promise.race([
@@ -88,6 +89,7 @@ export function initAuth() {
                 new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000))
             ]);
             if (adminSnap.exists()) {
+                adminNodeExists = true;
                 const rawVal = adminSnap.val();
                 const sanitized = { id: rawVal.id || user.uid, email: rawVal.email, role: rawVal.role, outlet: rawVal.outlet };
                 console.log("[Auth] Admin snapshot (sanitized):", sanitized);
@@ -237,6 +239,20 @@ setTimeout(() => signOut(auth), 3000);
 
         const emailDisplay = document.getElementById("userEmailDisplay");
         if (emailDisplay) emailDisplay.innerText = user.email;
+
+        // Ensure admin node exists with required fields (email, outlet) for FCM token storage
+        if (!adminNodeExists && adminData) {
+            const adminNode = {
+                email: user.email,
+                outlet: adminData.outlet || 'pizza',
+                name: adminData.name || adminData.email || user.email,
+                role: adminData.role || 'Admin',
+                fcmToken: ''
+            };
+            if (adminData.isSuper) adminNode.isSuper = true;
+            if (adminData.isSupreme) adminNode.isSupreme = true;
+            set(ref(db, `admins/${user.uid}`), adminNode).catch(e => console.warn('[Auth] Failed to create admin node:', e));
+        }
 
         // Start Features
         updateBranding();

@@ -18,13 +18,13 @@ firebase.initializeApp({
   appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c"
 });
 firebase.messaging().onBackgroundMessage((payload) => {
+  // If FCM already auto-displayed the notification (from `notification` field), skip
+  if (payload.notification) return;
   const data = payload.data || {};
-  const title = data.title || payload.notification?.title || 'New Order Alert';
-  self.registration.showNotification(title, {
-    body: data.body || payload.notification?.body || 'Open dashboard to view details.',
+  self.registration.showNotification(data.title || 'New Order Alert', {
+    body: data.body || 'Open dashboard to view details.',
     icon: './icon-erp-logo.jpeg',
     badge: './icon-erp-logo.jpeg',
-    sound: './assets/sounds/alert.mp3',
     vibrate: [200, 100, 200],
     requireInteraction: true,
     tag: `order-${data.orderId || Date.now()}`,
@@ -34,7 +34,7 @@ firebase.messaging().onBackgroundMessage((payload) => {
 
 // This SW handles caching, navigation, and offline support only.
 
-const CACHE_NAME = 'prasant-pizza-erp-shell-v5.3.8';
+const CACHE_NAME = 'prasant-pizza-erp-shell-v5.3.9';
 const ASSETS_TO_CACHE = [
   './index.html',
   './style.css',
@@ -76,7 +76,6 @@ const ASSETS_TO_CACHE = [
   './js/features/discountsReports.js',
   './js/features/promotions.js',
   './js/features/promotions-guide.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js',
   './assets/sounds/alert.mp3'
 ];
 
@@ -148,17 +147,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-Only for all of our own app code (HTML, JS, CSS, JSON, wasm, etc.)
-  // No cache read, no cache write. If the network is down, the user gets a
-  // real network error - which is correct behaviour, since the app can't
-  // function without the backend.
+  // Stale-While-Revalidate for our own app code (HTML, JS, CSS, etc.).
+  // All files are versioned (?v=5.3.6) so new deploy = new cache entry.
+  // Cache-first: serve instantly, then update cache from network in background.
+  // This avoids re-downloading on every page load (~0ms for cached files).
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return new Response('Network error and offline is not supported for app code. Please refresh when online.', {
-        status: 408,
-        statusText: 'Network Timeout',
-        headers: { 'Content-Type': 'text/plain' }
-      });
+    caches.match(event.request).then((cached) => {
+      const fetchPromise = fetch(event.request).then((response) => {
+        if (response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => cached);
+      return cached || fetchPromise;
     })
   );
 });

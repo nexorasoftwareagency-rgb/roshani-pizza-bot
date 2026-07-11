@@ -1,0 +1,48 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]:
+    - generic [ref=e4]: No internet connection — changes may not save
+  - main:
+    - generic "Loading Admin Dashboard..." [ref=e5]: ROSHANI ERP
+    - generic "Admin Login Screen" [ref=e11]:
+      - generic "Sign into the Admin Dashboard" [ref=e13]:
+        - generic [ref=e17]:
+          - heading "Roshani ERP" [level=2] [ref=e18]
+          - paragraph [ref=e19]: Secure Admin Management Portal
+        - generic [ref=e20]:
+          - generic [ref=e21]: Admin Email
+          - textbox "Admin Email" [ref=e24]:
+            - /placeholder: admin@roshani.com
+        - generic [ref=e25]:
+          - generic [ref=e26]: Secret Key
+          - textbox "Secret Key" [ref=e29]:
+            - /placeholder: ••••••••
+        - button "Access Dashboard" [ref=e31] [cursor=pointer]
+        - generic [ref=e32]: Enterprise Security Level 4
+  - option "Choose Category..." [selected]
+  - generic:
+    - generic:
+      - generic:
+        - heading "Table —" [level=3]
+        - generic:
+          - generic: —
+          - generic: —
+      - button "Close table details"
+    - generic:
+      - generic:
+        - generic:
+          - generic: Capacity
+          - strong: —
+        - generic:
+          - generic: Session Started
+          - strong: —
+        - generic:
+          - generic: Running Time
+          - strong: —
+      - generic:
+        - heading "Table QR Code" [level=5]
+        - paragraph: Customers scan this code to order from this table. Use "View QR" above to print or copy the link.
+  - option "Each" [selected]
+  - option "Grams (g)"
+  - option "Kilograms (kg)"
+  - option "Milliliters (ml)"
+  - option "Liters (l)"

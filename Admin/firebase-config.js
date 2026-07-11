@@ -8,5 +8,3 @@ window.firebaseConfig = {
   appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c",
   fcmServerKey: ""
 };
-
-window.reCaptchaSiteKey = "6LeAlcwsAAAAAH4F3p5aCNvyPlhC3BRHOXTdDEGK";

@@ -1,0 +1,361 @@
+- generic [active] [ref=f2e1]:
+  - alert [ref=f2e2]:
+    - generic [ref=f2e10]: No internet connection — changes may not save
+  - main:
+    - generic "Loading Admin Dashboard..." [ref=f2e11]: ROSHANI ERP
+  - dialog "Edit Dish":
+    - generic:
+      - generic:
+        - heading "Add New Dish" [level=2]
+        - button "Close dialog"
+      - generic:
+        - generic:
+          - generic:
+            - generic: No image
+            - generic:
+              - button "Update Photo"
+        - generic:
+          - generic:
+            - generic: Category *
+            - combobox "Choose Category":
+              - option "Choose Category..." [selected]
+          - generic:
+            - generic:
+              - text: Dish Name
+              - textbox "e.g. Farmhouse Pizza"
+            - generic:
+              - text: Serial
+              - spinbutton "Sorting Order"
+          - text: Base Price (₹)
+          - spinbutton "499"
+          - generic:
+            - generic:
+              - generic: Sizes & Variations
+              - button "+ Add Size"
+          - generic:
+            - generic:
+              - generic: Add-ons (Toppings/Extras)
+              - button "+ Add Addon"
+      - generic:
+        - button "Save Dish"
+        - button "Cancel"
+  - dialog "Rider Details":
+    - generic:
+      - generic:
+        - generic:
+          - heading "Rider Profile" [level=2]
+          - paragraph: Profile, login access & ID documents
+        - button "Close dialog"
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic: No photo
+              - button "Upload Photo"
+            - generic:
+              - generic: AADHAR CARD COPY
+              - generic: No document
+              - button "Upload Aadhar"
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - text: Full Name
+                  - textbox "Rider's full name":
+                    - /placeholder: John Doe
+                - generic:
+                  - text: Email (Login)
+                  - textbox "Rider's login email address":
+                    - /placeholder: john@example.com
+              - generic:
+                - generic:
+                  - text: Portal Password
+                  - generic:
+                    - textbox "New password for rider portal":
+                      - /placeholder: ••••••••
+                    - button "Show password"
+                - generic:
+                  - text: Primary Phone
+                  - textbox "Rider's primary contact number":
+                    - /placeholder: +91 99999 00000
+              - generic:
+                - generic:
+                  - text: Father's Name
+                  - textbox "Rider's father name":
+                    - /placeholder: Father's Name
+                - generic:
+                  - text: Age
+                  - spinbutton "Rider's age"
+              - text: Aadhar Number
+              - textbox "Rider's 12-digit Aadhar number":
+                - /placeholder: 0000 0000 0000
+              - text: Educational Qualification
+              - textbox "Highest educational degree":
+                - /placeholder: e.g. Graduate
+              - text: Current Address
+              - textbox "Full permanent/current address":
+                - /placeholder: Full residential address...
+      - generic:
+        - button "Save Rider"
+        - button "Cancel"
+  - generic:
+    - generic:
+      - generic:
+        - heading "Table —" [level=3]
+        - generic:
+          - generic: —
+          - generic: —
+      - button "Close table details"
+    - generic:
+      - generic:
+        - generic:
+          - generic: Capacity
+          - strong: —
+        - generic:
+          - generic: Session Started
+          - strong: —
+        - generic:
+          - generic: Running Time
+          - strong: —
+      - generic:
+        - heading "Table QR Code" [level=5]
+        - paragraph: Customers scan this code to order from this table. Use "View QR" above to print or copy the link.
+  - dialog:
+    - generic:
+      - generic:
+        - heading [level=3]: Discount Performance Reports
+        - button
+      - generic:
+        - generic:
+          - generic:
+            - button: Last 7 days
+            - button: Last 30 days
+            - button: Last 90 days
+            - button: All time
+          - generic:
+            - button: Export CSV
+            - button
+        - generic:
+          - generic:
+            - generic: Total Redemptions
+            - generic: "0"
+          - generic:
+            - generic: Total Savings Given
+            - generic: ₹0
+          - generic:
+            - generic: Active Discounts
+            - generic: "0"
+          - generic:
+            - generic: Average Discount
+            - generic: ₹0
+        - heading [level=4]: Per-Discount Breakdown
+        - heading [level=4]: Channel Split
+        - heading [level=4]: Recent Redemptions
+  - dialog:
+    - generic:
+      - generic:
+        - heading [level=3]: How to use Promotions
+        - button
+      - generic:
+        - button: Got it
+  - dialog "Promotion Template Picker":
+    - generic:
+      - generic:
+        - heading "Choose a template" [level=3]
+        - button "Close template picker": ×
+      - generic:
+        - button "Close"
+  - dialog:
+    - generic:
+      - generic:
+        - heading [level=3]: New Discount
+        - button
+      - generic:
+        - generic:
+          - generic:
+            - text: Name (shown on receipts & invoices)
+            - textbox:
+              - /placeholder: Festive 5% Off
+          - generic:
+            - generic:
+              - text: Type
+              - combobox
+            - generic:
+              - text: Mode
+              - combobox
+          - generic:
+            - generic:
+              - text: Value
+              - spinbutton
+              - text: "% off subtotal"
+            - generic:
+              - text: Max cap (₹, optional)
+              - spinbutton
+          - generic:
+            - generic:
+              - text: Starts at
+              - textbox
+            - generic:
+              - text: Ends at
+              - textbox
+              - generic:
+                - checkbox [checked]
+                - generic: No end date
+          - generic:
+            - generic:
+              - text: Min subtotal (₹, optional)
+              - spinbutton
+            - generic:
+              - text: Exclusive group (optional)
+              - textbox:
+                - /placeholder: welcome
+              - text: Only one discount in the same group can apply per order.
+          - generic:
+            - generic:
+              - text: Per-customer limit (0 = unlimited)
+              - spinbutton: "0"
+            - generic:
+              - text: Global limit (0 = unlimited)
+              - spinbutton: "0"
+          - generic:
+            - checkbox [checked]
+            - generic: Enabled
+          - generic:
+            - checkbox
+            - generic: Stackable with other discounts
+          - generic:
+            - generic:
+              - text: Apply to channel
+              - combobox
+              - text: Controls where this discount auto-applies.
+      - generic:
+        - button: Cancel
+        - button: Save Discount
+  - dialog "POS Selection":
+    - generic:
+      - generic:
+        - generic:
+          - heading "Select Options" [level=2]
+          - paragraph
+        - button "Close dialog"
+      - generic:
+        - generic: CHOOSE SIZE
+        - generic: EXTRA ADD-ONS
+        - generic:
+          - generic: QUANTITY
+          - generic:
+            - button "−"
+            - generic: "1"
+            - button "+"
+      - generic:
+        - generic:
+          - generic: Total Price
+          - generic: ₹0
+        - button "Add to Cart"
+  - dialog "Re-authenticate":
+    - generic:
+      - generic:
+        - generic:
+          - heading "Security Confirmation" [level=3]
+        - button "Close dialog"
+      - generic:
+        - paragraph: For security, please enter your password to proceed with this sensitive action (e.g. deleting riders or catalog items).
+        - generic:
+          - generic: Confirm Admin Password
+          - textbox "Enter password"
+      - generic:
+        - button "Cancel"
+        - button "Verify & Proceed"
+  - dialog "Inventory Management":
+    - generic:
+      - generic:
+        - heading "Track New Product" [level=2]
+        - button "Close dialog"
+      - generic:
+        - generic: Product Name
+        - textbox "e.g. Coca Cola 500ml"
+        - generic:
+          - generic:
+            - generic: Opening Stock
+            - spinbutton "0"
+          - generic:
+            - generic: Low Stock Alert at
+            - spinbutton "5"
+        - generic:
+          - generic:
+            - generic: SKU (optional)
+            - textbox "e.g. COKE-500"
+          - generic:
+            - generic: Unit
+            - combobox "Unit":
+              - option "Each" [selected]
+              - option "Grams (g)"
+              - option "Kilograms (kg)"
+              - option "Milliliters (ml)"
+              - option "Liters (l)"
+        - generic:
+          - generic:
+            - generic: Supplier (optional)
+            - textbox "e.g. Coke Co."
+          - generic:
+            - generic: Cost per Unit (optional)
+            - spinbutton "0"
+        - paragraph: We'll alert you when this item falls below the threshold.
+        - button "Start Tracking"
+  - dialog:
+    - generic:
+      - generic:
+        - heading [level=3]: How to use this page
+        - button
+      - generic:
+        - button: Got it
+  - dialog "Edit Table":
+    - generic:
+      - generic:
+        - heading "Add Table" [level=2]
+        - button "Close dialog"
+      - generic:
+        - generic:
+          - generic: Table Number *
+          - textbox "e.g. 07"
+        - generic:
+          - text: Capacity (Seats)
+          - spinbutton "e.g. 4"
+      - generic:
+        - button "Cancel"
+        - button "Save Table"
+  - dialog "Table QR Code":
+    - generic:
+      - generic:
+        - heading "Table QR Code" [level=2]
+        - button "Close dialog"
+      - generic:
+        - generic:
+          - generic:
+            - img "QR code"
+        - paragraph
+        - button "Copy Link"
+      - generic:
+        - button "Close"
+        - button "Print QR Card"
+  - dialog "Edit Category":
+    - generic:
+      - generic:
+        - heading "Edit Category" [level=2]
+        - button "Close dialog"
+      - generic:
+        - generic:
+          - generic:
+            - button "Change Photo"
+        - generic:
+          - generic:
+            - generic: Category Name
+            - textbox "Category Name"
+          - generic:
+            - generic: Sort Order
+            - spinbutton "Serial (lower = first)"
+      - generic:
+        - generic:
+          - generic: Add-ons (Optional)
+          - button "+ Add Addon"
+      - button "Save Category"

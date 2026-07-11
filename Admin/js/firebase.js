@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, get, onValue, onChildAdded, onChildChanged, set, update, remove, push, runTransaction, query, orderByChild, orderByKey, equalTo, limitToLast, startAt, endAt, endBefore, serverTimestamp, child, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithEmailAndPassword, signOut, EmailAuthProvider, sendPasswordResetEmail, createUserWithEmailAndPassword, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 
 import { showToast } from './ui-utils.js';
 
@@ -15,22 +14,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence).catch(e => console.warn('[Auth] Persistence error:', e));
 
-if (window.reCaptchaSiteKey) {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (isLocal) {
-        console.log('[App Check] Skipped on localhost — reCAPTCHA v3 requires HTTPS');
-    } else {
-        try {
-            initializeAppCheck(app, {
-                provider: new ReCaptchaV3Provider(window.reCaptchaSiteKey),
-                isTokenAutoRefreshEnabled: true
-            });
-        } catch (e) {
-            console.warn("[App Check] Activation failed:", e.message);
-        }
-    }
-}
-
+// ponytail: App Check removed — admin panel is auth-gated, reCAPTCHA added 776KB waste
 let _fbConnected = false;
 const _connWatchers = [];
 

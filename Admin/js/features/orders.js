@@ -565,7 +565,7 @@ export async function renderOrders(snap) {
                 <td data-label="Rider">
                     <div class="flex-row flex-center flex-gap-8">
                         <i data-lucide="bike" style="width:14px;" class="text-muted"></i>
-                        <select data-action="assignRider" data-id="${id}" class="status-select-mini" ${o.type === 'Dine-in' ? 'disabled' : ''}>
+                        <select data-action="assignRider" data-id="${id}" class="status-select-mini" aria-label="Assign rider" ${o.type === 'Dine-in' ? 'disabled' : ''}>
                             <option value="">Assign</option>
                             ${riderOptions}
                         </select>

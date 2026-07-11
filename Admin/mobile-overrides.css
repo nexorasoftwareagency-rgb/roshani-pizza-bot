@@ -298,7 +298,7 @@
     }
 
     .bottom-nav .nav-item.active {
-        color: var(--primary) !important;
+        color: var(--primary-dark) !important;
     }
 
     .bottom-nav .nav-item.active::before {
@@ -2602,11 +2602,5 @@
     }
 }
 
-/* Status dropdown — flip upward on mobile to avoid clipping */
-@media (max-width: 1024px) {
-    .status-dropdown .status-dropdown-menu{
-        top: auto !important;
-        bottom: calc(100% + 4px) !important;
-    }
-}
+/* Status dropdown uses position:fixed via JS — no mobile override needed */
 

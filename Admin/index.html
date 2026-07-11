@@ -177,11 +177,11 @@
     </script>
 
 
+    <link rel="preload" href="style.css?v=5.3.8" as="style" onload="this.rel='stylesheet'">
 
-    <link rel="preload" href="style.css?v=5.3.7" as="style" onload="this.rel='stylesheet'">
-    <link rel="stylesheet" href="style.css?v=5.3.7" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="style.css?v=5.3.8" media="print" onload="this.media='all'">
 
-    <link rel="stylesheet" href="mobile-overrides.css?v=5.3.6" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="mobile-overrides.css?v=5.3.7" media="print" onload="this.media='all'">
 
     <link rel="manifest" href="manifest.json?v=3">
 
@@ -854,7 +854,7 @@
 
                     <label class="promo-switch" style="position:relative; display:inline-block; width:52px; height:28px;">
 
-                        <input type="checkbox" id="promoKillWidgetToggle" style="opacity:0; width:0; height:0;">
+                        <input type="checkbox" id="promoKillWidgetToggle" aria-label="Toggle auto-kill promotion" style="opacity:0; width:0; height:0;">
 
                         <span class="promo-slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#22c55e; transition:0.2s; border-radius:28px;"></span>
 
@@ -4864,7 +4864,7 @@
 
         </button>
 
-        <button class="nav-item" data-tab="live" data-action="switchTab" title="Live Store Operations" aria-label="Live Operations">
+        <button class="nav-item" data-tab="live" data-action="switchTab" title="Live Store Operations" aria-label="Live Ops">
 
             <i data-lucide="flame"></i>
 
@@ -4874,7 +4874,7 @@
 
         </button>
 
-        <button class="nav-item" data-tab="walkin" data-action="switchTab" title="Point of Sale" aria-label="POS">
+        <button class="nav-item" data-tab="walkin" data-action="switchTab" title="Point of Sale" aria-label="Walk-in">
 
             <i data-lucide="shopping-cart"></i>
 

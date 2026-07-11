@@ -1,0 +1,15 @@
+- generic [active] [ref=f2e1]:
+  - alert [ref=f2e2]:
+    - generic [ref=f2e4]: No internet connection — changes may not save
+  - main
+  - text: Order Order Order Order ID Order ID Order ID Swipe → Order ID Order ID Order ID Swipe → Swipe → Up to (KM) Up to (KM) Swipe → Swipe → Swipe → Swipe → Swipe →
+  - navigation "Main Navigation" [ref=f2e5]:
+    - button "Dashboard" [ref=f2e6] [cursor=pointer]
+    - button "Orders" [ref=f2e9] [cursor=pointer]
+    - button "Live Operations" [ref=f2e12] [cursor=pointer]:
+      - generic [ref=f2e14]: Live Ops
+    - button "POS" [ref=f2e15] [cursor=pointer]:
+      - generic [ref=f2e17]: Walk-in
+    - button "Tables" [ref=f2e18] [cursor=pointer]
+    - button "More menu" [ref=f2e21] [cursor=pointer]:
+      - generic [ref=f2e23]: More
