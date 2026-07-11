@@ -50,42 +50,54 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+let _swReg = null;
 async function subscribeAndStore(userId) {
   const m = getMessagingInstance();
   if (!m || !userId) return false;
   if ('serviceWorker' in navigator) {
-    const reg = await Promise.race([
-      navigator.serviceWorker.ready,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 4000))
-    ]);
-    const token = await getToken(m, { serviceWorkerRegistration: reg });
-    if (token) { await storeToken(userId, token); return true; }
+    const reg = _swReg || await navigator.serviceWorker.ready;
+    _swReg = reg;
+    // Try getToken — works if subscription already exists
+    try {
+      const token = await getToken(m, { serviceWorkerRegistration: reg });
+      if (token) { await storeToken(userId, token); return true; }
+    } catch (e) {
+      // store error details for debug
+      console.warn('[FCM] getToken error:', e?.code, e?.message, e);
+    }
   } else {
-    const token = await getToken(m);
-    if (token) { await storeToken(userId, token); return true; }
+    try {
+      const token = await getToken(m);
+      if (token) { await storeToken(userId, token); return true; }
+    } catch (e) {
+      console.warn('[FCM] getToken error (no SW):', e?.code, e?.message, e);
+    }
   }
   return false;
 }
 
 export async function setupAdminFCM(userId) {
   if (!('Notification' in window) || !userId) return;
+  // Pre-cache SW registration
+  if ('serviceWorker' in navigator && !_swReg) {
+    navigator.serviceWorker.ready.then(r => { _swReg = r; });
+  }
   try {
-    // Try to subscribe during page load (works if subscription already exists)
     const gotToken = await subscribeAndStore(userId);
-    // If subscribe failed (no subscription, needs user gesture), try again on click
-    const permission = Notification.permission;
-    if (!gotToken || permission === 'default') {
-      const onClick = () => {
-        subscribeAndStore(userId);
-        if (permission === 'default') {
-          Notification.requestPermission().then(p => {
-            if (p === 'granted') console.log('[FCM] Notification permission granted');
-          });
-        }
-        document.removeEventListener('click', onClick);
-      };
-      document.addEventListener('click', onClick, { once: true });
-    }
+    if (gotToken) return;
+    // register click handler for gesture
+    const onClick = () => {
+      document.removeEventListener('click', onClick);
+      const doSubscribe = () => { subscribeAndStore(userId); };
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(p => {
+          if (p === 'granted') doSubscribe();
+        });
+      } else {
+        doSubscribe();
+      }
+    };
+    document.addEventListener('click', onClick, { once: true });
   } catch (e) {
     console.error('[FCM] Setup error:', e);
   }
