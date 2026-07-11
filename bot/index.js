@@ -966,7 +966,8 @@ async function sendDailyReportSafely(dateOverride = null) {
         const { connection, lastDisconnect, qr } = update;
         if (qr) qrcode.generate(qr, { small: true });
         if (connection === 'open') {
-            console.log(`✅ ${OUTLET_NAME.toUpperCase()} BOT IS ONLINE`);
+            initFCMWatcher();
+    console.log(`✅ ${OUTLET_NAME.toUpperCase()} BOT IS ONLINE`);
             console.log(`[AUTH] user=${JSON.stringify(sock.user)}`);
             reconnectAttempts = 0;
             cryptoErrorCount = 0;
@@ -1601,7 +1602,8 @@ async function sendDailyReportSafely(dateOverride = null) {
                             discountSource: user.discountSource || (user.discount ? 'manual' : 'none'),
                             discountMode: user.discountMode || 'fixed',
                             discountValue: user.discountValue || 0,
-                            discountGlobalLimit: user.discountGlobalLimit || 0
+                            discountGlobalLimit: user.discountGlobalLimit || 0,
+                            _fcmSent: true
                         };
 
                         await setData(`orders/${orderId}`, finalOrder, user.outlet);
@@ -1766,7 +1768,19 @@ async function handleCheckoutFinal(sock, sender, user) {
 }
 
 
-// Promotional campaign engine lives in ./promotions.js (imported as promo above).
-
+// Watch for new orders from non-WA sources (QR menu, REST API) → send FCM to admins
+function initFCMWatcher() {
+  const ONE_MIN_MS = 60000;
+  for (const outlet of ['pizza', 'cake']) {
+    db.ref(`${outlet}/orders`).on('child_added', (snap) => {
+      const order = snap.val() || {};
+      if (order._fcmSent) return;
+      const createdAt = new Date(order.createdAt).getTime();
+      if (Date.now() - createdAt > ONE_MIN_MS) return; // skip old orders on restart
+      sendFCMToAdmins(snap.key, order).catch(() => {});
+      snap.ref.child('_fcmSent').set(true).catch(() => {});
+    });
+  }
+}
 
 startBot();
