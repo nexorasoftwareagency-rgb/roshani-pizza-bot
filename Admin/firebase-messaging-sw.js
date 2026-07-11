@@ -17,18 +17,19 @@ firebase.initializeApp({
 const fcmMessaging = firebase.messaging();
 
 fcmMessaging.onBackgroundMessage((payload) => {
-  // If FCM already auto-displayed the notification (from `notification` field), skip
-  if (payload.notification) return;
   const data = payload.data || {};
-  self.registration.showNotification(data.title || 'New Order Alert', {
-    body: data.body || 'Open dashboard to view details.',
-    icon: './icon-erp-logo.jpeg',
-    badge: './icon-erp-logo.jpeg',
-    vibrate: [200, 100, 200],
-    requireInteraction: true,
-    tag: `order-${data.orderId || Date.now()}`,
-    data: { url: './index.html' }
-  });
+  self.registration.showNotification(
+    data.title || payload.notification?.title || 'New Order Alert',
+    {
+      body: data.body || payload.notification?.body || 'Open dashboard to view details.',
+      icon: './icon-erp-logo.jpeg',
+      badge: './icon-erp-logo.jpeg',
+      vibrate: [200, 100, 200],
+      requireInteraction: true,
+      tag: `order-${data.orderId || Date.now()}`,
+      data: { url: './index.html' }
+    }
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {

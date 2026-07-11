@@ -19,23 +19,24 @@ firebase.initializeApp({
   appId: "1:857471482885:web:9eb8bbb90c77c588fbb06c"
 });
 firebase.messaging().onBackgroundMessage((payload) => {
-  // If FCM already auto-displayed the notification (from `notification` field), skip
-  if (payload.notification) return;
   const data = payload.data || {};
-  self.registration.showNotification(data.title || 'New Order Alert', {
-    body: data.body || 'Open dashboard to view details.',
-    icon: './icon-erp-logo.jpeg',
-    badge: './icon-erp-logo.jpeg',
-    vibrate: [200, 100, 200],
-    requireInteraction: true,
-    tag: `order-${data.orderId || Date.now()}`,
-    data: { url: './index.html' }
-  });
+  self.registration.showNotification(
+    data.title || payload.notification?.title || 'New Order Alert',
+    {
+      body: data.body || payload.notification?.body || 'Open dashboard to view details.',
+      icon: './icon-erp-logo.jpeg',
+      badge: './icon-erp-logo.jpeg',
+      vibrate: [200, 100, 200],
+      requireInteraction: true,
+      tag: `order-${data.orderId || Date.now()}`,
+      data: { url: './index.html' }
+    }
+  );
 });
 
 // This SW handles caching, navigation, and offline support only.
 
-const CACHE_NAME = 'prasant-pizza-erp-shell-v5.3.9';
+const CACHE_NAME = 'prasant-pizza-erp-shell-v5.3.10';
 const ASSETS_TO_CACHE = [
   './index.html',
   './style.css',
@@ -61,6 +62,7 @@ const ASSETS_TO_CACHE = [
   './js/features/catalog.js',
   './js/features/customers.js',
   './js/features/analytics.js',
+  './js/features/analytics-mobile.js',
   './js/features/lost-sales.js',
   './js/features/pos.js',
   './js/features/settings.js',

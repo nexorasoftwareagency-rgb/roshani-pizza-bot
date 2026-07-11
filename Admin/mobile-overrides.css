@@ -2611,6 +2611,11 @@
 
 #reportsMobileView { display: block; }
 
+/* Ensure .hidden works inside the analytics toolbar — the .mob-inline-dates
+   and .mob-inline-filters containers receive display:flex from the rules
+   below, but must stay hidden when the .hidden class is present. */
+#reportsMobileView .hidden { display: none !important; }
+
 #tab-reports > .flex-row.justify-between.flex-center.mb-20.p-0-10,
 #tab-reports .reports-container-fluid > .kpi-row,
 #tab-reports .reports-container-fluid > #paymentBreakdownRow,
