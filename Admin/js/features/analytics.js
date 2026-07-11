@@ -3,6 +3,7 @@ import { ui } from '../ui.js';
 import { showToast, escapeHtml, formatDate, getISTDateString, getSkeletonDivs } from '../utils.js';
 import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
 import { loadJSPDF } from './printing.js';
+import { initMobileAnalyticsUI, renderMobileAnalytics, cleanupMobileAnalytics } from './analytics-mobile.js';
 
 let salesData = [];
 let prevPeriodData = [];
@@ -81,6 +82,7 @@ export async function loadReports() {
     if (outletEl) outletEl.value = _currentOutletFilter;
 
     console.log(`[Reports] Initializing with default range: ${fromVal} to ${toVal}`);
+    initMobileAnalyticsUI(generateCustomReport);
     generateCustomReport();
 }
 
@@ -245,7 +247,9 @@ export async function generateCustomReport() {
         const periodEl = document.getElementById('reportPeriod');
         if (periodEl) periodEl.innerText = `${fromDate} to ${toDate}`;
 
-        if (_compareMode) {
+        // Always fetch previous-period comparison — mobile KPI cards show
+        // "vs Previous Period" unconditionally. (Was: `if (_compareMode)`)
+        {
             const rangeMs = new Date(to).getTime() - new Date(from).getTime();
             const prevFrom = new Date(new Date(from).getTime() - rangeMs - 86400000);
             const prevTo = new Date(new Date(from).getTime() - 86400000);
@@ -324,16 +328,13 @@ function renderFromCache() {
         topMethodEl.innerText = top && top[1] > 0 ? top[0].toUpperCase() : '-';
     }
 
-    buildGrid(filtered);
-
     if (_compareMode && prevPeriodData.length > 0) {
         const bar = document.getElementById('reportComparisonBar');
         if (bar) bar.classList.remove('hidden');
         _renderComparison();
     }
 
-    renderRevenueChart(filtered);
-    renderOrderTypeChart(orderTypeCounts);
+    renderMobileAnalytics(salesData, prevPeriodData);
 }
 
 function _filteredCurrent() {
@@ -511,6 +512,7 @@ export function renderOrderTypeChart(orderTypeCounts) {
 export function cleanupReports() {
     if (revenueChart) { revenueChart.destroy(); revenueChart = null; }
     if (orderTypeChart) { orderTypeChart.destroy(); orderTypeChart = null; }
+    cleanupMobileAnalytics();
 }
 
 export function downloadExcel() {
@@ -587,6 +589,7 @@ export async function downloadPDF() {
 }
 
 function _filteredForExport() {
-    const filter = STATUS_OPTIONS[_currentStatusFilter] || STATUS_OPTIONS.delivered;
-    return salesData.filter(filter.match);
+    // Always exports everything in the selected date range, matching
+    // the new Detailed Sales Data table exactly (all statuses).
+    return salesData;
 }

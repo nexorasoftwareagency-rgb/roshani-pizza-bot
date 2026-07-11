@@ -2902,6 +2902,187 @@
 
             <div id="tab-reports" class="tab-content hidden">
 
+<div id="reportsMobileView" class="reports-mobile-view reports-mobile-loading">
+
+    <!-- ---------- Hero header ---------- -->
+    <div class="mob-hero">
+        <div class="mob-hero-title-row">
+            <h2><i data-lucide="trending-up" class="icon-20"></i> Analytics</h2>
+            <div class="mob-outlet-pill" id="mobOutletPill" title="Current outlet">
+                <i data-lucide="store" class="icon-14"></i>
+                <span id="mobOutletName">PIZZA</span>
+            </div>
+        </div>
+        <p class="mob-hero-sub">Overview of your business</p>
+    </div>
+
+    <!-- ---------- Date range + quick presets + filters ---------- -->
+    <div class="mob-toolbar-card">
+        <div class="mob-toolbar-label"><i data-lucide="calendar" class="icon-14"></i> Date Range</div>
+        <button type="button" class="mob-date-display" id="mobDateDisplay" data-action="mobToggleCustomDates">
+            <i data-lucide="calendar" class="icon-16"></i>
+            <span id="mobDateRangeText">Loading\u2026</span>
+            <i data-lucide="chevron-down" class="icon-14"></i>
+        </button>
+
+        <div class="mob-range-pills">
+            <button type="button" class="mob-range-pill" data-preset="today">Today</button>
+            <button type="button" class="mob-range-pill active" data-preset="7d">7D</button>
+            <button type="button" class="mob-range-pill" data-preset="30d">30D</button>
+            <button type="button" class="mob-range-pill mob-range-custom" data-preset="custom" data-action="mobToggleCustomDates">Custom</button>
+            <button type="button" class="mob-filters-btn" data-action="mobToggleFilters">
+                <i data-lucide="sliders-horizontal" class="icon-14"></i> Filters
+            </button>
+        </div>
+
+        <div class="mob-inline-dates hidden" id="mobInlineDates"></div>
+
+        <div class="mob-inline-filters hidden" id="mobInlineFilters"></div>
+    </div>
+
+    <!-- ---------- KPI cards, 2x2 ---------- -->
+    <div class="mob-kpi-grid">
+        <div class="mob-kpi-card" data-accent="revenue">
+            <div class="mob-kpi-top">
+                <span class="mob-kpi-label">Total Revenue</span>
+                <span class="mob-kpi-icon"><i data-lucide="indian-rupee" class="icon-16"></i></span>
+            </div>
+            <div class="mob-kpi-val" id="mobKpiRevenueVal">\u20B90</div>
+            <div class="mob-kpi-trend" id="mobKpiRevenueTrend"></div>
+            <div class="mob-spark-wrap"><canvas id="sparkRevenue"></canvas></div>
+        </div>
+
+        <div class="mob-kpi-card" data-accent="orders">
+            <div class="mob-kpi-top">
+                <span class="mob-kpi-label">Total Orders</span>
+                <span class="mob-kpi-icon"><i data-lucide="shopping-bag" class="icon-16"></i></span>
+            </div>
+            <div class="mob-kpi-val" id="mobKpiOrdersVal">0</div>
+            <div class="mob-kpi-trend" id="mobKpiOrdersTrend"></div>
+            <div class="mob-spark-wrap"><canvas id="sparkOrders"></canvas></div>
+        </div>
+
+        <div class="mob-kpi-card" data-accent="avgOrder">
+            <div class="mob-kpi-top">
+                <span class="mob-kpi-label">Avg. Order Value</span>
+                <span class="mob-kpi-icon"><i data-lucide="wallet" class="icon-16"></i></span>
+            </div>
+            <div class="mob-kpi-val" id="mobKpiAvgOrderVal">\u20B90</div>
+            <div class="mob-kpi-trend" id="mobKpiAvgOrderTrend"></div>
+            <div class="mob-spark-wrap"><canvas id="sparkAvgOrder"></canvas></div>
+        </div>
+
+        <div class="mob-kpi-card" data-accent="newCust">
+            <div class="mob-kpi-top">
+                <span class="mob-kpi-label">New Customers</span>
+                <span class="mob-kpi-icon"><i data-lucide="user-plus" class="icon-16"></i></span>
+            </div>
+            <div class="mob-kpi-val" id="mobKpiNewCustVal">0</div>
+            <div class="mob-kpi-trend" id="mobKpiNewCustTrend"></div>
+            <div class="mob-spark-wrap"><canvas id="sparkNewCust"></canvas></div>
+        </div>
+    </div>
+
+    <!-- ---------- Sales Overview ---------- -->
+    <div class="mob-card mob-overview-card">
+        <div class="mob-overview-head">
+            <div>
+                <h3>Sales Overview</h3>
+                <div class="mob-overview-total" id="mobOverviewTotal">\u20B90</div>
+                <div class="mob-overview-trend" id="mobOverviewTrend"></div>
+            </div>
+        </div>
+        <div class="mob-overview-chart-wrap"><canvas id="mobOverviewChart"></canvas></div>
+    </div>
+
+    <!-- ---------- Top Highlights ---------- -->
+    <div class="mob-card">
+        <h3 class="mob-card-title">Top Highlights</h3>
+        <div class="mob-highlights-row">
+            <div class="mob-hl-item">
+                <span class="mob-hl-icon mob-hl-good"><i data-lucide="check" class="icon-16"></i></span>
+                <div class="mob-hl-val" id="mobHlDeliveredVal">0</div>
+                <div class="mob-hl-label">Delivered Orders</div>
+                <div class="mob-highlight-pct" id="mobHlDeliveredPct">0%</div>
+            </div>
+            <div class="mob-hl-item">
+                <span class="mob-hl-icon mob-hl-bad"><i data-lucide="x" class="icon-16"></i></span>
+                <div class="mob-hl-val" id="mobHlCancelledVal">0</div>
+                <div class="mob-hl-label">Cancelled Orders</div>
+                <div class="mob-highlight-pct" id="mobHlCancelledPct">0%</div>
+            </div>
+            <div class="mob-hl-item">
+                <span class="mob-hl-icon mob-hl-warn"><i data-lucide="clock" class="icon-16"></i></span>
+                <div class="mob-hl-val" id="mobHlPendingVal">0</div>
+                <div class="mob-hl-label">Pending Orders</div>
+                <div class="mob-highlight-pct" id="mobHlPendingPct">0%</div>
+            </div>
+            <div class="mob-hl-item">
+                <span class="mob-hl-icon mob-hl-info"><i data-lucide="users" class="icon-16"></i></span>
+                <div class="mob-hl-val" id="mobHlRepeatVal">0</div>
+                <div class="mob-hl-label">Repeat Customers</div>
+                <div class="mob-highlight-pct" id="mobHlRepeatPct">0%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ---------- Payment method donut ---------- -->
+    <div class="mob-card">
+        <div class="mob-section-head-row">
+            <h3 class="mob-card-title">Sales by Payment Method</h3>
+            <i data-lucide="chevron-right" class="icon-16 text-muted"></i>
+        </div>
+        <div class="mob-payment-row">
+            <div class="mob-donut-wrap">
+                <canvas id="mobPaymentDonut"></canvas>
+                <div class="mob-donut-center">
+                    <div class="mob-donut-total" id="mobDonutCenterTotal">\u20B90</div>
+                    <div class="mob-donut-label">Total Sales</div>
+                </div>
+            </div>
+            <div class="mob-legend" id="mobPaymentLegend"></div>
+        </div>
+    </div>
+
+    <!-- ---------- Detailed Sales Data ---------- -->
+    <div class="mob-card mob-table-card">
+        <div class="mob-section-head-row">
+            <h3 class="mob-card-title">Detailed Sales Data</h3>
+            <span class="mob-table-count" id="mobTableCount">0 orders</span>
+        </div>
+        <div class="mob-table-scroll">
+            <table class="mob-data-table" id="mobDataTable">
+                <thead>
+                    <tr>
+                        <th data-sort="createdAt">Date &amp; Time</th>
+                        <th data-sort="customerName">Customer</th>
+                        <th data-sort="status">Status</th>
+                        <th data-sort="type">Type</th>
+                        <th data-sort="paymentMethod">Payment</th>
+                        <th data-sort="outlet">Outlet</th>
+                        <th data-sort="itemsStr">Items</th>
+                        <th data-sort="total" class="mob-th-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody id="mobDataTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ---------- Export banners ---------- -->
+    <div class="mob-export-row">
+        <button type="button" class="mob-export-banner mob-export-excel" data-action="mobExportExcel">
+            <i data-lucide="file-spreadsheet" class="icon-18"></i>
+            <span>Excel</span>
+        </button>
+        <button type="button" class="mob-export-banner mob-export-pdf" data-action="mobExportPDF">
+            <i data-lucide="file-text" class="icon-18"></i>
+            <span>PDF</span>
+        </button>
+    </div>
+
+</div>
+
                 <div class="flex-row justify-between flex-center mb-20 p-0-10">
 
                     <h2 class="section-title fs-24 m-0 flex-row flex-center flex-gap-10"><i data-lucide="bar-chart-3" class="icon-24"></i> Sales Analytics & Reports</h2>
