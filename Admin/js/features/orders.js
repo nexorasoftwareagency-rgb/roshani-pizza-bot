@@ -29,7 +29,7 @@ function isRiderFresh(r) {
 export const STATUS_SEQUENCE = ["Placed", "Confirmed", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"];
 export const STATUS_SEQUENCES = {
     'Online': ["Placed", "Confirmed", "Ready", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"],
-    'Dine-in': ["Confirmed", "Ready", "Served"],
+    'Dine-in': ["Confirmed", "Ready", "Served", "Delivered"],
     'Default': ["Placed", "Confirmed", "Ready", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"]
 };
 export const STATUS_MAPPING = {
