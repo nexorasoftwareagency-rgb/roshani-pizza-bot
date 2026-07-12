@@ -40,3 +40,9 @@ Desktop.ini
 
 # Root screenshots
 *.png
+
+# Stray root-level copies (actual code lives in Admin/, menu/, etc.)
+catalog.js
+catalog.srv.js
+page-guide.js
+riders.js
