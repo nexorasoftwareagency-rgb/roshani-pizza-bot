@@ -34,3 +34,9 @@ roshani_pizza_admin_ui_audit.html
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Playwright MCP snapshots
+.playwright-mcp/
+
+# Root screenshots
+*.png

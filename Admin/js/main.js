@@ -71,6 +71,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         rTo.value = toVal;
     }
 
+    // Close open status dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+        const openDd = document.querySelector('.status-dropdown.open');
+        if (openDd && !openDd.contains(e.target)) {
+            openDd.classList.remove('open');
+        }
+    });
+
     // Click handler registered BEFORE awaits — ensures clicks work even if Firebase hangs
     document.addEventListener('click', async (e) => {
         try {
@@ -109,7 +117,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             switch (action) {
 
-                case 'updateStatusFromDrawer': logger.info('ORDERS', `Update status from drawer: ${id} → ${val}`); (await useMod('orders')).updateStatus(id, val); break;
                 case 'closeOrderDrawer': logger.info('ORDERS', 'Closing order drawer'); (await useMod('orders')).closeOrderDrawer(); break;
                 case 'chatOnWhatsapp': {
                     const phone = el.getAttribute('data-phone');
@@ -125,24 +132,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'toggleStatus': {
                     const dd = el.closest('.status-dropdown');
                     if (!dd) break;
-                    const menu = dd.querySelector('.status-dropdown-menu');
-                    if (!menu) { dd.classList.toggle('open'); break; }
                     const wasOpen = dd.classList.contains('open');
-                    dd.classList.remove('open');
+                    dd.classList.toggle('open');
                     if (!wasOpen) {
-                        menu.style.top = ''; menu.style.left = ''; menu.style.bottom = '';
-                        dd.classList.add('open');
-                        const btn = dd.querySelector('.status-dropdown-trigger');
-                        const r = btn.getBoundingClientRect();
-                        menu.style.top = (r.bottom + 4) + 'px';
-                        menu.style.left = r.left + 'px';
-                        const mr = menu.getBoundingClientRect();
-                        if (mr.right > window.innerWidth) {
-                            menu.style.left = Math.max(4, window.innerWidth - mr.width - 4) + 'px';
-                        }
-                        if (mr.bottom > window.innerHeight) {
-                            menu.style.top = 'auto';
-                            menu.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+                        const menu = dd.querySelector('.status-dropdown-menu');
+                        if (menu) {
+                            menu.style.top = '';
+                            menu.style.left = '';
+                            menu.style.bottom = '';
+                            requestAnimationFrame(() => {
+                                const btn = dd.querySelector('.status-dropdown-trigger');
+                                const r = btn.getBoundingClientRect();
+                                menu.style.top = (r.bottom + 4) + 'px';
+                                menu.style.left = r.left + 'px';
+                                const mr = menu.getBoundingClientRect();
+                                if (mr.right > window.innerWidth) {
+                                    menu.style.left = Math.max(4, window.innerWidth - mr.width - 4) + 'px';
+                                }
+                                if (mr.bottom > window.innerHeight) {
+                                    menu.style.top = 'auto';
+                                    menu.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+                                }
+                            });
                         }
                     }
                     break;

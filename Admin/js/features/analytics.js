@@ -18,12 +18,19 @@ let _chartJSPromise = null;
 
 async function loadChartJS() {
     if (_chartJSPromise) return _chartJSPromise;
-    _chartJSPromise = import('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/+esm');
+    _chartJSPromise = import('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/+esm').then(m => {
+        const C = m.Chart;
+        if (C && C.register && m.CategoryScale) {
+            C.register(m.CategoryScale, m.LinearScale, m.LineElement, m.PointElement, m.LineController, m.ArcElement, m.DoughnutController, m.Tooltip, m.Legend, m.Filler);
+        }
+        window.Chart = C;
+        return m;
+    }).catch(e => { _chartJSPromise = null; throw e; });
     await _chartJSPromise;
 }
 
 const STATUS_OPTIONS = {
-    delivered: { label: 'Delivered Only', match: (o) => o.status === 'Delivered' },
+    delivered: { label: 'Delivered Only', match: (o) => o.status === 'Delivered' || o.status === 'Served' },
     all: { label: 'All Orders', match: () => true },
     cancelled: { label: 'Cancelled Only', match: (o) => (o.status || '').toLowerCase() === 'cancelled' }
 };
@@ -198,13 +205,12 @@ export async function generateCustomReport() {
     }
 
     _isLoading = true;
+    try {
     if (_grid) { _grid.destroy(); _grid = null; }
     prevPeriodData = [];
     const compBar = document.getElementById('reportComparisonBar');
     if (compBar) compBar.classList.add('hidden');
     tableBody.innerHTML = getSkeletonDivs(5);
-
-    try {
         const dFrom = new Date(from); dFrom.setDate(dFrom.getDate() - 1);
         const dTo = new Date(to); dTo.setDate(dTo.getDate() + 1);
 
@@ -334,7 +340,7 @@ function renderFromCache() {
         _renderComparison();
     }
 
-    renderMobileAnalytics(salesData, prevPeriodData);
+    renderMobileAnalytics(salesData, prevPeriodData).catch(e => console.error('[Reports] renderMobileAnalytics failed:', e));
 }
 
 function _filteredCurrent() {

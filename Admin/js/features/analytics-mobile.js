@@ -42,7 +42,7 @@ import { escapeHtml } from '../utils.js';
 
 let sparkRevenue = null, sparkOrders = null, sparkAvg = null, sparkNewCust = null;
 let overviewChart = null, paymentDonut = null;
-let _customersCache = null;
+let _customersCache = null, _customersFetchFailed = false;
 
 const PALETTE = {
     revenue: '#E84908',
@@ -117,21 +117,21 @@ export async function renderMobileAnalytics(salesData, prevPeriodData) {
     if (!root) return;
     updateMobileDateRangeText();
 
-    const delivered = salesData.filter(o => o.status === 'Delivered');
+    const delivered = salesData.filter(o => o.status === 'Delivered' || o.status === 'Served');
     const cancelled = salesData.filter(o => (o.status || '').toLowerCase() === 'cancelled');
-    const pending = salesData.filter(o => o.status !== 'Delivered' && (o.status || '').toLowerCase() !== 'cancelled');
+    const pending = salesData.filter(o => o.status !== 'Delivered' && o.status !== 'Served' && (o.status || '').toLowerCase() !== 'cancelled');
 
     const curRev = delivered.reduce((s, o) => s + Number(o.total || 0), 0);
     const curOrd = delivered.length;
     const curAvg = curOrd > 0 ? curRev / curOrd : 0;
 
-    const prevDelivered = (prevPeriodData || []).filter(o => o.status === 'Delivered');
+    const prevDelivered = (prevPeriodData || []).filter(o => o.status === 'Delivered' || o.status === 'Served');
     const prevRev = prevDelivered.reduce((s, o) => s + Number(o.total || 0), 0);
     const prevOrd = prevDelivered.length;
     const prevAvg = prevOrd > 0 ? prevRev / prevOrd : 0;
 
     if (!_customersCache) {
-        try { _customersCache = await fetchCustomers(); } catch (e) { _customersCache = {}; console.error('[AnalyticsMobile] customers fetch failed', e); }
+        try { _customersCache = await fetchCustomers(); _customersFetchFailed = false; } catch (e) { _customersCache = {}; _customersFetchFailed = true; console.error('[AnalyticsMobile] customers fetch failed', e); }
     }
     const fromEl = document.getElementById('reportFrom');
     const toEl = document.getElementById('reportTo');
@@ -161,7 +161,7 @@ export async function renderMobileAnalytics(salesData, prevPeriodData) {
     _setKpi('mobKpiRevenue', fmtMoney(curRev), deltaOf(curRev, prevRev));
     _setKpi('mobKpiOrders', String(curOrd), deltaOf(curOrd, prevOrd));
     _setKpi('mobKpiAvgOrder', fmtMoney(Math.round(curAvg)), deltaOf(curAvg, prevAvg));
-    _setKpi('mobKpiNewCust', String(newCustCount), deltaOf(newCustCount, prevNewCustCount));
+    _setKpi('mobKpiNewCust', _customersFetchFailed ? '\u2014' : String(newCustCount), _customersFetchFailed ? null : deltaOf(newCustCount, prevNewCustCount));
 
     const revSeries = buildDailySeries(delivered, o => Number(o.total || 0));
     const ordSeries = buildDailyCountSeries(delivered);
@@ -226,7 +226,7 @@ function _badgePayment(pm) {
 function _badgeStatus(status) {
     const s = status || 'Placed';
     const low = s.toLowerCase();
-    const cls = s === 'Delivered' ? 'delivered' : low === 'cancelled' ? 'cancelled' : 'pending';
+    const cls = (s === 'Delivered' || s === 'Served') ? 'delivered' : low === 'cancelled' ? 'cancelled' : 'pending';
     return `<span class="mob-badge mob-badge-status-${cls}">${escapeHtml(s)}</span>`;
 }
 
@@ -301,7 +301,8 @@ function _drawSparkline(canvasId, values, color, setter, existing) {
     if (!canvas || typeof Chart === 'undefined') return;
     if (existing) { existing.destroy(); }
     const ctx = canvas.getContext('2d');
-    const chart = new Chart(ctx, {
+    try {
+        const chart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: values.map((_, i) => i),
@@ -326,6 +327,7 @@ function _drawSparkline(canvasId, values, color, setter, existing) {
         }
     });
     setter(chart);
+    } catch (e) { console.warn('[AnalyticsMobile] sparkline failed:', e); }
 }
 
 function _renderOverviewChart(series, totalVal, deltaPct) {
@@ -343,6 +345,7 @@ function _renderOverviewChart(series, totalVal, deltaPct) {
     const values = series.values;
     const peakIdx = values.length ? values.indexOf(Math.max(...values)) : -1;
 
+    try {
     overviewChart = new Chart(canvas.getContext('2d'), {
         type: 'line',
         data: {
@@ -390,6 +393,7 @@ function _renderOverviewChart(series, totalVal, deltaPct) {
             }
         }
     });
+    } catch (e) { console.warn('[AnalyticsMobile] overview chart failed:', e); }
 }
 
 function _renderPaymentDonut(totals, grandTotal) {
@@ -418,6 +422,7 @@ function _renderPaymentDonut(totals, grandTotal) {
     }
     if (!canvas || typeof Chart === 'undefined') return;
     if (paymentDonut) paymentDonut.destroy();
+    try {
     paymentDonut = new Chart(canvas.getContext('2d'), {
         type: 'doughnut',
         data: {
@@ -429,6 +434,7 @@ function _renderPaymentDonut(totals, grandTotal) {
             plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => fmtMoney(item.parsed) } } }
         }
     });
+    } catch (e) { console.warn('[AnalyticsMobile] payment donut failed:', e); }
 }
 
 export function applyQuickRange(preset, regenerateFn) {
@@ -449,6 +455,7 @@ export function cleanupMobileAnalytics() {
     [sparkRevenue, sparkOrders, sparkAvg, sparkNewCust, overviewChart, paymentDonut].forEach(c => { try { c?.destroy(); } catch (e) {} });
     sparkRevenue = sparkOrders = sparkAvg = sparkNewCust = overviewChart = paymentDonut = null;
     _customersCache = null;
+    _customersFetchFailed = false;
 }
 
 export function initMobileAnalyticsUI(regenerateFn) {

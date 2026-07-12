@@ -1124,6 +1124,7 @@ export async function updateStatus(id, status) {
         logAudit("Orders", `Updated Status: #${id.slice(-5)} -> ${status}`, id);
         showToast(`Order status updated to ${status}`, "success");
         logger.success('ORDERS', `Status updated: ${id} → ${status}`);
+        closeOrderDrawer();
     } catch (e) {
         logger.error('ORDERS', `Status update failed: ${e.message}`, e);
         showToast("Update failed: " + e.message, "error");
@@ -1232,7 +1233,6 @@ export async function saveDeliveredOrder(id) {
  * ORDER DRAWER (DETAILS)
  */
 export async function openOrderDrawer(id) {
-    window.openOrderDrawer = openOrderDrawer;
     logger.info('ORDERS', `Opening order drawer: ${id}`);
     const order = state.ordersMap.get(id);
     if (!order) {
@@ -1448,6 +1448,8 @@ export function closeOrderDrawer() {
         window._drawerPopstateHandler = null;
     }
 }
+
+window.openOrderDrawer = openOrderDrawer;
 
 export function filterOrders(searchTerm) {
     const term = (searchTerm || '').toLowerCase().trim();
