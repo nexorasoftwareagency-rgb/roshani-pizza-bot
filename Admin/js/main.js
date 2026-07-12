@@ -393,10 +393,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         document.addEventListener('click', (e) => {
-            // Close status dropdowns on outside click
-            if (!e.target.closest('.status-dropdown')) {
-                document.querySelectorAll('.status-dropdown.open').forEach(dd => dd.classList.remove('open'));
-            }
             if (e.target.closest('.close-btn, .cancel-dish-btn, .btn-hide-modal')) {
                 const modal = e.target.closest('.modal');
                 if (modal) {

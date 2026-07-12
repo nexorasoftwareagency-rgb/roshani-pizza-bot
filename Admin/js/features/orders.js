@@ -986,6 +986,7 @@ export async function updateStatus(id, status) {
     }
 
     const currentStatus = order.status || "Placed";
+    if (status === currentStatus) return;
     const type = order.type || 'Online';
     const sequence = STATUS_SEQUENCES[type] || STATUS_SEQUENCES['Default'];
 
@@ -1234,7 +1235,7 @@ export async function saveDeliveredOrder(id) {
  */
 export async function openOrderDrawer(id) {
     logger.info('ORDERS', `Opening order drawer: ${id}`);
-    const order = state.ordersMap.get(id);
+    const order = state.ordersMap.get(id) || state.liveOrdersMap.get(id);
     if (!order) {
         logger.warn('ORDERS', `Order not found: ${id}`);
         showToast("Order not found. It may have been removed.", "error");
