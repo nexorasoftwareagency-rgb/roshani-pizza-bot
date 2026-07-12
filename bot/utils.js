@@ -144,7 +144,7 @@ function formatCartSummary(cart) {
 
 function formatOrderInvoice(orderId, order) {
     let itemsText = "";
-    (order.items || []).forEach((item) => {
+    Object.values(order.items || {}).forEach((item) => {
         const qty = item.quantity || item.qty || 1;
         const price = item.lineTotal || item.total || (item.price * qty) || 0;
         itemsText += `• *${item.name}* (${item.size || 'Regular'}) x${qty} - ₹${price}\n`;

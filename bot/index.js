@@ -1034,7 +1034,7 @@ async function sendDailyReportSafely(dateOverride = null) {
             if (msg.key.fromMe) return;
 
             // Deduplication to prevent double responses
-            const msgId = msg.key.id;
+            const msgId = msg.key?.id || Math.random().toString(36).slice(2);
             if (await getProcessedStatus(msgId)) return;
             saveProcessedStatus(msgId, { ts: Date.now() }).catch(() => {});
 
