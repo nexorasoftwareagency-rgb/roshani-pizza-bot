@@ -414,6 +414,8 @@ export async function verifyOtp(params: {
     return data;
   });
 
+  if (!result.committed) throw new Error("Failed to record OTP attempt");
+
   const updated = result.snapshot.val() as OtpAttemptRecord;
   if (updated?.blockedUntil && updated.blockedUntil > now) {
     throw new OtpBlockedError(updated.blockedUntil - now);
@@ -485,21 +487,22 @@ export async function completeDelivery(params: {
 }): Promise<void> {
   const { outlet, orderId, riderId, deliveryFee, paymentMethod, verifiedBy } = params;
 
-  await update(ref(db, dbPaths.singleOrder(outlet, orderId)), {
-    status: "Delivered",
-    deliveredAt: serverTimestamp(),
-    verifiedBy,
-    paymentCollected: true,
-    paymentMethod: paymentMethod.toUpperCase(),
-  });
-
-  await runTransaction(ref(db, dbPaths.riderStats(outlet, riderId)), (current) => {
+  const result = await runTransaction(ref(db, dbPaths.riderStats(outlet, riderId)), (current) => {
     if (!current) return { totalOrders: 1, totalEarnings: deliveryFee };
     return {
       ...current,
       totalOrders: (current.totalOrders || 0) + 1,
       totalEarnings: (current.totalEarnings || 0) + deliveryFee,
     };
+  });
+  if (!result.committed) throw new Error("Failed to update rider earnings");
+
+  await update(ref(db, dbPaths.singleOrder(outlet, orderId)), {
+    status: "Delivered",
+    deliveredAt: serverTimestamp(),
+    verifiedBy,
+    paymentCollected: true,
+    paymentMethod: paymentMethod.toUpperCase(),
   });
 
   try {

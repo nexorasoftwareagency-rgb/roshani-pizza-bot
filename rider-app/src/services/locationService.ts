@@ -34,7 +34,6 @@ export function startLocationTracking(
         lng: pos.coords.longitude,
         accuracy: pos.coords.accuracy,
         ts: Date.now(),
-        lastUpdate: Date.now(),
       };
       onUpdate(latest);
     },
@@ -51,7 +50,7 @@ export function startLocationTracking(
 
   const intervalId = window.setInterval(() => {
     if (latest && isOnline()) {
-      update(locRef, { ...latest, lastUpdate: serverTimestamp() }).catch(() => {});
+      update(locRef, latest).catch(() => {});
       update(ref(db, dbPaths.rider(uid)), { lastSeen: serverTimestamp() }).catch(() => {});
     }
   }, LOCATION_SYNC_INTERVAL_MS);
