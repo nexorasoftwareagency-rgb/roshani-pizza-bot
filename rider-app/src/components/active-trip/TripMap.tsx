@@ -1,5 +1,5 @@
 // === src/components/active-trip/TripMap.tsx ===
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import { useLocationContext } from "@/contexts/LocationContext";
@@ -60,7 +60,6 @@ export function TripMap({
 
   const destIcon = useMemo(() => destinationIcon(destinationColor), [destinationColor]);
   const secondaryIcon = useMemo(() => destinationIcon(secondaryStop?.color || "#3B82F6"), [secondaryStop?.color]);
-  const mapRef = useRef(null);
 
   const points = useMemo(() => {
     const pts: [number, number][] = [];
@@ -81,7 +80,6 @@ export function TripMap({
         dragging={true}
         zoomControl={false}
         attributionControl={false}
-        ref={mapRef}
         style={{ width: "100%", height: "100%" }}
       >
         <TileLayer

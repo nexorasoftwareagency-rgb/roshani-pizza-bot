@@ -1,5 +1,5 @@
 // === src/services/notificationService.ts ===
-import { db, ref, get, set, push, update, remove, onValue, off, getMessagingInstance, getToken, onMessage } from "@/lib/firebase";
+import { db, ref, get, push, update, remove, onValue, off, getMessagingInstance, getToken, onMessage } from "@/lib/firebase";
 import { dbPaths } from "@/lib/constants";
 import type { RiderNotification } from "@/types";
 import { updateFcmToken } from "@/services/riderService";

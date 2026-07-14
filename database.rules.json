@@ -73,10 +73,12 @@
           ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
         },
         "commands": {
-          ".validate": "newData.hasChildren(['action', 'phone', 'message', 'timestamp'])",
-          "action": { ".validate": "newData.isString()" },
-          "phone": { ".validate": "newData.isString()" },
-          "message": { ".validate": "newData.isString()" }
+          "$commandId": {
+            ".validate": "newData.hasChildren(['action', 'phone', 'message', 'timestamp'])",
+            "action": { ".validate": "newData.isString()" },
+            "phone": { ".validate": "newData.isString()" },
+            "message": { ".validate": "newData.isString()" }
+          }
         }
       },
       "logs": {

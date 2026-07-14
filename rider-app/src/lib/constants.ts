@@ -11,10 +11,6 @@ export const OUTLETS = [
 
 export type OutletId = "pizza" | "cake";
 
-/** resolvePath(path, outlet) → `${outlet}/${path}` for outlet-scoped data;
- *  these top-level nodes are shared/global and never outlet-prefixed. */
-const SHARED_NODES = ["admins", "admins_list", "riders", "logs", "errorLogs", "bot", "migrationStatus"];
-
 export const dbPaths = {
   rider: (rId: string) => `riders/${rId}`,
   riderNotifs: (rId: string) => `riders/${rId}/notifications`,

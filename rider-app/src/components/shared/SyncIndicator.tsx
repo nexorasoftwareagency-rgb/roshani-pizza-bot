@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { db, ref, onValue, off } from "@/lib/firebase";
 import { toast } from "@/hooks/use-toast";
 import { WifiOff, RefreshCw } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useOnlineStatus, getOfflineQueue } from "@/components/shared/OfflineQueue";
 
 export function useFirebaseConnection() {

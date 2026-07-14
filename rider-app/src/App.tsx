@@ -8,6 +8,7 @@ import { AuthGuard } from "@/components/layout/AuthGuard";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Toaster } from "@/components/ui/toaster";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const AvailablePage = lazy(() => import("@/pages/AvailablePage").then((m) => ({ default: m.AvailablePage })));
@@ -45,7 +46,9 @@ export default function App() {
         <RiderProvider>
           <LocationProvider>
             <AppLayout>
-              <AppRoutes />
+              <ErrorBoundary>
+                <AppRoutes />
+              </ErrorBoundary>
             </AppLayout>
           </LocationProvider>
         </RiderProvider>

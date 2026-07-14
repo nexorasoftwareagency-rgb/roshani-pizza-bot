@@ -40,7 +40,7 @@ export type RiderLocation = {
   lng: number;
   accuracy: number;
   ts: number;
-  lastUpdate: number;
+  lastUpdate?: number;
   signalLost?: boolean;
 };
 
@@ -133,6 +133,8 @@ export type AvailableOrder = {
   items: OrderItem[];
   distance?: number;
   createdAt: string;
+  phone?: string;
+  customerPhone?: string;
 };
 
 export type Settlement = {

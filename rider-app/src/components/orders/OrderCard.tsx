@@ -32,7 +32,7 @@ export function OrderCard({ order }: { order: AvailableOrder }) {
       riderName: rider?.name || "Your rider",
       outletLat: order.outletLat,
       outletLng: order.outletLng,
-      customerPhone: (order as any).phone || (order as any).customerPhone,
+      customerPhone: order.customerPhone || order.phone,
     };
 
     if (!navigator.onLine) {

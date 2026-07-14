@@ -287,7 +287,7 @@ export async function acceptOrder(params: {
       assignedRider: riderEmail.toLowerCase(),
       riderId: riderUid,
       riderPhone: riderPhone || "",
-      acceptedAt: Date.now(),
+      acceptedAt: serverTimestamp(),
     };
   });
 
@@ -382,9 +382,8 @@ export async function verifyOtp(params: {
   enteredOtp: string;
   actualOtp: string;
   backupCode?: string;
-  isAdmin?: boolean;
 }): Promise<{ success: boolean; verifiedBy: "OTP" | "ADMIN_FALLBACK"; attemptsRemaining?: number }> {
-  const { outlet, orderId, enteredOtp, actualOtp, backupCode, isAdmin } = params;
+  const { outlet, orderId, enteredOtp, actualOtp, backupCode } = params;
   const attemptsPath = dbPaths.otpAttempts(outlet, orderId);
 
   const existingSnap = await get(ref(db, attemptsPath));
@@ -420,7 +419,6 @@ export async function verifyOtp(params: {
     throw new OtpBlockedError(updated.blockedUntil - now);
   }
 
-  void isAdmin;
   return {
     success: false,
     verifiedBy: "OTP",
@@ -446,10 +444,11 @@ export async function resendOtp(params: { outlet: OutletId; orderId: string }): 
   }
 
   const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
-  await update(ref(db, dbPaths.singleOrder(outlet, orderId)), { deliveryOTP: newOtp, otp: newOtp });
-  await update(ref(db, attemptsPath), {
-    resendCount: (existing?.resendCount || 0) + 1,
-    lastResend: now,
+  await update(ref(db), {
+    [dbPaths.singleOrder(outlet, orderId) + "/deliveryOTP"]: newOtp,
+    [dbPaths.singleOrder(outlet, orderId) + "/otp"]: newOtp,
+    [attemptsPath + "/resendCount"]: (existing?.resendCount || 0) + 1,
+    [attemptsPath + "/lastResend"]: now,
   });
 
   return { otp: newOtp };
