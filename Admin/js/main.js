@@ -76,6 +76,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const openDd = document.querySelector('.status-dropdown.open');
         if (openDd && !openDd.contains(e.target)) {
             openDd.classList.remove('open');
+            const sb = openDd.closest('.drawer-scroll-body');
+            if (sb) sb.style.overflowY = '';
         }
     });
 
@@ -134,6 +136,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (!dd) break;
                     const wasOpen = dd.classList.contains('open');
                     dd.classList.toggle('open');
+                    const sb = dd.closest('.drawer-scroll-body');
+                    if (wasOpen) { if (sb) sb.style.overflowY = ''; }
+                    else { if (sb) sb.style.overflowY = 'visible'; }
                     if (!wasOpen) {
                         const menu = dd.querySelector('.status-dropdown-menu');
                         if (menu) {
@@ -158,7 +163,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     break;
                 }
-                case 'pickStatus': { const dd = el.closest('.status-dropdown'); if (dd) dd.classList.remove('open'); logger.info('ORDERS', `Status picked: ${id} → ${val}`); (await useMod('orders')).updateStatus(id, val); break; }
+                case 'pickStatus': { const dd = el.closest('.status-dropdown'); if (dd) { dd.classList.remove('open'); const sb = dd.closest('.drawer-scroll-body'); if (sb) sb.style.overflowY = ''; } logger.info('ORDERS', `Status picked: ${id} → ${val}`); (await useMod('orders')).updateStatus(id, val); break; }
                 case 'assignRider': logger.info('ORDERS', `Assign rider: ${id} → ${val}`); (await useMod('orders')).assignRider(id, val); break;
                 case 'openOrderDrawer': logger.info('ORDERS', `Open order drawer: ${id}`); (await useMod('orders')).openOrderDrawer(id); break;
                 case 'markAsPaid': logger.info('ORDERS', `Mark paid: ${id}`); (await useMod('orders')).markAsPaid(id); break;
