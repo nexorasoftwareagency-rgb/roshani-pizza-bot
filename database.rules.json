@@ -13,6 +13,7 @@
         ".read": "auth != null && (auth.uid == $uid || root.child('admins').child(auth.uid).exists())",
         ".write": "auth != null && (auth.uid == $uid || root.child('admins').child(auth.uid).exists())",
         ".validate": "newData.hasChildren(['name', 'phone']) || data.exists()",
+        "isAdmin": { ".validate": "!newData.exists() || newData.val() === data.val()" },
         "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
         "phone": { ".validate": "newData.isString() && newData.val().length >= 5 && newData.val().length <= 15" },
         "notifications": {
@@ -70,6 +71,12 @@
         "status": {
           ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
           ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+        },
+        "commands": {
+          ".validate": "newData.hasChildren(['action', 'phone', 'message', 'timestamp'])",
+          "action": { ".validate": "newData.isString()" },
+          "phone": { ".validate": "newData.isString()" },
+          "message": { ".validate": "newData.isString()" }
         }
       },
       "logs": {

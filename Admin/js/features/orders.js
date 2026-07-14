@@ -26,20 +26,22 @@ function isRiderFresh(r) {
 /**
  * STATUS WORKFLOW CONFIGURATION
  */
-export const STATUS_SEQUENCE = ["Placed", "Confirmed", "Ready", "Out for Delivery", "Reached Drop Location", "Delivered"];
+export const STATUS_SEQUENCE = ["Placed", "Confirmed", "Ready", "Arriving at Restaurant", "Arrived at Restaurant", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"];
 export const STATUS_SEQUENCES = {
-    'Online': ["Placed", "Confirmed", "Ready", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"],
+    'Online': ["Placed", "Confirmed", "Ready", "Arriving at Restaurant", "Arrived at Restaurant", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"],
     'Dine-in': ["Confirmed", "Ready", "Served", "Delivered"],
-    'Default': ["Placed", "Confirmed", "Ready", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"]
+    'Default': ["Placed", "Confirmed", "Ready", "Arriving at Restaurant", "Arrived at Restaurant", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"]
 };
 export const STATUS_MAPPING = {
     "New": 0, "Pending": 0, "Placed": 0,
     "Confirmed": 1,
     "Ready": 2, "Cooked": 2, "Preparing": 2, "In Kitchen": 2,
-    "Picked Up": 3,
-    "Out for Delivery": 4,
-    "Reached Drop Location": 5,
-    "Served": 6, "Delivered": 6,
+    "Arriving at Restaurant": 3,
+    "Arrived at Restaurant": 4,
+    "Picked Up": 5,
+    "Out for Delivery": 6,
+    "Reached Drop Location": 7,
+    "Served": 8, "Delivered": 8,
     "Cancelled": 0
 };
 
