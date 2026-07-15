@@ -583,7 +583,7 @@ export function toggleMobileCart() {
  */
 
 export async function checkWalkinCustomer() {
-    const phone = document.getElementById("walkinCustPhone").value.trim();
+    const phone = document.getElementById("walkinCustPhone").value.trim().replace(/\D/g, '').slice(-10);
     if (phone.length < 10) return;
 
     try {
@@ -699,7 +699,7 @@ export async function submitWalkinSale() {
         return;
     }
 
-    const phone = document.getElementById("walkinCustPhone").value.trim();
+    const phone = document.getElementById("walkinCustPhone").value.trim().replace(/\D/g, '').slice(-10);
     const name = document.getElementById("walkinCustName").value.trim() || "Guest";
     const tableNo = document.getElementById("walkinTableNo")?.value.trim() || "";
     const note = document.getElementById("walkinCustNote").value.trim() || "";

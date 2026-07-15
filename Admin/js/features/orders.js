@@ -1217,6 +1217,10 @@ export async function saveDeliveredOrder(id) {
         showToast("Order not found!", "error");
         return;
     }
+    if (['Delivered', 'Cancelled', 'Served'].includes(order.status)) {
+        showToast(`Cannot force-deliver: order is already ${order.status}`, "error");
+        return;
+    }
     const method = await showPaymentPicker(order.total);
     if (!method) return;
     try {
@@ -1483,7 +1487,7 @@ export async function openOrderDrawer(id) {
             ${order.phone ? `<a class="dw-act-btn whatsapp" href="https://wa.me/${escapeHtml(order.phone.replace(/[^0-9]/g, ''))}" target="_blank">
                 <i data-lucide="message-circle"></i> WhatsApp
             </a>` : ''}
-            ${isDelivery && order.status !== 'Delivered' ? `<button class="dw-act-btn" data-action="saveDeliveredOrder" data-id="${id}" title="Force-finalize as Delivered, bypassing the normal sequence — use for orders stuck outside the standard flow">
+            ${isDelivery && !['Delivered', 'Cancelled'].includes(order.status) ? `<button class="dw-act-btn" data-action="saveDeliveredOrder" data-id="${id}" title="Force-finalize as Delivered, bypassing the normal sequence — use for orders stuck outside the standard flow">
                 <i data-lucide="check-check"></i> Force Delivered
             </button>` : ''}
         </div>
