@@ -202,7 +202,7 @@ function _updateRecipientCount(n) {
     const el = document.getElementById('promoRecipientCount');
     const cap = document.getElementById('promoRecipientCap');
     if (el) el.textContent = String(n);
-    if (cap) cap.classList.toggle('hidden', n < PROMO_MAX_PER_CAMPAIGN);
+    if (cap) { cap.classList.toggle('hidden', n < PROMO_MAX_PER_CAMPAIGN); cap.textContent = `Capped at ${PROMO_MAX_PER_CAMPAIGN}`; }
     _lastRecipientsCount = n;
     _refreshLaunchButton();
 }
@@ -213,7 +213,7 @@ function _refreshLaunchButton() {
     const hasText = (document.getElementById('promoTemplate')?.value || '').trim().length > 0;
     const hasRecipients = _lastRecipientsCount > 0;
     const banner = document.getElementById('promotionsOfflineBanner');
-    const botOnline = banner ? !banner.classList.contains('hidden') : true;
+    const botOnline = banner ? banner.classList.contains('hidden') : true;
     const promoEnabled = !!_promoEnabledLocal;
     btn.disabled = !(hasText && hasRecipients && botOnline && promoEnabled);
 }
@@ -282,7 +282,6 @@ function _attachCampaignListener() {
         _allCampaignsSnap = val;
         _renderActivePane();
         _renderHistoryPane();
-        _switchMode('active');
     }, _promoErr('campaigns'));
     _killSwitchListener = onValue(_promoRef('killSwitch'), (snap) => {
         _setKillSwitchUi(snap.val() === true);

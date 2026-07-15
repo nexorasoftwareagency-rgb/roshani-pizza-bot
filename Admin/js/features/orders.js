@@ -31,6 +31,7 @@ export const STATUS_SEQUENCES = {
     'Dine-in': ["Placed", "Confirmed", "Ready", "Served", "Delivered"],
     'Default': ["Placed", "Confirmed", "Ready", "Arriving at Restaurant", "Arrived at Restaurant", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"]
 };
+const LIVE_STATUSES = ["Placed", "Confirmed", "Ready", "Pending", "New", "Arriving at Restaurant", "Arrived at Restaurant", "Picked Up", "Out for Delivery", "Reached Drop Location", "Dispatched"];
 
 // Order callback storage for safe detachment
 let _ordersUnsub = null;
@@ -120,6 +121,11 @@ export function initRealtimeListeners() {
     }, err => {
         console.error("[Orders] Firebase Read Error:", err);
         showToast("Error loading orders: " + err.message, "error");
+        ['liveOrdersTable','ordersTable','ordersTableFull'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '<tr><td colspan="7" class="empty-state-cell"><div class="empty-state"><i data-lucide="alert-circle"></i><p>Failed to load</p><span>Check Firebase rules or network connection</span></div></td></tr>';
+        });
+        if (window.lucide) window.lucide.createIcons();
     });
 
     // Live orders are populated from the main _ordersUnsub listener
@@ -373,7 +379,7 @@ export async function renderOrders(snap) {
         ordersToProcess = state.ordersPageData;
     } else if (activeTab === 'live') {
         // Populate liveOrdersMap from ordersMap (filtered for live statuses)
-        const _liveList = ["Placed", "Confirmed", "Ready", "Pending", "New", "Arriving at Restaurant", "Arrived at Restaurant", "Picked Up", "Out for Delivery", "Reached Drop Location", "Dispatched"];
+        const _liveList = LIVE_STATUSES;
         state.liveOrdersMap.clear();
         state.ordersMap.forEach((o, key) => {
             if (_liveList.some(s => s.toLowerCase() === (o.status || '').toLowerCase())) {
@@ -459,7 +465,7 @@ export async function renderOrders(snap) {
     }
     
     // Empty state for live tab
-    const _liveStatusList = ["Placed", "Confirmed", "Ready", "Pending", "New", "Arriving at Restaurant", "Arrived at Restaurant", "Picked Up", "Out for Delivery", "Reached Drop Location", "Dispatched"];
+    const _liveStatusList = LIVE_STATUSES;
     if (activeTab === 'live' && sortedOrders.filter(o => {
         const status = (o.status || "Unknown").trim();
         return _liveStatusList.some(s => s.toLowerCase() === status.toLowerCase());

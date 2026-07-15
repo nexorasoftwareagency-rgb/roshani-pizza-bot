@@ -68,6 +68,7 @@ export function loadCategories() {
             `;
             container.appendChild(div);
         });
+        if (window.lucide) window.lucide.createIcons({ root: container });
         updateActiveDishModalCategories();
     });
 }
