@@ -25,6 +25,8 @@ Cake-bot/
 verify_*.mjs
 screenshot_*.png
 screenshots-*/
+CLAUDE/
+Skill Set/
 
 # Firebase hosting cache
 .firebase/

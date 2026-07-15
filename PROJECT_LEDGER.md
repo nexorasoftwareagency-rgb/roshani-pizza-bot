@@ -5,8 +5,8 @@ Fragile Files before starting ANY task.
 
 ## Standing Decisions
 
-- **New Rider React app** (`rider-app/`) replaces old `rider/` PWA. Old `rider/` kept for
-  instant rollback — do not delete until Phase 6 of implementation plan completed.
+- **New Rider React app** (`rider-app/`) replaces old `rider-old/` PWA. Old PWA deleted.
+  Rollback via `git checkout 24ab5a1^ -- rider-old/` if needed.
 - **No Cloud Functions** (Spark plan) — all logic runs client-side or in Firebase rules.
 - **PII segregation**: phone numbers go to `tableSessionsContact` (auth-gated), not `tableSessions`.
 - **`_effectiveTotal(sess)`** replaces direct `sess.grandTotal` reads everywhere (table card, drawer, CSV, KPI).
@@ -15,7 +15,7 @@ Fragile Files before starting ANY task.
 - **WhatsApp validate rule** has known `.validate` path mismatch with `push()` — PRODUCTION_ISSUES.md #1.
 
 <!-- STANDING_DECISIONS_START -->
-- Rider app: `rider-app/` is the new production target
+- Rider app: `rider-app/` is the new production target (old `rider-old/` deleted)
 - PII in `tableSessionsContact` only
 - `_effectiveTotal()` canonical
 - `equalTo(null)` canonical
@@ -74,6 +74,35 @@ Fragile Files before starting ANY task.
 - Notes: Firebase v12 messaging handled; sw.js has background message handler; notificationclick wired.
 
 <!-- TASK_LOG_START -->
+### [20260715-031827-4301] Clean up CLAUDE/ and Skill Set/ dirs (review findings)
+- TIER: 1 (low-risk)
+- STATUS: IN PROGRESS
+- Started: 2026-07-15 03:18 UTC
+
+### [20260715-030542-9761] Verify all fixes live � dropdown, PWA offline, isTerminal, code dedup
+- TIER: 2 (medium-risk)
+- STATUS: DONE
+- Started: 2026-07-15 03:05 UTC
+- Ended: 2026-07-15 03:07 UTC
+- Verification: 4 parallel Playwright agents — admin (0 console errors, login loads), menu (SW registered, manifest link, offline banner, 0 errors), rider (correct title, CSS, form, 0 errors). Live curl confirmed `isBody` fix in main.js, `isTerminal` includes `'Served'`, `_retryBoot`/`offlineBanner` in menu app.js, `sw.js` HTTP 200
+- Confidence: HIGH
+
+### [20260715-025004-e40a] Fix menu app PWA offline � add service worker, manifest.json, registration for offline support
+- TIER: 2 (medium-risk)
+- STATUS: DONE
+- Started: 2026-07-15 02:50 UTC
+- Ended: 2026-07-15 02:58 UTC
+- Verification: Service worker (`menu/sw.js`) registered with cache-first strategy + stale-while-revalidate. Manifest (`menu/manifest.json`) has `display: standalone`, inline SVG icon. 1.5s boot timeout in `app.js` with offline banner + auto-reconnect. Deployed to Firebase hosting, confirmed HTTP 200
+- Confidence: HIGH
+
+### [20260715-024132-7ada] Formal verification of all completed fixes � drawer redesign migration, STATUS_SEQUENCES alignment, ISO createdAt fixes, rider filter, dead code removal, CSS fixes
+- TIER: 2 (medium-risk)
+- STATUS: DONE
+- Started: 2026-07-15 02:41 UTC
+- Ended: 2026-07-15 02:43 UTC
+- Verification: 15 checks passed per Rigorous Dev Protocol Tier 2 — TypeScript build (`tsc -b`) clean, Vite build clean, oxlint passes, grep confirmed no `.drawer-scroll-body`/`.drawer-header-v4`/`.drawer-section`/`.drawer-action-bar`/`.drawer-summary-panel` remain. `STATUS_SEQUENCES` 9-step confirmed (includes `Arriving at Restaurant`/`Arrived at Restaurant`). `DRAWER_ONLINE_PHASES` includes `Arriving` phase. Dead `shared/order-status.js` deleted. `.history-status-served` uses indigo
+- Confidence: HIGH
+
 ### [20260714-120000-001] Production readiness audit — rider-app
 - TIER: 3
 - STATUS: COMPLETED
