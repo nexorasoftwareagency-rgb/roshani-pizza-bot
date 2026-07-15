@@ -16,7 +16,6 @@
     "./audio/player.js": "./audio/player.js",
     "./geo/geo.js": "./geo/geo.js",
     "./firebase/paths.js": "./firebase/paths.js",
-    "./order-status.js": "./order-status.js",
     "./notifications.js": "./notifications.js"
   }
 }

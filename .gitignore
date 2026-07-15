@@ -46,3 +46,9 @@ catalog.js
 catalog.srv.js
 page-guide.js
 riders.js
+
+# Test artifacts
+test-results/
+
+# Audit temp files
+_audit_tmp/

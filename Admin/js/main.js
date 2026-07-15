@@ -73,12 +73,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Close open status dropdowns when clicking outside
     document.addEventListener('click', (e) => {
-        const openDd = document.querySelector('.status-dropdown.open');
-        if (openDd && !openDd.contains(e.target)) {
-            openDd.classList.remove('open');
-            const sb = openDd.closest('.drawer-scroll-body');
-            if (sb) sb.style.overflowY = '';
-        }
+        document.querySelectorAll('.status-dropdown.open').forEach(openDd => {
+            if (!openDd.contains(e.target)) {
+                openDd.classList.remove('open');
+                const sb = openDd.closest('.dw-body');
+                if (sb) sb.style.overflowY = '';
+                if (openDd._dropdownReposition) {
+                    window.removeEventListener('resize', openDd._dropdownReposition);
+                    openDd._dropdownReposition = null;
+                }
+            }
+        });
     });
 
     // Click handler registered BEFORE awaits — ensures clicks work even if Firebase hangs
@@ -135,35 +140,84 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const dd = el.closest('.status-dropdown');
                     if (!dd) break;
                     const wasOpen = dd.classList.contains('open');
+
+                    // Close every other open dropdown first
+                    document.querySelectorAll('.status-dropdown.open').forEach(openDd => {
+                        if (openDd !== dd) {
+                            openDd.classList.remove('open');
+                            const osb = openDd.closest('.dw-body');
+                            if (osb) osb.style.overflowY = '';
+                            if (openDd._dropdownReposition) {
+                                window.removeEventListener('resize', openDd._dropdownReposition);
+                                openDd._dropdownReposition = null;
+                            }
+                        }
+                    });
+
                     dd.classList.toggle('open');
-                    const sb = dd.closest('.drawer-scroll-body');
-                    if (wasOpen) { if (sb) sb.style.overflowY = ''; }
-                    else { if (sb) sb.style.overflowY = 'visible'; }
+                    const sb = dd.closest('.dw-body');
+                    if (wasOpen) {
+                        if (sb) sb.style.overflowY = '';
+                    } else {
+                        if (sb) sb.style.overflowY = 'visible';
+                    }
+
                     if (!wasOpen) {
                         const menu = dd.querySelector('.status-dropdown-menu');
                         if (menu) {
                             menu.style.top = '';
                             menu.style.left = '';
                             menu.style.bottom = '';
-                            requestAnimationFrame(() => {
+
+                            const positionMenu = () => {
                                 const btn = dd.querySelector('.status-dropdown-trigger');
+                                if (!btn || !menu.isConnected) return;
+
+                                // Measure relative to the drawer's containing box, not the viewport
+                                const containingEl = dd.closest('.drawer-content') || document.body;
+                                const containerRect = containingEl.getBoundingClientRect();
                                 const r = btn.getBoundingClientRect();
-                                menu.style.top = (r.bottom + 4) + 'px';
-                                menu.style.left = r.left + 'px';
+
+                                const isBody = containingEl === document.body;
+                                const availW = isBody ? window.innerWidth : containerRect.width;
+                                const availH = isBody ? window.innerHeight : containerRect.height;
+
+                                let left = r.left - containerRect.left;
+                                let top = r.bottom - containerRect.top + 4;
+
+                                menu.style.left = left + 'px';
+                                menu.style.top = top + 'px';
+                                menu.style.bottom = '';
+
                                 const mr = menu.getBoundingClientRect();
-                                if (mr.right > window.innerWidth) {
-                                    menu.style.left = Math.max(4, window.innerWidth - mr.width - 4) + 'px';
+                                const menuW = mr.width;
+                                const menuH = mr.height;
+
+                                if (left + menuW > availW) left = Math.max(4, availW - menuW - 4);
+                                if (left < 4) left = 4;
+
+                                if (top + menuH > availH) {
+                                    const flippedTop = (r.top - containerRect.top) - menuH - 4;
+                                    top = flippedTop >= 4 ? flippedTop : Math.max(4, availH - menuH - 4);
                                 }
-                                if (mr.bottom > window.innerHeight) {
-                                    menu.style.top = 'auto';
-                                    menu.style.bottom = (window.innerHeight - r.top + 4) + 'px';
-                                }
-                            });
+                                if (top < 4) top = 4;
+
+                                menu.style.left = left + 'px';
+                                menu.style.top = top + 'px';
+                            };
+
+                            requestAnimationFrame(positionMenu);
+
+                            dd._dropdownReposition = positionMenu;
+                            window.addEventListener('resize', dd._dropdownReposition);
                         }
+                    } else if (dd._dropdownReposition) {
+                        window.removeEventListener('resize', dd._dropdownReposition);
+                        dd._dropdownReposition = null;
                     }
                     break;
                 }
-                case 'pickStatus': { const dd = el.closest('.status-dropdown'); if (dd) { dd.classList.remove('open'); const sb = dd.closest('.drawer-scroll-body'); if (sb) sb.style.overflowY = ''; } logger.info('ORDERS', `Status picked: ${id} → ${val}`); (await useMod('orders')).updateStatus(id, val); break; }
+                case 'pickStatus': { const dd = el.closest('.status-dropdown'); if (dd) { if (dd._dropdownReposition) { window.removeEventListener('resize', dd._dropdownReposition); dd._dropdownReposition = null; } dd.classList.remove('open'); const sb = dd.closest('.dw-body'); if (sb) sb.style.overflowY = ''; } logger.info('ORDERS', `Status picked: ${id} → ${val}`); (await useMod('orders')).updateStatus(id, val); break; }
                 case 'assignRider': logger.info('ORDERS', `Assign rider: ${id} → ${val}`); (await useMod('orders')).assignRider(id, val); break;
                 case 'openOrderDrawer': logger.info('ORDERS', `Open order drawer: ${id}`); (await useMod('orders')).openOrderDrawer(id); break;
                 case 'markAsPaid': logger.info('ORDERS', `Mark paid: ${id}`); (await useMod('orders')).markAsPaid(id); break;

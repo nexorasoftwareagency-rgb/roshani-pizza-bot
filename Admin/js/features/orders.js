@@ -26,23 +26,10 @@ function isRiderFresh(r) {
 /**
  * STATUS WORKFLOW CONFIGURATION
  */
-export const STATUS_SEQUENCE = ["Placed", "Confirmed", "Ready", "Arriving at Restaurant", "Arrived at Restaurant", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"];
 export const STATUS_SEQUENCES = {
     'Online': ["Placed", "Confirmed", "Ready", "Arriving at Restaurant", "Arrived at Restaurant", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"],
-    'Dine-in': ["Confirmed", "Ready", "Served", "Delivered"],
+    'Dine-in': ["Placed", "Confirmed", "Ready", "Served", "Delivered"],
     'Default': ["Placed", "Confirmed", "Ready", "Arriving at Restaurant", "Arrived at Restaurant", "Picked Up", "Out for Delivery", "Reached Drop Location", "Delivered"]
-};
-export const STATUS_MAPPING = {
-    "New": 0, "Pending": 0, "Placed": 0,
-    "Confirmed": 1,
-    "Ready": 2, "Cooked": 2, "Preparing": 2, "In Kitchen": 2,
-    "Arriving at Restaurant": 3,
-    "Arrived at Restaurant": 4,
-    "Picked Up": 5,
-    "Out for Delivery": 6,
-    "Reached Drop Location": 7,
-    "Served": 8, "Delivered": 8,
-    "Cancelled": 0
 };
 
 // Order callback storage for safe detachment
@@ -1235,6 +1222,120 @@ export async function saveDeliveredOrder(id) {
 /**
  * ORDER DRAWER (DETAILS)
  */
+// ============================================================
+// ORDER DRAWER v5 — status stepper + adaptive context helpers
+// ============================================================
+
+// Collapses the 7-step Online/Default sequence into digestible visual phases.
+// Dine-in's shorter sequence is shown as direct nodes (see renderDrawerStepper).
+const DRAWER_ONLINE_PHASES = [
+    { label: 'Placed', statuses: ['Placed'] },
+    { label: 'Preparing', statuses: ['Confirmed', 'Ready'] },
+    { label: 'Arriving', statuses: ['Arriving at Restaurant', 'Arrived at Restaurant'] },
+    { label: 'Picked Up', statuses: ['Picked Up'] },
+    { label: 'On the way', statuses: ['Out for Delivery', 'Reached Drop Location'] },
+    { label: 'Delivered', statuses: ['Delivered'] },
+];
+
+function getOrderAge(createdAt) {
+    const t = createdAt ? (typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt) : Date.now();
+    const mins = Math.max(0, Math.floor((Date.now() - t) / 60000));
+    let cls = 'fresh', icon = 'circle-check';
+    if (mins >= 20) { cls = 'late'; icon = 'triangle-alert'; }
+    else if (mins >= 10) { cls = 'warm'; icon = 'clock'; }
+    return { mins, cls, icon };
+}
+
+function renderDrawerStepper(order, orderType, id) {
+    const status = order.status || 'Placed';
+    const isTerminal = ['Delivered', 'Cancelled', 'Served'].includes(status);
+    if (isTerminal) {
+        const isPaid = order.paymentStatus === 'Paid';
+        return `
+        <div class="dw-completed-banner">
+            <i data-lucide="${status === 'Cancelled' ? 'x-circle' : 'check-circle'}"></i>
+            <div>
+                <b>${status === 'Cancelled' ? 'Order Cancelled' : 'Order Completed'}</b>
+                <span>${escapeHtml(status)}${status !== 'Cancelled' ? ` · ${isPaid ? 'Paid in full' : 'Payment pending'}` : ''}</span>
+            </div>
+        </div>`;
+    }
+
+    const options = getStatusOptions(status, orderType);
+    const nextOption = options.find(o => o.value !== 'Cancelled');
+    const canCancel = options.some(o => o.value === 'Cancelled');
+
+    const isDineIn = orderType === 'Dine-in';
+    const sequence = isDineIn ? STATUS_SEQUENCES['Dine-in'] : DRAWER_ONLINE_PHASES.map(p => p.statuses[0]);
+    const idx = isDineIn
+        ? sequence.indexOf(status)
+        : DRAWER_ONLINE_PHASES.findIndex(p => p.statuses.includes(status));
+    const nodeCount = isDineIn ? sequence.length : DRAWER_ONLINE_PHASES.length;
+
+    const track = Array.from({ length: nodeCount }).map((_, i) => {
+        const st = i < idx ? 'done' : (i === idx ? 'current' : '');
+        const node = `<div class="dw-phase-node ${st}">${i < idx ? '<i data-lucide="check" style="width:10px;height:10px;"></i>' : i + 1}</div>`;
+        const line = i < nodeCount - 1 ? `<div class="dw-phase-line ${i < idx ? 'done' : ''}"></div>` : '';
+        return node + line;
+    }).join('');
+
+    const labels = (isDineIn ? sequence : DRAWER_ONLINE_PHASES.map(p => p.label))
+        .map((label, i) => `<span class="${i === idx ? 'active' : ''}">${escapeHtml(label)}</span>`)
+        .join('');
+
+    return `
+    <div class="dw-stepper-track">${track}</div>
+    <div class="dw-stepper-labels">${labels}</div>
+    <div class="dw-current-row">
+        <div class="dw-current-text">Now: <b>${escapeHtml(status)}</b></div>
+        ${nextOption ? `<button class="dw-btn-advance" data-action="pickStatus" data-val="${escapeHtml(nextOption.value)}" data-id="${id}"><i data-lucide="arrow-right" style="width:13px;height:13px;"></i> Mark ${escapeHtml(nextOption.label)}</button>` : ''}
+    </div>
+    ${canCancel ? `<div class="dw-cancel-link" data-action="pickStatus" data-val="Cancelled" data-id="${id}">Cancel order</div>` : ''}`;
+}
+
+function renderDrawerContext(order, orderType) {
+    // type is literally "Dine-in" for BOTH real QR/table orders AND staff-entered POS
+    // walk-in sales (see pos.js) — the only reliable signal between them is tableNo.
+    if (orderType === 'Dine-in') {
+        if (order.tableNo) {
+            return `
+            <div class="dw-section">
+                <div class="dw-ctx-compact">
+                    <div class="dw-ctx-table-badge"><i data-lucide="armchair" style="width:15px;height:15px;"></i> Table ${escapeHtml(order.tableNo)}</div>
+                    <span style="font-size:11px;color:#94a3b8;font-weight:600;">Dine-in${order.source === 'QR' ? ' · QR Order' : ''}</span>
+                </div>
+            </div>`;
+        }
+        return `
+        <div class="dw-section">
+            <div class="dw-ctx-simple"><i data-lucide="store" style="width:13px;height:13px;"></i> Counter sale${order.customerName ? ` — ${escapeHtml(order.customerName)}` : ' — walk-in customer'}</div>
+        </div>`;
+    }
+    return `
+    <div class="dw-section">
+        <div class="dw-eyebrow"><i data-lucide="user"></i> Customer</div>
+        <div class="dw-ctx-full">
+            <div class="dw-ctx-row">
+                <div class="dw-ctx-avatar"><i data-lucide="user" style="width:18px;height:18px;"></i></div>
+                <div>
+                    <div class="dw-ctx-name">${escapeHtml(order.customerName || 'Guest')}</div>
+                    <div class="dw-ctx-phone">${escapeHtml(order.phone || 'No phone')}</div>
+                </div>
+            </div>
+            <div class="dw-ctx-addr">
+                <i data-lucide="map-pin" style="width:14px;height:14px;"></i>
+                <div>
+                    ${escapeHtml(order.address || 'No address provided')}
+                    ${(order.locationLink || (order.lat && order.lng)) ?
+                        `<a href="${escapeHtml(order.locationLink || `https://www.google.com/maps?q=${order.lat},${order.lng}`)}" target="_blank" rel="noopener noreferrer" class="dw-ctx-map-link">
+                            <i data-lucide="external-link" style="width:9px;height:9px;"></i> Track on live map
+                        </a>` : ''}
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
 export async function openOrderDrawer(id) {
     logger.info('ORDERS', `Opening order drawer: ${id}`);
     const order = state.ordersMap.get(id) || state.liveOrdersMap.get(id);
@@ -1264,7 +1365,6 @@ export async function openOrderDrawer(id) {
             price: order.total || 0
         }];
     }
-    const statusLower = (order.status || '').toLowerCase().replace(/\s+/g, '');
     const orderType = order.type || 'Online';
     const isDelivery = orderType === 'Online' || orderType === 'WhatsApp';
     const createdAt = order.createdAt ? new Date(order.createdAt) : new Date();
@@ -1273,156 +1373,123 @@ export async function openOrderDrawer(id) {
 
     const itemsHtml = items.map((item, idx) => {
         const addonChips = [];
-        if (item.addon && item.addon !== 'None') addonChips.push(`<span class="item-addon-chip">${escapeHtml(item.addon)}</span>`);
+        if (item.addon && item.addon !== 'None') addonChips.push(`<span class="dw-addon-chip">${escapeHtml(item.addon)}</span>`);
         if (item.addons && Array.isArray(item.addons)) {
-            item.addons.forEach(a => { if (a.name) addonChips.push(`<span class="item-addon-chip">${escapeHtml(a.name)}</span>`); });
+            item.addons.forEach(a => { if (a.name) addonChips.push(`<span class="dw-addon-chip">${escapeHtml(a.name)}</span>`); });
         }
         return `
-        <div class="item-card">
-            <div class="item-qty-badge">${item.qty || 1}</div>
-            <div class="item-info">
-                <div class="item-name">${escapeHtml(item.name || 'Item')}</div>
-                <div class="item-size">${escapeHtml(item.size || 'Regular')}</div>
-                ${addonChips.length ? `<div class="item-addons">${addonChips.join('')}</div>` : ''}
+        <div class="dw-item-row">
+            <div class="dw-item-qty">${item.qty || 1}</div>
+            <div class="dw-item-info">
+                <div class="dw-item-name">${escapeHtml(item.name || 'Item')}</div>
+                <div class="dw-item-size">${escapeHtml(item.size || 'Regular')}</div>
+                ${addonChips.length ? `<div class="dw-item-addons">${addonChips.join('')}</div>` : ''}
             </div>
-            <div class="item-price">
-                <div class="price">₹${item.price || item.total || 0}</div>
-                ${item.qty > 1 ? `<div class="unit-price">₹${((item.price || item.total || 0) / (item.qty || 1)).toFixed(0)} each</div>` : ''}
+            <div class="dw-item-price">
+                <span>₹${item.price || item.total || 0}</span>
+                ${item.qty > 1 ? `<br><span style="font-size:11px;opacity:.65">₹${((item.price || item.total || 0) / (item.qty || 1)).toFixed(0)} each</span>` : ''}
             </div>
         </div>`;
     }).join('');
 
     const riderOptions = (state.ridersList || [])
-        .filter(r => isRiderFresh(r))
+        .filter(r => isRiderFresh(r) || r.id === order.riderId)
         .map(r => `<option value="${r.id}" ${order.riderId === r.id ? 'selected' : ''}>${escapeHtml(r.name)} (${r.status})</option>`)
         .join('');
 
+    const age = getOrderAge(order.createdAt);
+    const isTerminalForRider = ['Delivered', 'Cancelled'].includes(order.status);
+    const orderTypeIcon = orderType === 'Online' ? 'globe' : orderType === 'WhatsApp' ? 'message-circle' : 'utensils';
+
     content.innerHTML = `
-        <!-- VIBRANT HEADER -->
-        <div class="drawer-header-v4">
-            <button class="drawer-close-btn" data-action="closeOrderDrawer" title="Close" aria-label="Close order detail" onkeydown="if(event.key==='Enter'||event.key===' ')event.preventDefault();">
-                <i data-lucide="x" style="width:18px;height:18px;"></i>
+        <div class="dw-header">
+            <button class="dw-close" type="button" data-action="closeOrderDrawer" title="Close" aria-label="Close order detail">
+                <i data-lucide="x" style="width:15px;height:15px;"></i>
             </button>
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
-                <span class="order-type-badge">
-                    <i data-lucide="${orderType === 'Online' ? 'globe' : orderType === 'WhatsApp' ? 'message-circle' : orderType === 'POS' ? 'monitor' : 'utensils'}" style="width:11px;height:11px;"></i>
-                    ${escapeHtml(orderType)}
-                </span>
-                <span class="order-status-pill status-${statusLower}">
-                    <i data-lucide="circle" style="width:7px;height:7px;fill:currentColor;"></i>
-                    ${escapeHtml(order.status || 'Unknown')}
-                </span>
+            <div class="dw-toprow">
+                <span class="dw-type-badge"><i data-lucide="${orderTypeIcon}" style="width:9px;height:9px;"></i> ${escapeHtml(orderType)}</span>
             </div>
-            <div class="order-id-text">Order #${escapeHtml(order.orderId || id.slice(-5))}</div>
-            <div class="order-meta-text">${dateStr} at ${timeStr}</div>
+            <div class="dw-id">#${escapeHtml(order.orderId || id.slice(-5))}</div>
+            <div class="dw-meta-row">
+                <span class="dw-time">${dateStr} at ${timeStr}</span>
+                ${!['Delivered', 'Cancelled'].includes(order.status) ? `<span class="dw-age-chip ${age.cls}" id="dwAgeChip"><i data-lucide="${age.icon}" style="width:9px;height:9px;"></i> ${age.mins}m ago</span>` : ''}
+            </div>
         </div>
 
-        <!-- SCROLLABLE BODY -->
-        <div class="drawer-scroll-body">
+        <div class="dw-stepper-wrap">${renderDrawerStepper(order, orderType, id)}</div>
 
-            <!-- Customer Info -->
-            <div class="drawer-section">
-                <div class="section-label-v4"><i data-lucide="user"></i> Customer</div>
-                <div class="drawer-customer-card">
-                    <div class="customer-avatar">
-                        <i data-lucide="user" style="width:20px;height:20px;"></i>
-                    </div>
-                    <div>
-                        <div class="customer-name">${escapeHtml(order.customerName || 'Guest')}</div>
-                        <div class="customer-phone">${escapeHtml(order.phone || 'No phone')}</div>
-                    </div>
-                </div>
-                <div class="drawer-address-block">
-                    <i data-lucide="map-pin" style="width:16px;height:16px;color:#94a3b8;flex-shrink:0;margin-top:2px;"></i>
-                    <div>
-                        <div class="address-text">${escapeHtml(order.address || 'Counter Sale / Walk-in')}</div>
-                        ${(order.locationLink || (order.lat && order.lng)) ?
-                            `<a href="${escapeHtml(order.locationLink || `https://www.google.com/maps?q=${order.lat},${order.lng}`)}" target="_blank" rel="noopener noreferrer" class="map-link">
-                                <i data-lucide="external-link" style="width:10px;height:10px;"></i> Track on Live Map
-                            </a>` : ''}
-                    </div>
-                </div>
+        <div class="dw-body">
+
+            ${renderDrawerContext(order, orderType)}
+
+            <div class="dw-section">
+                <div class="dw-eyebrow"><i data-lucide="shopping-bag"></i> Items (${items.length})</div>
+                ${itemsHtml || '<div class="empty-state"><i data-lucide="shopping-bag"></i><p>No items in this order</p><span>Items may have been removed or the order is empty</span></div>'}
             </div>
 
-            <!-- Order Items -->
-            <div class="drawer-section">
-                <div class="section-label-v4"><i data-lucide="shopping-bag"></i> Items (${items.length})</div>
-                <div class="drawer-items-list">${itemsHtml || '<div class="empty-state"><i data-lucide="shopping-bag"></i><p>No items in this order</p><span>Items may have been removed or the order is empty</span></div>'}</div>
-            </div>
-
-            <!-- Pricing Summary -->
-            <div class="drawer-summary-panel">
-                <div class="summary-row"><span class="label">Subtotal</span><span class="value">₹${order.subtotal || 0}</span></div>
-                ${order.taxItems && Array.isArray(order.taxItems) && order.taxItems.length > 0 ? order.taxItems.map(t => `<div class="summary-row"><span class="label">${escapeHtml(t.name)} (${t.rate}%)</span><span class="value">₹${Number(t.amount).toFixed(2)}</span></div>`).join('') : ((order.tax && Number(order.tax) > 0) ? `<div class="summary-row"><span class="label">${escapeHtml(order.taxName || 'Tax')}</span><span class="value">₹${order.tax}</span></div>` : '')}
-                ${(order.serviceCharge && Number(order.serviceCharge) > 0) ? `<div class="summary-row"><span class="label">${escapeHtml(order.serviceChargeName || 'Service Charge')}${order.serviceChargeRate ? ` (${escapeHtml(String(order.serviceChargeRate))}%)` : ''}</span><span class="value">₹${order.serviceCharge}</span></div>` : ''}
-                ${(order.discount && Number(order.discount) > 0) ? `<div class="summary-row discount"><span class="label">Discount${order.discountLabel ? ` (${escapeHtml(order.discountLabel)})` : ''}</span><span class="value">-₹${order.discount}</span></div>` : ''}
-                ${(order.deliveryFee && Number(order.deliveryFee) > 0) ? `<div class="summary-row"><span class="label">Delivery Fee</span><span class="value">₹${order.deliveryFee}</span></div>` : ''}
-                <div class="summary-total">
-                    <span class="label">Grand Total</span>
-                    <span class="value">₹${order.total || 0}</span>
+            <div class="dw-section">
+                <div class="dw-money-panel">
+                    <div class="dw-money-row"><span>Subtotal</span><span>₹${order.subtotal || 0}</span></div>
+                    ${order.taxItems && Array.isArray(order.taxItems) && order.taxItems.length > 0 ? order.taxItems.map(t => `<div class="dw-money-row"><span>${escapeHtml(t.name)} (${t.rate}%)</span><span>₹${Number(t.amount).toFixed(2)}</span></div>`).join('') : ((order.tax && Number(order.tax) > 0) ? `<div class="dw-money-row"><span>${escapeHtml(order.taxName || 'Tax')}</span><span>₹${order.tax}</span></div>` : '')}
+                    ${(order.serviceCharge && Number(order.serviceCharge) > 0) ? `<div class="dw-money-row"><span>${escapeHtml(order.serviceChargeName || 'Service Charge')}${order.serviceChargeRate ? ` (${escapeHtml(String(order.serviceChargeRate))}%)` : ''}</span><span>₹${order.serviceCharge}</span></div>` : ''}
+                    ${(order.discount && Number(order.discount) > 0) ? `<div class="dw-money-row discount"><span>Discount${order.discountLabel ? ` (${escapeHtml(order.discountLabel)})` : ''}</span><span>-₹${order.discount}</span></div>` : ''}
+                    ${(order.deliveryFee && Number(order.deliveryFee) > 0) ? `<div class="dw-money-row"><span>Delivery Fee</span><span>₹${order.deliveryFee}</span></div>` : ''}
+                    <div class="dw-money-divider"></div>
+                    <div class="dw-money-total"><span class="dw-label">Total</span><span class="dw-value">₹${order.total || 0}</span></div>
+                    <div class="dw-pay-row">
+                        <div class="dw-pay-method"><i data-lucide="${(order.paymentMethod || '').toLowerCase() === 'cash' ? 'banknote' : (order.paymentMethod || '').toLowerCase() === 'upi' ? 'smartphone' : 'credit-card'}" style="width:13px;height:13px;"></i> ${escapeHtml(order.paymentMethod || '---')}</div>
+                        <div class="dw-pay-badge ${(order.paymentStatus || 'Pending') === 'Paid' ? 'paid' : 'pending'}">${escapeHtml(order.paymentStatus || 'Pending')}</div>
+                    </div>
+                    ${order.paymentMethod && order.paymentStatus !== 'Paid' ? `<button class="dw-btn-mark-paid" data-action="markAsPaid" data-id="${id}"><i data-lucide="check-circle" style="width:13px;height:13px;"></i> Mark as Paid</button>` : ''}
                 </div>
             </div>
 
-            <!-- Payment Info -->
-            <div class="drawer-section">
-                <div class="section-label-v4"><i data-lucide="credit-card"></i> Payment</div>
-                <div class="drawer-payment-card">
-                    <div class="payment-method-row">
-                        <span class="label">Method</span>
-                        <span class="badge-payment-v4" data-method="${escapeHtml((order.paymentMethod || '---').toLowerCase())}">
-                            <i data-lucide="${(order.paymentMethod || '').toLowerCase() === 'cash' ? 'banknote' : (order.paymentMethod || '').toLowerCase() === 'upi' ? 'smartphone' : 'credit-card'}" style="width:12px;height:12px;"></i>
-                            <span>${escapeHtml(order.paymentMethod || '---')}</span>
-                        </span>
-                    </div>
-                    <div class="payment-status-row">
-                        <span class="label">Status</span>
-                        <span class="badge ${(order.paymentStatus || 'Pending') === 'Paid' ? 'badge-success' : 'badge-pending'}">${escapeHtml(order.paymentStatus || 'Pending')}</span>
-                    </div>
-                    ${order.paymentMethod && order.paymentStatus !== 'Paid' ? `<button class="btn-text text-success btn-small" data-action="markAsPaid" data-id="${id}"><i data-lucide="check-circle" style="width:12px;height:12px;"></i> Mark as Paid</button>` : ''}
+            ${isDelivery ? `
+            <div class="dw-section" style="margin-bottom:0;">
+                <div class="dw-eyebrow"><i data-lucide="bike"></i> Rider</div>
+                <div class="dw-rider-card">
+                    <span class="dw-rider-name">${order.riderId ? (state.ridersList?.find(r => r.id === order.riderId)?.name || 'Assigned') : 'Not assigned yet'}</span>
+                    <select class="dw-rider-select" data-action="assignRider" data-id="${id}" ${isTerminalForRider ? 'disabled' : ''}>
+                        <option value="">${order.riderId ? 'Change Rider' : 'Assign Rider'}</option>
+                        ${riderOptions}
+                    </select>
                 </div>
-            </div>
-
-            <!-- Operational Controls -->
-            <div class="drawer-section" style="margin-bottom:0;">
-                <div class="section-label-v4"><i data-lucide="settings"></i> Controls</div>
-                <div class="drawer-ctrl-panel" style="border:none;padding:0;margin:0;background:transparent;box-shadow:none;">
-                    <div class="ctrl-row">
-                        <div class="ctrl-group">
-                            <label class="form-label-small mb-6 d-block" style="color:#64748b;">STATUS</label>
-                            ${renderStatusDropdown(order.status || 'Placed', orderType, id, order)}
-                        </div>
-                        <div class="ctrl-group">
-                            <label class="form-label-small mb-6 d-block" style="color:#64748b;">RIDER</label>
-                            <select data-action="assignRider" data-id="${id}" class="form-input-v4 w-100" ${!isDelivery ? 'disabled' : ''}>
-                                <option value="">${order.riderId ? 'Change Rider' : 'Assign Rider'}</option>
-                                ${riderOptions}
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            </div>` : ''}
 
         </div>
 
-        <!-- ACTION BAR -->
-        <div class="drawer-action-bar">
-            <button class="btn-drawer-action primary" data-action="printReceiptById" data-id="${id}">
-                <i data-lucide="printer" style="width:15px;height:15px;"></i> Print
+        <div class="dw-actions">
+            <button class="dw-act-btn primary" data-action="printReceiptById" data-id="${id}">
+                <i data-lucide="printer"></i> Print
             </button>
-            <button class="btn-drawer-action secondary" data-action="printKotById" data-id="${id}">
-                <i data-lucide="clipboard-list" style="width:15px;height:15px;"></i> KOT
+            <button class="dw-act-btn" data-action="printKotById" data-id="${id}">
+                <i data-lucide="clipboard-list"></i> KOT
             </button>
-            ${order.phone ? `<a class="btn-drawer-action whatsapp" href="https://wa.me/${escapeHtml(order.phone.replace(/[^0-9]/g, ''))}" target="_blank" style="text-decoration:none;">
-                <i data-lucide="message-circle" style="width:15px;height:15px;"></i> WhatsApp
+            ${order.phone ? `<a class="dw-act-btn whatsapp" href="https://wa.me/${escapeHtml(order.phone.replace(/[^0-9]/g, ''))}" target="_blank">
+                <i data-lucide="message-circle"></i> WhatsApp
             </a>` : ''}
-            ${isDelivery && order.status !== 'Delivered' ? `<button class="btn-drawer-action secondary" data-action="saveDeliveredOrder" data-id="${id}">
-                <i data-lucide="check-circle" style="width:15px;height:15px;"></i> Delivered
+            ${isDelivery && order.status !== 'Delivered' ? `<button class="dw-act-btn" data-action="saveDeliveredOrder" data-id="${id}" title="Force-finalize as Delivered, bypassing the normal sequence — use for orders stuck outside the standard flow">
+                <i data-lucide="check-check"></i> Force Delivered
             </button>` : ''}
         </div>
     `;
 
     await loadLucide();
     window.lucide.createIcons({ root: content });
+
+    // Live-update the age chip every 30s so "Xm ago" stays accurate while the
+    // drawer is left open — cleared in closeOrderDrawer() to avoid leaking timers.
+    if (window._drawerAgeTicker) clearInterval(window._drawerAgeTicker);
+    if (!['Delivered', 'Cancelled'].includes(order.status)) {
+        window._drawerAgeTicker = setInterval(() => {
+            const chip = document.getElementById('dwAgeChip');
+            if (!chip) { clearInterval(window._drawerAgeTicker); return; }
+            const a = getOrderAge(order.createdAt);
+            chip.className = `dw-age-chip ${a.cls}`;
+            chip.innerHTML = `<i data-lucide="${a.icon}" style="width:9px;height:9px;"></i> ${a.mins}m ago`;
+            window.lucide.createIcons({ root: chip });
+        }, 30000);
+    }
 
     const overlay = document.getElementById('orderDrawerOverlay');
     if (drawer) drawer.classList.add('active');
@@ -1445,6 +1512,11 @@ export function closeOrderDrawer() {
     if (drawer) drawer.classList.remove('active');
     if (overlay) overlay.classList.remove('active');
     document.body.style.overflow = '';
+
+    if (window._drawerAgeTicker) {
+        clearInterval(window._drawerAgeTicker);
+        window._drawerAgeTicker = null;
+    }
 
     if (window._drawerPopstateHandler) {
         window.removeEventListener('popstate', window._drawerPopstateHandler);

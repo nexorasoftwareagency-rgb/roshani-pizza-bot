@@ -246,7 +246,8 @@ export async function generateCustomReport() {
             });
         }
 
-        salesData.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+        const _ms = v => typeof v === 'string' ? new Date(v).getTime() : (v || 0);
+        salesData.sort((a, b) => _ms(b.createdAt) - _ms(a.createdAt));
 
         const fromDate = from ? formatDate(new Date(from + 'T00:00:00')) : 'Start';
         const toDate = to ? formatDate(new Date(to + 'T23:59:59')) : 'Today';

@@ -92,7 +92,8 @@ function buildAdaptiveSeries(orders, rangeFrom, rangeTo) {
     const buckets = {};
     const rangeStart = new Date(rangeFrom).getTime();
     orders.forEach(o => {
-        const weekIdx = Math.floor((o.createdAt - rangeStart) / (7 * 86400000));
+        const _ms = v => typeof v === 'string' ? new Date(v).getTime() : (v || 0);
+        const weekIdx = Math.floor((_ms(o.createdAt) - rangeStart) / (7 * 86400000));
         const weekStartKey = dayKey(rangeStart + weekIdx * 7 * 86400000);
         buckets[weekStartKey] = (buckets[weekStartKey] || 0) + Number(o.total || 0);
     });
@@ -171,8 +172,10 @@ export async function renderMobileAnalytics(salesData, prevPeriodData) {
     const firstOrderByPhone = {};
     delivered.forEach(o => {
         if (!o.phone) return;
-        if (!firstOrderByPhone[o.phone] || o.createdAt < firstOrderByPhone[o.phone]) {
-            firstOrderByPhone[o.phone] = o.createdAt;
+        const _ms = v => typeof v === 'string' ? new Date(v).getTime() : (v || 0);
+        const ot = _ms(o.createdAt);
+        if (!firstOrderByPhone[o.phone] || ot < firstOrderByPhone[o.phone]) {
+            firstOrderByPhone[o.phone] = ot;
         }
     });
     Object.entries(firstOrderByPhone).forEach(([phone, firstTs]) => {

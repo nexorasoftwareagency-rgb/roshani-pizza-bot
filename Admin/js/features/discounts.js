@@ -132,7 +132,8 @@ async function _renderList() {
         else if (s === 'scheduled') groups.scheduled.push(d);
         else groups.expired.push(d);
     }
-    const sorted = arr => arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const _ms = v => typeof v === 'string' ? new Date(v).getTime() : (v || 0);
+    const sorted = arr => arr.sort((a, b) => _ms(b.createdAt) - _ms(a.createdAt));
 
     const fill = (id, list, emptyMsg) => {
         const el = document.getElementById(id);
@@ -276,7 +277,7 @@ async function _save() {
         engineVersion: 1,
         updatedAt: Date.now()
     };
-    if (!_editingId) { doc.createdAt = Date.now(); doc.createdBy = window.currentAdmin?.uid || 'admin'; doc.stats = { usedCount: 0, totalDiscountGiven: 0 }; }
+    if (!_editingId) { doc.createdAt = new Date().toISOString(); doc.createdBy = window.currentAdmin?.uid || 'admin'; doc.stats = { usedCount: 0, totalDiscountGiven: 0 }; }
     else { doc.id = id; }
 
     try {

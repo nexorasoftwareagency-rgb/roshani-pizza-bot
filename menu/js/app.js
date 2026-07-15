@@ -61,11 +61,18 @@ function _groupTotalForBill() {
 // ---------------------------------------------------------------
 // BOOT
 // ---------------------------------------------------------------
+let _bootReady = false;
+
 async function boot() {
-    const result = await initSession();
+    const result = await Promise.race([
+        initSession().catch(() => ({ ok: false })),
+        new Promise(resolve => setTimeout(() => resolve({ ok: false, reason: 'timeout' }), 1500))
+    ]);
     if (!result.ok) {
         document.getElementById('loadingOverlay').style.display = 'none';
-        UI.showScreen('screenInvalid');
+        document.getElementById('offlineBanner').classList.add('visible');
+        UI.showScreen('screenWelcome');
+        window.addEventListener('online', _retryBoot, { once: true });
         return;
     }
 
@@ -165,6 +172,14 @@ async function boot() {
     clearCart();
     document.getElementById('loadingOverlay').style.display = 'none';
     UI.showScreen('screenWelcome');
+    _bootReady = true;
+}
+
+async function _retryBoot() {
+    if (_bootReady) return;
+    document.getElementById('offlineBanner').classList.remove('visible');
+    document.getElementById('loadingOverlay').style.display = '';
+    await boot();
 }
 
 // ---------------------------------------------------------------
@@ -771,5 +786,9 @@ window.addEventListener('popstate', UI.handlePopState);
 boot().catch(err => {
     console.error('[Boot]', err);
     document.getElementById('loadingOverlay').style.display = 'none';
-    UI.showScreen('screenInvalid');
+    if (!_bootReady) {
+        document.getElementById('offlineBanner').classList.add('visible');
+        UI.showScreen('screenWelcome');
+        window.addEventListener('online', _retryBoot, { once: true });
+    }
 });

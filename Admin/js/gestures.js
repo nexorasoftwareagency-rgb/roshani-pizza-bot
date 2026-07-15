@@ -40,7 +40,7 @@ function initSwipeToClose(elementId, closeCallback) {
     const DIAGONAL_THRESHOLD = 30;
 
     el.addEventListener('touchstart', (e) => {
-        if (el.querySelector('.drawer-scroll-body')?.scrollTop > 0) return;
+        if (el.querySelector('.dw-body')?.scrollTop > 0) return;
         const touchX = e.touches[0].pageX;
         const drawerRect = el.getBoundingClientRect();
         if (touchX - drawerRect.left > EDGE_THRESHOLD) return;

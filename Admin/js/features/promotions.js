@@ -521,7 +521,7 @@ async function _launchCampaign() {
         sendStopMsg: sendStop,
         recipients, delayMs: delaySec * 1000, generateCoupons,
         runAt, quietHours, requestedBy: window.currentAdmin?.uid || 'admin',
-        createdAt: Date.now(),
+        createdAt: new Date().toISOString(),
     };
     if (mode !== 'schedule') campaignDoc.startedAt = Date.now();
 
