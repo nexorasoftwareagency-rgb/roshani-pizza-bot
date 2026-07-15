@@ -341,6 +341,7 @@ export async function renderOrders(snap) {
         const toDate = document.getElementById("orderTo")?.value;
 
         state.ordersMap.clear();
+        const _seen = new Set();
         snap.forEach(child => {
             const o = child.val();
             if (!o) return;
@@ -354,13 +355,21 @@ export async function renderOrders(snap) {
             }
 
             state.ordersMap.set(child.key, o);
+            _seen.add(child.key);
         });
+
+        // Keep paginated data in sync with live snap — merge updates into ordersPageData
+        if (activeTab === 'orders' && state.ordersPageData.length > 0) {
+            state.ordersPageData.forEach((o, i) => { if (_seen.has(o.id) && state.ordersMap.has(o.id)) state.ordersPageData[i] = { id: o.id, ...state.ordersMap.get(o.id) }; });
+            const existing = new Set(state.ordersPageData.map(o => o.id));
+            state.ordersMap.forEach((o, key) => { if (!existing.has(key)) state.ordersPageData.unshift({ id: key, ...o }); });
+        }
     }
 
     // Decide which data source to use
     let ordersToProcess = [];
     if (activeTab === 'orders') {
-        // Use paginated data for orders tab
+        // Use paginated data for orders tab (now live-merged)
         ordersToProcess = state.ordersPageData;
     } else if (activeTab === 'live') {
         // Populate liveOrdersMap from ordersMap (filtered for live statuses)
@@ -1240,7 +1249,7 @@ const DRAWER_ONLINE_PHASES = [
 function getOrderAge(createdAt) {
     const t = createdAt ? (typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt) : Date.now();
     const mins = Math.max(0, Math.floor((Date.now() - t) / 60000));
-    let cls = 'fresh', icon = 'circle-check';
+    let cls = 'fresh', icon = 'check-circle';
     if (mins >= 20) { cls = 'late'; icon = 'triangle-alert'; }
     else if (mins >= 10) { cls = 'warm'; icon = 'clock'; }
     return { mins, cls, icon };
