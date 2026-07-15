@@ -1256,7 +1256,7 @@ function getOrderAge(createdAt) {
     const t = createdAt ? (typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt) : Date.now();
     const mins = Math.max(0, Math.floor((Date.now() - t) / 60000));
     let cls = 'fresh', icon = 'check-circle';
-    if (mins >= 20) { cls = 'late'; icon = 'triangle-alert'; }
+    if (mins >= 20) { cls = 'late'; icon = 'alert-triangle'; }
     else if (mins >= 10) { cls = 'warm'; icon = 'clock'; }
     return { mins, cls, icon };
 }

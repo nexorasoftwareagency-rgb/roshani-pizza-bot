@@ -1042,7 +1042,7 @@ async function _advanceOrder(orderId, nextStatus) {
         let orderData, tableId;
         const result = await runTransaction(_ordersRef(orderId), (current) => {
             if (!current) return;
-            const o = current.val();
+            const o = current; // ponytail: runTransaction gives raw value, not snapshot
             if (!o) return;
             if (!valid[o.status]?.includes(nextStatus)) {
                 return; // abort — transaction won't commit
