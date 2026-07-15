@@ -388,10 +388,14 @@ export async function saveCheckoutContact(name, phone, guestCount, specialNote) 
     const contactPayload = { customerName: name || '', customerPhone: phone || '', guestPhone: cleanPhone };
     if (typeof guestCount === 'number' && guestCount > 0) contactPayload.guestCount = guestCount;
     if (specialNote) contactPayload.specialNote = specialNote;
-    try {
-        await update(outletRef(`tableSessionsContact/${Session.sessionId}`), contactPayload);
-    } catch (e) {
-        console.warn('[Session] PII write failed', e?.message || e);
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            await update(outletRef(`tableSessionsContact/${Session.sessionId}`), contactPayload);
+            return;
+        } catch (e) {
+            if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+            else console.warn('[Session] PII write failed', e?.message || e);
+        }
     }
 }
 

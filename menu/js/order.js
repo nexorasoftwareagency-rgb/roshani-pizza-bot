@@ -130,12 +130,18 @@ export async function placeOrder({ taxPercent = 5, taxEnabled = true, taxRates, 
     // Write order-level guest record (fire-and-forget; must not reject the caller)
     const cleanPhone = (customerPhone || '').replace(/[^\d]/g, '');
     if (cleanPhone.length >= 10) {
-        set(outletRef(`guests/${cleanPhone}/orders/${newOrderRef.key}`), {
-            name: customerName || '',
-            total,
-            placedAt: new Date().toISOString(),
-            source: 'QR'
-        }).catch(e => console.warn('[Order] Guest record write failed:', e));
+        const _writeGuest = (attempt) => {
+            set(outletRef(`guests/${cleanPhone}/orders/${newOrderRef.key}`), {
+                name: customerName || '',
+                total,
+                placedAt: new Date().toISOString(),
+                source: 'QR'
+            }).catch(e => {
+                if (attempt < 1) setTimeout(() => _writeGuest(attempt + 1), 500);
+                else console.warn('[Order] Guest record write failed:', e);
+            });
+        };
+        _writeGuest(0);
     }
 
     return { orderId: newOrderRef.key, ...orderPayload };

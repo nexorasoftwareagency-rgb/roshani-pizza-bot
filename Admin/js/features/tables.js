@@ -1032,8 +1032,6 @@ async function _cancelSessionForTable(tableId) {
 // ---------------------------------------------------------------------
 async function _advanceOrder(orderId, nextStatus) {
     try {
-        const o = _orders[orderId];
-        if (!o) { showToast('Order not found', 'error'); return; }
         const valid = {
             'Placed': ['Confirmed', 'Cancelled'],
             'Confirmed': ['Ready', 'Cancelled'],
@@ -1041,23 +1039,31 @@ async function _advanceOrder(orderId, nextStatus) {
             'Ready': ['Served', 'Delivered', 'Cancelled'],
             'Served': [], 'Delivered': [], 'Cancelled': []
         };
-        if (!valid[o.status]?.includes(nextStatus)) {
-            showToast(`Cannot change status from ${o.status} to ${nextStatus}`, 'warning');
+        let orderData, tableId;
+        const result = await runTransaction(_ordersRef(orderId), (current) => {
+            if (!current) return;
+            const o = current.val();
+            if (!o) return;
+            if (!valid[o.status]?.includes(nextStatus)) {
+                return; // abort — transaction won't commit
+            }
+            orderData = o;
+            tableId = o.tableId;
+            return { ...o, status: nextStatus, updatedAt: Date.now() };
+        });
+        if (!orderData) {
+            const o = _orders[orderId];
+            if (!o) showToast('Order not found', 'error');
+            else showToast(`Cannot change status from ${o.status} to ${nextStatus}`, 'warning');
             return;
         }
-        const updates = { status: nextStatus, updatedAt: Date.now() };
-        await update(_ordersRef(orderId), updates);
         if (_orders[orderId]) {
-            _orders[orderId] = { ..._orders[orderId], ...updates };
+            _orders[orderId] = { ..._orders[orderId], status: nextStatus, updatedAt: Date.now() };
         }
         _renderAll();
 
-        // Session aggregates intentionally NOT adjusted on cancellation —
-        // see _cancelSessionForTable comment for rationale.
-
-        // Auto-print KOT on Accept (Placed -> Confirmed)
-        if (nextStatus === 'Confirmed' && o?.tableId) {
-            setTimeout(() => _printTableKOT(o.tableId), 500);
+        if (nextStatus === 'Confirmed' && tableId) {
+            setTimeout(() => _printTableKOT(tableId), 500);
         }
 
         showToast(`Order moved to ${nextStatus}`, 'success');
@@ -1357,12 +1363,12 @@ async function _qrUrlForTable(t) {
 
 async function _openQrModal(id) {
     if (_qrModalOpening) return;
-    _qrModalOpening = true;
     const modal = document.getElementById('tableQrModal');
     const img = document.getElementById('tableQrModalImage');
     const titleEl = document.getElementById('tableQrModalTitle');
     const urlEl = document.getElementById('tableQrModalUrl');
     try {
+        _qrModalOpening = true;
         const t = _tables[id];
         if (!t) { modal?.classList.remove('active'); return; }
 
