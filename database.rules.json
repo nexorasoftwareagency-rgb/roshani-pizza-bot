@@ -74,10 +74,7 @@
         },
         "commands": {
           "$commandId": {
-            ".validate": "newData.hasChildren(['action', 'phone', 'message', 'timestamp'])",
-            "action": { ".validate": "newData.isString()" },
-            "phone": { ".validate": "newData.isString()" },
-            "message": { ".validate": "newData.isString()" }
+            ".validate": "newData.hasChildren(['action']) && (newData.hasChild('phone') || newData.hasChild('campaignId'))"
           }
         }
       },
