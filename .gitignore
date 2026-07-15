@@ -20,6 +20,11 @@ capacitor-rider/node_modules/
 graphify-out/
 .kilo/
 rider_old/
+rider-old/
+Cake-bot/
+verify_*.mjs
+screenshot_*.png
+screenshots-*/
 
 # Firebase hosting cache
 .firebase/
