@@ -1907,54 +1907,6 @@
         border-top: 1px solid #f1f5f9;
     }
 
-    /* Customers Table - Card Layout */
-    #tab-customers .premium-table-v4 {
-        display: block;
-        border-spacing: 0;
-    }
-    #tab-customers .premium-row-v4 {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 4px 8px;
-        padding: 12px;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-    }
-    #tab-customers .premium-row-v4 td {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 0;
-        border: none;
-        font-size: 12px;
-        flex: 0 0 auto;
-    }
-    #tab-customers .premium-row-v4 td:before {
-        content: attr(data-label);
-        font-size: 9px;
-        font-weight: 700;
-        color: #94a3b8;
-        text-transform: uppercase;
-        display: block;
-        width: 100%;
-    }
-    #tab-customers .premium-row-v4 td[data-label="Address"] {
-        flex: 1 1 100%;
-        font-size: 11px;
-        color: #64748b;
-    }
-
-    /* Hide Address on small screens */
-    @media (max-width: 480px) {
-        #tab-customers .premium-row-v4 td[data-label="Address"] {
-            display: none !important;
-        }
-    }
-
     /* Analytics KPIs - Adaptive Grid */
     #tab-riderAnalytics .kpi-row {
         grid-template-columns: repeat(2, 1fr) !important;
@@ -2638,7 +2590,8 @@
     .mob-highlights-row { grid-template-columns: repeat(4, 1fr); }
 }
 
-#reportsMobileView {
+#reportsMobileView,
+#tab-customers {
     --mob-orange: var(--primary, #E84908);
     --mob-orange-light: rgba(232, 73, 8, 0.14);
     --mob-blue: #2563eb;
@@ -2655,11 +2608,59 @@
     --mob-sub: #475569;
     --mob-border: #e2e8f0;
     --mob-bg: #f8fafc;
-
+}
+#reportsMobileView {
     background: var(--mob-bg);
     margin: -20px -16px 0;
     padding-bottom: 24px;
     font-family: inherit;
+}
+#tab-customers {
+    padding: 20px 16px;
+}
+#tab-customers .mob-cust-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+#tab-customers .mob-cust-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--mob-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+#tab-customers .mob-wa-link {
+    color: var(--mob-blue);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+#tab-customers .mob-wa-link:hover { text-decoration: underline; }
+#tab-customers .mob-map-link {
+    color: var(--mob-blue);
+    font-size: 10px;
+    font-weight: 800;
+    text-decoration: none;
+    margin-left: 2px;
+}
+#tab-customers .mob-map-link:hover { text-decoration: underline; }
+#tab-customers .mob-addr-text {
+    font-size: 13px;
+    color: var(--mob-ink);
+}
+#tab-customers .mob-th-center { text-align: center !important; }
+#tab-customers .mob-order-count {
+    font-weight: 900;
+    font-size: 16px;
+    color: var(--mob-blue);
 }
 #reportsMobileView.reports-mobile-loading .mob-kpi-val,
 #reportsMobileView.reports-mobile-loading .mob-overview-total { opacity: .35; }

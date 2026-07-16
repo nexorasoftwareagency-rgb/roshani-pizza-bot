@@ -2877,24 +2877,35 @@
 
             <div id="tab-customers" class="tab-content hidden">
 
-                <div class="panel">
-
-                    <div class="panel-header">
-
-                        <h3>Customer Database</h3>
-
-                        <input type="text" id="customerSearch" placeholder="Search..." class="search-input-group" aria-label="Search customers">
-
+                <div class="mob-card mob-table-card" style="margin:0;">
+                    <div class="mob-section-head-row">
+                        <h3 class="mob-card-title">Customer Database</h3>
+                        <input type="text" id="customerSearch" placeholder="Search..." class="search-input-group" style="max-width:220px;" aria-label="Search customers">
                     </div>
-
-                    <div class="scroll-x">
-
-                        <div id="customersTableBody"></div>
-
-                        <div id="customersPagination" class="pagination-controls"></div>
-
+                    <div class="mob-table-scroll">
+                        <table class="mob-data-table" id="customerDataTable">
+                            <thead>
+                                <tr>
+                                    <th data-sort="name">Customer</th>
+                                    <th data-sort="displayPhone">Phone</th>
+                                    <th data-sort="address">Address</th>
+                                    <th data-sort="orderCount">Orders</th>
+                                    <th data-sort="ltv" class="mob-th-right">Value (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customerDataTableBody"></tbody>
+                        </table>
                     </div>
-
+                    <div class="mob-export-row" style="margin-top:14px;">
+                        <button type="button" class="mob-export-banner mob-export-excel" data-action="custExportExcel">
+                            <i data-lucide="file-spreadsheet" class="icon-18"></i>
+                            <span>Excel</span>
+                        </button>
+                        <button type="button" class="mob-export-banner mob-export-pdf" data-action="custExportPDF">
+                            <i data-lucide="file-text" class="icon-18"></i>
+                            <span>PDF</span>
+                        </button>
+                    </div>
                 </div>
 
             </div>
