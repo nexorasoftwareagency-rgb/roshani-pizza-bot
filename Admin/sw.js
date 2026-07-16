@@ -70,7 +70,6 @@ const ASSETS_TO_CACHE = [
   './js/features/feedback.js',
   './js/features/notifications.js',
   './js/fcm-init.js',
-  './js/fcm-sender.js',
   './js/features/printing.js',
   './js/features/rider-analytics.js',
   './js/features/inventory.js',

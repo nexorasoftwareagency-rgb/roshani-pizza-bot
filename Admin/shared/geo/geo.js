@@ -17,7 +17,3 @@ export function getFeeFromSlabs(distance, slabs) {
     }
     return slabs[slabs.length - 1].fee;
 }
-
-export function isWithinRadius(lat1, lon1, lat2, lon2, radiusKm = 0.5) {
-    return calculateDistance(lat1, lon1, lat2, lon2) <= radiusKm;
-}

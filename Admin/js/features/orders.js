@@ -5,7 +5,7 @@
 
 import { db, Outlet, serverTimestamp, ref, get, set, update, query, orderByChild, orderByKey, equalTo, limitToLast, startAt, endAt, endBefore, onValue, onChildAdded, onChildChanged } from '../firebase.js';
 import { state } from '../state.js';
-import { escapeHtml, showToast, playNotificationSound, startContinuousSound, stopContinuousSound, validateUrl, logAudit, calculateDistance, getFeeFromSlabs, addRiderNotification, getISTDateString, getSkeletonRows } from '../utils.js';
+import { escapeHtml, showToast, playNotificationSound, startContinuousSound, stopContinuousSound, logAudit, calculateDistance, getFeeFromSlabs, addRiderNotification, getISTDateString, getSkeletonRows } from '../utils.js';
 import { showAlert, addNotification, highlightOrder } from './notifications.js';
 import { showPaymentPicker } from '../ui-utils.js';
 import { autoDeductStock } from './inventory.js';

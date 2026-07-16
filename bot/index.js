@@ -1653,6 +1653,10 @@ async function sendDailyReportSafely(dateOverride = null) {
                                     merged.firstOrderDiscountUsed = Date.now();
                                     merged.firstOrderDiscountId = user.discountId;
                                 }
+                                if (user.discountId && user.discount > 0) {
+                                    merged.discountUsage = merged.discountUsage || {};
+                                    merged.discountUsage[user.discountId] = (merged.discountUsage[user.discountId] || 0) + 1;
+                                }
                                 return merged;
                             }).catch(() => {});
                         }

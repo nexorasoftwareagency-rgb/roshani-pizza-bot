@@ -65,6 +65,8 @@ async function evaluateDiscount({ OUTLET, customer, subtotal, couponCode, cart, 
         .filter(([, d]) => d && d.type && d.value != null)
         .map(([id, d]) => ({ id, ...d }));
 
+    const customerPhone = customer?.phone ? String(customer.phone).replace(/\D/g, '').slice(-10) : null;
+
     const candidates = list.filter(d =>
         d.enabled !== false
         && now >= (d.startsAt || 0)
@@ -72,6 +74,7 @@ async function evaluateDiscount({ OUTLET, customer, subtotal, couponCode, cart, 
         && (!d.minSubtotal || subtotal >= d.minSubtotal)
         && (!d.globalLimit || (d.stats?.usedCount || 0) < d.globalLimit)
         && (!d.channel || d.channel === 'all' || d.channel === channel || (d.channel === 'both' && (channel === 'whatsapp' || channel === 'pos')))
+        && (!d.perCustomerLimit || !customerPhone || (customer?.discountUsage?.[d.id] || 0) < d.perCustomerLimit)
     );
 
     const applicable = candidates.filter(d => {
@@ -101,7 +104,7 @@ async function evaluateDiscount({ OUTLET, customer, subtotal, couponCode, cart, 
     total = Math.round(Math.min(total, subtotal));
 
     if (total <= 0) return null;
-    const primary = exclusive[0] || chosen[0];
+    const primary = chosen[0];
     return {
         discount: primary,
         allApplied: chosen,

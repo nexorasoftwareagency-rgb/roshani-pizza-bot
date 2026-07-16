@@ -17,7 +17,7 @@ export const formatDate = (ts) => {
 // Re-export IST date helper from shared — single source of truth
 export { getISTDateString } from '../../shared/format/date.js';
 
-export { escapeHtml } from './utils/escape.js';
+export { escapeHtml } from '../../shared/dom/escape.js';
 
 // Re-export geo utilities from shared — single source of truth
 export { calculateDistance } from '../../shared/geo/geo.js';
@@ -32,38 +32,7 @@ export const getFeeFromSlabs = (dist, slabs) => {
 };
 
 import { showToast, showConfirm } from './ui-utils.js';
-export { showToast, showConfirm, showConfirm as confirmAction };
-
-export function initPagination(containerId, totalItems, pageSize, onPageChange) {
-    const container = document.getElementById(containerId);
-    if (!container) return { currentPage: 1, goToPage: () => {} };
-    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-    let currentPage = 1;
-    container.innerHTML = '';
-    container.style.display = totalPages <= 1 ? 'none' : 'flex';
-    if (totalPages <= 1) return { currentPage: 1, goToPage: () => {} };
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'btn-pagination';
-    prevBtn.innerHTML = '← Prev';
-    prevBtn.disabled = true;
-    const info = document.createElement('span');
-    info.className = 'pagination-info';
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'btn-pagination';
-    nextBtn.innerHTML = 'Next →';
-    function update() {
-        info.textContent = `Page ${currentPage} of ${totalPages}`;
-        prevBtn.disabled = currentPage <= 1;
-        nextBtn.disabled = currentPage >= totalPages;
-    }
-    prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; update(); onPageChange(currentPage); } };
-    nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; update(); onPageChange(currentPage); } };
-    container.appendChild(prevBtn);
-    container.appendChild(info);
-    container.appendChild(nextBtn);
-    update();
-    return { currentPage: () => currentPage, goToPage: (p) => { currentPage = Math.max(1, Math.min(p, totalPages)); update(); onPageChange(currentPage); } };
-}
+export { showToast, showConfirm };
 
 // ── Audio (pre-created, unlocked on first user interaction) ──
 let _alertAudio = null;
@@ -133,19 +102,6 @@ export const playSuccessSound = () => {
     const audio = _ensureAudio();
     audio.currentTime = 0;
     audio.play().catch(e => console.warn('Audio playback failed:', e));
-};
-
-export const generateNextOrderId = async () => {
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = (today.getMonth() + 1).toString().padStart(2, '0');
-    const d = today.getDate().toString().padStart(2, '0');
-    const dateStr = `${y}${m}${d}`;
-
-    const seqRef = Outlet.ref(`metadata/orderSequence/${dateStr}`);
-    const result = await runTransaction(seqRef, (current) => (current || 0) + 1);
-    const seqNum = result.snapshot.val() || 1;
-    return `${dateStr}-${seqNum.toString().padStart(4, '0')}`;
 };
 
 export const standardizeOrderData = (o) => {
@@ -298,26 +254,6 @@ export const validateUrl = (url) => {
     }
 };
 
-export const enhanceTablesForMobile = (root = document) => {
-    if (window.innerWidth > 600) return;
-
-    const tables = root.querySelectorAll('table');
-    tables.forEach(table => {
-        const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
-        if (headers.length === 0) return;
-
-        const rows = table.querySelectorAll('tbody tr');
-        rows.forEach(row => {
-            const cells = row.querySelectorAll('td');
-            cells.forEach((cell, index) => {
-                if (headers[index] && !cell.getAttribute('data-label')) {
-                    cell.setAttribute('data-label', headers[index]);
-                }
-            });
-        });
-    });
-};
-
 /**
  * Generates skeleton table rows for loading states.
  * @param {number} count - Number of skeleton rows to generate (default 5)
@@ -328,22 +264,6 @@ export function getSkeletonRows(count = 5, colspan = 7) {
     return Array.from({ length: count }, () =>
         `<tr class="skeleton-row"><td colspan="${colspan}"><div class="skeleton" style="height:44px;width:100%;border-radius:6px;margin:3px 0"></div></td></tr>`
     ).join('');
-}
-
-let _xlsxPromise = null;
-
-export function loadXLSX() {
-    if (typeof window.XLSX !== 'undefined') return Promise.resolve(window.XLSX);
-    if (_xlsxPromise) return _xlsxPromise;
-    _xlsxPromise = new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js';
-        script.crossOrigin = 'anonymous';
-        script.onload = () => resolve(window.XLSX);
-        script.onerror = () => { _xlsxPromise = null; reject(new Error('Failed to load XLSX library')); };
-        document.head.appendChild(script);
-    });
-    return _xlsxPromise;
 }
 
 export function getSkeletonDivs(count = 5) {

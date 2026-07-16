@@ -11,14 +11,6 @@ const SETTINGS_PATHS = {
     DISPLAY: "settings/Display"
 };
 
-/**
- * v5.0.0 One-time migration: remove deprecated bot image keys (imgPreparing, imgCooked).
- * Merged "Cooked" + "Ready" into a single "Ready" status; "Preparing" deleted.
- * Guarded by localStorage flag so it only runs once per browser.
- *
- * COORDINATE VALIDATION
- * Validates Latitude and Longitude
- */
 function validateCoords(lat, lng) {
     const l = parseFloat(lat);
     const n = parseFloat(lng);
@@ -85,6 +77,7 @@ const val = (id) => document.getElementById(id)?.value ?? '';
 const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
 const setChecked = (id, v) => { const el = document.getElementById(id); if (el) el.checked = v; };
 const isChecked = (id) => document.getElementById(id)?.checked ?? false;
+const refreshIcons = (root) => loadLucide().then(() => window.lucide?.createIcons({ root }));
 
 // --- CORE FUNCTIONS ---
 
@@ -254,8 +247,7 @@ export async function saveStoreSettings() {
     if (saveBtn) {
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<i data-lucide="loader" class="icon-16 spin-icon"></i> Saving...';
-        await loadLucide();
-        if (window.lucide) window.lucide.createIcons({ root: saveBtn });
+        await refreshIcons(saveBtn);
     }
 
     try {
@@ -328,7 +320,7 @@ export async function saveStoreSettings() {
             serviceChargeEnabled: isChecked('dineinServiceChargeEnabled'),
             serviceChargeName: val('dineinServiceChargeName').trim() || 'Service Charge',
             serviceChargeRate: parseFloat(val('dineinServiceChargeRate')) || 0,
-            offers: _getOffers()
+            offers: _readOffersFromDOM().filter(o => o.title)
         };
         await update(ref(db), updates);
 
@@ -345,8 +337,7 @@ export async function saveStoreSettings() {
         if (saveBtn) {
             saveBtn.disabled = false;
             saveBtn.innerHTML = saveBtnOriginalHTML;
-            await loadLucide();
-            if (window.lucide) window.lucide.createIcons({ root: saveBtn });
+            await refreshIcons(saveBtn);
         }
     }
 }
@@ -383,8 +374,7 @@ async function renderFeeSlabs(slabs) {
         `;
         tbody.appendChild(tr);
     });
-    await loadLucide();
-    if (window.lucide) window.lucide.createIcons({ root: tbody });
+    await refreshIcons(tbody);
 }
 
 export async function addFeeSlab() {
@@ -413,8 +403,7 @@ export async function addFeeSlab() {
         </td>
     `;
     tbody.appendChild(tr);
-    await loadLucide();
-    if (window.lucide) window.lucide.createIcons({ root: tr });
+    await refreshIcons(tr);
     state.settingsDirty = true;
 }
 
@@ -430,7 +419,7 @@ function getSlabsFromTable() {
 
 // --- IMAGE PREVIEWS ---
 
-export function previewSettingsImage(inputId, previewId, hiddenId) {
+function previewSettingsImage(inputId, previewId, hiddenId) {
     const file = document.getElementById(inputId).files[0];
     if (!file) return;
 
@@ -493,8 +482,7 @@ async function showStatusAlert(newStatus) {
         <div class="alert-sub">The WhatsApp bot and ordering system will respect this status immediately.</div>
     `;
     alertContainer.appendChild(div);
-    await loadLucide();
-    if (window.lucide) window.lucide.createIcons({ root: div });
+    await refreshIcons(div);
     
     setTimeout(() => {
         div.style.animation = 'slideOutPremium 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards';
@@ -525,21 +513,31 @@ document.addEventListener('change', (e) => {
 });
 
 document.addEventListener('click', (e) => {
+    // File upload button triggers
     if (e.target.id === 'btnChangeQR') document.getElementById('settingQRFile').click();
-    if (e.target.id === 'btnChangeGreetingImg') document.getElementById('settingGreetingFile').click();
-    if (e.target.id === 'btnChangeMenuImg') document.getElementById('settingMenuFile').click();
-    
+    else if (e.target.id === 'btnChangeGreetingImg') document.getElementById('settingGreetingFile').click();
+    else if (e.target.id === 'btnChangeMenuImg') document.getElementById('settingMenuFile').click();
+
     if (e.target.classList.contains('btn-upload-bot-img')) {
         const targetId = e.target.getAttribute('data-target');
         const input = document.getElementById(targetId);
         if (input) input.click();
     }
+
     if (e.target.getAttribute('data-action') === 'removeFeeSlab') {
         const row = e.target.closest('tr');
-        if (row) {
-            row.remove();
-            state.settingsDirty = true;
-        }
+        if (row) { row.remove(); state.settingsDirty = true; }
+    }
+
+    // Settings sub-tab switching
+    const subBtn = e.target.closest('.settings-subtab');
+    if (subBtn) {
+        document.querySelectorAll('.settings-subtab').forEach(b => b.classList.remove('active'));
+        subBtn.classList.add('active');
+        const tab = subBtn.dataset.subtab;
+        document.querySelectorAll('[data-settings-section]').forEach(el => {
+            el.style.display = el.dataset.settingsSection === tab ? '' : 'none';
+        });
     }
 });
 
@@ -554,18 +552,6 @@ document.addEventListener('input', (e) => {
     }
 });
 
-// Settings sub-tab switching
-document.addEventListener('click', e => {
-    const btn = e.target.closest('.settings-subtab');
-    if (!btn) return;
-    document.querySelectorAll('.settings-subtab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab = btn.dataset.subtab;
-    document.querySelectorAll('[data-settings-section]').forEach(el => {
-        el.style.display = el.dataset.settingsSection === tab ? '' : 'none';
-    });
-});
-
 // Set initial sub-tab state (General visible, Tax & Services hidden)
 document.querySelectorAll('[data-settings-section]').forEach(el => {
     el.style.display = el.dataset.settingsSection === 'general' ? '' : 'none';
@@ -574,67 +560,65 @@ document.querySelectorAll('[data-settings-section]').forEach(el => {
 // -------------------------------------------------------------------
 // OFFERS MANAGEMENT
 // -------------------------------------------------------------------
-let _offers = [];
 
 async function _renderOffers(offers) {
     const arr = Array.isArray(offers) ? offers : (offers && typeof offers === 'object' ? Object.values(offers) : []);
-    _offers = arr.map(o => ({ ...o }));
     const list = document.getElementById('offersList');
     const noMsg = document.getElementById('noOffersMsg');
     if (!list) return;
 
-    if (_offers.length === 0) {
+    if (arr.length === 0) {
         list.innerHTML = '';
         if (noMsg) noMsg.classList.remove('hidden');
         return;
     }
     if (noMsg) noMsg.classList.add('hidden');
 
-    list.innerHTML = _offers.map((o, i) => `
+    list.innerHTML = arr.map((o, i) => `
         <div class="offer-row">
             <div class="offer-row-fields">
-                <input type="text" class="offer-title-input form-input-small" data-offer-idx="${i}" data-field="title" value="${(o.title || '').replace(/"/g, '&quot;')}" placeholder="Offer title">
-                <input type="text" class="offer-desc-input form-input-small" data-offer-idx="${i}" data-field="description" value="${(o.description || '').replace(/"/g, '&quot;')}" placeholder="Description (optional)">
-                <input type="text" class="offer-code-input form-input-small" data-offer-idx="${i}" data-field="code" value="${(o.code || '').replace(/"/g, '&quot;')}" placeholder="Promo code (optional)">
+                <input type="text" class="offer-title-input form-input-small" data-offer-idx="${i}" value="${(o.title || '').replace(/"/g, '&quot;')}" placeholder="Offer title">
+                <input type="text" class="offer-desc-input form-input-small" data-offer-idx="${i}" value="${(o.description || '').replace(/"/g, '&quot;')}" placeholder="Description (optional)">
+                <input type="text" class="offer-code-input form-input-small" data-offer-idx="${i}" value="${(o.code || '').replace(/"/g, '&quot;')}" placeholder="Promo code (optional)">
             </div>
             <button type="button" class="btn-icon-danger offer-remove-btn" data-offer-idx="${i}" title="Remove offer">
                 <i data-lucide="x" class="icon-14"></i>
             </button>
         </div>`).join('');
 
-    await loadLucide();
-    if (window.lucide) window.lucide.createIcons({ root: list });
+    await refreshIcons(list);
 
-    // Bind input changes
-    list.querySelectorAll('[data-field]').forEach(el => {
-        el.addEventListener('input', () => {
-            const idx = Number(el.dataset.offerIdx);
-            const field = el.dataset.field;
-            if (_offers[idx]) { _offers[idx][field] = el.value; state.settingsDirty = true; }
-        });
-    });
-
-    // Bind remove buttons
     list.querySelectorAll('.offer-remove-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            _offers.splice(Number(btn.dataset.offerIdx), 1);
-            _renderOffers(_offers);
+            const all = _readOffersFromDOM();
+            all.splice(Number(btn.dataset.offerIdx), 1);
+            _renderOffers(all);
             state.settingsDirty = true;
         });
     });
 }
 
 document.getElementById('btnAddOffer')?.addEventListener('click', () => {
-    _offers.push({ title: '', description: '', code: '' });
-    _renderOffers(_offers);
+    const all = _readOffersFromDOM();
+    all.push({ title: '', description: '', code: '' });
+    _renderOffers(all);
     state.settingsDirty = true;
-    // Focus the new title input
     const list = document.getElementById('offersList');
     const lastTitle = list?.querySelector('.offer-title-input:last-of-type');
     if (lastTitle) lastTitle.focus();
 });
 
-function _getOffers() { return _offers.filter(o => o.title && o.title.trim()); }
+function _readOffersFromDOM() {
+    const offers = [];
+    document.querySelectorAll('#offersList .offer-row').forEach(row => {
+        offers.push({
+            title: row.querySelector('.offer-title-input')?.value?.trim() || '',
+            description: row.querySelector('.offer-desc-input')?.value?.trim() || '',
+            code: row.querySelector('.offer-code-input')?.value?.trim() || ''
+        });
+    });
+    return offers;
+}
 
 // --- MULTI-TAX RATES ---
 async function _renderTaxRates(rates) {
@@ -651,8 +635,7 @@ container.innerHTML = arr.map((r, i) => `
             <input type="number" class="form-input mb-0 tax-rate-pct" data-idx="${i}" value="${parseFloat(r.rate) || ''}" placeholder="%" min="0" max="100" step="0.5" style="width:70px;">
             <button type="button" class="btn-icon-danger tax-rate-remove" data-idx="${i}" title="Remove this tax" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;"><i data-lucide="x" class="icon-14"></i></button>
         </div>`).join('');
-    await loadLucide();
-    if (window.lucide) window.lucide.createIcons({ root: container });
+    await refreshIcons(container);
     container.querySelectorAll('.tax-rate-name, .tax-rate-pct').forEach(el => {
         el.addEventListener('input', () => state.settingsDirty = true);
     });

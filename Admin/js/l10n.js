@@ -108,16 +108,3 @@ export function localize(root) {
         if (key) el.setAttribute('aria-label', t(key, el.getAttribute('aria-label') || ''));
     });
 }
-
-/**
- * Replace the strings table (for runtime language switching).
- * Clears the cache so new keys take effect.
- */
-export function setLanguage(newStrings) {
-    _strings = Object.assign({}, _strings, newStrings || {});
-    _cache = new Map();
-}
-
-export function getStrings() {
-    return _strings;
-}

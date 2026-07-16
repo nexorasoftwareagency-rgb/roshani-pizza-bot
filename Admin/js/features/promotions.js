@@ -760,7 +760,6 @@ export function loadPromotions() {
         if (e.target.checked) {
             // Load menu image from settings
             try {
-                const { get, Outlet } = await import('../firebase.js');
                 const snap = await get(Outlet.ref('settings/Bot'));
                 const botSettings = snap.val() || {};
                 const menuUrl = botSettings.menuImage || '';

@@ -780,6 +780,7 @@ export async function submitWalkinSale() {
         let discountId = null;
         let discountLabel = null;
         let discountSource = 'none';
+        let discountGlobalLimit = null;
         if (state.walkinDiscount > 0) {
             discountValue = state.walkinDiscount;
             discountSource = 'manual:flat';
@@ -807,6 +808,7 @@ export async function submitWalkinSale() {
                     discountId = evalResult.discount.id;
                     discountLabel = evalResult.label;
                     discountSource = evalResult.source;
+                    discountGlobalLimit = evalResult.discount.globalLimit;
                 }
             } catch (e) {
                 console.warn('[POS] auto-discount evaluation failed:', e?.message || e);
@@ -874,7 +876,8 @@ export async function submitWalkinSale() {
                     amountGiven: discountValue,
                     channel: 'pos',
                     discountLabel,
-                    discountSource
+                    discountSource,
+                    globalLimit: discountGlobalLimit
                 });
             } catch (e) {
                 console.warn('[POS] recordDiscountUsage failed:', e?.message || e);
@@ -892,6 +895,9 @@ export async function submitWalkinSale() {
                         fresh.firstOrderDiscountUsed = Date.now();
                         fresh.firstOrderDiscountId = discountId;
                     }
+                    if (discountId && discountValue > 0) {
+                        fresh.discountUsage = { [discountId]: 1 };
+                    }
                     return fresh;
                 }
                 const updated = {
@@ -908,6 +914,10 @@ export async function submitWalkinSale() {
                 if (isFirstOrderDiscount) {
                     updated.firstOrderDiscountUsed = Date.now();
                     updated.firstOrderDiscountId = discountId;
+                }
+                if (discountId && discountValue > 0) {
+                    updated.discountUsage = updated.discountUsage || {};
+                    updated.discountUsage[discountId] = (updated.discountUsage[discountId] || 0) + 1;
                 }
                 return updated;
             });

@@ -122,7 +122,7 @@ export async function evaluateDiscount(ctx = {}) {
     total = Math.round(Math.min(total, subtotal));
 
     if (total <= 0) return null;
-    const primary = exclusive[0] || chosen[0];
+    const primary = chosen[0];
     return {
         discount: primary,
         allApplied: chosen,
@@ -140,25 +140,28 @@ export async function evaluateDiscount(ctx = {}) {
  * Persist a usage record + bump the discount's stats atomically.
  * Called from POS and Bot after a successful order.
  */
-export async function recordDiscountUsage({ discountId, orderId, customerPhone, amountGiven, channel, discountLabel, discountSource }) {
+export async function recordDiscountUsage({ discountId, orderId, customerPhone, amountGiven, channel, discountLabel, discountSource, globalLimit }) {
     try {
+        // Bump stats atomically — abort if globalLimit would be exceeded
+        let reserved = true;
+        const txResult = await runTransaction(Outlet.ref(`discounts/${discountId}/stats`), (cur) => {
+            cur = cur || {};
+            const nextCount = (cur.usedCount || 0) + 1;
+            if (globalLimit && nextCount > globalLimit) { reserved = false; return; }
+            return {
+                usedCount: nextCount,
+                totalDiscountGiven: (cur.totalDiscountGiven || 0) + Math.round(Number(amountGiven) || 0),
+                lastUsedAt: Date.now()
+            };
+        });
+        if (!reserved || !txResult.committed) { console.warn(`[Discounts] Redemption cap reached or tx failed for ${discountId}`); return; }
         const usageId = push(Outlet.ref('discountsUsage')).key;
-        const usage = {
+        await Outlet.ref(`discountsUsage/${usageId}`).set({
             discountId, discountLabel: discountLabel || '',
             orderId: orderId || '', customerPhone: customerPhone || '',
             amountGiven: Math.round(Number(amountGiven) || 0),
             appliedAt: Date.now(), channel: channel || 'pos',
             source: discountSource || ''
-        };
-        await Outlet.ref(`discountsUsage/${usageId}`).set(usage);
-        // Bump stats atomically
-        await runTransaction(Outlet.ref(`discounts/${discountId}/stats`), (cur) => {
-            cur = cur || {};
-            return {
-                usedCount: (cur.usedCount || 0) + 1,
-                totalDiscountGiven: (cur.totalDiscountGiven || 0) + Math.round(Number(amountGiven) || 0),
-                lastUsedAt: Date.now()
-            };
         });
     } catch (e) {
         console.warn('[Discounts] Failed to record usage:', e?.message || e);
