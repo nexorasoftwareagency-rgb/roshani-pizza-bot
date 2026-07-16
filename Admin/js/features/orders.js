@@ -286,20 +286,19 @@ export function loadOrdersPage(reset = false) {
  * Filters available status transitions based on current status
  */
 function getStatusOptions(currentStatus, type = 'Online') {
+    if (['Delivered', 'Served', 'Cancelled'].includes(currentStatus)) {
+        return [];
+    }
     const sequence = STATUS_SEQUENCES[type] || STATUS_SEQUENCES['Default'];
     const currentLevel = sequence.indexOf(currentStatus);
     const options = [];
 
-    // Show next step only
     const nextStep = (currentLevel !== -1) ? sequence[currentLevel + 1] : sequence[0];
     if (nextStep && nextStep !== currentStatus) {
         options.push({ value: nextStep, label: nextStep });
     }
 
-    // Always allow cancellation (unless already at a terminal status)
-    if (!['Delivered', 'Served', 'Cancelled'].includes(currentStatus)) {
-        options.push({ value: "Cancelled", label: "Cancel" });
-    }
+    options.push({ value: "Cancelled", label: "Cancel" });
 
     return options;
 }
@@ -307,15 +306,15 @@ function getStatusOptions(currentStatus, type = 'Online') {
 function renderStatusDropdown(currentStatus, type, orderId, order) {
     const options = getStatusOptions(currentStatus, type);
     if (options.length === 0) {
-        // Terminal status — show payment badge for Served Dine-in orders
-        if (currentStatus === 'Served') {
-            const isPaid = (order && (order.paymentStatus === 'Paid' || order.paidAt));
-            if (isPaid) {
-                return `<span class="status-badge status-paid">Paid <i data-lucide="check-circle" style="width:11px;height:11px;vertical-align:-2px;"></i></span>`;
-            }
-            return `<span class="status-badge status-pending-payment">Pending Payment</span>`;
+        const badge = `<span class="status-badge status-${(currentStatus||'').toLowerCase()}">${currentStatus}</span>`;
+        if (currentStatus === 'Served' && order) {
+            const isPaid = order.paymentStatus === 'Paid' || order.paidAt;
+            const payBadge = isPaid
+                ? `<span class="status-badge status-paid"><i data-lucide="check-circle" style="width:11px;height:11px;vertical-align:-2px;"></i> Paid</span>`
+                : `<span class="status-badge status-pending-payment">Pending Payment <i data-lucide="clock" style="width:11px;height:11px;vertical-align:-2px;"></i></span>`;
+            return `${badge} ${payBadge}`;
         }
-        return `<span class="status-badge status-${(currentStatus||'').toLowerCase()}">${currentStatus}</span>`;
+        return badge;
     }
     const optionsHtml = options.map(o => {
         const cls = o.value === 'Cancelled' ? 'status-opt-cancel' : 'status-opt-next';
