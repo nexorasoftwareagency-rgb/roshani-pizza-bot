@@ -1856,6 +1856,24 @@ html, body {
     .settings-subtabs { flex-wrap: wrap; width: 100%; }
     .settings-subtab { padding: 6px 12px; font-size: 12px; }
     .settings-grid { grid-template-columns: 1fr; }
+
+    /* Contain cards so flex/grid content doesn't overflow viewport */
+    .settings-grid .glass-card { max-width: 100%; overflow: hidden; box-sizing: border-box; }
+
+    /* Receipt & Dev: stack columns vertically on mobile */
+    [data-settings-section="receipt-dev"] .flex-row.flex-gap-24 {
+        flex-direction: column !important;
+    }
+    [data-settings-section="receipt-dev"] .border-l-ghost {
+        border-left: none !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    /* Tax & Services: override nested inline 2-col grid to single column */
+    [data-settings-section="tax-services"] .settings-grid {
+        grid-template-columns: 1fr !important;
+    }
 }
 
 .panel {
