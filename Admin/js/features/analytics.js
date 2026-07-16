@@ -79,8 +79,10 @@ export async function loadReports() {
     const fromVal = getISTDateString(yesterday);
     const toVal = getISTDateString(today);
 
-    if (document.getElementById('reportFrom')) document.getElementById('reportFrom').value = fromVal;
-    if (document.getElementById('reportTo')) document.getElementById('reportTo').value = toVal;
+    const fromEl = document.getElementById('reportFrom');
+    const toEl = document.getElementById('reportTo');
+    if (fromEl) { fromEl.value = fromVal; fromEl.addEventListener('change', generateCustomReport); }
+    if (toEl) { toEl.value = toVal; toEl.addEventListener('change', generateCustomReport); }
 
     const filterEl = document.getElementById('reportStatusFilter');
     if (filterEl) filterEl.value = _currentStatusFilter;

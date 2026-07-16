@@ -477,22 +477,28 @@ export function initMobileAnalyticsUI(regenerateFn) {
     root.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-action]');
         if (!btn) return;
+        let handled = false;
         switch (btn.dataset.action) {
             case 'mobToggleCustomDates':
                 datesHost?.classList.toggle('hidden');
                 filtersHost?.classList.add('hidden');
+                handled = true;
                 break;
             case 'mobToggleFilters':
                 filtersHost?.classList.toggle('hidden');
                 datesHost?.classList.add('hidden');
+                handled = true;
                 break;
             case 'mobExportExcel':
                 document.getElementById('btnDownloadExcel')?.click();
+                handled = true;
                 break;
             case 'mobExportPDF':
                 document.getElementById('btnDownloadPDF')?.click();
+                handled = true;
                 break;
         }
+        if (handled) e.stopPropagation();
     });
 
     root.querySelectorAll('.mob-range-pill[data-preset]').forEach(btn => {
