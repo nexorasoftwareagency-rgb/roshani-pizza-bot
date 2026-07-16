@@ -381,7 +381,8 @@ export async function renderOrders(snap) {
         const _liveList = LIVE_STATUSES;
         state.liveOrdersMap.clear();
         state.ordersMap.forEach((o, key) => {
-            if (_liveList.some(s => s.toLowerCase() === (o.status || '').toLowerCase())) {
+            if (_liveList.some(s => s.toLowerCase() === (o.status || '').toLowerCase()) ||
+                (o.status === 'Served' && o.paymentStatus !== 'Paid' && !o.paidAt)) {
                 state.liveOrdersMap.set(key, o);
             }
         });
@@ -467,7 +468,8 @@ export async function renderOrders(snap) {
     const _liveStatusList = LIVE_STATUSES;
     if (activeTab === 'live' && sortedOrders.filter(o => {
         const status = (o.status || "Unknown").trim();
-        return _liveStatusList.some(s => s.toLowerCase() === status.toLowerCase());
+        return _liveStatusList.some(s => s.toLowerCase() === status.toLowerCase()) ||
+            (status === 'Served' && o.paymentStatus !== 'Paid' && !o.paidAt);
     }).length === 0 && containers['live']) {
         containers['live'].innerHTML = '<tr><td colspan="7" class="empty-state-cell"><div class="empty-state"><i data-lucide="activity"></i><p>No live orders</p><span>Active orders will appear here</span></div></td></tr>';
         await loadLucide();
@@ -495,7 +497,8 @@ export async function renderOrders(snap) {
         o.normalizedItems = items;
 
         const status = (o.status || "Unknown").trim();
-        const isLive = _liveStatusList.some(s => s.toLowerCase() === status.toLowerCase());
+        const isLive = _liveStatusList.some(s => s.toLowerCase() === status.toLowerCase()) ||
+            (status === 'Served' && o.paymentStatus !== 'Paid' && !o.paidAt);
         
         if (isLive) liveCount++;
 

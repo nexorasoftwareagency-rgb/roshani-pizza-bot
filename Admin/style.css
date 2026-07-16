@@ -4577,6 +4577,12 @@ body {
     border: 1px solid #E5E7EB !important;
 }
 
+.status.Served {
+    background: linear-gradient(135deg, #F0FDF4, #DCFCE7) !important;
+    color: #16A34A !important;
+    border: 1px solid #BBF7D0 !important;
+}
+
 .status.Cancelled {
     background: #111 !important;
     color: #fff !important;
