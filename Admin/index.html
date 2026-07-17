@@ -1549,33 +1549,51 @@
 
 
 
-                <div class="glass-card">
+                <div class="mob-card mob-table-card">
 
-                    <div class="card-header-flex">
+                    <div class="mob-section-head-row">
 
-                        <h3>All Registered Riders</h3>
+                        <h3 class="mob-card-title">All Registered Riders</h3>
 
-                        <div class="flex-center flex-gap-12">
+                        <div class="search-input-wrapper">
 
-                            <div class="search-input-wrapper">
+                            <i data-lucide="search"></i>
 
-                                <i data-lucide="search"></i>
+                            <input type="text" placeholder="Search riders..." class="search-input"
 
-                                <input type="text" placeholder="Search riders..." class="search-input"
-
-                                    id="riderSearchInput">
-
-                            </div>
+                                id="riderSearchInput">
 
                         </div>
 
                     </div>
 
-                    <div class="scroll-x">
+                    <div class="mob-table-scroll">
 
-                        <div id="ridersTable"></div>
+                        <table class="mob-data-table" id="riderDataTable">
 
-                        <div id="ridersPagination" class="pagination-controls"></div>
+                            <thead>
+
+                                <tr>
+
+                                    <th data-sort="name">Rider</th>
+
+                                    <th data-sort="email">Email</th>
+
+                                    <th data-sort="_displayStatus">Status</th>
+
+                                    <th data-sort="orders">Performance</th>
+
+                                    <th data-sort="_avgRating">Rating</th>
+
+                                    <th class="mob-th-right">Actions</th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody id="riderDataTableBody"></tbody>
+
+                        </table>
 
                     </div>
 
@@ -3740,13 +3758,43 @@
 
             <div id="tab-payments" class="tab-content hidden">
 
-                <div class="panel">
+                <div class="mob-card mob-table-card">
 
-                    <h3>💳 Payment Tracking</h3>
+                    <div class="mob-section-head-row">
 
-                    <div class="scroll-x">
+                        <h3 class="mob-card-title">Payment Tracking</h3>
 
-                        <div id="paymentsTable"></div>
+                        <span class="mob-table-count" id="payTableCount">0 payments</span>
+
+                    </div>
+
+                    <div class="mob-table-scroll">
+
+                        <table class="mob-data-table" id="payDataTable">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th data-sort="createdAt">Date &amp; Time</th>
+
+                                    <th data-sort="customerName">Customer</th>
+
+                                    <th data-sort="paymentMethod">Method</th>
+
+                                    <th data-sort="status">Status</th>
+
+                                    <th data-sort="outlet">Outlet</th>
+
+                                    <th data-sort="total" class="mob-th-right">Amount (₹)</th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody id="payDataTableBody"></tbody>
+
+                        </table>
 
                     </div>
 

@@ -3034,6 +3034,19 @@
     color: #fff;
 }
 
+/* --- Rider mob-data-table extras --- */
+.rider-table-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.rider-table-initial { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; background:var(--primary,#E84908); color:#fff; font-weight:800; font-size:14px; flex-shrink:0; }
+.rider-status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; vertical-align:middle; margin-right:4px; }
+.rider-status-dot.online { background:#16a34a; }
+.rider-status-dot.on-delivery { background:#f59e0b; }
+.rider-status-dot.offline { background:#94a3b8; }
+.rider-action-btns { display:flex; gap:4px; justify-content:flex-end; }
+.rider-act-btn { width:30px; height:30px; border:none; border-radius:6px; background:#f1f5f9; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; justify-content:center; transition:all .15s; }
+.rider-act-btn:hover { background:#e2e8f0; }
+.rider-act-edit { color:var(--primary,#E84908); }
+.rider-act-del { color:#dc2626; }
+
 .mob-badge {
     display: inline-block;
     font-size: 11px;

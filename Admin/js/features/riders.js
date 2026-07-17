@@ -1,21 +1,21 @@
 import { db, auth, secondaryAuth, secondaryAuthAvailable, Outlet, serverTimestamp, ref, get, set, push, update, runTransaction, remove, query, orderByChild, equalTo, onValue, signOut, sendPasswordResetEmail, createUserWithEmailAndPassword } from '../firebase.js';
 import { state } from '../state.js';
 import { showDeleteConfirm } from '../ui-utils.js';
-import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm, addRiderNotification, getSkeletonDivs } from '../utils.js';
-import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
+import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm, addRiderNotification, getSkeletonRows } from '../utils.js';
+
 import { loadLucide } from '../ui.js';
 
 import { uploadImage } from '../firebase.js';
 import { populateRiderSelect } from './rider-analytics.js';
 let _ridersUnsub = null;
 let _statsUnsub = null;
-let _grid = null;
+let _riderData = [];
+let _riderSortField = 'name', _riderSortDir = 'asc';
 
 export function loadRiders() {
     cleanupRiders();
-    const ridersTbody = document.getElementById('ridersTable');
-    if (_grid) { _grid.destroy(); _grid = null; }
-    if (ridersTbody) ridersTbody.innerHTML = getSkeletonDivs(5);
+    const ridersTbody = document.getElementById('riderDataTableBody');
+    if (ridersTbody) ridersTbody.innerHTML = getSkeletonRows(5, 6);
 
     const ridersRef = ref(db, "riders");
     const statsRef = Outlet.ref("riderStats");
@@ -57,115 +57,127 @@ export function cleanupRiders() {
     if (_statsUnsub) { _statsUnsub(); _statsUnsub = null; }
 }
 
-function buildGrid(data) {
-    const el = document.getElementById('ridersTable');
-    if (!el) return;
-    el.innerHTML = '';
+function _riderProfileImg(r) {
+    const url = r.photoUrl || r.profilePhoto || '';
+    if (url) return `<img src="${escapeHtml(url)}" class="rider-table-avatar" alt="" onerror="this.style.display='none'">`;
+    const initial = (r.name || '?').charAt(0).toUpperCase();
+    return `<span class="rider-table-initial">${escapeHtml(initial)}</span>`;
+}
 
-    _grid = new Tabulator("#ridersTable", {
-        data: data || [],
-        ...GRID_DEFAULTS,
-        ...PAGINATION_DEFAULTS,
-        paginationSize: 30,
-        placeholder: '<div style="padding:40px; color:#94a3b8;">🛵 No riders found</div>',
-        columns: [
-            { formatter: "rownum", hozAlign: "center", width: 45, headerSort: false },
-            {
-                title: "Rider",
-                field: "name",
-                width: 220,
-                formatter: function(cell) {
-                    const d = cell.getRow().getData();
-                    const profileImg = d.photoUrl || d.profilePhoto || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='20' fill='%23E84908'/%3E%3Ctext x='20' y='26' font-size='18' fill='white' text-anchor='middle'%3E" + encodeURIComponent((d.name || '?').charAt(0).toUpperCase()) + "%3C/text%3E%3C/svg%3E";
-                    const maskedPhone = d.phone ? '******' + escapeHtml(d.phone.slice(-4)) : 'N/A';
-                    return `<div style="display:flex;align-items:center;gap:10px;">
-                        <img src="${escapeHtml(profileImg)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" onerror="this.src='https://placehold.co/36'">
-                        <div><div style="font-weight:700;">${escapeHtml(d.name || 'Unnamed')}</div><div style="font-size:11px;color:#94a3b8;">📱 ${maskedPhone}</div></div>
-                    </div>`;
-                }
-            },
-            {
-                title: "Email",
-                field: "email",
-                width: 200,
-                formatter: function(cell) {
-                    return `<div><div style="font-weight:600;font-size:12px;">${escapeHtml(cell.getValue() || '')}</div><div style="font-size:10px;color:#94a3b8;">Credential Email</div></div>`;
-                }
-            },
-            {
-                title: "Status",
-                field: "_displayStatus",
-                width: 130,
-                hozAlign: "center",
-                formatter: function(cell) {
-                    const val = cell.getValue() || 'Offline';
-                    const el = cell.getElement();
-                    const cls = val.toLowerCase().replace(/\s+/g, '-');
-                    el.classList.add('cell-status-' + cls);
-                    return `<div style="display:flex;align-items:center;justify-content:center;gap:6px;">
-                        <span style="width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block;"></span>
-                        ${escapeHtml(val)}
-                    </div>`;
-                }
-            },
-            {
-                title: "Performance",
-                width: 150,
-                hozAlign: "center",
-                formatter: function(cell) {
-                    const d = cell.getRow().getData();
-                    const stats = d._stats || {};
-                    return `<div style="display:flex;gap:16px;justify-content:center;">
-                        <div style="text-align:center;"><div style="font-weight:700;">${parseInt(stats.totalOrders || 0)}</div><div style="font-size:10px;color:#94a3b8;">Orders</div></div>
-                        <div style="text-align:center;"><div style="font-weight:700;color:#16a34a;">₹${(stats.totalEarnings || 0).toLocaleString()}</div><div style="font-size:10px;color:#94a3b8;">Wallet</div></div>
-                    </div>`;
-                }
-            },
-            {
-                title: "Rating",
-                field: "_avgRating",
-                width: 120,
-                hozAlign: "center",
-                formatter: function(cell) {
-                    const val = cell.getValue();
-                    const pct = Math.min(100, (val || 0) * 20);
-                    const label = val ? val.toFixed(1) + '★' : '—';
-                    return `<div style="min-width:80px;">
-                        <div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-size:10px;color:#94a3b8;">Success</span><span style="font-size:10px;font-weight:700;">${label}</span></div>
-                        <div style="height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:#4472C4;border-radius:2px;"></div></div>
-                    </div>`;
-                }
-            },
-            {
-                title: "Actions",
-                width: 150,
-                hozAlign: "center",
-                headerSort: false,
-                formatter: function(cell) {
-                    const d = cell.getRow().getData();
-                    return `<div style="display:flex;gap:6px;justify-content:center;">
-                        <button class="grid-btn grid-btn-outline" data-action="settleRider" data-id="${escapeHtml(d.id)}" data-name="${escapeHtml(d.name)}" title="Settle Wallet">💰</button>
-                        <button class="grid-btn grid-btn-primary" data-action="editRider" data-id="${escapeHtml(d.id)}" title="Edit">✏️</button>
-                        <button class="grid-btn grid-btn-outline" data-action="resetRiderPassword" data-email="${escapeHtml(d.email || '')}" title="Reset Password">🔑</button>
-                        <button class="grid-btn grid-btn-danger" data-action="deleteRider" data-id="${escapeHtml(d.id)}" title="Delete">🗑️</button>
-                    </div>`;
-                },
-                cellClick: function(e, cell) {
-                    const btn = e.target.closest('[data-action]');
-                    if (!btn) return;
-                    const action = btn.dataset.action;
-                    if (action === 'settleRider') settleRiderWallet(btn.dataset.id, btn.dataset.name);
-                    else if (action === 'editRider') editRider(btn.dataset.id);
-                    else if (action === 'resetRiderPassword') resetRiderPassword(btn.dataset.email);
-                    else if (action === 'deleteRider') deleteRider(btn.dataset.id);
-                }
+function _renderRiderTable(data) {
+    const tbody = document.getElementById('riderDataTableBody');
+    if (!tbody) return;
+
+    _riderData = data || [];
+
+    const sorted = [..._riderData].sort((a, b) => {
+        let av = a[_riderSortField], bv = b[_riderSortField];
+        if (_riderSortField === '_avgRating' || _riderSortField === 'orders') {
+            av = Number(av ?? (
+                _riderSortField === 'orders' ? (a._stats?.totalOrders ?? 0) : 0
+            ));
+            bv = Number(bv ?? (
+                _riderSortField === 'orders' ? (b._stats?.totalOrders ?? 0) : 0
+            ));
+        } else if (_riderSortField === '_displayStatus') {
+            const w = { 'Online': 0, 'On Delivery': 1, 'Offline': 2 };
+            av = w[av] ?? 2; bv = w[bv] ?? 2;
+        } else { av = String(av || '').toLowerCase(); bv = String(bv || '').toLowerCase(); }
+        const cmp = av > bv ? 1 : av < bv ? -1 : 0;
+        return _riderSortDir === 'asc' ? cmp : -cmp;
+    });
+
+    if (sorted.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="mob-table-empty">No riders found.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = sorted.map(r => {
+        const stats = r._stats || {};
+        const maskedPhone = r.phone ? '******' + escapeHtml(r.phone.slice(-4)) : 'N/A';
+        const status = r._displayStatus || 'Offline';
+        const statusLow = status.toLowerCase().replace(/\s+/g, '-');
+        const rating = r._avgRating;
+        const pct = Math.min(100, (rating || 0) * 20);
+        const ratingLabel = rating ? rating.toFixed(1) + '\u2605' : '\u2014';
+        const orders = parseInt(stats.totalOrders || 0);
+        const earnings = stats.totalEarnings || 0;
+
+        return `<tr>
+            <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    ${_riderProfileImg(r)}
+                    <div>
+                        <div class="mob-td-strong">${escapeHtml(r.name || 'Unnamed')}</div>
+                        <div class="mob-td-sub">\uD83D\uDCF1 ${maskedPhone}</div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div class="mob-td-strong" style="font-size:12px;">${escapeHtml(r.email || '')}</div>
+                <div class="mob-td-sub">Credential Email</div>
+            </td>
+            <td><span class="rider-status-dot ${statusLow}"></span> ${escapeHtml(status)}</td>
+            <td>
+                <div style="display:flex;gap:16px;">
+                    <div style="text-align:center;"><div class="mob-td-strong">${orders}</div><div class="mob-td-sub">Orders</div></div>
+                    <div style="text-align:center;"><div class="mob-td-strong" style="color:#16a34a;">\u20B9${earnings.toLocaleString('en-IN')}</div><div class="mob-td-sub">Wallet</div></div>
+                </div>
+            </td>
+            <td>
+                <div style="min-width:80px;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span class="mob-td-sub">Success</span><span style="font-size:11px;font-weight:700;">${ratingLabel}</span></div>
+                    <div style="height:4px;background:var(--mob-border);border-radius:2px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:#4472C4;border-radius:2px;"></div></div>
+                </div>
+            </td>
+            <td class="mob-th-right">
+                <div class="rider-action-btns">
+                    <button class="rider-act-btn" data-action="settleRider" data-id="${escapeHtml(r.id)}" data-name="${escapeHtml(r.name)}" title="Settle Wallet">\uD83D\uDCB0</button>
+                    <button class="rider-act-btn rider-act-edit" data-action="editRider" data-id="${escapeHtml(r.id)}" title="Edit">\u270F\uFE0F</button>
+                    <button class="rider-act-btn" data-action="resetRiderPassword" data-email="${escapeHtml(r.email || '')}" title="Reset Password">\uD83D\uDD11</button>
+                    <button class="rider-act-btn rider-act-del" data-action="deleteRider" data-id="${escapeHtml(r.id)}" title="Delete">\uD83D\uDDD1\uFE0F</button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function _initRiderTable() {
+    const table = document.getElementById('riderDataTable');
+    if (!table || table.dataset.wired) return;
+    table.dataset.wired = '1';
+
+    const sortEl = table.querySelector(`th[data-sort="${_riderSortField}"]`);
+    if (sortEl) sortEl.classList.add(`mob-sort-${_riderSortDir}`);
+
+    table.querySelectorAll('th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const field = th.dataset.sort;
+            if (_riderSortField === field) {
+                _riderSortDir = _riderSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                _riderSortField = field;
+                _riderSortDir = 'asc';
             }
-        ]
+            table.querySelectorAll('th[data-sort]').forEach(h => h.classList.remove('mob-sort-asc', 'mob-sort-desc'));
+            th.classList.add(_riderSortDir === 'asc' ? 'mob-sort-asc' : 'mob-sort-desc');
+            _renderRiderTable(_riderData);
+        });
+    });
+
+    // Delegate action clicks from tbody
+    document.getElementById('riderDataTableBody')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === 'settleRider') settleRiderWallet(btn.dataset.id, btn.dataset.name);
+        else if (action === 'editRider') editRider(btn.dataset.id);
+        else if (action === 'resetRiderPassword') resetRiderPassword(btn.dataset.email);
+        else if (action === 'deleteRider') deleteRider(btn.dataset.id);
     });
 }
 
 export async function renderRiders(searchTerm = "") {
-    await loadTabulator();
     const activeDashboard = document.getElementById('riderStatusList');
     const statOnline = document.getElementById('rider-stat-online');
     const statBusy = document.getElementById('rider-stat-busy');
@@ -229,8 +241,8 @@ export async function renderRiders(searchTerm = "") {
         }
     });
 
-    if (!_grid) buildGrid(riders);
-    else _grid.replaceData(riders);
+    if (!document.getElementById('riderDataTable')?.dataset.wired) _initRiderTable();
+    _renderRiderTable(riders);
 
     if (statOnline) statOnline.innerText = onlineCount;
     if (statBusy) statBusy.innerText = busyCount;

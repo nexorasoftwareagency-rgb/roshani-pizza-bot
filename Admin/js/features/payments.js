@@ -1,96 +1,101 @@
 /**
- * PAYMENTS TAB — Excel-like Tabulator Grid
- * Separate module to keep orders.js clean.
+ * PAYMENTS TAB — mob-data-table (plain HTML, no Tabulator)
+ * Called from orders.js renderOrders() when activeTab === 'payments'.
  */
 
 import { escapeHtml } from '../utils.js';
-import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
 
-let _grid = null;
+let _payData = [];
+let _paySortField = 'createdAt', _paySortDir = 'desc';
 
-async function buildGrid(data) {
-    await loadTabulator();
-    const el = document.getElementById('paymentsTable');
-    if (!el) return;
+function _badgePayment(pm) {
+    const p = (pm || 'Cash');
+    const cls = p.toLowerCase() === 'upi' ? 'upi' : (p.toLowerCase() === 'cash' ? 'cash' : 'cod');
+    return `<span class="mob-badge mob-badge-pay-${cls}">${escapeHtml(p)}</span>`;
+}
 
-    if (_grid) {
-        _grid.setData(data || []);
+function _badgeStatus(status) {
+    const s = status || 'Placed';
+    const low = s.toLowerCase();
+    const cls = (s === 'Delivered' || s === 'Served') ? 'delivered' : low === 'cancelled' ? 'cancelled' : 'pending';
+    return `<span class="mob-badge mob-badge-status-${cls}">${escapeHtml(s)}</span>`;
+}
+
+function formatDateTime(ts) {
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return '\u2014';
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'Asia/Kolkata' })
+        + ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+}
+
+function _renderPayTable() {
+    const tbody = document.getElementById('payDataTableBody');
+    const countEl = document.getElementById('payTableCount');
+    if (!tbody) return;
+
+    if (countEl) countEl.textContent = `${_payData.length} payment${_payData.length === 1 ? '' : 's'}`;
+
+    const sorted = [..._payData].sort((a, b) => {
+        let av = a[_paySortField], bv = b[_paySortField];
+        if (_paySortField === 'total') { av = Number(av || 0); bv = Number(bv || 0); }
+        else if (_paySortField === 'createdAt') { av = new Date(av || 0).getTime(); bv = new Date(bv || 0).getTime(); }
+        else { av = String(av || '').toLowerCase(); bv = String(bv || '').toLowerCase(); }
+        const cmp = av > bv ? 1 : av < bv ? -1 : 0;
+        return _paySortDir === 'asc' ? cmp : -cmp;
+    });
+
+    if (sorted.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="mob-table-empty">No payments found.</td></tr>`;
         return;
     }
 
-    el.innerHTML = '';
-    _grid = new Tabulator("#paymentsTable", {
-        data: data || [],
-        ...GRID_DEFAULTS,
-        ...PAGINATION_DEFAULTS,
-        paginationSize: 25,
-        placeholder: '<div style="padding:40px; color:#94a3b8;">💳 No payments found</div>',
-        columns: [
-            { formatter: "rownum", hozAlign: "center", width: 45, headerSort: false },
-            {
-                title: "Order ID",
-                field: "orderId",
-                width: 140,
-                formatter: function(cell) {
-                    const d = cell.getRow().getData();
-                    const id = d.orderId || (d.id ? d.id.slice(-5) : 'N/A');
-                    const date = d.createdAt ? new Date(d.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—';
-                    return `<div style="display:flex;align-items:center;gap:8px;">
-                        <div style="width:30px;height:30px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:12px;">📅</div>
-                        <div><div style="font-weight:700;">#${escapeHtml(id)}</div><div style="font-size:11px;color:#94a3b8;">${date}</div></div>
-                    </div>`;
-                }
-            },
-            {
-                title: "Customer",
-                field: "customerName",
-                width: 170,
-                formatter: function(cell) {
-                    const d = cell.getRow().getData();
-                    return `<div><div style="font-weight:600;">${escapeHtml(d.customerName || 'Guest')}</div><div style="font-size:11px;color:#94a3b8;">${escapeHtml(d.phone || '')}</div></div>`;
-                }
-            },
-            {
-                title: "Method",
-                field: "paymentMethod",
-                width: 110,
-                hozAlign: "center",
-                formatter: function(cell) {
-                    const val = cell.getValue() || 'Cash';
-                    return `<span class="badge-payment" data-method="${val.toLowerCase()}">${escapeHtml(val)}</span>`;
-                }
-            },
-            {
-                title: "Status",
-                field: "status",
-                width: 130,
-                hozAlign: "center",
-                formatter: function(cell) {
-                    const val = cell.getValue() || 'Unknown';
-                    const el = cell.getElement();
-                    const cls = 'cell-status-' + val.toLowerCase().replace(/\s+/g, '-');
-                    el.classList.add(cls);
-                    return val;
-                }
-            },
-            {
-                title: "Amount (₹)",
-                field: "total",
-                width: 120,
-                hozAlign: "right",
-                formatter: function(cell) {
-                    return `<span style="font-weight:700;font-size:15px;">₹${Number(cell.getValue() || 0).toLocaleString()}</span>`;
-                },
-                sorter: "number"
+    tbody.innerHTML = sorted.map(o => {
+        const id = o.orderId || (o.id ? o.id.slice(-5).toUpperCase() : 'N/A');
+        return `<tr>
+            <td>
+                <div class="mob-td-strong">${formatDateTime(o.createdAt)}</div>
+                <div class="mob-td-sub">#${escapeHtml(id)}</div>
+            </td>
+            <td>
+                <div class="mob-td-strong">${escapeHtml(o.customerName || 'Guest')}</div>
+                <div class="mob-td-sub">${escapeHtml(o.phone || '')}</div>
+            </td>
+            <td>${_badgePayment(o.paymentMethod)}</td>
+            <td>${_badgeStatus(o.status)}</td>
+            <td><span class="mob-outlet-chip">${escapeHtml((o.outlet || 'pizza').toUpperCase())}</span></td>
+            <td class="mob-th-right"><span class="mob-td-total">\u20B9${Number(o.total || 0).toLocaleString('en-IN')}</span></td>
+        </tr>`;
+    }).join('');
+}
+
+function _initPayTable() {
+    const table = document.getElementById('payDataTable');
+    if (!table || table.dataset.wired) return;
+    table.dataset.wired = '1';
+
+    const sortEl = table.querySelector(`th[data-sort="${_paySortField}"]`);
+    if (sortEl) sortEl.classList.add(`mob-sort-${_paySortDir}`);
+
+    table.querySelectorAll('th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const field = th.dataset.sort;
+            if (_paySortField === field) {
+                _paySortDir = _paySortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                _paySortField = field;
+                _paySortDir = field === 'total' || field === 'createdAt' ? 'desc' : 'asc';
             }
-        ]
+            table.querySelectorAll('th[data-sort]').forEach(h => h.classList.remove('mob-sort-asc', 'mob-sort-desc'));
+            th.classList.add(_paySortDir === 'asc' ? 'mob-sort-asc' : 'mob-sort-desc');
+            _renderPayTable();
+        });
     });
 }
 
-/**
- * Render payments grid from orders data.
- * Called from orders.js renderOrders() when activeTab === 'payments'.
- */
 export function renderPayments(orders) {
-    buildGrid(orders);
+    _payData = orders || [];
+    if (_payData.length > 0 && !document.getElementById('payDataTable')?.dataset.wired) {
+        _initPayTable();
+    }
+    _renderPayTable();
 }

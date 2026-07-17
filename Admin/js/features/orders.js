@@ -46,7 +46,7 @@ export function initRealtimeListeners() {
     if (_liveOrdersUnsub) { _liveOrdersUnsub(); _liveOrdersUnsub = null; }
 
     // Show skeleton while data loads
-    ['ordersTable','ordersTableFull','liveOrdersTable','paymentsTable'].forEach(id => {
+    ['ordersTable','ordersTableFull','liveOrdersTable','payDataTableBody'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = getSkeletonRows(5, 7);
     });
@@ -335,7 +335,7 @@ export async function renderOrders(snap) {
         'dashboard': document.getElementById('ordersTable'),
         'orders': document.getElementById('ordersTableFull'),
         'live': document.getElementById('liveOrdersTable'),
-        'payments': document.getElementById('paymentsTable')
+        'payments': document.getElementById('payDataTableBody')
     };
 
     console.log(`[Orders] Rendering started for tab: ${activeTab}. Snap: ${snap ? 'Yes' : 'No'}. LiveMap: ${state.liveOrdersMap.size}`);
@@ -420,7 +420,7 @@ export async function renderOrders(snap) {
         renderTopCustomers(snapshotOrders);
     }
 
-    // PAYMENTS TAB: Delegate to Tabulator grid module
+    // PAYMENTS TAB: Delegate to payments module
     if (activeTab === 'payments') {
         renderPayments(sortedOrders);
         return;
@@ -637,38 +637,6 @@ export async function renderOrders(snap) {
                             <i data-lucide="printer"></i>
                         </button>
                     </div>
-                </td>
-            `;
-        } else if (activeTab === 'payments') {
-            const method = o.paymentMethod || "Cash";
-            tr.innerHTML = `
-                <td data-label="Date">
-                    <div class="identity-chip-v4 ml-15">
-                        <div class="kpi-icon-box glass" style="width:32px; height:32px; font-size:14px;">
-                            <i data-lucide="calendar"></i>
-                        </div>
-                        <div class="identity-info-v4">
-                            <span class="name">#${safeOrderId}</span>
-                            <span class="sub">${new Date(o.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
-                        </div>
-                    </div>
-                </td>
-                <td data-label="Customer">
-                    <div class="identity-info-v4">
-                        <span class="name">${safeCustomerName}</span>
-                        <span class="sub">${escapeHtml(o.phone || 'Guest')}</span>
-                    </div>
-                </td>
-                <td data-label="Method">
-                    <div class="flex-row flex-center flex-gap-8">
-                        <span class="badge-payment-v4">${escapeHtml(method)}</span>
-                    </div>
-                </td>
-                <td data-label="Status">
-                    <span class="status ${safeStatusClass}">${safeStatus}</span>
-                </td>
-                <td data-label="Amount" class="text-right pr-25">
-                    <span class="font-bold color-primary fs-16">₹${escapeHtml(o.total || '0')}</span>
                 </td>
             `;
         } else {
