@@ -16,8 +16,30 @@ const REPORT_STATE = {
     range: 7,                       // days; 0 = all time
     discounts: {},
     usage: [],
-    lastSnapshot: null
+    lastSnapshot: null,
+    focusedMode: false
 };
+
+const _nameCache = new Map();
+async function _resolveCustomerName(phone) {
+    if (!phone) return null;
+    const clean = String(phone).replace(/\D/g, '').slice(-10);
+    if (!clean) return null;
+    if (_nameCache.has(clean)) return _nameCache.get(clean);
+    try {
+        const snap = await get(Outlet.ref(`customers/${clean}`));
+        const name = snap.exists() ? (snap.val()?.name || null) : null;
+        _nameCache.set(clean, name);
+        return name;
+    } catch { _nameCache.set(clean, null); return null; }
+}
+function _initials(nameOrPhone) {
+    const s = (nameOrPhone || '').trim();
+    if (!s) return '?';
+    const parts = s.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return s.slice(0, 2).toUpperCase();
+}
 
 function _rangeStartMs() {
     if (!REPORT_STATE.range) return 0;
@@ -46,6 +68,10 @@ function _isActiveNow(d, now = Date.now()) {
 export async function openDiscountsReports() {
     const modal = document.getElementById('discountsReportsModal');
     if (!modal) return;
+    REPORT_STATE.focusedMode = false;
+    ['discountKpiGrid', 'discountReportBreakdownWrap', 'discountReportChannelsWrap', 'discountReportRecentWrap']
+        .forEach(id => document.getElementById(id)?.classList.remove('hidden'));
+    document.querySelector('#discountsReportsModal .discount-report-range-row')?.classList.remove('hidden');
     modal.classList.add('active');
     modal.setAttribute('aria-hidden', 'false');
     await loadLucide();
@@ -58,6 +84,7 @@ export function closeDiscountsReports() {
     if (!modal) return;
     modal.classList.remove('active');
     modal.setAttribute('aria-hidden', 'true');
+    REPORT_STATE.focusedMode = false;
 }
 
 export async function setDiscountReportRange(el) {
@@ -284,7 +311,7 @@ export function generateCouponCode(prefix = '') {
     return `${word}${num}`;
 }
 
-export function openCodeUses(discountId) {
+export async function openCodeUses(discountId) {
     const all = REPORT_STATE.usage || [];
     const filtered = all.filter(u => u.discountId === discountId);
     const sorted = filtered.sort((a, b) => (b.appliedAt || 0) - (a.appliedAt || 0));
@@ -292,52 +319,113 @@ export function openCodeUses(discountId) {
     const title = document.getElementById('discountCodeUsesTitle');
     const list = document.getElementById('discountCodeUsesList');
     const panel = document.getElementById('discountCodeUsesPanel');
+    const backBtn = document.getElementById('discountCodeUsesBackBtn');
 
-    if (title) title.textContent = `Code Uses: ${disc?.name || discountId}`;
+    if (title) title.textContent = disc?.name || discountId;
     if (panel) panel.classList.remove('hidden');
+    if (backBtn) backBtn.innerHTML = REPORT_STATE.focusedMode
+        ? '<i data-lucide="x"></i> Close'
+        : '<i data-lucide="arrow-left"></i> Back to reports';
 
     if (!list) return;
+
+    const totalSaved = sorted.reduce((s, u) => s + (Number(u.amountGiven) || 0), 0);
+    const avg = sorted.length > 0 ? Math.round(totalSaved / sorted.length) : 0;
+    const globalLimit = disc?.globalLimit || 0;
+    const usedCount = disc?.stats?.usedCount ?? sorted.length;
+    const pct = globalLimit ? Math.min(100, Math.round((usedCount / globalLimit) * 100)) : null;
+
+    let kpiHtml = `
+        <div class="discount-usage-kpis">
+            <div class="discount-usage-kpi-card">
+                <div class="kpi-label">Times Used</div>
+                <div class="kpi-value">${sorted.length.toLocaleString('en-IN')}</div>
+            </div>
+            <div class="discount-usage-kpi-card">
+                <div class="kpi-label">Total Given</div>
+                <div class="kpi-value money">${_fmtINR(totalSaved)}</div>
+            </div>
+            <div class="discount-usage-kpi-card">
+                <div class="kpi-label">Avg / Redemption</div>
+                <div class="kpi-value">${_fmtINR(avg)}</div>
+            </div>
+        </div>`;
+    if (globalLimit > 0) {
+        const cls = pct >= 90 ? 'full' : pct >= 70 ? 'warn' : 'ok';
+        kpiHtml += `
+        <div class="discount-limit-progress">
+            <div class="dlp-track"><div class="dlp-fill ${cls}" style="width:${pct}%;"></div></div>
+            <div class="dlp-text"><span>${usedCount} of ${globalLimit} used</span><span>${pct}%</span></div>
+        </div>`;
+    }
+
     if (sorted.length === 0) {
-        list.innerHTML = '<div class="discount-report-empty">No usage recorded for this discount.</div>';
+        list.innerHTML = kpiHtml + `
+            <div class="usage-log-empty">
+                <i data-lucide="ticket"></i>
+                <p>No redemptions yet</p>
+                <span>Usage will appear here as customers apply this discount</span>
+            </div>`;
+        await loadLucide();
+        window.lucide.createIcons({ root: list });
         return;
     }
-    const totalSaved = sorted.reduce((s, u) => s + (Number(u.amountGiven) || 0), 0);
-    list.innerHTML = `
-        <div style="margin-bottom:12px; font-size:13px; color:var(--text-muted);">
-            Total: <strong>${sorted.length} uses</strong> · <strong>${_fmtINR(totalSaved)}</strong> saved
-        </div>
-        <div style="overflow-x:auto;">
-        <table style="width:100%; font-size:13px; border-collapse:collapse;">
-            <thead>
-                <tr style="border-bottom:1px solid var(--border); text-align:left;">
-                    <th style="padding:6px 8px;">Phone</th>
-                    <th style="padding:6px 8px;">Order</th>
-                    <th style="padding:6px 8px;">Saved</th>
-                    <th style="padding:6px 8px;">Date</th>
-                    <th style="padding:6px 8px;">Channel</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${sorted.slice(0, 200).map(u => {
-                    const d = new Date(u.appliedAt || 0);
-                    const dateStr = d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-                    const channel = String(u.channel || 'other');
-                    return `<tr style="border-bottom:1px solid var(--border-light);">
-                        <td style="padding:6px 8px;">${escapeHtml(u.customerPhone || '—')}</td>
-                        <td style="padding:6px 8px;">#${escapeHtml(u.orderId || '—')}</td>
-                        <td style="padding:6px 8px;">${_fmtINR(u.amountGiven)}</td>
-                        <td style="padding:6px 8px;">${escapeHtml(dateStr)}</td>
-                        <td style="padding:6px 8px;"><span class="channel-chip channel-${escapeHtml(channel)}">${escapeHtml(channel)}</span></td>
-                    </tr>`;
-                }).join('')}
-            </tbody>
-        </table>
-        </div>
-        ${sorted.length > 200 ? `<div style="margin-top:8px; font-size:12px; color:var(--text-muted);">Showing 200 of ${sorted.length} uses</div>` : ''}
-    `;
+
+    const page = sorted.slice(0, 200);
+    const uniquePhones = [...new Set(page.map(u => u.customerPhone).filter(Boolean))];
+    await Promise.all(uniquePhones.map(_resolveCustomerName));
+
+    const rowsHtml = page.map(u => {
+        const cleanPhone = String(u.customerPhone || '').replace(/\D/g, '').slice(-10);
+        const name = _nameCache.get(cleanPhone) || u.customerPhone || 'Walk-in';
+        const d = new Date(u.appliedAt || 0);
+        const dateStr = d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        const channel = String(u.channel || 'other');
+        return `
+            <div class="usage-log-row">
+                <div class="usage-log-avatar">${escapeHtml(_initials(name))}</div>
+                <div class="usage-log-info">
+                    <div class="usage-log-name">${escapeHtml(name)}</div>
+                    <div class="usage-log-meta">
+                        <span>${escapeHtml(u.customerPhone || '—')}</span>
+                        ${u.orderId ? `<span>·</span><span class="usage-log-order-link" data-action="viewOrderFromDiscountUsage" data-id="${escapeHtml(u.orderId)}" role="button" tabindex="0">#${escapeHtml(String(u.orderId).slice(-5))}</span>` : ''}
+                        <span class="channel-chip channel-${escapeHtml(channel)}">${escapeHtml(channel)}</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="usage-log-amount">-${_fmtINR(u.amountGiven)}</div>
+                    <div class="usage-log-date">${escapeHtml(dateStr)}</div>
+                </div>
+            </div>`;
+    }).join('');
+
+    list.innerHTML = kpiHtml + `<div style="margin-top:14px;">${rowsHtml}</div>` +
+        (sorted.length > 200 ? `<div class="text-muted-small mt-8">Showing 200 of ${sorted.length} redemptions</div>` : '');
+
+    await loadLucide();
+    window.lucide.createIcons({ root: list });
+}
+
+export async function openDiscountUsageDirect(discountId) {
+    const modal = document.getElementById('discountsReportsModal');
+    if (!modal) return;
+
+    REPORT_STATE.focusedMode = true;
+    ['discountKpiGrid', 'discountReportBreakdownWrap', 'discountReportChannelsWrap', 'discountReportRecentWrap']
+        .forEach(id => document.getElementById(id)?.classList.add('hidden'));
+    document.querySelector('#discountsReportsModal .discount-report-range-row')?.classList.add('hidden');
+
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    await loadLucide();
+    window.lucide.createIcons({ root: modal });
+
+    await refreshDiscountsReport();
+    await openCodeUses(discountId);
 }
 
 export function closeCodeUsesPanel() {
     const panel = document.getElementById('discountCodeUsesPanel');
     if (panel) panel.classList.add('hidden');
+    if (REPORT_STATE.focusedMode) { closeDiscountsReports(); }
 }

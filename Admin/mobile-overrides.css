@@ -4,6 +4,9 @@
 
 @media (max-width: 1024px) {
 
+    /* --- 0.1 GENERAL UTILITIES --- */
+    .flex-wrap-mobile { flex-wrap: wrap; }
+
     /* --- 0. LOADING SCREEN MOBILE --- */
     #initial-loader { padding: 20px; }
     .loader-text-v4 { font-size: 22px; letter-spacing: 3px; }

@@ -220,6 +220,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'pickStatus': { const dd = el.closest('.status-dropdown'); if (dd) { if (dd._dropdownReposition) { window.removeEventListener('resize', dd._dropdownReposition); dd._dropdownReposition = null; } dd.classList.remove('open'); const sb = dd.closest('.dw-body'); if (sb) sb.style.overflowY = ''; } logger.info('ORDERS', `Status picked: ${id} → ${val}`); (await useMod('orders')).updateStatus(id, val); break; }
                 case 'assignRider': logger.info('ORDERS', `Assign rider: ${id} → ${val}`); (await useMod('orders')).assignRider(id, val); break;
                 case 'openOrderDrawer': logger.info('ORDERS', `Open order drawer: ${id}`); (await useMod('orders')).openOrderDrawer(id); break;
+                case 'viewOrderFromDiscountUsage': {
+                    logger.info('DISCOUNT', `View order from discount usage: ${id}`);
+                    (await useMod('discountsReports')).closeDiscountsReports?.();
+                    (await useMod('orders')).openOrderDrawer(id);
+                    break;
+                }
                 case 'markAsPaid': logger.info('ORDERS', `Mark paid: ${id}`); (await useMod('orders')).markAsPaid(id); break;
                 case 'deleteCategory': logger.info('CATALOG', `Delete category: ${id}`); (await useMod('catalog')).deleteCategory(id); break;
                 case 'removeParent': logger.info('UI', 'Remove parent element'); el.parentElement.remove(); break;
@@ -331,6 +337,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'closeDiscountEditor': logger.info('DISCOUNT', 'Close editor'); window.__discounts?.closeEditor(); break;
                 case 'saveDiscount': logger.info('DISCOUNT', 'Save discount'); window.__discounts?.save(); break;
                 case 'deleteDiscount': logger.info('DISCOUNT', `Delete discount: ${el.dataset.id}`); window.__discounts?.remove(el.dataset.id); break;
+                case 'viewDiscountUsage': logger.info('DISCOUNT', `View discount usage: ${el.dataset.id}`); (await useMod('discountsReports')).openDiscountUsageDirect?.(el.dataset.id); break;
                 case 'openDiscountsReports': logger.info('DISCOUNT', 'Open discount reports'); (await useMod('discountsReports')).openDiscountsReports?.(); break;
                 case 'closeDiscountsReports': logger.info('DISCOUNT', 'Close discount reports'); (await useMod('discountsReports')).closeDiscountsReports?.(); break;
                 case 'setDiscountReportRange': logger.info('DISCOUNT', 'Set report range'); (await useMod('discountsReports')).setDiscountReportRange?.(el); break;
@@ -339,7 +346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'viewCodeUses': {
                     const discId = el.getAttribute('data-discount-id');
                     logger.info('DISCOUNT', `View code uses: ${discId}`);
-                    (await useMod('discountsReports')).openCodeUses?.(discId);
+                    await (await useMod('discountsReports')).openCodeUses?.(discId);
                     break;
                 }
                 case 'closeCodeUsesPanel':

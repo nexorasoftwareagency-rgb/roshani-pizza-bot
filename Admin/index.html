@@ -5313,7 +5313,7 @@
 
             <div class="modal-body">
 
-                <div class="flex-between flex-center mb-16 flex-wrap" style="gap:10px;">
+                <div class="flex-between flex-center mb-16 flex-wrap discount-report-range-row" style="gap:10px;">
 
                     <div class="flex-row flex-gap-8">
 
@@ -5385,26 +5385,28 @@
 
 
 
+                <div id="discountReportBreakdownWrap">
                 <h4 class="panel-title mt-24 mb-8 fs-14">Per-Discount Breakdown</h4>
 
                 <div id="discountReportBreakdown" class="discount-report-list"></div>
+                </div>
 
-
-
+                <div id="discountReportChannelsWrap">
                 <h4 class="panel-title mt-24 mb-8 fs-14">Channel Split</h4>
 
                 <div id="discountReportChannels" class="discount-report-channels"></div>
+                </div>
 
-
-
+                <div id="discountReportRecentWrap">
                 <h4 class="panel-title mt-24 mb-8 fs-14">Recent Redemptions</h4>
 
                 <div id="discountReportRecent" class="discount-report-list"></div>
+                </div>
 
                 <div id="discountCodeUsesPanel" class="hidden" style="margin-top:20px;">
                     <div class="flex-between flex-center mb-8">
                         <h4 class="panel-title fs-14" id="discountCodeUsesTitle">Code Uses</h4>
-                        <button class="btn-text" data-action="closeCodeUsesPanel"><i data-lucide="arrow-left"></i> Back to reports</button>
+                        <button class="btn-text" id="discountCodeUsesBackBtn" data-action="closeCodeUsesPanel"><i data-lucide="arrow-left"></i> Back to reports</button>
                     </div>
                     <div id="discountCodeUsesList" class="discount-report-list"></div>
                 </div>

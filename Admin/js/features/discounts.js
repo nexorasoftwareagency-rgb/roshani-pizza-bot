@@ -87,7 +87,7 @@ function _renderCard(d) {
     }
 
     return `
-    <div class="discount-card" data-id="${escapeHtml(d.id)}">
+    <div class="discount-card" data-id="${escapeHtml(d.id)}" data-action="viewDiscountUsage">
         <div class="flex-between flex-center flex-wrap-mobile">
             <div style="flex:1; min-width:200px;">
                 <div class="flex-row flex-gap-10 flex-center flex-wrap-mobile">
@@ -118,6 +118,7 @@ function _renderCard(d) {
                 <button class="btn-text text-danger" data-action="deleteDiscount" data-id="${escapeHtml(d.id)}" title="Delete">
                     <i data-lucide="trash-2"></i>
                 </button>
+                <i data-lucide="chevron-right" class="discount-card-chevron" style="color:#cbd5e1;width:16px;height:16px;"></i>
             </div>
         </div>
     </div>`;
