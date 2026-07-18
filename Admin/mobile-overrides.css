@@ -3241,23 +3241,29 @@
 
     .discount-recent-row {
         grid-template-columns: 1fr auto;
-        gap: 2px 8px;
-        padding: 8px;
+        gap: 1px 6px;
+        padding: 6px;
         font-size: 11px;
     }
-    .drcr-discount { grid-column: 1 / -1; font-size: 12px; }
-    .drcr-amount { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
-    .drcr-time { order: -1; }
-    .drcr-customer, .drcr-order, .drcr-channel, .drcr-source { font-size: 10px; }
+    .drcr-discount { grid-column: 1 / -1; font-size: 12px; margin-bottom: 2px; }
+    .drcr-time { grid-row: 2; }
+    .drcr-amount { grid-column: 2; grid-row: 2; align-self: center; }
+    .drcr-customer { grid-row: 3; grid-column: 1 / -1; font-size: 10px; }
+    .drcr-order { grid-row: 4; grid-column: 1; font-size: 10px; }
+    .drcr-channel { grid-row: 4; grid-column: 2; font-size: 10px; text-align: right; }
+    .drcr-source { display: none; }
     .drcr-channel .channel-chip { font-size: 9px; padding: 1px 4px; }
 
     .drc-row {
-        grid-template-columns: auto 1fr auto;
-        gap: 6px;
+        grid-template-columns: 14px 1fr auto;
+        gap: 4px 8px;
         padding: 6px 4px;
         font-size: 12px;
     }
-    .drc-label { font-size: 12px; }
+    .drc-dot { grid-row: 1; }
+    .drc-label { grid-row: 1; font-size: 12px; }
+    .drc-value { grid-row: 1; text-align: right; }
+    .drc-bar-wrap { grid-column: 1 / -1; grid-row: 2; height: 6px; }
 
     .discount-kpi-grid {
         grid-template-columns: repeat(2, 1fr);
