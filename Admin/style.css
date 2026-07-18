@@ -1398,6 +1398,7 @@ html, body {
 .scroll-x { overflow-x: auto; }
 .hidden { display: none !important; }
 .flex-between { display: flex; justify-content: space-between; }
+.flex-wrap { flex-wrap: wrap; }
 .mt-20 { margin-top: 20px; }
 .p-15 { padding: 15px; }
 .p-32 { padding: 32px; }
