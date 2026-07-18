@@ -1875,6 +1875,42 @@ html, body {
     [data-settings-section="tax-services"] .settings-grid {
         grid-template-columns: 1fr !important;
     }
+
+    /* Settings > General: business-details row (flex-2 + flex-1) had the same
+       gap as receipt-dev but wasn't covered by that fix -- different
+       sub-section. No border-l-ghost here, so no companion border rule needed. */
+    [data-settings-section="general"] .flex-row.flex-gap-24 {
+        flex-direction: column !important;
+    }
+
+    /* Inventory modal ("Track New Product"): 3 field-pair rows (flex-1 + flex-1
+       -- Opening Stock/Low Stock Alert, SKU/Unit, Supplier/+1 more), zero
+       mobile coverage anywhere. Same stacking pattern as #dishModal, which
+       already has this treatment for its own field pairs. */
+    #inventoryModal .flex-row.flex-gap-10 {
+        flex-direction: column !important;
+    }
+
+    /* Promotions tab: 3 elements declared flex-wrap-mobile but no rule
+       anywhere in the codebase ever defined that class -- verified via
+       grep, zero matches. The existing flex-wrap-mobile rules elsewhere are
+       tab-scoped to reports/riderAnalytics with child selectors specific to
+       that UI (.report-date-input etc.) that don't apply here. */
+    #tab-promotions .flex-row.flex-wrap-mobile {
+        flex-wrap: wrap !important;
+    }
+    #tab-promotions .promo-action-row.flex-wrap-mobile > .btn-primary,
+    #tab-promotions .promo-action-row.flex-wrap-mobile > .btn-secondary {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+    /* Quiet-hours start/end row has no flex-wrap-mobile class at all (missed
+       even the incomplete pattern above) -- two number inputs + a dash
+       separator, narrow enough usually, but should wrap not overflow on the
+       smallest phones. */
+    #tab-promotions .flex-row.flex-gap-10.flex-center {
+        flex-wrap: wrap !important;
+    }
 }
 
 .panel {

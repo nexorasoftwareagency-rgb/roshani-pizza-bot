@@ -59,3 +59,9 @@ test-results/
 
 # Audit temp files
 _audit_tmp/
+
+# Infrastructure artifacts
+.agents/
+skills-lock.json
+videos/
+CLAude Adv Video/
