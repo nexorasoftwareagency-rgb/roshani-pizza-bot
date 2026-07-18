@@ -388,7 +388,7 @@ export async function openCodeUses(discountId) {
                     <div class="usage-log-name">${escapeHtml(name)}</div>
                     <div class="usage-log-meta">
                         <span>${escapeHtml(u.customerPhone || '—')}</span>
-                        ${u.orderId ? `<span>·</span><span class="usage-log-order-link" data-action="viewOrderFromDiscountUsage" data-id="${escapeHtml(u.orderId)}" role="button" tabindex="0">#${escapeHtml(String(u.orderId).slice(-5))}</span>` : ''}
+                        ${u.orderId ? `<span>·</span><span class="usage-log-order-link" data-action="viewOrderFromDiscountUsage" data-id="${escapeHtml(u.orderId)}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">#${escapeHtml(String(u.orderId).slice(-5))}</span>` : ''}
                         <span class="channel-chip channel-${escapeHtml(channel)}">${escapeHtml(channel)}</span>
                     </div>
                 </div>
