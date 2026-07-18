@@ -3139,6 +3139,186 @@
     .mob-export-banner { font-size: 15.5px; padding: 16px 18px; }
 }
 
+/* ================================================================
+   DISCOUNT TAB — MOBILE RESPONSIVE OVERRIDES
+   ================================================================ */
+@media (max-width: 768px) {
+
+    /* Header: stack title + buttons vertically */
+    .promo-page-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .promo-page-header > div:first-child { width: 100%; }
+    .promo-page-header > .flex-row {
+        width: 100%;
+        justify-content: stretch;
+    }
+    .promo-page-header > .flex-row .btn-secondary,
+    .promo-page-header > .flex-row .btn-primary {
+        flex: 1;
+        justify-content: center;
+        font-size: 12px;
+        padding: 8px 10px;
+    }
+
+    /* Mode tabs: allow wrapping + tighter padding */
+    .promo-mode-tabs {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .promo-mode-tab {
+        padding: 8px 10px;
+        font-size: 12px;
+        flex: 1 0 auto;
+        text-align: center;
+        min-width: 0;
+    }
+    .promo-mode-tab i { width: 14px; height: 14px; }
+    .promo-mode-tab .badge { font-size: 10px; padding: 1px 6px; }
+
+    /* Discount card: stack content + actions vertically */
+    .discount-card {
+        padding: 12px;
+    }
+    .discount-card > .flex-between.flex-center {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    .discount-card > .flex-between.flex-center > div:first-child {
+        min-width: 0 !important;
+    }
+    .discount-card .flex-row.flex-gap-6.flex-center {
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+    .discount-card .discount-type-badge {
+        font-size: 10px;
+        padding: 1px 6px;
+    }
+    .discount-card .badge {
+        font-size: 10px;
+    }
+    .discount-card code {
+        font-size: 10px;
+    }
+    .discount-card .text-muted-small {
+        font-size: 11px;
+    }
+    .discount-card .promo-slider {
+        width: 32px;
+        height: 18px;
+    }
+    .discount-card .promo-switch input:checked + .promo-slider:before {
+        transform: translateX(14px);
+    }
+    .discount-card .btn-text {
+        padding: 4px 6px;
+    }
+    .discount-card .btn-text i,
+    .discount-card-chevron {
+        width: 14px !important;
+        height: 14px !important;
+    }
+
+    /* Discount card — name+badges row */
+    .discount-card .flex-row.flex-gap-10 {
+        gap: 4px;
+    }
+}
+
+/* Reports modal — mobile */
+@media (max-width: 768px) {
+
+    .discount-report-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+        padding: 10px;
+    }
+    .drr-value { text-align: left; min-width: 0; }
+    .drr-bar-wrap { height: 6px; }
+
+    .discount-recent-row {
+        grid-template-columns: 1fr 1fr auto;
+        gap: 4px 8px;
+        padding: 8px;
+        font-size: 11px;
+    }
+    .drcr-time { grid-column: 1; }
+    .drcr-discount { grid-column: 1 / -1; font-size: 12px; }
+    .drcr-amount { grid-column: 3; grid-row: 1; }
+
+    .drc-row {
+        grid-template-columns: auto 1fr auto;
+        gap: 6px;
+        padding: 6px 4px;
+        font-size: 12px;
+    }
+    .drc-label { font-size: 12px; }
+
+    .discount-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    .discount-kpi-card { padding: 10px 12px; }
+    .kpi-value { font-size: 20px; }
+
+    .discount-usage-kpis {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+    .discount-usage-kpi-card { padding: 8px 10px; }
+    .discount-usage-kpi-card .kpi-value { font-size: 16px; }
+
+    .usage-log-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        padding: 10px;
+    }
+    .usage-log-row > div:last-child {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+}
+
+/* Discount editor modal — mobile */
+@media (max-width: 768px) {
+    #discountEditorModal .modal-content {
+        max-width: 100% !important;
+        margin: 10px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    .promo-options-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    #discountEditorForm .form-group { margin-bottom: 8px; }
+    #discountEditorForm .search-input-group,
+    #discountEditorForm select,
+    #discountEditorForm input {
+        font-size: 14px;
+        padding: 8px 10px;
+    }
+    #discCouponBox .flex-row { flex-wrap: wrap; }
+    #discCouponBox .flex-row input { max-width: 100% !important; flex: 1; }
+}
+
+/* Discount editor toggle + stackable row */
+@media (max-width: 480px) {
+    .checkbox-label { font-size: 13px; }
+    #discountEditorModal .modal-footer {
+        flex-direction: column;
+        gap: 8px;
+    }
+    #discountEditorModal .modal-footer button {
+        width: 100%;
+    }
+}
+
 @media (max-width: 380px) {
     .mob-kpi-grid { grid-template-columns: 1fr; }
     .mob-highlights-row { grid-template-columns: repeat(2, 1fr); }
