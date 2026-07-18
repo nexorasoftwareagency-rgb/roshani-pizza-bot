@@ -3240,14 +3240,16 @@
     .drr-bar-wrap { height: 6px; }
 
     .discount-recent-row {
-        grid-template-columns: 1fr 1fr auto;
-        gap: 4px 8px;
+        grid-template-columns: 1fr auto;
+        gap: 2px 8px;
         padding: 8px;
         font-size: 11px;
     }
-    .drcr-time { grid-column: 1; }
     .drcr-discount { grid-column: 1 / -1; font-size: 12px; }
-    .drcr-amount { grid-column: 3; grid-row: 1; }
+    .drcr-amount { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+    .drcr-time { order: -1; }
+    .drcr-customer, .drcr-order, .drcr-channel, .drcr-source { font-size: 10px; }
+    .drcr-channel .channel-chip { font-size: 9px; padding: 1px 4px; }
 
     .drc-row {
         grid-template-columns: auto 1fr auto;
