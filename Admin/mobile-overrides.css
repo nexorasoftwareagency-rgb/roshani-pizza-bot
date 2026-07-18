@@ -3226,6 +3226,41 @@
     .discount-card .flex-row.flex-gap-10 {
         gap: 4px;
     }
+
+    /* --- FIX: promo-page-header overlap on mobile --- */
+    .promo-page-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    .promo-page-header > div:first-child { width: 100%; flex-shrink: 1; min-width: 0; }
+    .promo-page-header > .flex-row {
+        width: 100%;
+        justify-content: stretch;
+        flex-wrap: wrap;
+    }
+    .promo-page-header > .flex-row .btn-secondary,
+    .promo-page-header > .flex-row .btn-primary {
+        flex: 1 1 0;
+        min-width: 0;
+        justify-content: center;
+        font-size: 12px;
+        padding: 8px 10px;
+        white-space: nowrap;
+    }
+
+    /* --- FIX: discount card name clipping on mobile --- */
+    .discount-card { overflow: visible; }
+    .discount-card > .flex-between.flex-center > div:first-child {
+        min-width: 0 !important;
+        overflow: visible;
+    }
+    .discount-card > .flex-between.flex-center > div:first-child > .flex-row {
+        flex-wrap: wrap;
+    }
+    .discount-card > .flex-between.flex-center > div:first-child > .flex-row strong {
+        min-width: 0;
+        word-break: break-word;
+    }
 }
 
 /* Reports modal — mobile */
@@ -3289,6 +3324,37 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+    }
+
+    /* --- FIX: Reports modal title wrapping --- */
+    #discountsReportsModal .modal-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    #discountsReportsModal .modal-header h3 {
+        font-size: 18px;
+        word-break: break-word;
+    }
+
+    /* --- FIX: Code-uses panel header layout --- */
+    #discountCodeUsesPanel .flex-between {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    #discountCodeUsesPanel .btn-text {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+
+    /* --- FIX: Stats grid — 3 cols too tight, use 1-col on small screens --- */
+    .discount-usage-kpis {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .discount-usage-kpi-card .kpi-value {
+        font-size: 20px;
     }
 }
 
