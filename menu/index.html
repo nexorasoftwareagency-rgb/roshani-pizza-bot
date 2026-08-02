@@ -23,7 +23,10 @@
         <div class="spinner"></div>
         <p style="font-size:13px;color:var(--text-sub);">Loading menu…</p>
     </div>
-    <div id="offlineBanner" class="offline-banner">You're offline — reconnecting…</div>
+    <div id="offlineBanner" class="offline-banner">
+        Connection trouble —
+        <button id="btnRetryConnection" type="button" style="background:none;border:none;color:#fff;text-decoration:underline;font:inherit;font-weight:800;cursor:pointer;padding:0;margin-left:4px;">Tap to retry</button>
+    </div>
 
     <!-- ============== SCREEN 1: WELCOME ============== -->
     <div id="screenWelcome" class="screen welcome-screen">

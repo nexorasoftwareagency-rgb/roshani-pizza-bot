@@ -434,7 +434,7 @@ img{max-width:100%; display:block;}
 .bill-generated-note{ font-size:13px; color:var(--text-sub); line-height:1.6; margin-bottom:12px; }
 
 /* ---------- Misc ---------- */
-.toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1a1a1a; color:#fff; padding:12px 20px; border-radius:12px; font-size:13px; font-weight:600; z-index:999; opacity:0; transition:opacity .25s ease; max-width:90%; text-align:center; }
+.toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1a1a1a; color:#fff; padding:12px 20px; border-radius:12px; font-size:13px; font-weight:600; z-index:999; opacity:0; transition:opacity .25s ease; max-width:90%; text-align:center; pointer-events:none; }
 .toast.show{opacity:1;}
 .empty-cart{text-align:center; padding:60px 20px; color:var(--text-sub);}
 .icon{width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}

@@ -35,6 +35,29 @@ export const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
 
 // ---------------------------------------------------------------
+// Real connection state — same .info/connected pattern already
+// proven in Admin/js/firebase.js. Lets app.js tell "genuinely
+// offline" apart from "just a slow first connection" instead of
+// guessing off a fixed timer.
+// ---------------------------------------------------------------
+let _fbConnected = false;
+const _connWatchers = [];
+onValue(ref(db, '.info/connected'), (snap) => {
+    _fbConnected = snap.val() === true;
+    _connWatchers.slice().forEach(fn => { try { fn(_fbConnected); } catch (e) { console.error('[FB] conn watcher error', e); } });
+});
+export function isConnected() {
+    return _fbConnected;
+}
+export function onConnectionChange(fn) {
+    _connWatchers.push(fn);
+    return () => {
+        const i = _connWatchers.indexOf(fn);
+        if (i >= 0) _connWatchers.splice(i, 1);
+    };
+}
+
+// ---------------------------------------------------------------
 // Outlet resolution — parsed once from the URL path, e.g.
 //   https://menu.roshani.com/pizza/?t=7YH8K2P4X9F6M2A
 // If your deployment serves a single outlet from a fixed subdomain,

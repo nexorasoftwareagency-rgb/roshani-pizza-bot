@@ -1623,6 +1623,7 @@ window.__tables = {
     closeSession: _closeSessionForTable, cancelSession: _cancelSessionForTable,
     closeExpiredSession: _closeExpiredSession,
     makePaymentForTable: _makePaymentForTable,
+    advanceOrder: _advanceOrder,
     printSessionBill: _printSessionBill,
     printBillForGroup: _printBillForGroup,
     editTable: _openTableEditor, setTableEnabled: _setTableEnabled

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'roshani-menu-shell-v1';
+const CACHE_NAME = 'roshani-menu-shell-v3';
 const ASSETS = [
   './index.html',
   './css/app.css',
@@ -32,6 +32,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
+  if (new URL(event.request.url).origin !== location.origin) return; // ponytail: app-shell caching only — CDN (gstatic) is out of CSP connect-src
   if (event.request.url.includes('firebaseio.com')) return;
   if (event.request.url.includes('identitytoolkit.googleapis.com')) return;
   if (event.request.url.includes('securetoken.googleapis.com')) return;

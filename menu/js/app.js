@@ -3,7 +3,7 @@
  * Wires together firebase.js, session.js, cart.js, order.js, ui.js.
  * This is the only file with top-level event listener registration.
  */
-import { outletRef, get, onValue, push, set } from './firebase.js';
+import { outletRef, get, onValue, push, set, OUTLET, isConnected, onConnectionChange } from './firebase.js';
 import { initSession, ensureSession, Session, saveCheckoutContact, cleanupSession, touchSession, createOrderGroup, getCurrentGroupOrders } from './session.js';
 import { Cart, addLine, setQty, clearCart, lineCount, subtotal as cartSubtotal, isEmpty as cartIsEmpty, restoreCart } from './cart.js';
 import { placeOrder } from './order.js';
@@ -62,117 +62,164 @@ function _groupTotalForBill() {
 // BOOT
 // ---------------------------------------------------------------
 let _bootReady = false;
+let _bootWatchdog = null;
+
+// Token genuinely doesn't match any table on this outlet — a data/config
+// problem, NOT a network problem. Shows the already-built #screenInvalid
+// screen instead of the misleading offline banner.
+function _showInvalidToken() {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    document.getElementById('offlineBanner').classList.remove('visible');
+    UI.showScreen('screenInvalid');
+}
+
+// Real timeout / thrown error / a later step hanging — an actual
+// connectivity problem. Shows the offline banner with a working retry.
+function _showConnectionIssue() {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    document.getElementById('offlineBanner').classList.add('visible');
+    UI.showScreen('screenWelcome');
+    window.addEventListener('online', _retryBoot, { once: true });
+}
 
 async function boot() {
-    const result = await Promise.race([
-        initSession().catch(() => ({ ok: false })),
-        new Promise(resolve => setTimeout(() => resolve({ ok: false, reason: 'timeout' }), 1500))
-    ]);
-    if (!result.ok) {
-        document.getElementById('loadingOverlay').style.display = 'none';
-        document.getElementById('offlineBanner').classList.add('visible');
-        UI.showScreen('screenWelcome');
-        window.addEventListener('online', _retryBoot, { once: true });
-        return;
-    }
+    // Diagnostic line — if this ever fails again, check the console for
+    // exactly which outlet + token were checked, and whether Firebase
+    // was actually connected at that moment.
+    const _tokenAttempted = new URLSearchParams(window.location.search).get('t');
+    console.log('[Boot] outlet =', OUTLET, '| token =', _tokenAttempted, '| firebase connected =', isConnected());
 
-    // Register event listeners immediately after session init
-    // so the first session:updated event from watchSession() is captured
-    window.addEventListener('session:updated', (e) => onSessionUpdated(e.detail));
-    window.addEventListener('cart:changed', onCartChanged);
-
-    const t = Session.table;
-    document.getElementById('welcomeTableNum').textContent = String(t.number).padStart(2, '0');
-    document.querySelectorAll('#menuTableChip').forEach(el => el.textContent = `TABLE ${String(t.number).padStart(2, '0')}`);
-    document.getElementById('cartHeaderTitle').textContent = `Your Cart (Table ${String(t.number).padStart(2, '0')})`;
-
-    // Branding + dine-in settings (tax %, etc.) — non-critical, use defaults on failure
-    let brandName = '', dineSettings = {};
-    try {
-        const [brandSnap, dineSettingsSnap] = await Promise.all([
-            get(outletRef('settings/Store/storeName')),
-            get(outletRef('dineinSettings'))
-        ]);
-        if (brandSnap.exists()) brandName = brandSnap.val();
-        dineSettings = dineSettingsSnap.val() || {};
-    } catch (e) {
-        console.warn('[Boot] Settings fetch failed, using defaults:', e?.message || e);
-    }
-    if (brandName) document.getElementById('welcomeBrandName').textContent = brandName;
-    M.taxEnabled = dineSettings.taxEnabled !== false;
-    M.taxName = dineSettings.taxName || 'GST';
-    M.taxPercent = typeof dineSettings.taxRate === 'number' ? dineSettings.taxRate : 5;
-    M.taxRates = (dineSettings.taxRates && Array.isArray(dineSettings.taxRates) && dineSettings.taxRates.length > 0) ? dineSettings.taxRates : (M.taxEnabled ? [{ name: M.taxName, rate: M.taxPercent }] : []);
-    M.serviceChargeEnabled = dineSettings.serviceChargeEnabled === true;
-    M.serviceChargeName = dineSettings.serviceChargeName || 'Service Charge';
-    M.serviceChargeRate = typeof dineSettings.serviceChargeRate === 'number' ? dineSettings.serviceChargeRate : 0;
-
-    // Render today's offers on welcome screen
-    const offersRaw = dineSettings.offers;
-    const offers = Array.isArray(offersRaw) ? offersRaw : (offersRaw ? Object.values(offersRaw) : []);
-    if (offers.length > 0) {
-        const offersEl = document.getElementById('welcomeOffers');
-        offersEl.innerHTML = offers.slice(0, 3).map(o => `
-            <div class="welcome-offer-card">
-                <div class="welcome-offer-title">${UI.esc(o.title || '')}</div>
-                ${o.description ? `<div class="welcome-offer-desc">${UI.esc(o.description)}</div>` : ''}
-                ${o.code ? `<span class="welcome-offer-code">${UI.esc(o.code)}</span>` : ''}
-            </div>`).join('');
-        offersEl.classList.remove('hidden');
-    }
-
-    const bgSnap = await get(outletRef('settings/Store/customerMenuBgImage'));
-    if (bgSnap.exists() && bgSnap.val()) {
-        const welcomeEl = document.getElementById('screenWelcome');
-        const img = new Image();
-        img.onload = () => {
-            welcomeEl.style.backgroundImage = `url('${bgSnap.val()}')`;
-            welcomeEl.classList.add('has-photo');
-        };
-        img.src = bgSnap.val();
-    }
-
-    await loadMenu();
-
-    // Restore cart from sessionStorage (survives soft refresh / navigate-back)
-    restoreCart();
-
-    // Auto-rejoin: if this table already has an active session, create/join
-    // it immediately so returning users see their orders without delay.
-    // Token validation already set Session.table. If currentSession exists,
-    // ensureSession() will find it and restore the user's group context.
-    if (Session.table?.currentSession) {
-        const sessResult = await ensureSession();
-        if (sessResult.isNewSession) {
-            clearCart(); // old expired session's cart has no place in the new one
+    // Watchdog: if boot() doesn't finish within 15s for ANY reason
+    // (e.g. loadMenu()/ensureSession() hanging on a bad connection —
+    // none of those calls have their own timeout), don't leave the
+    // user staring at the spinner forever.
+    _bootWatchdog = setTimeout(() => {
+        if (!_bootReady) {
+            console.warn('[Boot] Watchdog fired — boot did not complete in time.');
+            _showConnectionIssue();
         }
-        if (sessResult.ok) {
-            if (sessResult.groupChoiceNeeded) {
-                renderGroupChoiceScreen();
-                UI.showScreen('screenChooseGroup');
-                document.getElementById('loadingOverlay').style.display = 'none';
-                return;
+    }, 15000);
+
+    try {
+        const result = await Promise.race([
+            initSession().catch((e) => ({ ok: false, reason: 'error', error: e })),
+            new Promise(resolve => setTimeout(() => resolve({ ok: false, reason: 'timeout' }), 8000))
+        ]);
+
+        if (!result.ok) {
+            console.warn('[Boot] initSession failed — reason:', result.reason, result.error || '');
+            if (result.reason === 'invalid-token') {
+                _showInvalidToken();
+            } else {
+                _showConnectionIssue();
             }
-            const groupOrders = getCurrentGroupOrders();
-            if (groupOrders.length > 0) {
-                const lastOrderId = groupOrders[groupOrders.length - 1];
-                watchOrder(lastOrderId);
-                UI.showScreen('screenTracking');
-                document.getElementById('loadingOverlay').style.display = 'none';
-                return;
-            }
-            // Session active but no orders — go straight to menu, not welcome
-            document.getElementById('loadingOverlay').style.display = 'none';
-            UI.showScreen('screenMenu');
             return;
         }
-    }
 
-    // No existing session — anything in the cart is stale from a prior visit
-    clearCart();
-    document.getElementById('loadingOverlay').style.display = 'none';
-    UI.showScreen('screenWelcome');
-    _bootReady = true;
+        // Register event listeners immediately after session init
+        // so the first session:updated event from watchSession() is captured
+        window.addEventListener('session:updated', (e) => onSessionUpdated(e.detail));
+        window.addEventListener('cart:changed', onCartChanged);
+
+        const t = Session.table;
+        document.getElementById('welcomeTableNum').textContent = String(t.number).padStart(2, '0');
+        document.querySelectorAll('#menuTableChip').forEach(el => el.textContent = `TABLE ${String(t.number).padStart(2, '0')}`);
+        document.getElementById('cartHeaderTitle').textContent = `Your Cart (Table ${String(t.number).padStart(2, '0')})`;
+
+        // Branding + dine-in settings (tax %, etc.) — non-critical, use defaults on failure
+        let brandName = '', dineSettings = {};
+        try {
+            const [brandSnap, dineSettingsSnap] = await Promise.all([
+                get(outletRef('settings/Store/storeName')),
+                get(outletRef('dineinSettings'))
+            ]);
+            if (brandSnap.exists()) brandName = brandSnap.val();
+            dineSettings = dineSettingsSnap.val() || {};
+        } catch (e) {
+            console.warn('[Boot] Settings fetch failed, using defaults:', e?.message || e);
+        }
+        if (brandName) document.getElementById('welcomeBrandName').textContent = brandName;
+        M.taxEnabled = dineSettings.taxEnabled !== false;
+        M.taxName = dineSettings.taxName || 'GST';
+        M.taxPercent = typeof dineSettings.taxRate === 'number' ? dineSettings.taxRate : 5;
+        M.taxRates = (dineSettings.taxRates && Array.isArray(dineSettings.taxRates) && dineSettings.taxRates.length > 0) ? dineSettings.taxRates : (M.taxEnabled ? [{ name: M.taxName, rate: M.taxPercent }] : []);
+        M.serviceChargeEnabled = dineSettings.serviceChargeEnabled === true;
+        M.serviceChargeName = dineSettings.serviceChargeName || 'Service Charge';
+        M.serviceChargeRate = typeof dineSettings.serviceChargeRate === 'number' ? dineSettings.serviceChargeRate : 0;
+
+        // Render today's offers on welcome screen
+        const offersRaw = dineSettings.offers;
+        const offers = Array.isArray(offersRaw) ? offersRaw : (offersRaw ? Object.values(offersRaw) : []);
+        if (offers.length > 0) {
+            const offersEl = document.getElementById('welcomeOffers');
+            offersEl.innerHTML = offers.slice(0, 3).map(o => `
+                <div class="welcome-offer-card">
+                    <div class="welcome-offer-title">${UI.esc(o.title || '')}</div>
+                    ${o.description ? `<div class="welcome-offer-desc">${UI.esc(o.description)}</div>` : ''}
+                    ${o.code ? `<span class="welcome-offer-code">${UI.esc(o.code)}</span>` : ''}
+                </div>`).join('');
+            offersEl.classList.remove('hidden');
+        }
+
+        const bgSnap = await get(outletRef('settings/Store/customerMenuBgImage'));
+        if (bgSnap.exists() && bgSnap.val()) {
+            const welcomeEl = document.getElementById('screenWelcome');
+            const img = new Image();
+            img.onload = () => {
+                welcomeEl.style.backgroundImage = `url('${bgSnap.val()}')`;
+                welcomeEl.classList.add('has-photo');
+            };
+            img.src = bgSnap.val();
+        }
+
+        await loadMenu();
+
+        // Restore cart from sessionStorage (survives soft refresh / navigate-back)
+        restoreCart();
+
+        // Auto-rejoin: if this table already has an active session, create/join
+        // it immediately so returning users see their orders without delay.
+        // Token validation already set Session.table. If currentSession exists,
+        // ensureSession() will find it and restore the user's group context.
+        if (Session.table?.currentSession) {
+            const sessResult = await ensureSession();
+            if (sessResult.isNewSession) {
+                clearCart(); // old expired session's cart has no place in the new one
+            }
+            if (sessResult.ok) {
+                _bootReady = true;
+                if (sessResult.groupChoiceNeeded) {
+                    renderGroupChoiceScreen();
+                    UI.showScreen('screenChooseGroup');
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    return;
+                }
+                const groupOrders = getCurrentGroupOrders();
+                if (groupOrders.length > 0) {
+                    const lastOrderId = groupOrders[groupOrders.length - 1];
+                    watchOrder(lastOrderId);
+                    UI.showScreen('screenTracking');
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    return;
+                }
+                // Session active but no orders — go straight to menu, not welcome
+                document.getElementById('loadingOverlay').style.display = 'none';
+                UI.showScreen('screenMenu');
+                return;
+            }
+        }
+
+        // No existing session — anything in the cart is stale from a prior visit
+        clearCart();
+        document.getElementById('loadingOverlay').style.display = 'none';
+        UI.showScreen('screenWelcome');
+        _bootReady = true;
+    } catch (e) {
+        console.error('[Boot] Unexpected error:', e);
+        _showConnectionIssue();
+    } finally {
+        clearTimeout(_bootWatchdog);
+    }
 }
 
 async function _retryBoot() {
@@ -181,6 +228,14 @@ async function _retryBoot() {
     document.getElementById('loadingOverlay').style.display = '';
     await boot();
 }
+
+// Manual retry button inside the offline banner (see index.html change) —
+// covers the common real-world case where the device was never actually
+// marked offline by the OS, so the 'online' event above never fires.
+document.getElementById('btnRetryConnection')?.addEventListener('click', () => {
+    haptic(10);
+    _retryBoot();
+});
 
 // ---------------------------------------------------------------
 // GROUP CHOICE (Multi-Bill)
@@ -785,10 +840,5 @@ window.addEventListener('popstate', UI.handlePopState);
 // Boot
 boot().catch(err => {
     console.error('[Boot]', err);
-    document.getElementById('loadingOverlay').style.display = 'none';
-    if (!_bootReady) {
-        document.getElementById('offlineBanner').classList.add('visible');
-        UI.showScreen('screenWelcome');
-        window.addEventListener('online', _retryBoot, { once: true });
-    }
+    if (!_bootReady) _showConnectionIssue();
 });

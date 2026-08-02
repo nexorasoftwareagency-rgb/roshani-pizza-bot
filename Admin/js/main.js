@@ -415,7 +415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'printTableKOT': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Print KOT'); window.__tables?.printKOT?.(id); break;
                 case 'printSessionBill': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Print session bill'); window.__tables?.printSessionBill?.(id); break;
                 case 'printBillForGroup': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Print bill for group'); window.__tables?.printBillForGroup?.(id, el.getAttribute('data-group-id')); break;
-                case 'advanceTableOrder': break;
+                case 'advanceTableOrder': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Advance order'); window.__tables?.advanceOrder?.(id, el.getAttribute('data-next')); break;
                 case 'resolveTableRequest': break;
                 case 'jumpToOrderInOrdersTab': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Jump to order'); window.__tables?.jumpToOrder?.(id); break;
                 case 'openTableQr': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Open table QR'); window.__tables?.openQr?.(id); break;

@@ -705,6 +705,6 @@ export function resetDiscountInput() {
     const btn = document.getElementById('btnApplyDiscount');
     const input = document.getElementById('discountCodeInput');
     if (btn) { btn.textContent = 'Apply'; btn.classList.remove('discount-applied'); btn.disabled = false; }
-    if (input) { input.disabled = false; input.value = ''; input.focus(); }
+    if (input) { input.disabled = false; input.value = ''; }
     hideDiscountMsg();
 }
