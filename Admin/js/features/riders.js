@@ -1,4 +1,4 @@
-import { db, auth, secondaryAuth, secondaryAuthAvailable, Outlet, serverTimestamp, ref, get, set, push, update, runTransaction, remove, query, orderByChild, equalTo, onValue, signOut, sendPasswordResetEmail, createUserWithEmailAndPassword } from '../firebase.js';
+import { db, auth, getSecondaryAuth, isSecondaryAuthAvailable, Outlet, serverTimestamp, ref, get, set, push, update, runTransaction, remove, query, orderByChild, equalTo, onValue, signOut, sendPasswordResetEmail, createUserWithEmailAndPassword } from '../firebase.js';
 import { state } from '../state.js';
 import { showDeleteConfirm } from '../ui-utils.js';
 import { showToast, haptic, escapeHtml, standardizeAuthError, logAudit, showConfirm, addRiderNotification, getSkeletonRows } from '../utils.js';
@@ -349,11 +349,12 @@ export async function saveRiderAccount() {
             showToast("Rider updated successfully!", "success");
             hideRiderModal();
         } else {
-            if (!secondaryAuthAvailable) { closePasswordModal(); showToast("Secondary Auth Service unavailable.", "error"); return; }
-            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, pass);
+            if (!isSecondaryAuthAvailable()) { closePasswordModal(); showToast("Secondary Auth Service unavailable.", "error"); return; }
+            const _sa = getSecondaryAuth();
+            const userCredential = await createUserWithEmailAndPassword(_sa, email, pass);
             const uid = userCredential.user.uid;
             await set(ref(db, `riders/${uid}`), { uid, name, email, phone, fatherName, age, aadharNo, qualification, address, profilePhoto, aadharPhoto, status: "Offline", createdAt: Date.now() });
-            await signOut(secondaryAuth);
+            await signOut(_sa);
             logAudit("Riders", `Created New Rider: ${name}`, uid);
             closePasswordModal();
             showToast("Rider account created successfully!", "success");

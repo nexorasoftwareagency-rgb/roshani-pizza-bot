@@ -178,7 +178,9 @@ export const switchTab = async (tabId, skipHistory = false) => {
     console.log(`[SWITCH] target=${!!target}, id=tab-${tabId}`);
     if (target) {
         target.classList.remove('hidden');
-        console.log(`[SWITCH] removed hidden, classes="${target.className}", display=${getComputedStyle(target).display}, height=${target.offsetHeight}`);
+        const _targetDisplay = getComputedStyle(target).display;
+        const _targetHeight = target.offsetHeight;
+        console.log(`[SWITCH] removed hidden, classes="${target.className}", display=${_targetDisplay}, height=${_targetHeight}`);
 
         const mainEl = document.querySelector('.main');
         if (mainEl) mainEl.scrollTop = 0;

@@ -165,24 +165,20 @@ export async function deleteImage(url) {
     }
 }
 
-export let secondaryAuth;
-export let secondaryAuthAvailable = false;
-export function initSecondaryAuth() {
+let _secondaryAuth, _secondaryAuthAvailable = false;
+export function getSecondaryAuth() {
+    if (_secondaryAuth) return _secondaryAuth;
     try {
-        if (!window.firebaseConfig) {
-            secondaryAuthAvailable = false;
-            return;
-        }
-        const secondaryApp = initializeApp(window.firebaseConfig, "secondary_auth");
-        secondaryAuth = getAuth(secondaryApp);
-        secondaryAuthAvailable = true;
+        const secondaryApp = initializeApp(window.firebaseConfig, 'secondary_auth');
+        _secondaryAuth = getAuth(secondaryApp);
+        _secondaryAuthAvailable = true;
     } catch (e) {
-        console.error("Secondary Auth Init Error:", e);
-        secondaryAuthAvailable = false;
+        console.error('Secondary Auth Init Error:', e);
+        _secondaryAuthAvailable = false;
     }
+    return _secondaryAuth;
 }
-
-initSecondaryAuth();
+export function isSecondaryAuthAvailable() { return _secondaryAuthAvailable; }
 
 export {
     db, auth, app,

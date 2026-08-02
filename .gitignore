@@ -31,6 +31,9 @@ Skill Set/
 # Firebase hosting cache
 .firebase/
 
+# Build output
+Admin/dist/
+
 # OpenCode config
 .opencode/
 
