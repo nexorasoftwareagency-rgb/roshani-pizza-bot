@@ -1438,7 +1438,7 @@ async function _printSingleQr() {
     const w = window.open('', '_blank', 'width=420,height=620');
     if (!w) { showToast('Popup blocked — allow popups for print', 'error'); return; }
     w.document.write(`<html><head><title>${escapeHtml(titleText)} — ${escapeHtml(storeName)}</title><style>
-        *{box-sizing:border-box;margin:0;padding:0;}
+        *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
         body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fef3e8;padding:24px;}
         ${QR_CARD_CSS}
         </style></head><body>
@@ -1466,7 +1466,7 @@ async function _bulkQrPrint() {
         _qrCardMarkup({ storeName, poweredBy, tableNumber: t.number, qrSrc: dataUri, compact: true })
     ).join('');
     w.document.write(`<html><head><title>Bulk QR Print — ${escapeHtml(storeName)}</title><style>
-        *{box-sizing:border-box;margin:0;padding:0;}
+        *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
         body{font-family:-apple-system,'Segoe UI',sans-serif;background:#fef3e8;padding:20px;}
         .qr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;justify-items:center;}
         ${QR_CARD_CSS}
