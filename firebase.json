@@ -251,6 +251,7 @@
         "**/node_modules/**"
       ],
       "rewrites": [
+        {"source": "/home", "destination": "/home.html"},
         {"source": "**", "destination": "/index.html"}
       ],
       "headers": [
