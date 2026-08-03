@@ -338,7 +338,7 @@ async function _renderFloorGrid() {
 // RENDER: Live Orders (Dine-In) panel
 // ---------------------------------------------------------------------
 function _statusPillClass(status) {
-    const map = { Placed: 'badge-placed', Confirmed: 'badge-confirmed', Ready: 'badge-ready', Preparing: 'badge-preparing', Served: 'badge-delivered', Delivered: 'badge-delivered' };
+    const map = { Placed: 'badge-pending', Confirmed: 'badge-pending', Preparing: 'badge-pending', Ready: 'badge-ready', Served: 'badge-ready', Delivered: 'badge-delivery' };
     return map[status] || 'badge-pending';
 }
 
