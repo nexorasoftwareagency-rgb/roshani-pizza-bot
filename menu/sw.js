@@ -1,4 +1,4 @@
-const CACHE_NAME = 'roshani-menu-shell-v6';
+const CACHE_NAME = 'roshani-menu-shell-v7';
 const ASSETS = [
   './index.html',
   './css/app.css',
