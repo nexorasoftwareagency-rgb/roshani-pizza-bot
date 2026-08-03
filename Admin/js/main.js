@@ -592,20 +592,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (el && window[fn]) el.addEventListener('click', window[fn]);
         };
 
-        const btnGenerateReport = document.getElementById('btnGenerateReport');
-        if (btnGenerateReport) btnGenerateReport.addEventListener('click', async () => {
-            const r = await useMod('analytics');
-            if (r.generateCustomReport) r.generateCustomReport();
-        });
-
-        const reportStatusFilter = document.getElementById('reportStatusFilter');
-        if (reportStatusFilter) {
-            reportStatusFilter.addEventListener('change', async (e) => {
-                const r = await useMod('analytics');
-                if (r.setStatusFilter) r.setStatusFilter(e.target.value);
-            });
-        }
-
         const reportOutletFilter = document.getElementById('reportOutletFilter');
         if (reportOutletFilter) {
             reportOutletFilter.addEventListener('change', async (e) => {
@@ -613,48 +599,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (r.setOutletFilter) r.setOutletFilter(e.target.value);
             });
         }
-
-        const btnToggleCompare = document.getElementById('btnToggleCompare');
-        if (btnToggleCompare) {
-            btnToggleCompare.addEventListener('click', async () => {
-                const r = await useMod('analytics');
-                if (r.toggleCompare) {
-                    const on = btnToggleCompare.classList.toggle('active');
-                    btnToggleCompare.style.background = on ? 'var(--accent)' : '';
-                    btnToggleCompare.style.color = on ? '#fff' : '';
-                    r.toggleCompare(on);
-                }
-            });
-        }
-
-        const btnWhatsappReport = document.getElementById('btnWhatsappReport');
-        if (btnWhatsappReport) btnWhatsappReport.addEventListener('click', async () => {
-            if (!(await showConfirm("Send Daily Sales Report to WhatsApp now?", "Confirm Report"))) return;
-            
-            try {
-                btnWhatsappReport.disabled = true;
-                btnWhatsappReport.style.opacity = '0.7';
-                
-                const reportDate = document.getElementById('reportFrom')?.value;
-                const dateLabel = reportDate ? reportDate : "Today";
-                
-                showToast(`Requesting WhatsApp Report for ${dateLabel}...`, "info");
-                const cmdRef = push(ref(db, `bot/${state.currentOutlet}/commands`));
-                await set(cmdRef, {
-                    action: "SEND_DAILY_REPORT",
-                    targetDate: reportDate || null,
-                    requestedBy: auth.currentUser?.email || 'admin',
-                    timestamp: serverTimestamp()
-                });
-                showToast(`Report request for ${dateLabel} sent to Bot!`, "success");
-            } catch (err) {
-                console.error("Bot trigger error:", err);
-                showToast("Failed to trigger Bot: " + err.message, "error");
-            } finally {
-                btnWhatsappReport.disabled = false;
-                btnWhatsappReport.style.opacity = '1';
-            }
-        });
 
         document.getElementById('btnDownloadExcel')?.addEventListener('click', async () => {
             const r = await useMod('analytics');

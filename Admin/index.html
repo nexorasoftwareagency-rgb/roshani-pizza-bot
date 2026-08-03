@@ -2967,9 +2967,18 @@
             </button>
         </div>
 
-        <div class="mob-inline-dates hidden" id="mobInlineDates"></div>
+        <div class="mob-inline-dates hidden" id="mobInlineDates">
+            <input type="date" id="reportFrom" class="form-input report-date-input" title="From Date">
+            <input type="date" id="reportTo" class="form-input report-date-input" title="To Date">
+        </div>
 
-        <div class="mob-inline-filters hidden" id="mobInlineFilters"></div>
+        <div class="mob-inline-filters hidden" id="mobInlineFilters">
+            <select id="reportOutletFilter" class="form-input report-date-input" title="Filter by Outlet">
+                <option value="current">Current</option>
+                <option value="pizza">Pizza</option>
+                <option value="cake">Cake</option>
+            </select>
+        </div>
     </div>
 
     <!-- ---------- KPI cards, 2x2 ---------- -->
@@ -3113,274 +3122,11 @@
         </button>
     </div>
 
+    <!-- Hidden triggers: mobile export banners fire these -->
+    <button id="btnDownloadExcel" style="display:none"></button>
+    <button id="btnDownloadPDF" style="display:none"></button>
+
 </div>
-
-                <div class="flex-row justify-between flex-center mb-20 p-0-10">
-
-                    <h2 class="section-title fs-24 m-0 flex-row flex-center flex-gap-10"><i data-lucide="bar-chart-3" class="icon-24"></i> Sales Analytics & Reports</h2>
-
-                    <div class="flex-row flex-gap-10 flex-center glass-card p-10-20 rounded-12 flex-wrap-mobile">
-
-                        <input type="date" id="reportFrom" class="form-input report-date-input" title="From Date">
-
-                        <span class="text-muted-small">to</span>
-
-                        <input type="date" id="reportTo" class="form-input report-date-input" title="To Date">
-
-                        <select id="reportStatusFilter" class="form-input report-date-input" title="Filter by Order Status">
-
-                            <option value="delivered" selected>Delivered Only</option>
-
-                            <option value="all">All Orders</option>
-
-                            <option value="cancelled">Cancelled Only</option>
-
-                        </select>
-
-                        <select id="reportOutletFilter" class="form-input report-date-input" title="Filter by Outlet">
-
-                            <option value="current">Current</option>
-
-                            <option value="pizza">Pizza</option>
-
-                            <option value="cake">Cake</option>
-
-                        </select>
-
-                        <button id="btnToggleCompare" class="btn-secondary report-gen-btn"
-                            title="Compare with previous period" style="padding:8px 12px;font-size:12px;">vs Previous</button>
-
-                        <button id="btnGenerateReport" class="btn-primary report-gen-btn"
-
-                            title="Generate Sales Statistics for the selected dates">Generate</button>
-
-                        <button id="btnWhatsappReport" class="btn-whatsapp flex-center flex-gap-8"
-
-                            title="Send Daily Sales Report via WhatsApp Bot">
-
-                            <i data-lucide="message-circle" class="icon-16"></i> <span>Bot Report</span>
-
-                        </button>
-
-                    </div>
-
-                </div>
-
-
-
-                <div class="reports-container-fluid w-full">
-
-                    <!-- KPI TOP ROW -->
-
-                    <div class="kpi-row mb-24">
-
-                        <div class="kpi-card-v4 success">
-
-                            <div class="icon-wrap success"><i data-lucide="indian-rupee"></i></div>
-
-                            <div class="info-wrap">
-
-                                <span class="val" id="reportRevenue">₹0</span>
-
-                                <span class="lbl">Total Revenue</span>
-
-                            </div>
-
-                        </div>
-
-                        <div class="kpi-card-v4 info">
-
-                            <div class="icon-wrap info"><i data-lucide="shopping-bag"></i></div>
-
-                            <div class="info-wrap">
-
-                                <span class="val" id="reportOrders">0</span>
-
-                                <span class="lbl">Total Orders</span>
-
-                            </div>
-
-                        </div>
-
-                        <div class="kpi-card-v4 orange">
-
-                            <div class="icon-wrap orange"><i data-lucide="trending-up"></i></div>
-
-                            <div class="info-wrap">
-
-                                <span class="val" id="reportAvg">₹0</span>
-
-                                <span class="lbl">Avg. Ticket Size</span>
-
-                            </div>
-
-                        </div>
-
-                        <div class="kpi-card-v4 warning">
-
-                            <div class="icon-wrap warning"><i data-lucide="calendar"></i></div>
-
-                            <div class="info-wrap">
-
-                                <span class="val" id="reportPeriod">Selected Period</span>
-
-                                <span class="lbl">Report Duration</span>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- PAYMENT BREAKDOWN KPIs -->
-
-                    <div class="kpi-row mb-24" id="paymentBreakdownRow">
-
-                        <div class="kpi-card-v4 success">
-
-                            <div class="icon-wrap success"><i data-lucide="wallet"></i></div>
-
-                            <div class="info-wrap">
-
-                                <span class="val" id="reportCashTotal">₹0</span>
-
-                                <span class="lbl">Cash Payments</span>
-
-                            </div>
-
-                        </div>
-
-                        <div class="kpi-card-v4 info">
-
-                            <div class="icon-wrap info"><i data-lucide="smartphone"></i></div>
-
-                            <div class="info-wrap">
-
-                                <span class="val" id="reportUpiTotal">₹0</span>
-
-                                <span class="lbl">UPI Payments</span>
-
-                            </div>
-
-                        </div>
-
-                        <div class="kpi-card-v4 orange">
-
-                            <div class="icon-wrap orange"><i data-lucide="banknote"></i></div>
-
-                            <div class="info-wrap">
-
-                                <span class="val" id="reportCodTotal">₹0</span>
-
-                                <span class="lbl">COD Payments</span>
-
-                            </div>
-
-                        </div>
-
-                        <div class="kpi-card-v4 warning">
-
-                            <div class="icon-wrap warning"><i data-lucide="percent"></i></div>
-
-                            <div class="info-wrap">
-
-                                <span class="val" id="reportTopMethod">-</span>
-
-                                <span class="lbl">Top Payment Method</span>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div id="reportComparisonBar" class="glass-card p-10-20 mb-20 flex-row flex-center flex-gap-20 hidden" style="justify-content:center;">
-
-                        <span style="font-weight:700;color:var(--text-secondary);font-size:13px;">vs Previous Period:</span>
-
-                        <span id="compRevenue" class="flex-row flex-gap-5 flex-center" style="font-size:13px;font-weight:700;">Revenue: <span>--</span></span>
-
-                        <span id="compOrders" class="flex-row flex-gap-5 flex-center" style="font-size:13px;font-weight:700;">Orders: <span>--</span></span>
-
-                        <span id="compAvg" class="flex-row flex-gap-5 flex-center" style="font-size:13px;font-weight:700;">Avg Ticket: <span>--</span></span>
-
-                    </div>
-
-                    <div class="reports-grid">
-
-                        <!-- Left: Detailed Table -->
-
-                        <div class="flex-col">
-
-                            <div class="glass-card mb-20 p-24 min-h-400">
-
-                                <div class="flex-row justify-between flex-center mb-20">
-
-                                    <h4 class="panel-title m-0">Detailed Sales Data</h4>
-
-                                    <div class="flex-row flex-gap-10">
-
-                                        <button id="btnDownloadExcel" class="btn-secondary btn-small excel-btn"
-
-                                            title="Export current sales report to Excel">📥 Excel</button>
-
-                                        <button id="btnDownloadPDF" class="btn-secondary btn-small pdf-btn"
-
-                                            title="Export current sales report to PDF">📥 PDF</button>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="scroll-x">
-
-                                    <div id="reportTableBody"></div>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-
-
-                        <!-- Right: Trends -->
-
-                        <div class="flex-col">
-
-                            <div class="glass-card mb-20 p-24">
-
-                                <h4 class="panel-title mb-15">Revenue Trends</h4>
-
-                                <div class="w-full h-300" style="position:relative">
-
-                                    <canvas id="revenueChart" style="position:relative;z-index:2"></canvas>
-
-                                </div>
-
-                            </div>
-
-                            <div class="glass-card mb-20 p-24">
-
-                                <h4 class="panel-title mb-15">Order Type Distribution</h4>
-
-                                <div class="w-full h-250" style="position:relative">
-
-                                    <canvas id="orderTypeChart" style="position:relative;z-index:2"></canvas>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
 
                 <div id="reportsContainer" class="hidden"></div>
 

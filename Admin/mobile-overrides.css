@@ -1702,11 +1702,8 @@
     #riderModal .modal-grid-2col { grid-template-columns: 1fr !important; gap: 16px !important; }
     #riderModal .modal-grid-2col .modal-media-section { margin-bottom: 12px; }
     .h-250 { height: 200px !important; }
-    #tab-reports .flex-row.justify-between.flex-center.mb-20,
     #tab-riderAnalytics .dashboard-main .flex-row.justify-between.flex-center.mb-20 { flex-direction: column; align-items: flex-start !important; gap: 10px; }
-    #tab-reports .flex-row.justify-between.flex-center.mb-20 .btn-small,
-    #tab-riderAnalytics .dashboard-main .flex-row.justify-between.flex-center.mb-20 .btn-small,
-    #tab-reports .glass-card.p-24 .flex-row.justify-between .flex-row.flex-gap-10 { width: 100%; justify-content: center; }
+    #tab-riderAnalytics .dashboard-main .flex-row.justify-between.flex-center.mb-20 .btn-small { width: 100%; justify-content: center; }
 
     @media (max-width: 480px) {
         .kpi-row { grid-template-columns: 1fr !important; }
@@ -1715,12 +1712,8 @@
         .quick-stats-grid { grid-template-columns: 1fr !important; }
         .flex-wrap-mobile > .report-date-input,
         .flex-wrap-mobile > .btn-primary.report-gen-btn,
-        .flex-wrap-mobile > .btn-secondary.report-gen-btn,
-        .flex-wrap-mobile > .btn-whatsapp { width: 100% !important; }
-        .flex-wrap-mobile > .btn-whatsapp { justify-content: center !important; }
+        .flex-wrap-mobile > .btn-secondary.report-gen-btn { width: 100% !important; }
         .flex-wrap-mobile > .text-muted-small { text-align: center; width: 100%; display: block; }
-        #tab-reports .glass-card.p-24 .flex-row.justify-between .flex-row.flex-gap-10 { flex-wrap: wrap; gap: 8px; }
-        #tab-reports .glass-card.p-24 .flex-row.justify-between .flex-row.flex-gap-10 .btn-small { flex: 1; min-width: 100px; justify-content: center; }
     }
 
     /* --- 16. DASHBOARD RECENT ORDER HISTORY: FULL RESPONSIVE CARDS --- */
@@ -1873,15 +1866,6 @@
 /* ======================================================================
    ANALYTICS / REPORTS MOBILE OPTIMIZATION
    ====================================================================== */
-    /* Reports Grid - Single Column */
-    .reports-grid {
-        grid-template-columns: 1fr !important;
-    }
-
-    /* Sales Data Table now renders via Tabulator.js (see analytics.js) —
-       Tabulator's own responsiveLayout:"hide" setting handles column
-       hiding on narrow screens; the table's visual theme lives in
-       style.css under .tabulator / .tabulator-row etc. */
 
     /* Lost Sales Table - Card Layout */
     #tab-lostSales .premium-table-v4 {
@@ -1941,89 +1925,9 @@
    Chart scaling, KPI compaction, status filter, swipe indicator
    ====================================================================== */
 
-/* --- Status filter dropdown: match .form-input style --- */
-#reportStatusFilter {
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath fill='%2364748b' d='M6 8L0 0h12z'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    background-size: 10px;
-    padding-right: 28px;
-    font-weight: 600;
-    color: var(--text-dark, #1e293b);
-}
-
-#reportStatusFilter:focus {
-    outline: 2px solid var(--primary, #E84908);
-    outline-offset: 1px;
-}
-
-/* --- Mobile status tag (shown next to total in mobile card view) --- */
-.mobile-status-tag {
-    display: inline-block;
-    padding: 2px 6px;
-    border-radius: 6px;
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-top: 2px;
-}
-
-.status-tag-delivered { background: rgba(16, 185, 129, 0.12); color: #059669; }
-.status-tag-cancelled { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
-.status-tag-ready,
-.status-tag-confirmed,
-.status-tag-placed { background: rgba(232, 73, 8, 0.12); color: #c43d00; }
-.status-tag-outfordelivery,
-.status-tag-reacheddroplocation { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
-
 /* --- Tablet (≤ 1024px): 2x2 KPI grid, smaller chart, compact controls --- */
 @media (max-width: 1024px) {
-    /* KPI row: 2x2 grid */
-    #tab-reports .kpi-row {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 12px !important;
-    }
 
-    /* Chart height reduced */
-    #tab-reports .h-300 {
-        height: 240px !important;
-    }
-
-    /* Period KPI: span 2 columns so it doesn't look squished */
-    #tab-reports .kpi-card-v4.warning {
-        grid-column: span 2;
-    }
-    #tab-reports .kpi-card-v4.warning .val {
-        font-size: 13px !important;
-    }
-
-    /* Date filter row: tightens padding */
-    #tab-reports .flex-row.flex-gap-10.flex-center.glass-card.p-10-20 {
-        padding: 10px 12px !important;
-    }
-
-    /* Section title shrinks */
-    #tab-reports .section-title {
-        font-size: 18px !important;
-    }
-    #tab-reports .section-title .icon-24 {
-        width: 20px;
-        height: 20px;
-    }
-
-    /* Detailed Sales panel header: stack title above buttons on tablet */
-    #tab-reports .glass-card.p-24 .flex-row.justify-between.flex-center.mb-20 {
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-    #tab-reports .glass-card.p-24 .flex-row.justify-between.flex-center.mb-20 .panel-title {
-        width: 100%;
-        margin-bottom: 4px;
-    }
 
     /* Rider Analytics: stack title above controls at tablet, KPIs 2x2+1, full-width controls
        NOTE: base .flex-row has `flex-direction: row !important` in style.css, so every
@@ -2076,105 +1980,12 @@
 
 /* --- Mobile (≤ 768px): single-column KPIs, swipe indicator, smaller chart --- */
 @media (max-width: 768px) {
-    #tab-reports .kpi-row {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 10px !important;
-    }
-
-    /* Tighter KPI cards */
-    #tab-reports .kpi-card-v4 {
-        padding: 12px !important;
-        gap: 10px !important;
-    }
-    #tab-reports .kpi-card-v4 .icon-wrap {
-        width: 36px !important;
-        height: 36px !important;
-    }
-    #tab-reports .kpi-card-v4 .icon-wrap i {
-        width: 16px !important;
-        height: 16px !important;
-    }
-    #tab-reports .kpi-card-v4 .val {
-        font-size: 16px !important;
-    }
-    #tab-reports .kpi-card-v4 .lbl {
-        font-size: 10px !important;
-    }
-
-    #tab-reports .kpi-card-v4.warning {
-        grid-column: span 2;
-    }
-
-    /* Chart: 220px on mobile, full width */
-    #tab-reports .h-300 {
-        height: 220px !important;
-    }
-
-    /* Date filter row: stack tighter, force wrap (parent .flex-row has
-       flex-wrap: nowrap by default which causes horizontal overflow). */
-    #tab-reports .flex-row.flex-gap-10.flex-center.glass-card.p-10-20 {
-        padding: 8px 10px !important;
-        gap: 6px !important;
-        flex-wrap: wrap !important;
-    }
-    #tab-reports .flex-row.flex-gap-10.flex-center.glass-card.p-10-20 > .report-date-input,
-    #tab-reports .flex-row.flex-gap-10.flex-center.glass-card.p-10-20 > #reportStatusFilter {
-        flex: 1 1 calc(50% - 6px) !important;
-        min-width: 0;
-    }
-    #tab-reports .report-date-input,
-    #reportStatusFilter {
+    #tab-reports .report-date-input {
         min-height: 38px;
         font-size: 13px;
         padding: 6px 8px;
     }
 
-    /* Make Generate button prominent on mobile */
-    #tab-reports #btnGenerateReport {
-        flex: 1 1 100%;
-        min-height: 42px;
-        font-size: 14px;
-        order: 10;
-    }
-    #tab-reports #btnWhatsappReport {
-        flex: 1 1 100%;
-        min-height: 42px;
-        order: 11;
-    }
-
-    /* Excel/PDF buttons: full width on mobile, side-by-side */
-    #tab-reports #btnDownloadExcel,
-    #tab-reports #btnDownloadPDF {
-        flex: 1;
-        min-width: 0;
-        min-height: 38px;
-    }
-
-    /* Glass card padding reduction */
-    #tab-reports .glass-card.p-24 {
-        padding: 14px !important;
-    }
-    #tab-reports .glass-card.min-h-400 {
-        min-height: 200px !important;
-    }
-
-    /* Swipe-to-scroll indicator on the table */
-    #tab-reports .scroll-x {
-        position: relative;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: thin;
-    }
-    #tab-reports .scroll-x::after {
-        content: '';
-        position: sticky;
-        right: 0;
-        top: 0;
-        bottom: 0;
-        width: 30px;
-        background: linear-gradient(to right, transparent, rgba(255,255,255,0.85));
-        pointer-events: none;
-    }
 
     /* --- 17. MENU PAGE (#tab-menu) MOBILE ADAPTATION v5.1.3 ---
        Fixes:
@@ -2308,83 +2119,31 @@
 
 /* --- Very small mobile (≤ 480px): 2-col KPIs (still 2x2), chart 200px --- */
 @media (max-width: 480px) {
-    #tab-reports .kpi-row {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px !important;
-    }
-    #tab-reports .kpi-card-v4.warning {
-        grid-column: span 2;
-    }
-    #tab-reports .kpi-card-v4 {
-        padding: 10px !important;
-        gap: 8px !important;
-    }
-    #tab-reports .kpi-card-v4 .icon-wrap {
-        width: 30px !important;
-        height: 30px !important;
-    }
-    #tab-reports .kpi-card-v4 .icon-wrap i {
-        width: 14px !important;
-        height: 14px !important;
-    }
-    #tab-reports .kpi-card-v4 .val {
-        font-size: 14px !important;
-    }
-    #tab-reports .kpi-card-v4 .lbl {
-        font-size: 9px !important;
-    }
-
-    #tab-reports .h-300 {
-        height: 200px !important;
-    }
-
-    #tab-reports .section-title {
-        font-size: 16px !important;
-    }
-
-    /* Status filter: show full width */
-    #reportStatusFilter {
-        flex: 1 1 100%;
-        min-width: 0;
-    }
 
     /* Force date filter row to wrap on very small screens.
        The base .flex-row has flex-wrap: nowrap which causes horizontal
        overflow on the analytics date filter card. */
-    #tab-reports .flex-row.flex-wrap-mobile,
     #tab-riderAnalytics .flex-row.flex-wrap-mobile {
         flex-wrap: wrap !important;
         row-gap: 8px !important;
     }
-    #tab-reports .flex-row.flex-wrap-mobile > .report-date-input,
-    #tab-reports .flex-row.flex-wrap-mobile > #reportStatusFilter,
     #tab-riderAnalytics .flex-row.flex-wrap-mobile > .report-date-input,
     #tab-riderAnalytics .flex-row.flex-wrap-mobile > select {
         flex: 1 1 100% !important;
         min-width: 0;
         width: 100% !important;
     }
-    #tab-reports .flex-row.flex-wrap-mobile > .btn-primary,
-    #tab-reports .flex-row.flex-wrap-mobile > .btn-whatsapp,
     #tab-riderAnalytics .flex-row.flex-wrap-mobile > .btn-primary,
     #tab-riderAnalytics .flex-row.flex-wrap-mobile > .btn-secondary {
         flex: 1 1 100% !important;
         width: 100% !important;
         justify-content: center !important;
     }
-    #tab-reports .flex-row.flex-wrap-mobile > .text-muted-small,
     #tab-riderAnalytics .flex-row.flex-wrap-mobile > .text-muted-small {
         width: 100% !important;
         text-align: center !important;
     }
 
-    /* Items cell on very small: clamp to 2 lines */
-    .mobile-items-cell {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
 
     /* --- MENU PAGE: very small mobile compaction --- */
     #tab-menu .menu-grid {
@@ -2502,12 +2261,6 @@
 
 /* --- Print: collapse to single column, hide controls --- */
 @media print {
-    #tab-reports .flex-row.justify-between.flex-center.mb-20 .glass-card,
-    #tab-reports .btn-primary,
-    #tab-reports .btn-secondary {
-        display: none !important;
-    }
-    .reports-grid { grid-template-columns: 1fr !important; }
     .kpi-row { grid-template-columns: repeat(2, 1fr) !important; }
 }
 
@@ -2587,13 +2340,6 @@
    below, but must stay hidden when the .hidden class is present. */
 #reportsMobileView .hidden { display: none !important; }
 
-#tab-reports > .flex-row.justify-between.flex-center.mb-20.p-0-10,
-#tab-reports .reports-container-fluid > .kpi-row,
-#tab-reports .reports-container-fluid > #paymentBreakdownRow,
-#tab-reports .reports-container-fluid > #reportComparisonBar,
-#tab-reports .reports-grid {
-    display: none !important;
-}
 
 @media (min-width: 769px) {
     #reportsMobileView {

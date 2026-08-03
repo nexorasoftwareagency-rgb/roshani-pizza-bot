@@ -362,13 +362,6 @@ html, body {
     gap: 20px;
 }
 
-.reports-grid {
-    display: grid;
-    grid-template-columns: 1.5fr 1fr;
-    gap: 24px;
-    align-items: start;
-}
-
 .kpi-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -379,7 +372,6 @@ html, body {
 }
 
 .h-250 { height: 250px; }
-.reports-container-fluid { width: 100%; }
 
 @keyframes fadeIn {
     from {
@@ -4412,79 +4404,11 @@ body {
 .status-indicator.disconnected { background: var(--error); box-shadow: 0 0 8px var(--error); }
 .status-indicator.connecting { background: var(--warning); animation: pulse-opacity 1s infinite; }
 @keyframes pulse-opacity { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-/* --- PREMIUM ANALYTICS UI --- */
-#tab-reports .section-title {
-    font-size: 26px;
-    font-weight: 800;
-    background: linear-gradient(135deg, var(--primary), #ea580c);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: -0.5px;
-}
-
-#tab-reports .glass-card.flex-row {
-    background: rgba(255, 255, 255, 0.9);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-    padding: 12px 20px;
-    border-radius: 16px;
-}
-
-#tab-reports .kpi-card {
-    background: linear-gradient(145deg, #ffffff, #f8fafc);
-    border: 1px solid rgba(0,0,0,0.03);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.04);
-    border-radius: var(--radius-premium);
-    padding: 24px 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-#tab-reports .kpi-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(var(--primary-rgb), 0.1);
-    border-color: rgba(var(--primary-rgb), 0.2);
-}
-
-#tab-reports .kpi-info .val {
-    font-size: 26px;
-    font-weight: 800;
-    color: #0f172a;
-    line-height: 1.2;
-}
-
-#tab-reports .kpi-info .lbl {
-    font-size: 12px;
-    font-weight: 700;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-
-#tab-reports .panel-title {
-    font-size: 18px;
-    font-weight: 800;
-    color: #1e293b;
-    border-bottom: 2px solid #f1f5f9;
-    padding-bottom: 12px;
-    margin-bottom: 20px;
-}
-
 .glass-card {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-premium);
     box-shadow: var(--glass-shadow);
-}
-
-#tab-reports .glass-card {
-    border-radius: var(--radius-premium);
-    box-shadow: 0 10px 40px rgba(0,0,0,0.03);
-    border: 1px solid rgba(0,0,0,0.04);
 }
 
 /* --- PREMIUM TABLE & ROW REFINEMENTS (v4.1) --- */
