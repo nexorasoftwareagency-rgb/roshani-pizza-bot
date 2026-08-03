@@ -275,7 +275,7 @@ function renderGroupChoiceScreen() {
 async function selectGroup(groupId) {
     if (!groupId || !Session.session?.orderGroups?.[groupId]) return;
     Session.currentGroupId = groupId;
-    localStorage.setItem(`_pizza_group_${Session.sessionId}`, groupId);
+    sessionStorage.setItem(`_pizza_group_${Session.sessionId}`, groupId);
     document.getElementById('loadingOverlay').style.display = '';
     try {
         if (M._savedDraft) {

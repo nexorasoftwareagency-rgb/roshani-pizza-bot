@@ -90,9 +90,10 @@ async function joinOrCreateSession(table) {
     // each creating their own session for the same table.
     let createdSessionId = null;
     let createdSessionData = null;
+    let committed = false;
 
     try {
-        await runTransaction(outletRef(`tables/${table.id}/currentSession`), (current) => {
+        const txResult = await runTransaction(outletRef(`tables/${table.id}/currentSession`), (current) => {
             if (current) {
                 // Someone else's transaction already created a session —
                 // abort this one (return undefined cancels the transaction).
@@ -125,12 +126,13 @@ async function joinOrCreateSession(table) {
             };
             return newRef.key;
         });
+        committed = !!(txResult && txResult.committed);
     } catch (e) {
         console.warn('[Session] Transaction failed:', e?.message || e);
         return null;
     }
 
-    if (createdSessionId && createdSessionData) {
+    if (committed && createdSessionId && createdSessionData) {
         _isNewSession = true;
         try {
             await set(outletRef(`tableSessions/${createdSessionId}`), createdSessionData);
@@ -146,7 +148,6 @@ async function joinOrCreateSession(table) {
         }
         return { id: createdSessionId, ...createdSessionData };
     }
-
     // Transaction was aborted because another scan won the race —
     // re-read the table to pick up the session it created.
     const freshSnap = await get(outletRef(`tables/${table.id}`));
@@ -188,6 +189,51 @@ export async function initSession() {
  *   groupChoiceNeeded → the caller should show the group choice screen
  *   isNewSession → the session was created just now (not joined from existing)
  */
+/**
+ * Atomically claims the session's FIRST order group. This is the piece
+ * that was missing before: two tabs/devices both arriving at a freshly
+ * occupied table at nearly the same moment used to each independently
+ * decide "orderGroups is empty, I'll create Group A" — a plain push()+set()
+ * with only an in-memory flag guarding it, which does nothing across tabs.
+ *
+ * This instead transacts directly on the orderGroups node: the callback
+ * only writes the new group if orderGroups is STILL empty at the moment
+ * the transaction actually commits on the server (Firebase re-runs the
+ * callback against the live value, not a stale client read), so only one
+ * of two racing tabs can ever win. Returns the winning groupId, or null
+ * if this call lost the race — the caller falls through to the existing
+ * group-choice screen instead of creating a competing duplicate group.
+ */
+async function _claimFirstGroup(label) {
+    const groupsRef = outletRef(`tableSessions/${Session.sessionId}/orderGroups`);
+    const newRef = push(groupsRef);
+    const groupId = newRef.key;
+    const groupData = {
+        label: label || 'Group A',
+        createdAt: Date.now(),
+        status: 'active',
+        orders: []
+    };
+    let won = false;
+    try {
+        const txResult = await runTransaction(groupsRef, (current) => {
+            if (current && Object.keys(current).length > 0) {
+                return undefined; // another tab already created the first group — abort
+            }
+            return { [groupId]: groupData };
+        });
+        won = !!(txResult && txResult.committed);
+    } catch (e) {
+        console.warn('[Session] First-group claim failed:', e?.message || e);
+        return null;
+    }
+    if (!won) return null;
+    Session.session.orderGroups = { [groupId]: groupData };
+    Session.currentGroupId = groupId;
+    sessionStorage.setItem(`_pizza_group_${Session.sessionId}`, groupId);
+    return groupId;
+}
+
 export async function ensureSession() {
     if (Session.sessionId && Session.currentGroupId) {
         const st = Session.session?.status;
@@ -215,29 +261,43 @@ export async function ensureSession() {
     // --- Order Group initialization (moved from initSession) ---
     _groupCounter = session.orderGroups ? Object.keys(session.orderGroups).length : 0;
     if (!session.orderGroups || Object.keys(session.orderGroups).length === 0) {
-        const groupId = await createOrderGroup('Group A');
-        if (!groupId) {
-            Session.sessionId = null;
-            Session.session = null;
+        // Race-safe claim — see _claimFirstGroup() above.
+        const groupId = await _claimFirstGroup('Group A');
+        if (groupId) {
+            // We won the race — legitimately the first tab at this table.
+            // Migrate any pre-existing session orders (from before Phase 2) into Group A
+            if (Array.isArray(session.orders) && session.orders.length > 0) {
+                try {
+                    await set(outletRef(`tableSessions/${Session.sessionId}/orderGroups/${groupId}/orders`), session.orders);
+                    if (Session.session?.orderGroups?.[groupId]) {
+                        Session.session.orderGroups[groupId].orders = [...session.orders];
+                    }
+                } catch (e) {
+                    console.warn('[Session] Legacy order migration failed:', e);
+                }
+            }
+            watchSession();
+            return { ok: true, groupChoiceNeeded: false, isNewSession: _isNewSession };
+        }
+
+        // Lost the race (or a genuine write failure) — re-read the live
+        // group list instead of acting on the stale "empty" snapshot from
+        // above. Another tab's group now exists; this tab did NOT create
+        // one of its own, so route to the choice screen.
+        const freshSnap = await get(outletRef(`tableSessions/${Session.sessionId}/orderGroups`));
+        const freshGroups = freshSnap.val();
+        if (!freshGroups || Object.keys(freshGroups).length === 0) {
             return { ok: false, reason: 'group-creation-failed' };
         }
-        // Migrate any pre-existing session orders (from before Phase 2) into Group A
-        if (Array.isArray(session.orders) && session.orders.length > 0) {
-            try {
-                await set(outletRef(`tableSessions/${Session.sessionId}/orderGroups/${groupId}/orders`), session.orders);
-                if (Session.session?.orderGroups?.[groupId]) {
-                    Session.session.orderGroups[groupId].orders = [...session.orders];
-                }
-            } catch (e) {
-                console.warn('[Session] Legacy order migration failed:', e);
-            }
-        }
-        Session.currentGroupId = groupId;
-        localStorage.setItem(`_pizza_group_${session.id}`, groupId);
+        Session.session.orderGroups = freshGroups;
+        Session.currentGroupId = null;
         watchSession();
-        return { ok: true, groupChoiceNeeded: false, isNewSession: _isNewSession };
+        return { ok: true, groupChoiceNeeded: true, isNewSession: _isNewSession };
     } else {
-        const savedGroupId = localStorage.getItem(`_pizza_group_${session.id}`);
+        // sessionStorage is PRIVATE per tab (unlike localStorage, which is
+        // shared across every tab of the same browser). This is what stops
+        // one tab's group choice from silently overwriting another tab's.
+        const savedGroupId = sessionStorage.getItem(`_pizza_group_${session.id}`);
         if (savedGroupId && session.orderGroups[savedGroupId] && session.orderGroups[savedGroupId].status === 'active') {
             Session.currentGroupId = savedGroupId;
             watchSession();
@@ -276,9 +336,9 @@ let _groupCounter = 0;
 let _creatingGroup = false;
 export async function createOrderGroup(label) {
     if (!Session.sessionId) return null;
-    if (_creatingGroup) return null; // guard against concurrent calls (race from two browsers)
-    _creatingGroup = true;
-    try {
+    if (_creatingGroup) return null; // guard against a double-click within THIS tab only —
+    _creatingGroup = true;           // this is a deliberate user action ("Start My Own Bill"),
+    try {                            // so creating an additional group here is intended, not a race
     const groupsRef = outletRef(`tableSessions/${Session.sessionId}/orderGroups`);
     const newRef = push(groupsRef);
     const groupId = newRef.key;
@@ -295,7 +355,7 @@ export async function createOrderGroup(label) {
     if (!Session.session.orderGroups) Session.session.orderGroups = {};
     Session.session.orderGroups[groupId] = groupData;
     Session.currentGroupId = groupId;
-    localStorage.setItem(`_pizza_group_${Session.sessionId}`, groupId);
+    sessionStorage.setItem(`_pizza_group_${Session.sessionId}`, groupId);
     return groupId;
     } finally {
         _creatingGroup = false;
@@ -402,7 +462,7 @@ export async function saveCheckoutContact(name, phone, guestCount, specialNote) 
 export function cleanupSession() {
     if (Session._sessionUnsub) { Session._sessionUnsub(); Session._sessionUnsub = null; }
     if (Session.sessionId) {
-        localStorage.removeItem(`_pizza_group_${Session.sessionId}`);
+        sessionStorage.removeItem(`_pizza_group_${Session.sessionId}`);
     }
     sessionStorage.removeItem('_pizza_draft');
     Session.sessionId = null;
