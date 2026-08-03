@@ -95,6 +95,7 @@ async function main() {
           /^table-/,
           /^kds-/,
           /^pos-/,
+          /^mob-/,
           /^rider-/,
           /^btn-/,
           /^icon-/,

@@ -2354,8 +2354,7 @@
     .mob-highlights-row { grid-template-columns: repeat(4, 1fr); }
 }
 
-#reportsMobileView,
-#tab-customers {
+:root {
     --mob-orange: var(--primary, #E84908);
     --mob-orange-light: rgba(232, 73, 8, 0.14);
     --mob-blue: #2563eb;

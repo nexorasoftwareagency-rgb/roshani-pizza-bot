@@ -1,4 +1,4 @@
-// Fail-fast if not on HTTPS
+﻿// Fail-fast if not on HTTPS
 if (self.location.protocol !== 'https:' && self.location.hostname !== 'localhost' && self.location.hostname !== '127.0.0.1') {
   throw new Error('Service Worker requires HTTPS');
 }
@@ -36,7 +36,7 @@ firebase.messaging().onBackgroundMessage((payload) => {
 
 // This SW handles caching, navigation, and offline support only.
 
-const CACHE_NAME = 'prasant-pizza-erp-shell-v5.3.14';
+const CACHE_NAME = 'prasant-pizza-erp-shell-v5.3.15';
 const ASSETS_TO_CACHE = [
   './index.html',
   './style.css',
