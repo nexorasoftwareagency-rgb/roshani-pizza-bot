@@ -74,6 +74,11 @@ Fragile Files before starting ANY task.
 - Notes: Firebase v12 messaging handled; sw.js has background message handler; notificationclick wired.
 
 <!-- TASK_LOG_START -->
+### [20260803-192722-2941] Reverify payments tab mob-* CSS variable fix
+- TIER: 2 (medium-risk)
+- STATUS: IN PROGRESS
+- Started: 2026-08-03 19:27 UTC
+
 ### [20260718-040027-a044] Discount tab mobile CSS/UI/UX responsive fixes
 - TIER: 1 (low-risk)
 - STATUS: DONE
