@@ -1468,9 +1468,9 @@ async function _bulkQrPrint() {
     w.document.write(`<html><head><title>Bulk QR Print — ${escapeHtml(storeName)}</title><style>
         *{box-sizing:border-box;margin:0;padding:0;}
         body{font-family:-apple-system,'Segoe UI',sans-serif;background:#fef3e8;padding:20px;}
-        .qr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;justify-items:center;}
+        .qr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;justify-items:center;}
         ${QR_CARD_CSS}
-        @media print{ body{background:#fff;} .qr-grid{grid-template-columns:repeat(2,1fr);} }
+        @media print{ body{background:#fff;} }
         </style></head><body><div class="qr-grid">${cardsHtml}</div>
         <script>window.onload=function(){setTimeout(function(){window.print();},300);};</script></body></html>`);
     w.document.close();
