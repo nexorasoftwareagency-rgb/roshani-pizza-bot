@@ -1280,8 +1280,11 @@ async function _fetchStoreBranding() {
 
 function _qrCardMarkup({ storeName, poweredBy, tableNumber, qrSrc, compact }) {
     const qrSize = compact ? 150 : 220;
-    const footer = poweredBy
-        ? `<div class="qr-divider"></div><div class="qr-footer">Powered by <b>${escapeHtml(poweredBy)}</b></div>`
+    // Defensive: some outlets have "Powered by X" already saved as the
+    // poweredBy value itself, which used to render as "Powered by Powered by X".
+    const poweredByClean = (poweredBy || '').replace(/^powered\s+by\s+/i, '').trim();
+    const footer = poweredByClean
+        ? `<div class="qr-divider"></div><div class="qr-footer">Powered by <b>${escapeHtml(poweredByClean)}</b></div>`
         : '';
     return `
     <div class="qr-frame${compact ? ' qr-frame-compact' : ''}">
@@ -1328,6 +1331,19 @@ const QR_CARD_CSS = `
     .qr-footer b{ color:#E84908; }
 `;
 
+// Inject QR_CARD_CSS into the admin document itself, once. Without this,
+// the branded card can only ever render inside the print popup (which
+// builds its own <style> tag) — never in the on-screen preview modal.
+let _qrCardCssInjected = false;
+function _ensureQrCardCssInPage() {
+    if (_qrCardCssInjected) return;
+    const style = document.createElement('style');
+    style.id = 'qrCardCssShared';
+    style.textContent = QR_CARD_CSS;
+    document.head.appendChild(style);
+    _qrCardCssInjected = true;
+}
+
 async function _ensureQrLib() {
     if (window.QRCode) return true;
     return new Promise((resolve) => {
@@ -1363,8 +1379,9 @@ async function _qrUrlForTable(t) {
 
 async function _openQrModal(id) {
     if (_qrModalOpening) return;
+    _ensureQrCardCssInPage();
     const modal = document.getElementById('tableQrModal');
-    const img = document.getElementById('tableQrModalImage');
+    const preview = document.getElementById('tableQrCardPreview');
     const titleEl = document.getElementById('tableQrModalTitle');
     const urlEl = document.getElementById('tableQrModalUrl');
     try {
@@ -1373,17 +1390,21 @@ async function _openQrModal(id) {
         if (!t) { modal?.classList.remove('active'); return; }
 
         titleEl.textContent = `Table ${t.number} QR Code`;
-        img.removeAttribute('src');
-        img.alt = 'Loading...';
+        if (preview) preview.innerHTML = `<p class="text-muted-small">Loading…</p>`;
         if (modal) modal.dataset.tableId = id;
         modal?.classList.remove('hidden');
         modal?.classList.add('active');
+
         const url = await _qrUrlForTable(t);
         urlEl.textContent = url;
-        img.alt = 'Generating QR…';
-        const dataUri = await _qrDataUri(url, 200);
-        if (dataUri) { img.src = dataUri; img.alt = `QR code for Table ${t.number}`; }
-        else showToast('QR generation failed — check connection', 'error');
+        const dataUri = await _qrDataUri(url, 220);
+        if (!dataUri) { showToast('QR generation failed — check connection', 'error'); return; }
+
+        // Same markup + same data the print flow uses — this IS what will print.
+        const { storeName, poweredBy } = await _fetchStoreBranding();
+        if (preview) {
+            preview.innerHTML = _qrCardMarkup({ storeName, poweredBy, tableNumber: t.number, qrSrc: dataUri, compact: false });
+        }
     } catch (e) {
         showToast('Failed to load QR', 'error');
         modal?.classList.remove('active');
@@ -1401,24 +1422,27 @@ function _copyQrLink() {
 }
 
 async function _printSingleQr() {
-    const modalUrl = document.getElementById('tableQrModalUrl')?.textContent;
-    if (!modalUrl) { showToast('No QR URL to print', 'warning'); return; }
-    const dataUri = await _qrDataUri(modalUrl, 220);
-    if (!dataUri) { showToast('Failed to generate QR for print', 'error'); return; }
+    // Print exactly what's on screen right now — clone the live preview
+    // node's HTML rather than re-fetching data and rebuilding the card
+    // independently. This is what actually guarantees print === preview:
+    // if the on-screen card is ever wrong (stale name, missing branding),
+    // print will be wrong the same way, which is honest and debuggable,
+    // instead of two code paths silently drifting apart.
+    const preview = document.getElementById('tableQrCardPreview');
+    const cardHtml = preview?.querySelector('.qr-frame')?.outerHTML;
+    if (!cardHtml) { showToast('Nothing to print yet — wait for the QR to load', 'warning'); return; }
 
     const titleText = document.getElementById('tableQrModalTitle')?.textContent || 'Table QR';
-    const tableNumberMatch = titleText.match(/Table\s+(\S+)/i);
-    const tableNumber = tableNumberMatch ? tableNumberMatch[1] : titleText;
-    const { storeName, poweredBy } = await _fetchStoreBranding();
+    const { storeName } = await _fetchStoreBranding();
 
     const w = window.open('', '_blank', 'width=420,height=620');
     if (!w) { showToast('Popup blocked — allow popups for print', 'error'); return; }
-    w.document.write(`<html><head><title>Table ${escapeHtml(tableNumber)} QR — ${escapeHtml(storeName)}</title><style>
+    w.document.write(`<html><head><title>${escapeHtml(titleText)} — ${escapeHtml(storeName)}</title><style>
         *{box-sizing:border-box;margin:0;padding:0;}
         body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fef3e8;padding:24px;}
         ${QR_CARD_CSS}
         </style></head><body>
-        ${_qrCardMarkup({ storeName, poweredBy, tableNumber, qrSrc: dataUri, compact: false })}
+        ${cardHtml}
         <script>window.onload=function(){setTimeout(function(){window.print();},300);};</script></body></html>`);
     w.document.close();
 }
