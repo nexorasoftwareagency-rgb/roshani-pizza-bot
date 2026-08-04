@@ -3163,32 +3163,62 @@
 }
 
 /* --- 40. INVENTORY TAB — MENU VIEW MOBILE ---
-   Base .dish-img-container is 1/1 aspect + global button rule forces
-   44px min-height, so cards balloon to ~490px on mobile. Compact the
-   image and reset in-card stock controls to their base 36px size. */
+   Base grid is minmax(220px,1fr) + dish-img-container is 1/1 + global
+   button rule forces 44px min-height, so mobile shows 1 fat column.
+   Force 3-up and compact the card contents to fit. */
 @media (max-width: 768px) {
+    #inventoryMenuGrid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px;
+    }
     #inventoryMenuSection .dish-img-container {
         aspect-ratio: 16 / 10 !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 6px !important;
+    }
+    #inventoryMenuGrid .dish-card {
+        padding: 6px !important;
+    }
+    #inventoryMenuGrid .dish-info h4 {
+        font-size: 11px !important;
+        margin-bottom: 2px !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+    }
+    #inventoryMenuGrid .dish-price-val {
+        font-size: 13px;
+    }
+    #inventoryMenuGrid .inventory-avail-row {
+        padding: 6px 0;
+    }
+    #inventoryMenuGrid .avail-label {
+        font-size: 10px;
     }
     #inventoryMenuGrid .stock-adjust-btn {
-        min-width: 36px !important;
-        min-height: 36px !important;
-        width: 36px;
-        height: 36px;
-        font-size: 17px;
+        min-width: 28px !important;
+        min-height: 28px !important;
+        width: 28px;
+        height: 28px;
+        font-size: 15px;
     }
     #inventoryMenuGrid .stock-val-display {
-        min-width: 38px;
-        font-size: 16px;
+        min-width: 28px;
+        font-size: 14px;
     }
     #inventoryMenuGrid .stock-control-group {
-        gap: 8px;
-        padding: 4px 8px;
+        gap: 4px;
+        padding: 3px 5px;
+        border-radius: 8px;
     }
     #inventoryMenuGrid .inventory-stock-row {
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 4px;
+        padding: 6px 0;
+    }
+    #inventoryMenuGrid .stock-label {
+        font-size: 10px;
+        width: 100%;
+        justify-content: center;
     }
 }
 
