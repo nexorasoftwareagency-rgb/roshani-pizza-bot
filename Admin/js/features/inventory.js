@@ -472,7 +472,7 @@ export async function loadInventoryMenu() {
             inventoryMap[(inv.name || '').toLowerCase()] = { id: child.key, stock: inv.stock || 0, threshold: inv.threshold || 5 };
         });
 
-        if (dishesSnap.numChildren() === 0) {
+        if (dishesSnap.size === 0) {
             _menuAllRows = [];
             container.innerHTML = '<div class="text-center p-40 text-muted">No dishes found.</div>';
             return;
