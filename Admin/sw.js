@@ -36,19 +36,19 @@ firebase.messaging().onBackgroundMessage((payload) => {
 
 // This SW handles caching, navigation, and offline support only.
 
-const CACHE_NAME = 'prasant-pizza-erp-shell-v5.3.18';
+const CACHE_NAME = 'prasant-pizza-erp-shell-v5.3.19';
 const ASSETS_TO_CACHE = [
   './index.html',
-  './style.css?v=5.3.18',
-  './mobile-overrides.css?v=5.3.18',
-  './branding.js?v=5.3.18',
-  './firebase-config.js?v=5.3.18',
-  './receipt-templates.js?v=5.3.18',
+  './style.css?v=5.3.19',
+  './mobile-overrides.css?v=5.3.19',
+  './branding.js?v=5.3.19',
+  './firebase-config.js?v=5.3.19',
+  './receipt-templates.js?v=5.3.19',
   './manifest.json',
   './icon-erp-logo.jpeg',
   './sw.js',
   './firebase-messaging-sw.js',
-  './js/main.js?v=5.3.18',
+  './js/main.js?v=5.3.19',
   './js/auth.js',
   './js/firebase.js',
   './js/state.js',
@@ -150,7 +150,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Stale-While-Revalidate for our own app code (HTML, JS, CSS, etc.).
-  // All files are versioned (?v=5.3.18) so new deploy = new cache entry.
+  // All files are versioned (?v=5.3.19) so new deploy = new cache entry.
   // Cache-first: serve instantly, then update cache from network in background.
   // This avoids re-downloading on every page load (~0ms for cached files).
   event.respondWith(
