@@ -505,6 +505,7 @@ export async function loadInventoryMenu() {
         _menuPage = 1;
         paintMenuPage();
     } catch (e) {
+        console.error('[Inventory] loadInventoryMenu failed:', e);
         container.innerHTML = '<div class="text-center p-40 text-danger">Failed to load menu.</div>';
     }
 }
