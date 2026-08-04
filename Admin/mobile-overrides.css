@@ -3168,8 +3168,8 @@
    image and reset in-card stock controls to their base 36px size. */
 @media (max-width: 768px) {
     #inventoryMenuSection .dish-img-container {
-        aspect-ratio: 16 / 10;
-        margin-bottom: 8px;
+        aspect-ratio: 16 / 10 !important;
+        margin-bottom: 8px !important;
     }
     #inventoryMenuGrid .stock-adjust-btn {
         min-width: 36px !important;
