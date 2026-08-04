@@ -48,6 +48,8 @@ export function loadInventory() {
         console.error("[Inventory] Load Error:", error);
         showToast("Failed to load inventory", "error");
     });
+
+    updateMenuVisibility();
 }
 
 export function refreshInventoryTogglesForOutlet() {
