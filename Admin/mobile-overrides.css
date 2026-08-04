@@ -3162,3 +3162,33 @@
     .mob-highlights-row { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* --- 40. INVENTORY TAB — MENU VIEW MOBILE ---
+   Base .dish-img-container is 1/1 aspect + global button rule forces
+   44px min-height, so cards balloon to ~490px on mobile. Compact the
+   image and reset in-card stock controls to their base 36px size. */
+@media (max-width: 768px) {
+    #inventoryMenuSection .dish-img-container {
+        aspect-ratio: 16 / 10;
+        margin-bottom: 8px;
+    }
+    #inventoryMenuGrid .stock-adjust-btn {
+        min-width: 36px !important;
+        min-height: 36px !important;
+        width: 36px;
+        height: 36px;
+        font-size: 17px;
+    }
+    #inventoryMenuGrid .stock-val-display {
+        min-width: 38px;
+        font-size: 16px;
+    }
+    #inventoryMenuGrid .stock-control-group {
+        gap: 8px;
+        padding: 4px 8px;
+    }
+    #inventoryMenuGrid .inventory-stock-row {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+}
+
