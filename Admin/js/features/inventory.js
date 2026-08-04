@@ -387,22 +387,24 @@ export function initInventoryToggles() {
     if (!toggleAvail || !toggleStock) return;
     if (_togglesBound) return;
     _togglesBound = true;
+
+    toggleAvail.addEventListener('change', () => {
+        localStorage.setItem('inv_availability', toggleAvail.checked);
+        updateInfoPanel(toggleAvail, availInfo);
+        updateMenuVisibility();
+        scheduleTogglePersist(toggleAvail, toggleStock);
+    });
+    toggleStock.addEventListener('change', () => {
+        localStorage.setItem('inv_stockTracking', toggleStock.checked);
+        updateInfoPanel(toggleStock, stockInfo);
+        updateMenuVisibility();
+        scheduleTogglePersist(toggleAvail, toggleStock);
+    });
+
     hydrateToggles(toggleAvail, toggleStock).then(() => {
         updateInfoPanel(toggleAvail, availInfo);
         updateInfoPanel(toggleStock, stockInfo);
         updateMenuVisibility();
-        toggleAvail.addEventListener('change', () => {
-            localStorage.setItem('inv_availability', toggleAvail.checked);
-            updateInfoPanel(toggleAvail, availInfo);
-            updateMenuVisibility();
-            scheduleTogglePersist(toggleAvail, toggleStock);
-        });
-        toggleStock.addEventListener('change', () => {
-            localStorage.setItem('inv_stockTracking', toggleStock.checked);
-            updateInfoPanel(toggleStock, stockInfo);
-            updateMenuVisibility();
-            scheduleTogglePersist(toggleAvail, toggleStock);
-        });
     });
 }
 
