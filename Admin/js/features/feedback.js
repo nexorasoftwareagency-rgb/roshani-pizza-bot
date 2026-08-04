@@ -1,92 +1,100 @@
 /**
  * ROSHANI ERP | FEEDBACK MANAGEMENT MODULE
- * Handles customer feedback retrieval and rendering.
+ * mob-data-table (plain HTML, no Tabulator) — same design as the Payments tab.
  */
 
 import { Outlet, onValue, isConnected, onConnectionChange } from '../firebase.js';
-import { escapeHtml, getSkeletonDivs } from '../utils.js';
-import { createGrid, updateGridData, GRID_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
+import { escapeHtml, getSkeletonRows } from '../utils.js';
 
 let _feedbackUnsub = null;
-let _grid = null;
 let _connUnsub = null;
+let _feedData = [];
+let _feedSortField = 'timestamp', _feedSortDir = 'desc';
 
-async function buildGrid(data) {
-    await loadTabulator();
-    const el = document.getElementById('feedbackTableBody');
-    if (!el) return;
-    el.innerHTML = '';
+function _ratingBadge(rating) {
+    const r = parseInt(rating, 10) || 0;
+    const cls = r <= 2 ? 'low' : r <= 3 ? 'mid' : 'high';
+    return `<span class="mob-badge mob-badge-rating-${cls}">${'\u2605'.repeat(r)} ${r}/5</span>`;
+}
 
-    _grid = new Tabulator("#feedbackTableBody", {
-        data: data || [],
-        ...GRID_DEFAULTS,
-        pagination: false,
-        placeholder: '<div style="padding:40px; color:#94a3b8;">ðŸ’¬ No feedback received yet.</div>',
-        columns: [
-            { formatter: "rownum", hozAlign: "center", width: 45, headerSort: false },
-            {
-                title: "Date",
-                field: "timestamp",
-                width: 160,
-                formatter: function(cell) {
-                    const val = cell.getValue();
-                    if (!val) return 'N/A';
-                    const d = new Date(val);
-                    if (isNaN(d.getTime())) return 'N/A';
-                    return `<div><div style="font-weight:600;">${d.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</div><div style="font-size:11px;color:#94a3b8;">Log Time</div></div>`;
-                }
-            },
-            {
-                title: "Order ID",
-                field: "orderId",
-                width: 120,
-                formatter: function(cell) {
-                    const val = cell.getValue() || 'N/A';
-                    return `<div style="display:flex;align-items:center;gap:6px;"><div style="width:28px;height:28px;border-radius:6px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">#</div><span style="font-weight:600;">${escapeHtml(val)}</span></div>`;
-                }
-            },
-            {
-                title: "Customer",
-                field: "customerName",
-                width: 170,
-                formatter: function(cell) {
-                    const d = cell.getRow().getData();
-                    const name = d.customerName || 'Guest';
-                    const phone = d.phone || 'Anonymous';
-                    return `<div><div style="font-weight:600;">${escapeHtml(name)}</div><div style="font-size:11px;color:#94a3b8;">${escapeHtml(phone)}</div></div>`;
-                }
-            },
-            {
-                title: "Rating",
-                field: "rating",
-                width: 130,
-                hozAlign: "center",
-                formatter: function(cell) {
-                    const val = parseInt(cell.getValue()) || 0;
-                    const el = cell.getElement();
-                    if (val <= 2) el.classList.add('cell-rating-low');
-                    else if (val <= 3) el.classList.add('cell-rating-mid');
-                    else el.classList.add('cell-rating-high');
-                    return `<div style="text-align:center;"><div style="font-size:14px;">${'â­'.repeat(val)}</div><div style="font-size:11px;color:#475569;">${val}/5 Score</div></div>`;
-                },
-                sorter: "number"
-            },
-            {
-                title: "Feedback",
-                field: "reason",
-                width: 280,
-                formatter: function(cell) {
-                    const d = cell.getRow().getData();
-                    const reason = d.reason || d.feedback || 'General Rating';
-                    const comment = d.comment || '';
-                    let html = `<div style="font-weight:600;color:#4472C4;font-size:13px;">${escapeHtml(reason)}</div>`;
-                    if (comment) {
-                        html += `<div style="font-size:12px;color:#64748b;font-style:italic;margin-top:2px;">"${escapeHtml(comment)}"</div>`;
-                    }
-                    return html;
-                }
+function formatDateTime(ts) {
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return '\u2014';
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })
+        + ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+}
+
+function _renderFeedTable() {
+    const tbody = document.getElementById('feedbackTableBody');
+    const countEl = document.getElementById('feedbackCount');
+    if (!tbody) return;
+
+    if (countEl) countEl.textContent = `${_feedData.length} feedback${_feedData.length === 1 ? '' : 's'}`;
+
+    const sorted = [..._feedData].sort((a, b) => {
+        let av = a[_feedSortField], bv = b[_feedSortField];
+        if (_feedSortField === 'timestamp' || _feedSortField === 'rating') {
+            av = _feedSortField === 'timestamp' ? new Date(av || 0).getTime() : Number(av || 0);
+            bv = _feedSortField === 'timestamp' ? new Date(bv || 0).getTime() : Number(bv || 0);
+        } else {
+            av = String(av || '').toLowerCase(); bv = String(bv || '').toLowerCase();
+        }
+        const cmp = av > bv ? 1 : av < bv ? -1 : 0;
+        return _feedSortDir === 'asc' ? cmp : -cmp;
+    });
+
+    if (sorted.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="mob-table-empty">No feedback received yet.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = sorted.map(f => {
+        const name = f.customerName || 'Guest';
+        const phone = f.phone || 'Anonymous';
+        const reason = f.reason || f.feedback || 'General Rating';
+        const comment = f.comment || '';
+        return `<tr>
+            <td>
+                <div class="mob-td-strong">${formatDateTime(f.timestamp)}</div>
+                <div class="mob-td-sub">Log Time</div>
+            </td>
+            <td>
+                <div class="mob-td-strong">#${escapeHtml(f.orderId || 'N/A')}</div>
+            </td>
+            <td>
+                <div class="mob-td-strong">${escapeHtml(name)}</div>
+                <div class="mob-td-sub">${escapeHtml(phone)}</div>
+            </td>
+            <td>${_ratingBadge(f.rating)}</td>
+            <td>
+                <div class="mob-td-strong">${escapeHtml(reason)}</div>
+                ${comment ? `<div class="mob-td-sub">\u201C${escapeHtml(comment)}\u201D</div>` : ''}
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function _initFeedTable() {
+    const table = document.getElementById('feedbackTable');
+    if (!table || table.dataset.wired) return;
+    table.dataset.wired = '1';
+
+    const sortEl = table.querySelector(`th[data-sort="${_feedSortField}"]`);
+    if (sortEl) sortEl.classList.add(`mob-sort-${_feedSortDir}`);
+
+    table.querySelectorAll('th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const field = th.dataset.sort;
+            if (_feedSortField === field) {
+                _feedSortDir = _feedSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                _feedSortField = field;
+                _feedSortDir = field === 'timestamp' || field === 'rating' ? 'desc' : 'asc';
             }
-        ]
+            table.querySelectorAll('th[data-sort]').forEach(h => h.classList.remove('mob-sort-asc', 'mob-sort-desc'));
+            th.classList.add(_feedSortDir === 'asc' ? 'mob-sort-asc' : 'mob-sort-desc');
+            _renderFeedTable();
+        });
     });
 }
 
@@ -94,12 +102,11 @@ export function loadFeedbacks() {
     const tableBody = document.getElementById('feedbackTableBody');
     if (!tableBody) return;
 
-    if (_grid) { _grid.destroy(); _grid = null; }
     if (_connUnsub) { _connUnsub(); _connUnsub = null; }
     cleanupFeedbacks();
 
     if (!isConnected()) {
-        tableBody.innerHTML = '<div class="offline-placeholder"><div class="offline-icon">📡</div><h4>Waiting for connection</h4><p>Feedback data will load automatically when the connection is restored.</p></div>';
+        tableBody.innerHTML = '<tr><td colspan="5"><div class="offline-placeholder"><div class="offline-icon">\uD83D\uDCE1</div><h4>Waiting for connection</h4><p>Feedback data will load automatically when the connection is restored.</p></div></td></tr>';
         if (!_connUnsub) _connUnsub = onConnectionChange(function _retryFb(online) {
             if (!online) return;
             if (_connUnsub) { _connUnsub(); _connUnsub = null; }
@@ -109,7 +116,7 @@ export function loadFeedbacks() {
         return;
     }
 
-    tableBody.innerHTML = getSkeletonDivs(5);
+    tableBody.innerHTML = getSkeletonRows(5, 5);
 
     _feedbackUnsub = onValue(Outlet.ref("feedbacks"), snap => {
         const feedbacks = [];
@@ -123,18 +130,13 @@ export function loadFeedbacks() {
             return dateB - dateA;
         });
 
-        try {
-            if (!_grid) buildGrid(feedbacks);
-            else _grid.replaceData(feedbacks);
-        } catch (gridErr) {
-            console.error('[Feedback] Grid error:', gridErr);
-            const tb = document.getElementById('feedbackTableBody');
-            if (tb) tb.innerHTML = '<div style=padding:40px;text-align:center;color:#ef4444;>Error loading feedback grid</div>';
-        }
+        _feedData = feedbacks;
+        _initFeedTable();
+        _renderFeedTable();
     }, (error) => {
         console.error('[Feedback] Firebase read error:', error);
         const tb = document.getElementById('feedbackTableBody');
-        if (tb) tb.innerHTML = '<div style=padding:40px;text-align:center;color:#ef4444;>Failed to load feedback data</div>';
+        if (tb) tb.innerHTML = '<tr><td colspan="5" style="padding:40px;text-align:center;color:#ef4444;font-weight:600;">Failed to load feedback data</td></tr>';
     });
 }
 

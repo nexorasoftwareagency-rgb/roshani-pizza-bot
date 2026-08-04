@@ -2786,6 +2786,7 @@
     white-space: nowrap;
 }
 .mob-td-total { font-weight: 900; font-size: 14.5px; color: var(--mob-ink); }
+.mob-td-link { color: var(--mob-primary, #2563eb); text-decoration: none; font-weight: 700; font-size: 12px; }
 .mob-table-empty { text-align: center; padding: 30px; color: var(--mob-sub); font-weight: 600; white-space: normal; }
 
 .mob-outlet-chip {
@@ -2828,6 +2829,9 @@
 .mob-badge-status-delivered { background: var(--mob-green); }
 .mob-badge-status-cancelled { background: var(--mob-red); }
 .mob-badge-status-pending { background: var(--mob-amber); }
+.mob-badge-rating-high { background: var(--mob-green); }
+.mob-badge-rating-mid { background: var(--mob-amber); }
+.mob-badge-rating-low { background: var(--mob-red); }
 
 .mob-export-row {
     display: flex;

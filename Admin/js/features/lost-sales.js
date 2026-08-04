@@ -1,130 +1,11 @@
 import { Outlet, get, update } from '../firebase.js';
-import { ui } from '../ui.js';
-import { showToast, logAudit, escapeHtml, formatDate, haptic, getSkeletonDivs } from '../utils.js';
+import { showToast, logAudit, escapeHtml, formatDate, haptic, getSkeletonRows } from '../utils.js';
 import { showBulkDeleteConfirm } from '../ui-utils.js';
-import { createGrid, updateGridData, GRID_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
 
 let _allLostSales = [];
-let _grid = null;
 let _outletFilter = 'all';
-
-async function buildGrid(data) {
-    await loadTabulator();
-    const el = document.getElementById('lostSalesTableBody');
-    if (!el) return;
-    el.innerHTML = '';
-
-    _grid = new Tabulator("#lostSalesTableBody", {
-        data: data || [],
-        ...GRID_DEFAULTS,
-        pagination: false,
-        placeholder: '<div style="padding:40px; color:#94a3b8;">🛍️ No lost sales found!</div>',
-        columns: [
-            { formatter: "rownum", hozAlign: "center", width: 45, headerSort: false },
-            {
-                title: "Date & Time",
-                field: "cancelledAt",
-                width: 160,
-                formatter: function(cell) {
-                    const d = cell.getRow().getData();
-                    const ts = d.cancelledAt || d.timestamp || '';
-                    const display = ts ? formatDate(ts) : '—';
-                    const id = d._id || '';
-                    return `<div><div style="font-weight:600;">${escapeHtml(display)}</div><div style="font-size:11px;color:#94a3b8;">...${escapeHtml(id.slice(-6))}</div></div>`;
-                }
-            },
-            {
-                title: "Customer",
-                field: "customerName",
-                width: 180,
-                formatter: function(cell) {
-                    const d = cell.getRow().getData();
-                    const addr = d.address || '—';
-                    const truncated = addr.length > 25 ? addr.substring(0, 25) + '…' : addr;
-                    return `<div><div style="font-weight:600;">${escapeHtml(d.customerName || 'Guest')}</div><div style="font-size:11px;color:#94a3b8;" title="${escapeHtml(addr)}">📍 ${escapeHtml(truncated)}</div></div>`;
-                }
-            },
-            {
-                title: "Phone",
-                field: "phone",
-                width: 130,
-                formatter: function(cell) {
-                    const val = cell.getValue() || '';
-                    const clean = val.replace(/\D/g, '').slice(-10);
-                    if (!clean || clean.length < 10) return '—';
-                    return `<a href="https://wa.me/91${clean}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:none;font-weight:600;font-size:12px;">📱 ${escapeHtml(val)}</a>`;
-                }
-            },
-            {
-                title: "Outlet",
-                field: "outlet",
-                width: 90,
-                hozAlign: "center",
-                formatter: function(cell) {
-                    const val = (cell.getValue() || 'pizza').toUpperCase();
-                    const emoji = val === 'CAKE' ? '🎂' : '🍕';
-                    return `<span style="font-size:12px;">${emoji} ${val}</span>`;
-                }
-            },
-            {
-                title: "Items",
-                field: "itemsStr",
-                width: 260,
-                formatter: function(cell) {
-                    const val = cell.getValue() || '—';
-                    const truncated = val.length > 35 ? val.substring(0, 35) + '…' : val;
-                    return `<span title="${escapeHtml(val)}" style="color:#475569;font-size:12px;">${escapeHtml(truncated)}</span>`;
-                }
-            },
-            {
-                title: "Subtotal",
-                field: "subtotal",
-                width: 100,
-                hozAlign: "right",
-                formatter: function(cell) { return `₹${cell.getValue() || 0}`; },
-                sorter: "number"
-            },
-            {
-                title: "Delivery",
-                field: "deliveryFee",
-                width: 90,
-                hozAlign: "right",
-                formatter: function(cell) {
-                    const val = cell.getValue();
-                    return val ? `₹${val}` : '<span style="color:#94a3b8;">—</span>';
-                }
-            },
-            {
-                title: "Discount",
-                field: "discount",
-                width: 110,
-                hozAlign: "right",
-                formatter: function(cell) {
-                    const d = cell.getRow().getData();
-                    const val = d.discount || 0;
-                    if (!val) return '<span style="color:#94a3b8;">—</span>';
-                    const label = d.discountLabel ? ` (${escapeHtml(d.discountLabel)})` : '';
-                    return `<span style="color:#4472C4;font-size:12px;">-₹${val}${label}</span>`;
-                }
-            },
-            {
-                title: "Potential Value",
-                field: "total",
-                width: 130,
-                hozAlign: "right",
-                formatter: function(cell) {
-                    const val = parseInt(cell.getValue()) || 0;
-                    const el = cell.getElement();
-                    if (val >= 500) el.classList.add('cell-value-high');
-                    else if (val >= 200) el.classList.add('cell-value-mid');
-                    else el.classList.add('cell-value-low');
-                    return `₹${val.toLocaleString()}`;
-                },
-                sorter: "number"
-            }
-        ]
-    });
-}
+let _sortField = 'cancelledAt';
+let _sortDir = 'desc';
 
 export async function loadLostSales() {
     const tbody = document.getElementById('lostSalesTableBody');
@@ -132,21 +13,14 @@ export async function loadLostSales() {
     const countBadge = document.getElementById('lostSalesCount');
     if (!tbody) return;
 
-    if (_grid) { _grid.destroy(); _grid = null; }
-    tbody.innerHTML = getSkeletonDivs(5);
+    tbody.innerHTML = getSkeletonRows(5, 9);
 
     try {
         const lostRef = Outlet.ref('logs/lostSales');
         const snap = await get(lostRef);
         const data = snap.val();
 
-        if (!data) {
-            _allLostSales = [];
-            _renderLostSales(tbody, revenueBadge, countBadge);
-            return;
-        }
-
-        _allLostSales = Object.entries(data).map(([id, r]) => {
+        _allLostSales = data ? Object.entries(data).map(([id, r]) => {
             const rawItems = r.cart || (Array.isArray(r.items) ? r.items : Object.values(r.items || {}));
             const items = rawItems.length ? rawItems : (r.item ? [{ name: r.item, size: r.size }] : []);
             const itemsStr = items.map(i => {
@@ -155,26 +29,55 @@ export async function loadLostSales() {
                 return `${i.name || i.item}(${i.size || '-'}) x${qty} ₹${price}`;
             }).join(', ');
             return { _id: id, id, ...r, itemsStr };
-        });
+        }) : [];
+
         _allLostSales.sort((a, b) => {
             const tsA = a.cancelledAt ? new Date(a.cancelledAt).getTime() : (a.timestamp ? new Date(a.timestamp).getTime() : 0);
             const tsB = b.cancelledAt ? new Date(b.cancelledAt).getTime() : (b.timestamp ? new Date(b.timestamp).getTime() : 0);
             return tsB - tsA;
         });
 
-        _renderLostSales(tbody, revenueBadge, countBadge);
-
-        document.getElementById('lostSalesOutletFilter')?.addEventListener('change', (e) => {
-            _outletFilter = e.target.value;
-            _renderLostSales(tbody, revenueBadge, countBadge);
-        });
+        _renderLostSales(revenueBadge, countBadge);
     } catch (e) {
         console.error('Load Lost Sales Error:', e);
-        tbody.innerHTML = `<div style="text-align:center; padding:40px; color:#ef4444;">⚠️ Error loading data</div>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="mob-table-empty">⚠️ Error loading data</td></tr>`;
     }
 }
 
-function _renderLostSales(tbody, revenueBadge, countBadge) {
+function _initLostTable() {
+    const table = document.getElementById('lostSalesTable');
+    if (!table || table.dataset.wired) return;
+    table.dataset.wired = '1';
+
+    const filter = document.getElementById('lostSalesOutletFilter');
+    if (filter) filter.addEventListener('change', (e) => {
+        _outletFilter = e.target.value;
+        _renderLostSales();
+    });
+
+    const sortEl = table.querySelector(`th[data-sort="${_sortField}"]`);
+    if (sortEl) sortEl.classList.add(`mob-sort-${_sortDir}`);
+
+    table.querySelectorAll('th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const field = th.dataset.sort;
+            if (_sortField === field) {
+                _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                _sortField = field;
+                _sortDir = field === 'subtotal' || field === 'deliveryFee' || field === 'discount' || field === 'total' ? 'desc' : 'asc';
+            }
+            table.querySelectorAll('th[data-sort]').forEach(h => h.classList.remove('mob-sort-asc', 'mob-sort-desc'));
+            th.classList.add(_sortDir === 'asc' ? 'mob-sort-asc' : 'mob-sort-desc');
+            _renderLostSales();
+        });
+    });
+}
+
+function _renderLostSales(revenueBadge, countBadge) {
+    const tbody = document.getElementById('lostSalesTableBody');
+    if (!tbody) return;
+
     const filtered = _outletFilter === 'all'
         ? _allLostSales
         : _allLostSales.filter(r => (r.outlet || 'pizza') === _outletFilter);
@@ -182,10 +85,70 @@ function _renderLostSales(tbody, revenueBadge, countBadge) {
     let totalLost = 0;
     filtered.forEach(r => { totalLost += (r.total || 0); });
 
-    if (revenueBadge) revenueBadge.innerText = `₹${totalLost.toLocaleString()}`;
-    if (countBadge) countBadge.innerText = String(filtered.length);
+    const rev = revenueBadge || document.querySelector('#lostSalesTotalRevenue span');
+    const cnt = countBadge || document.getElementById('lostSalesCount');
+    if (rev) rev.innerText = `₹${totalLost.toLocaleString()}`;
+    if (cnt) cnt.innerText = String(filtered.length);
 
-    buildGrid(filtered);
+    const countEl = document.getElementById('lostSalesTableCount');
+    if (countEl) countEl.textContent = `${filtered.length} record${filtered.length === 1 ? '' : 's'}`;
+
+    _initLostTable();
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="mob-table-empty">🛍️ No lost sales found!</td></tr>`;
+        return;
+    }
+
+    const sorted = [...filtered].sort((a, b) => {
+        let av = a[_sortField], bv = b[_sortField];
+        if (_sortField === 'subtotal' || _sortField === 'deliveryFee' || _sortField === 'discount' || _sortField === 'total') {
+            av = Number(av || 0); bv = Number(bv || 0);
+        } else {
+            av = String(av || '').toLowerCase(); bv = String(bv || '').toLowerCase();
+        }
+        const cmp = av > bv ? 1 : av < bv ? -1 : 0;
+        return _sortDir === 'asc' ? cmp : -cmp;
+    });
+
+    tbody.innerHTML = sorted.map(r => {
+        const ts = r.cancelledAt || r.timestamp || '';
+        const display = ts ? formatDate(ts) : '—';
+        const idTail = (r._id || '').slice(-6);
+        const addr = r.address || '—';
+        const addrTrunc = addr.length > 25 ? addr.substring(0, 25) + '…' : addr;
+        const phoneRaw = r.phone || '';
+        const cleanPhone = phoneRaw.replace(/\D/g, '').slice(-10);
+        const phoneHtml = cleanPhone && cleanPhone.length >= 10
+            ? `<a href="https://wa.me/91${cleanPhone}" target="_blank" rel="noopener" class="mob-td-link">📱 ${escapeHtml(phoneRaw)}</a>`
+            : '<span class="mob-td-sub">—</span>';
+        const outlet = (r.outlet || 'pizza').toUpperCase();
+        const outletEmoji = outlet === 'CAKE' ? '🎂' : '🍕';
+        const itemsStr = r.itemsStr || '—';
+        const itemsTrunc = itemsStr.length > 35 ? itemsStr.substring(0, 35) + '…' : itemsStr;
+        const subtotal = `₹${r.subtotal || 0}`;
+        const delivery = r.deliveryFee ? `₹${r.deliveryFee}` : '<span class="mob-td-sub">—</span>';
+        const discount = r.discount ? `<span style="color:#4472C4;">-₹${r.discount}${r.discountLabel ? ` (${escapeHtml(r.discountLabel)})` : ''}</span>` : '<span class="mob-td-sub">—</span>';
+        const totalVal = parseInt(r.total) || 0;
+        const valClass = totalVal >= 500 ? 'cell-value-high' : totalVal >= 200 ? 'cell-value-mid' : 'cell-value-low';
+        return `<tr>
+            <td>
+                <div class="mob-td-strong">${escapeHtml(display)}</div>
+                <div class="mob-td-sub">...${escapeHtml(idTail)}</div>
+            </td>
+            <td>
+                <div class="mob-td-strong">${escapeHtml(r.customerName || 'Guest')}</div>
+                <div class="mob-td-sub" title="${escapeHtml(addr)}">📍 ${escapeHtml(addrTrunc)}</div>
+            </td>
+            <td>${phoneHtml}</td>
+            <td><span class="mob-td-sub">${outletEmoji} ${escapeHtml(outlet)}</span></td>
+            <td><span class="mob-td-sub" title="${escapeHtml(itemsStr)}">${escapeHtml(itemsTrunc)}</span></td>
+            <td class="mob-td-total">${subtotal}</td>
+            <td>${delivery}</td>
+            <td>${discount}</td>
+            <td class="${valClass}" style="text-align:right;">₹${totalVal.toLocaleString()}</td>
+        </tr>`;
+    }).join('');
 }
 
 export async function clearLostSales() {

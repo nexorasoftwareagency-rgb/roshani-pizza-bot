@@ -177,13 +177,13 @@
     </script>
 
 
-    <link rel="preload" href="style.css?v=5.3.15" as="style" onload="this.rel='stylesheet'">
+    <link rel="preload" href="style.css?v=5.3.17" as="style" onload="this.rel='stylesheet'">
 
-    <link rel="stylesheet" href="style.css?v=5.3.15" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="style.css?v=5.3.17" media="print" onload="this.media='all'">
 
-    <link rel="preload" href="mobile-overrides.css?v=5.3.15" as="style" onload="this.rel='stylesheet'">
+    <link rel="preload" href="mobile-overrides.css?v=5.3.17" as="style" onload="this.rel='stylesheet'">
 
-    <link rel="stylesheet" href="mobile-overrides.css?v=5.3.15" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="mobile-overrides.css?v=5.3.17" media="print" onload="this.media='all'">
 
     <link rel="manifest" href="manifest.json?v=3">
 
@@ -203,7 +203,7 @@
 
     <link rel="dns-prefetch" href="https://prashant-pizza-e86e4-default-rtdb.firebaseio.com">
 
-    <link rel="modulepreload" href="js/main.js?v=5.3.15">
+    <link rel="modulepreload" href="js/main.js?v=5.3.17">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 
@@ -1800,11 +1800,49 @@
 
 
 
-                    <div class="glass-card mb-20 p-0 overflow-hidden">
+                    <div class="mob-card mob-table-card">
 
-                        <div class="table-responsive">
+                        <div class="mob-section-head-row">
 
-                            <div id="lostSalesTableBody"></div>
+                            <h3 class="mob-card-title">Abandoned Checkout Log</h3>
+
+                            <span class="mob-table-count" id="lostSalesTableCount">0 records</span>
+
+                        </div>
+
+                        <div class="mob-table-scroll">
+
+                            <table class="mob-data-table" id="lostSalesTable">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th data-sort="cancelledAt">Date &amp; Time</th>
+
+                                        <th data-sort="customerName">Customer</th>
+
+                                        <th data-sort="phone">Phone</th>
+
+                                        <th data-sort="outlet">Outlet</th>
+
+                                        <th data-sort="itemsStr">Items</th>
+
+                                        <th data-sort="subtotal" class="mob-th-right">Subtotal</th>
+
+                                        <th data-sort="deliveryFee" class="mob-th-right">Delivery</th>
+
+                                        <th data-sort="discount" class="mob-th-right">Discount</th>
+
+                                        <th data-sort="total" class="mob-th-right">Potential Value</th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody id="lostSalesTableBody"></tbody>
+
+                            </table>
 
                         </div>
 
@@ -3474,7 +3512,15 @@
 
 
 
-                    <div class="glass-card mb-20 p-0 overflow-hidden">
+                    <div class="mob-card mob-table-card">
+
+                        <div class="mob-section-head-row">
+
+                            <h3 class="mob-card-title">Inventory Items</h3>
+
+                            <span class="mob-table-count" id="invTableCount">0 items</span>
+
+                        </div>
 
                         <div class="p-16">
 
@@ -3482,11 +3528,31 @@
 
                         </div>
 
-                        <div class="table-responsive">
+                        <div class="mob-table-scroll">
 
-                                <div id="inventoryTableBody"></div>
+                            <table class="mob-data-table" id="invDataTable">
 
-                            <div id="inventoryPagination" class="pagination-controls"></div>
+                                <thead>
+
+                                    <tr>
+
+                                        <th data-sort="name">Item</th>
+
+                                        <th data-sort="stock">Stock</th>
+
+                                        <th data-sort="threshold">Min.</th>
+
+                                        <th data-sort="cost">Cost</th>
+
+                                        <th>Actions</th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody id="inventoryTableBody"></tbody>
+
+                            </table>
 
                         </div>
 
@@ -3554,31 +3620,48 @@
 
             <div id="tab-feedback" class="tab-content hidden">
 
-                <div class="panel">
+                <div class="mob-card mob-table-card">
 
-                    <div class="panel-header">
+                    <div class="mob-section-head-row">
 
-                        <h3 class="panel-title">â­ Customer Feedback & Ratings</h3>
+                        <h3 class="mob-card-title">Customer Feedback &amp; Ratings</h3>
 
-                        <div class="text-muted-small">Real-time satisfaction monitor</div>
+                        <span class="mob-table-count" id="feedbackCount">0 feedback</span>
 
                     </div>
 
-                    <div class="scroll-x mt-20">
+                    <div class="mob-table-scroll">
 
-                        <div id="feedbackTableBody"></div>
+                        <table class="mob-data-table" id="feedbackTable">
 
-                        <div id="feedbackPagination" class="pagination-controls"></div>
+                            <thead>
+
+                                <tr>
+
+                                    <th data-sort="timestamp">Date &amp; Time</th>
+
+                                    <th data-sort="orderId">Order ID</th>
+
+                                    <th data-sort="customerName">Customer</th>
+
+                                    <th data-sort="rating">Rating</th>
+
+                                    <th data-sort="reason">Feedback</th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody id="feedbackTableBody"></tbody>
+
+                        </table>
 
                     </div>
 
                 </div>
 
             </div>
-
-
-
-            <!-- WALK-IN SALE TAB -->
+<!-- WALK-IN SALE TAB -->
 
             <div id="tab-walkin" class="tab-content hidden">
 
@@ -6021,19 +6104,19 @@
         </div>
     </div>
 
-    <script src="branding.js?v=5.3.15" defer></script>
+    <script src="branding.js?v=5.3.17" defer></script>
 
-    <script src="firebase-config.js?v=5.3.15" defer></script>
+    <script src="firebase-config.js?v=5.3.17" defer></script>
 
-    <script src="receipt-templates.js?v=5.3.15" defer></script>
+    <script src="receipt-templates.js?v=5.3.17" defer></script>
 
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" crossorigin="anonymous" defer></script>
 
     <!-- XLSX loaded lazily via utils.js loadXLSX() -->
 
-    <script type="module" src="js/bot-status.js?v=5.3.15"></script>
+    <script type="module" src="js/bot-status.js?v=5.3.17"></script>
 
-    <script type="module" src="js/main.js?v=5.3.15"></script>
+    <script type="module" src="js/main.js?v=5.3.17"></script>
 
 </body>
 

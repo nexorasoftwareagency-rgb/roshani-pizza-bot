@@ -1,15 +1,15 @@
 import { db, auth, Outlet, serverTimestamp, get, set, update, remove, push, onValue, runTransaction } from '../firebase.js';
 import { state } from '../state.js';
 import { showDeleteConfirm, showConfirm } from '../ui-utils.js';
-import { logAudit, showToast, escapeHtml, getSkeletonDivs } from '../utils.js';
+import { logAudit, showToast, escapeHtml, getSkeletonRows } from '../utils.js';
 import { pushLog, maybeNotifyLowStock } from './inventory-extras.js';
 import { t, localize } from '../l10n.js';
-import { createGrid, updateGridData, GRID_DEFAULTS, PAGINATION_DEFAULTS, loadTabulator } from '../tabulator-setup.js';
 import { loadLucide } from '../ui.js';
 
 let inventoryListener = null;
-let _grid = null;
+let _invData = [];
 let _invSearch = '';
+let _invSortField = 'name', _invSortDir = 'asc';
 let _menuPage = 1;
 let _menuAllRows = [];
 const MENU_PAGE_SIZE = 20;
@@ -35,17 +35,15 @@ export function loadInventory() {
     cleanupInventory();
 
     const tbody = document.getElementById('inventoryTableBody');
-    if (_grid) { _grid.destroy(); _grid = null; }
-    if (tbody) tbody.innerHTML = getSkeletonDivs(5);
+    if (tbody) tbody.innerHTML = getSkeletonRows(5, 5);
 
     if (_togglesBound && _togglesOutlet !== state.currentOutlet) refreshInventoryTogglesForOutlet();
     _togglesOutlet = state.currentOutlet;
 
     const invRef = Outlet.ref('inventory');
     inventoryListener = onValue(invRef, (snapshot) => {
-        const data = snapshot.val();
-        renderInventoryTable(data);
-        updateInventoryKPIs(data);
+        renderInventoryTable(snapshot.val());
+        updateInventoryKPIs(snapshot.val());
     }, (error) => {
         console.error("[Inventory] Load Error:", error);
         showToast("Failed to load inventory", "error");
@@ -101,125 +99,108 @@ function _invKeyHandler(e) {
     }
 }
 
-async function buildGrid(data) {
-    await loadTabulator();
-    const el = document.getElementById('inventoryTableBody');
-    if (!el) return;
-    el.innerHTML = '';
+function _initInvTable() {
+    const table = document.getElementById('invDataTable');
+    if (!table || table.dataset.wired) return;
+    table.dataset.wired = '1';
 
-    _grid = new Tabulator("#inventoryTableBody", {
-        data: data || [],
-        ...GRID_DEFAULTS,
-        ...PAGINATION_DEFAULTS,
-        paginationSize: 30,
-        placeholder: '<div style="padding:40px; color:#94a3b8;">📦 No items found. Click "Add Item" to start tracking.</div>',
-        columns: [
-            { formatter: "rownum", hozAlign: "center", width: 45, headerSort: false },
-            {
-                title: "Product Item",
-                field: "name",
-                width: 280,
-                formatter: function(cell) {
-                    const d = cell.getRow().getData();
-                    const threshold = d.threshold || 0;
-                    const isLow = d.stock <= threshold;
-                    const isReorder = !isLow && d.stock > threshold && d.stock <= threshold * 1.5;
-                    const detailParts = [];
-                    if (d.sku) detailParts.push(`SKU: ${d.sku}`);
-                    if (d.unit) detailParts.push(`Unit: ${d.unit}`);
-                    if (d.supplier) detailParts.push(`Supplier: ${d.supplier}`);
-                    if (d.cost) detailParts.push(`Cost: ₹${d.cost}`);
-                    const title = detailParts.length ? detailParts.join(' · ') : '';
-                    let html = `<div style="display:flex;flex-direction:column;gap:2px;"><span style="font-weight:800;font-size:15px;" title="${escapeHtml(title)}">${escapeHtml(d.name)}</span>`;
-                    if (isLow) html += `<span class="stock-status-badge low" style="font-size:10px;">${t('inv.lowStockBadge', 'Low Stock')}</span>`;
-                    else if (isReorder) html += `<span class="reorder-badge" style="font-size:10px;">${t('inv.reorderSoon', 'Reorder Soon')}</span>`;
-                    html += '</div>';
-                    return html;
-                }
-            },
-            {
-                title: "Stock",
-                field: "stock",
-                width: 150,
-                hozAlign: "center",
-                formatter: function(cell) {
-                    const val = parseInt(cell.getValue()) || 0;
-                    const d = cell.getRow().getData();
-                    const threshold = d.threshold || 0;
-                    const el = cell.getElement();
-                    if (val === 0) el.classList.add('cell-stock-out');
-                    else if (val <= threshold) el.classList.add('cell-stock-low');
-                    else el.classList.add('cell-stock-ok');
-                    return `<div class="grid-stock-control">
-                        <button class="grid-stock-btn grid-stock-btn-minus" data-action="adjustStock" data-id="${escapeHtml(d.id)}" data-delta="-1">−</button>
-                        <span class="grid-stock-value">${val}</span>
-                        <button class="grid-stock-btn grid-stock-btn-plus" data-action="adjustStock" data-id="${escapeHtml(d.id)}" data-delta="1">+</button>
-                    </div>`;
-                },
-                cellClick: function(e, cell) {
-                    const btn = e.target.closest('[data-action="adjustStock"]');
-                    if (!btn) return;
-                    const id = btn.dataset.id;
-                    const delta = parseInt(btn.dataset.delta, 10);
-                    if (id && delta) adjustStock(id, delta);
-                },
-                sorter: "number"
-            },
-            {
-                title: "Threshold",
-                field: "threshold",
-                width: 100,
-                hozAlign: "center",
-                formatter: function(cell) {
-                    return `<span style="font-size:12px;color:#64748b;">Min: ${cell.getValue() || 0}</span>`;
-                }
-            },
-            {
-                title: "Actions",
-                width: 130,
-                hozAlign: "center",
-                headerSort: false,
-                formatter: function(cell) {
-                    const d = cell.getRow().getData();
-                    return `<div style="display:flex;gap:6px;justify-content:center;">
-                        <button class="grid-btn grid-btn-outline" data-action="viewStockHistory" data-id="${escapeHtml(d.id)}" data-name="${escapeHtml(d.name)}" title="History">📋</button>
-                        <button class="grid-btn grid-btn-primary" data-action="editInventoryItem" data-id="${escapeHtml(d.id)}" title="Edit">✏️</button>
-                        <button class="grid-btn grid-btn-danger" data-action="deleteInventoryItem" data-id="${escapeHtml(d.id)}" title="Delete">🗑️</button>
-                    </div>`;
-                },
-                cellClick: function(e, cell) {
-                    const btn = e.target.closest('[data-action]');
-                    if (!btn) return;
-                    const action = btn.dataset.action;
-                    const id = btn.dataset.id;
-                    if (action === 'viewStockHistory') viewStockHistory(id, btn.dataset.name);
-                    else if (action === 'editInventoryItem') editInventoryItem(id);
-                    else if (action === 'deleteInventoryItem') deleteInventoryItem(id);
-                }
+    const sortEl = table.querySelector(`th[data-sort="${_invSortField}"]`);
+    if (sortEl) sortEl.classList.add(`mob-sort-${_invSortDir}`);
+
+    table.querySelectorAll('th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const field = th.dataset.sort;
+            if (_invSortField === field) {
+                _invSortDir = _invSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                _invSortField = field;
+                _invSortDir = field === 'stock' || field === 'threshold' || field === 'cost' ? 'desc' : 'asc';
             }
-        ]
+            table.querySelectorAll('th[data-sort]').forEach(h => h.classList.remove('mob-sort-asc', 'mob-sort-desc'));
+            th.classList.add(_invSortDir === 'asc' ? 'mob-sort-asc' : 'mob-sort-desc');
+            _renderInvTable();
+        });
     });
 }
 
-function renderInventoryTable(data) {
-    if (!data) {
-        if (_grid) _grid.replaceData([]);
-        else buildGrid([]);
+function _renderInvTable() {
+    const tbody = document.getElementById('inventoryTableBody');
+    const countEl = document.getElementById('invTableCount');
+    if (!tbody) return;
+
+    let rows = _invData;
+    const term = _invSearch.trim().toLowerCase();
+    if (term) rows = rows.filter(r => (r.name || '').toLowerCase().includes(term));
+
+    if (countEl) countEl.textContent = `${rows.length} item${rows.length === 1 ? '' : 's'}`;
+
+    const sorted = [...rows].sort((a, b) => {
+        let av = a[_invSortField], bv = b[_invSortField];
+        if (_invSortField === 'stock' || _invSortField === 'threshold' || _invSortField === 'cost') {
+            av = Number(av || 0); bv = Number(bv || 0);
+        } else {
+            av = String(av || '').toLowerCase(); bv = String(bv || '').toLowerCase();
+        }
+        const cmp = av > bv ? 1 : av < bv ? -1 : 0;
+        return _invSortDir === 'asc' ? cmp : -cmp;
+    });
+
+    if (sorted.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="mob-table-empty">${term ? 'No items match your search.' : 'No items found. Click "Add Item" to start tracking.'}</td></tr>`;
         return;
     }
 
-    const sorted = Object.entries(data).sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''));
-    const items = sorted.map(([id, item]) => ({ id, ...item }));
+    tbody.innerHTML = sorted.map(d => {
+        const threshold = d.threshold || 0;
+        const stock = parseInt(d.stock, 10) || 0;
+        const isLow = stock <= threshold;
+        const isReorder = !isLow && stock > threshold && stock <= threshold * 1.5;
+        const detailParts = [];
+        if (d.sku) detailParts.push(`SKU: ${d.sku}`);
+        if (d.unit) detailParts.push(`Unit: ${d.unit}`);
+        if (d.supplier) detailParts.push(`Supplier: ${d.supplier}`);
+        const title = detailParts.length ? detailParts.join(' · ') : '';
+        const badge = isLow
+            ? `<span class="stock-status-badge low">${t('inv.lowStockBadge', 'Low Stock')}</span>`
+            : isReorder ? `<span class="reorder-badge">${t('inv.reorderSoon', 'Reorder Soon')}</span>` : '';
+        const stockColor = stock === 0 ? 'var(--mob-red)' : isLow ? 'var(--mob-amber)' : 'var(--mob-ink)';
+        return `<tr>
+            <td>
+                <div class="mob-td-strong"${title ? ` title="${escapeHtml(title)}"` : ''}>${escapeHtml(d.name || '—')}</div>
+                <div class="mob-td-sub">${detailParts.length ? escapeHtml(title) : ''}${badge}</div>
+            </td>
+            <td>
+                <div class="grid-stock-control">
+                    <button class="grid-stock-btn grid-stock-btn-minus" data-action="adjustStock" data-id="${escapeHtml(d.id)}" data-val="-1" title="Decrease">−</button>
+                    <span class="grid-stock-value" style="color:${stockColor}">${stock}</span>
+                    <button class="grid-stock-btn grid-stock-btn-plus" data-action="adjustStock" data-id="${escapeHtml(d.id)}" data-val="1" title="Increase">+</button>
+                </div>
+            </td>
+            <td><span class="mob-td-sub">Min: ${threshold || 0}</span></td>
+            <td>${d.cost ? `<span class="mob-td-total">₹${d.cost}</span>` : '<span class="mob-td-sub">—</span>'}</td>
+            <td>
+                <div style="display:flex;gap:6px;">
+                    <button class="grid-btn grid-btn-outline" data-action="viewStockHistory" data-id="${escapeHtml(d.id)}" data-name="${escapeHtml(d.name || '')}" title="History">📋</button>
+                    <button class="grid-btn grid-btn-primary" data-action="editInventoryItem" data-id="${escapeHtml(d.id)}" title="Edit">✏️</button>
+                    <button class="grid-btn grid-btn-danger" data-action="deleteInventoryItem" data-id="${escapeHtml(d.id)}" title="Delete">🗑️</button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
 
-    if (!_grid) buildGrid(items);
-    else _grid.replaceData(items);
+function renderInventoryTable(data) {
+    if (!data) { _invData = []; _renderInvTable(); return; }
+
+    const sorted = Object.entries(data).sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''));
+    _invData = sorted.map(([id, item]) => ({ id, ...item }));
+    _initInvTable();
+    _renderInvTable();
 }
 
 export function setInventorySearch(term) {
     _invSearch = term || '';
-    if (!_grid) return;
-    if (!term) { _grid.clearFilter(); return; }
-    _grid.setFilter({ field: "name", type: "like", value: term });
+    _renderInvTable();
 }
 
 export async function adjustStock(id, delta) {
@@ -372,10 +353,6 @@ export async function deleteInventoryItem(id) {
         await remove(Outlet.ref(`inventory/${id}`));
         showToast(t('inv.removed', '📦 Tracking stopped'));
     } catch (error) { showToast(t('inv.removeFailed', '📦 Failed to remove'), "error"); }
-}
-
-function viewStockHistory(id, name) {
-    showToast(`Viewing history for: ${name}`, 'info');
 }
 
 function updateInventoryKPIs(data) {

@@ -637,19 +637,22 @@ The sidebar is organized into 5 groups with 20 navigation items:
 
 ### 11. Analytics / Reports (`tab-reports`)
 
-**Data loaded on switch:** date-range report data
+**Data loaded on switch:** date-range report data + previous-period data (for vs-previous-period deltas)
+
+Mobile-first layout. Rendered by `analytics.js` (data generation, Excel/PDF export) + `analytics-mobile.js` (UI rendering).
 
 **Components:**
-- **Date Filters** — `#reportFrom`, `#reportTo`
-- **Status Filter** — `#reportStatusFilter` (Delivered Only / All / Cancelled)
-- **Generate Button** — `#btnGenerateReport`
-- **WhatsApp Report Button** — `#btnWhatsappReport` (pushes command to bot)
-- **KPI Row** — Revenue (`#reportRevenue`), Orders (`#reportOrders`), Avg Order Value (`#reportAvg`), Period (`#reportPeriod`)
-- **Export Buttons** — Excel (`#btnDownloadExcel`), PDF (`#btnDownloadPDF`)
-- **Detailed Table** — `#reportTableBody` (itemized sales data)
-- **Revenue Trend Chart** — `#revenueChart` (Chart.js line graph)
+- **Date Range Toolbar** (`mobToolbarCard`) — `#mobDateDisplay` / `#mobDateRangeText`, quick-range pills (Today / 7D / 30D / Custom), Filters toggle
+- **Custom Dates** — `#reportFrom`, `#reportTo` (in `#mobInlineDates`)
+- **Outlet Filter** — `#reportOutletFilter` (Current / Pizza / Cake, in `#mobInlineFilters`)
+- **KPI Grid (2×2)** — Revenue (`#mobKpiRevenueVal`), Orders (`#mobKpiOrdersVal`), Avg. Order Value (`#mobKpiAvgOrderVal`), New Customers (`#mobKpiNewCustVal`) — each with vs-previous-period trend + sparkline
+- **Sales Overview** — `#mobOverviewTotal`, `#mobOverviewTrend`, `#mobOverviewChart` canvas
+- **Top Highlights** — Delivered / Cancelled / Pending / Repeat Customers with % share
+- **Payment Donut** — `#mobPaymentDonut`, `#mobDonutCenterTotal`, `#mobPaymentLegend`
+- **Detailed Sales Table** — `#mobDataTable` / `#mobDataTableBody` / `#mobTableCount` (sortable `mob-data-table`)
+- **Export Banners** — `#mobExportExcel`, `#mobExportPDF` (fire hidden `#btnDownloadExcel` / `#btnDownloadPDF`)
 
-**Functions:** `loadReports()`, `generateCustomReport()`, `setStatusFilter()`, `downloadExcel()`, `downloadPDF()`, `cleanupReports()`
+**Functions:** `loadReports()`, `generateCustomReport()`, `renderMobileAnalytics()`, `applyQuickRange()`, `initMobileAnalyticsUI()`, `updateMobileDateRangeText()`, `downloadExcel()`, `downloadPDF()`, `cleanupReports()`
 
 ---
 
@@ -739,12 +742,20 @@ The sidebar is organized into 5 groups with 20 navigation items:
 
 ### 17. Payments (`tab-payments`)
 
-**Data loaded on switch:** orders (all)
+**Data loaded on switch:** orders (all) — filtered for the payments view
+
+Responsive `mob-data-table` (plain HTML, no Tabulator). Rendered by `payments.js` (`renderPayments()`, called from `orders.js` `renderOrders()` when the payments tab is active).
 
 **Components:**
-- **Payments Table** — `#paymentsTable` with order + payment info
+- **Payments Table** — `#payDataTable` / `#payDataTableBody` / `#payTableCount`, sortable columns (`data-sort` headers: date, customer, payment, status, outlet, total)
+- **Payment Method Badge** — `mob-badge-pay-cash` / `mob-badge-pay-upi` / `mob-badge-pay-cod`
+- **Status Badge** — `mob-badge-status-delivered` / `mob-badge-status-cancelled` / `mob-badge-status-pending`
+- **Outlet Chip** — `mob-outlet-chip`
+- **Cell styles** — `mob-td-strong`, `mob-td-sub` (order id, phone), `mob-td-total`, `mob-th-right`
 
-**Functions:** Same `renderOrders()` but filtered for payments view.
+**Functions:** `renderPayments(orders)`
+
+> Note: the `mob-*` class family is composed at runtime in JS. It is safelisted as `/^mob-/` in `tools/build.mjs` (PurgeCSS) so the rules survive the production build.
 
 ---
 
