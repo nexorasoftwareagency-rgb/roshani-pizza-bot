@@ -33,8 +33,9 @@ A full-stack ERP system for **Roshani Pizza** and **Roshani Cake** outlets. Cust
 | Layer | Technology | Purpose |
 |---|---|---|
 | WhatsApp Bot | **Node.js** + **@whiskeysockets/baileys** v6.17 | Multi-device WhatsApp Web API — send & receive messages |
-| Admin Dashboard | **Vanilla JS** SPA (ES Modules) | 19-screen management panel |
-| Rider Portal | **Vanilla JS** SPA (ES Modules) | 6-screen mobile delivery app |
+| Admin Dashboard | **Vanilla JS** SPA (ES Modules) | 20-screen management panel |
+| Rider Portal | **React 19 + TypeScript** (Vite) | Mobile delivery app (`rider-app/`) |
+| QR Menu App | **Vanilla JS** SPA (ES Modules) | Customer QR ordering + dine-in sessions (`menu/`) |
 | Database | **Firebase Realtime Database** | Source of truth for orders, menu, users, settings |
 | Cache / Sessions | **Redis** (standalone or AWS ElastiCache cluster) | User sessions, message dedup, OTP cache |
 | Admin & Rider Hosting | **Firebase Hosting** | Static asset delivery + PWA service workers |
@@ -45,9 +46,9 @@ A full-stack ERP system for **Roshani Pizza** and **Roshani Cake** outlets. Cust
 | Push Notifications | **Firebase Cloud Messaging (FCM)** via Admin SDK | Rider in-app notifications + audio alerts (no Cloud Functions needed) |
 | PWA | **Service Worker** + Web Manifest | Installable on mobile home screen |
 | Geolocation | **navigator.geolocation.watchPosition()** | 30-second interval rider GPS streaming |
-| Table Grid | **Tabulator** v6.3 | Interactive data tables (riders, inventory, feedback, customers) |
+| Table Grid | **Custom `mob-data-table`** (plain HTML) | Responsive data tables (riders, customers, inventory, feedback, payments) |
 | CSS Icons | **Lucide** v0.344 | UI icon set |
-| Tab Management | **Custom tab system** | 19-tab SPA with lazy module loading |
+| Tab Management | **Custom tab system** | 20-tab SPA with lazy module loading |
 
 ---
 
@@ -412,7 +413,7 @@ The sidebar is organized into 5 groups with 20 navigation items:
 #### People
 | Menu Item | Tab Target | Icon | Description |
 |---|---|---|---|
-| Riders | `riders` | `bike` | Rider management with Tabulator grid |
+| Riders | `riders` | `bike` | Rider management with sortable grid |
 | Customers | `customers` | `users` | Customer database with LTV tracking |
 
 #### Insights
@@ -597,14 +598,14 @@ The sidebar is organized into 5 groups with 20 navigation items:
 **Components:**
 - **KPI Row** — Online (`#rider-stat-online`), Busy (`#rider-stat-busy`), Offline (`#rider-stat-offline`), Total Earnings (`#rider-stat-earnings`)
 - **Search** — `#riderSearchInput`
-- **Tabulator Grid** — `#ridersTable` with columns: #, Rider (name/phone/img), Email, Status, Performance (orders/wallet), Rating (progress bar), Actions (Settle Wallet / Edit / Reset Password / Delete)
+- **Sortable Grid** — `#riderDataTable` with columns: #, Rider (name/phone/img), Email, Status, Performance (orders/wallet), Rating (progress bar), Actions (Settle Wallet / Edit / Reset Password / Delete)
 - **Pagination** — `#ridersPagination`
 - **Add New Rider** — Button opens rider modal
 - **Show All Toggle** — `#showAllRidersToggle`
 
 **Functions:** `loadRiders()`, `renderRiders()`, `showRiderModal()`, `editRider()`, `saveRiderAccount()`, `deleteRider()`, `resetRiderPassword()`, `settleRiderWallet()`, `toggleRiderPass()`, `cleanupRiders()`
 
-**Special:** Tabulator grid with built-in sorting, filtering, pagination. Rider photos, Aadhar uploads. Password auto-generated with secure copy-to-clipboard modal (auto-clears after 30s).
+**Special:** Sortable grid with search/filter. Rider photos, Aadhar uploads. Password auto-generated with secure copy-to-clipboard modal (auto-clears after 30s).
 
 ---
 
@@ -614,7 +615,7 @@ The sidebar is organized into 5 groups with 20 navigation items:
 
 **Components:**
 - **Search** — `#customerSearch`
-- **Tabulator Grid** — `#customersTableBody` with columns: #, Customer (name + joined date), WhatsApp link, Address (with map link), Orders count, Lifetime Value
+- **Sortable Grid** — `#customerDataTable` with columns: #, Customer (name + joined date), WhatsApp link, Address (with map link), Orders count, Lifetime Value
 
 **Functions:** `loadCustomers()`, `filterCustomers()`
 
@@ -680,7 +681,7 @@ Mobile-first layout. Rendered by `analytics.js` (data generation, Excel/PDF expo
 **Data loaded on switch:** feedbacks (real-time listener)
 
 **Components:**
-- **Tabulator Grid** — `#feedbackTableBody` with columns: #, Date, Order ID, Customer, Rating (star display), Feedback (reason + comment)
+- **Sortable Grid** — `#feedbackTableBody` with columns: #, Date, Order ID, Customer, Rating (star display), Feedback (reason + comment)
 
 **Functions:** `loadFeedbacks()`, `cleanupFeedbacks()`
 
@@ -730,7 +731,7 @@ Mobile-first layout. Rendered by `analytics.js` (data generation, Excel/PDF expo
 - **Menu Section** — `#inventoryMenuGrid` + `#inventoryMenuPagination` (shown when availability toggle on)
 - **KPI Row** — Total Items (`#invTotalItems`), Low Stock (`#invLowStock`)
 - **Search** — `#inventorySearch`
-- **Tabulator Grid** — `#inventoryTableBody` with columns: #, Product Item (name with stock badges), Stock (+/- quick adjust buttons), Threshold, Actions (History/Edit/Delete)
+- **Sortable Grid** — `#inventoryTableBody` with columns: #, Product Item (name with stock badges), Stock (+/- quick adjust buttons), Threshold, Actions (History/Edit/Delete)
 - **Pagination** — `#inventoryPagination`
 - **Add Item Button** — `#btnShowAddInventory`
 
@@ -920,7 +921,7 @@ Add Fee Slab button (`#btnAddFeeSlab`), Fee Slabs Table (`#feeSlabsTable`: Up to
 9. Optional: Reprint last receipt
 
 ### Rider Management Flow
-1. View all riders in Tabulator grid with sorting/filtering
+1. View all riders in a sortable grid with search/filter
 2. Add new rider → fill form with photo + Aadhar upload
 3. Edit rider → pre-filled modal
 4. Delete rider → confirmation dialog
@@ -990,12 +991,12 @@ Add Fee Slab button (`#btnAddFeeSlab`), Fee Slabs Table (`#feeSlabsTable`: Up to
 ## Rider Portal
 
 **URL:** Firebase Hosting — `roshani-sudha-rider` target
-**Tech:** Vanilla JS ES Modules + Firebase Realtime Database + Leaflet.js
+**Tech:** React 19 + TypeScript (Vite), Firebase Realtime Database, Leaflet.js
 **Auth:** Firebase Auth (email/password). Phone numbers (10 digits) are converted to `{number}@rider.com` for authentication.
 **PWA:** Installable on mobile home screen with audio alerts
-**Entry Point:** `rider/index.html` or `rider/login.html`
+**Source:** `rider-app/` — Vite app; build output `rider-app/dist` is deployed to `hosting:rider`
 
-### Rider Login Screen (`login.html`)
+### Rider Login Screen (`/login` route)
 
 **Components:**
 - Logo (lightning bolt icon)
@@ -1008,7 +1009,7 @@ Add Fee Slab button (`#btnAddFeeSlab`), Fee Slabs Table (`#feeSlabsTable`: Up to
 **Flow:**
 1. User enters mobile (10 digits) or email + password
 2. Firebase auth via synthetic email `{phone}@rider.com`
-3. On success → redirect to `index.html`
+3. On success → redirect to the app root (`/`)
 4. If already logged in → immediately redirected
 
 ---
@@ -1159,7 +1160,7 @@ Add Fee Slab button (`#btnAddFeeSlab`), Fee Slabs Table (`#feeSlabsTable`: Up to
 ## Rider Complete User Flows
 
 ### Flow A: Login → Dashboard
-1. User opens `login.html` (or `index.html` if not authenticated)
+1. User opens the login page (or app root if not authenticated)
 2. Enters mobile (10 digits) or email + password
 3. Firebase auth via synthetic email `{phone}@rider.com`
 4. `onAuthStateChanged` fires → loads rider profile from `riders/{uid}`
@@ -1258,24 +1259,33 @@ This project is designed for the **Firebase Spark (free) plan**. No Cloud Functi
 - **Admin custom claims** were set via a one-time local script (see [Custom Claims & Firebase Security](#custom-claims--firebase-security))
 - The `functions/` directory exists for reference only — **do not deploy** it unless you upgrade to the Blaze plan
 
-### Firebase Hosting (Admin + Rider)
+### Firebase Hosting (Admin + Rider + Menu)
+
+Admin and Rider deploy from build output (`Admin/dist`, `rider-app/dist`), so build first. Menu deploys from source (`menu/`).
 
 ```bash
 # Login to Firebase
 firebase login
 
+# Build admin (esbuild + PurgeCSS → Admin/dist)
+npm run build
+
 # Deploy admin dashboard
 firebase deploy --only hosting:admin
 
-# Deploy rider portal
+# Build + deploy rider portal (Vite → rider-app/dist)
+cd rider-app
+npm run build
 firebase deploy --only hosting:rider
 
 # Deploy QR menu app
 firebase deploy --only hosting:menu
 
-# Deploy all hosting targets
-firebase deploy --only hosting
+# Deploy database rules + all hosting targets
+firebase deploy --only database,hosting
 ```
+
+Shorthand scripts in `package.json`: `npm run deploy:admin` (build + deploy admin) and in `rider-app/package.json`: `npm run deploy` (build + deploy rider).
 
 ### WhatsApp Bot (EC2)
 
@@ -1409,70 +1419,70 @@ npx http-server -p 8080 -c-1
 
 ```
 Prasant-Pizza-ERP/
-├── Admin/                     # Admin Dashboard (Firebase Hosting: admin)
+├── Admin/                     # Admin Dashboard source (Firebase Hosting: admin → Admin/dist)
 │   ├── index.html             # SPA shell with 20 tab sections
-│   ├── init.js                # Firebase init + global helpers
+│   ├── firebase-config.js     # Firebase init + project config
 │   ├── branding.js            # Multi-outlet CSS theming
 │   ├── receipt-templates.js   # Thermal receipt HTML templates
-│   ├── style.css              # Main styles (5500+ lines)
+│   ├── style.css              # Main styles
 │   ├── mobile-overrides.css   # Mobile-specific styling
-│   ├── sw.js                  # Service Worker
+│   ├── sw.js                  # Service Worker (versioned shell cache)
 │   ├── firebase-messaging-sw.js
-│   ├── manifest-pizza.json    # PWA manifest (Pizza)
-│   ├── manifest-cake.json     # PWA manifest (Cake)
+│   ├── manifest.json          # PWA manifest
 │   └── js/
 │       ├── main.js            # Entry point (event delegation, module loader)
 │       ├── auth.js            # Firebase Auth (login, logout, 3-tier, idle timeout)
-│       ├── state.js           # Global reactive state object (40+ properties)
+│       ├── state.js           # Global reactive state object
 │       ├── firebase.js        # Firebase SDK exports
 │       ├── utils.js           # Utility functions (dates, pagination, sounds, audit)
 │       ├── ui-utils.js        # UI utilities (toasts, confirm dialogs, overlays)
 │       ├── ui.js              # Tab switching, sidebar, theme toggle
 │       ├── pwa.js             # PWA install, nuclear refresh
+│       ├── l10n.js            # Localization
 │       └── features/
 │           ├── orders.js      # Order management (listeners, pagination, status, rider assign)
 │           ├── tables.js      # Dine-in table management (floor grid, KDS, session billing, requests)
 │           ├── catalog.js     # Dishes + Categories CRUD (listeners, modals, migrations)
-│           ├── riders.js      # Rider management (Tabulator grid, CRUD, wallet settle)
+│           ├── riders.js      # Rider management (sortable grid, CRUD, wallet settle)
 │           ├── pos.js         # Walk-in POS (cart, discounts, coupons, checkout)
 │           ├── settings.js    # Store settings (4 config nodes, validation)
-│           ├── customers.js   # Customer database (Tabulator, LTV)
+│           ├── customers.js   # Customer database (sortable grid, LTV)
 │           ├── notifications.js  # Alert system (toasts, badges, native notifications)
 │           ├── tracker.js     # Live rider map (Leaflet, real-time markers)
-│           ├── feedback.js    # Feedback display (Tabulator)
-│           ├── inventory.js   # Stock tracking (Tabulator, import/export, toggles)
+│           ├── feedback.js    # Feedback display (sortable grid)
+│           ├── inventory.js   # Stock tracking (sortable grid, import/export, toggles)
+│           ├── inventory-extras.js  # Inventory helpers (low-stock, logs)
+│           ├── lost-sales.js  # Abandoned checkout tracking
+│           ├── payments.js    # Payment transactions (mob-data-table)
 │           ├── rider-analytics.js  # Rider performance reports (Chart.js, Excel/PDF)
+│           ├── analytics.js   # Sales report data + Excel/PDF export
+│           ├── analytics-mobile.js  # Analytics UI rendering (mob-data-table)
 │           ├── printing.js    # Receipt printing
 │           ├── promotions.js  # WhatsApp promo campaigns
+│           ├── promotions-templates.js  # Promo template picker
+│           ├── promotions-guide.js      # Promotions how-to guide
 │           ├── discounts.js   # Discount/coupon CRUD
-│           └── discountsReports.js  # Discount performance analytics
+│           ├── discountsReports.js  # Discount performance analytics
+│           ├── discount-evaluator.js   # Discount validation engine
+│           └── page-guide.js  # Generic how-to guides
 │
-├── rider/                     # Rider Portal (Firebase Hosting: rider)
-│   ├── index.html             # SPA shell with 6 sections + modals
-│   ├── login.html             # Standalone login page
-│   ├── app.js                 # Full rider app logic (1764 lines)
-│   ├── style.css              # Rider styles
-│   ├── sw.js                  # Service Worker
-│   ├── manifest.json
-│   ├── firebase-messaging-sw.js
-│   └── js/
-│       ├── firebase.js        # Firebase SDK exports
-│       ├── ui.js              # UI helpers (toasts, sidebar, sections)
-│       ├── auth.js            # Login/logout
-│       ├── geo.js             # Geolocation + Leaflet map
-│       ├── pwa.js             # PWA install
-│       ├── notifications.js   # Notifications management
-│       ├── settlement.js      # Settlement history
-│       ├── whatsapp.js        # WhatsApp link triggers
-│       └── shared/
-│           └── dom/
-│               └── escape.js  # HTML escaping
+├── rider-app/                 # Rider Portal source (React 19 + TS + Vite; Firebase Hosting: rider → rider-app/dist)
+│   ├── index.html             # Vite entry
+│   ├── src/
+│   │   ├── main.tsx / App.tsx # App shell + routing
+│   │   ├── pages/             # Dashboard, ActiveTrip, Available, Completed, Earnings, Wallet, Profile
+│   │   ├── components/        # UI components (modals, trip, dashboard, orders, wallet, layout)
+│   │   ├── contexts/          # Auth, Rider, Location contexts
+│   │   ├── hooks/             # useAuth, useGeolocation, useActiveOrder, etc.
+│   │   ├── services/          # Firebase/auth/order/wallet/location services
+│   │   └── lib/               # Firebase init, constants, utils
+│   ├── vite.config.ts / tsconfig*.json
+│   └── package.json           # `npm run deploy` = build + hosting:rider
 │
 ├── bot/                       # WhatsApp Bot (EC2 - PM2)
-│   ├── index.js               # Main bot logic (1676 lines — state machine, listeners)
+│   ├── index.js               # Main bot logic (state machine, listeners)
 │   ├── rider.js               # Rider notification engine
 │   ├── reports.js             # Report generation (daily/weekly/monthly)
-│   ├── reports2.js            # Alternative report module
 │   ├── discounts.js           # Discount/coupon validation engine
 │   ├── promos.js              # Promo campaign management
 │   ├── firebase.js            # Firebase Admin SDK helpers
@@ -1481,12 +1491,13 @@ Prasant-Pizza-ERP/
 │   ├── session_data_pizza/    # Auth session (auto-generated)
 │   └── session_data_cake/     # Auth session (auto-generated)
 │
-├── shared/                    # Shared code across apps
-│   └── dom/
-│       └── escape.js          # HTML escaping utility
+├── shared/                    # Shared Firebase config
+│   ├── firebase-config.js     # Shared Firebase init
+│   └── firebase-config.cjs    # CJS variant
 │
-├── menu/                      # QR Menu App (Firebase Hosting: menu)
+├── menu/                      # QR Menu App (Firebase Hosting: menu → menu/)
 │   ├── index.html             # Menu app entry point
+│   ├── home.html              # Landing page
 │   ├── css/app.css            # Menu app styles
 │   └── js/
 │       ├── app.js             # Menu app logic (boot, cart, order flow)
@@ -1500,8 +1511,12 @@ Prasant-Pizza-ERP/
 │
 ├── assets/                    # Static assets (images, sounds, icons)
 │
+├── docs/                      # Project documentation
+│   └── architecture-chart.md  # Mermaid architecture diagram
+│
+├── tools/build.mjs            # Admin build (esbuild + PurgeCSS → Admin/dist)
 ├── ecosystem.config.js        # PM2 process manager config
-├── firebase.json              # Firebase Hosting config
+├── firebase.json              # Firebase Hosting config (admin/rider/menu targets)
 ├── .firebaserc                # Firebase project alias
 ├── database.rules.json        # Firebase RTDB security rules
 ├── storage.rules              # Firebase Storage rules
