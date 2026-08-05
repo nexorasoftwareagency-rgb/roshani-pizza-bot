@@ -422,6 +422,7 @@ export async function _preview() {
     let body = template;
     for (const [k, v] of Object.entries(tokens)) body = body.split(k).join(v);
     if (greeting) body = `Hi ${sampleName},\n\n${body}`;
+    if (attachMenu && menuText) body += '\n\n' + menuText;
     if (closingMsg) body += '\n\n' + closingMsg;
     if (sendStop) body += '\n\n_Reply STOP to unsubscribe._';
 
@@ -455,15 +456,9 @@ export async function _preview() {
         ${_mediaDataUrl ? `<div style="margin-bottom:12px;"><img src="${escapeHtml(_mediaDataUrl)}" alt="Attached media" style="max-width:100%; border-radius:8px; display:block;"></div>` : ''}
         <div style="white-space:pre-wrap; background:#0b1220; color:#e5e7eb; padding:12px; border-radius:8px; font-family:monospace; font-size:13px;">${escapeHtml(body)}</div>
         ${sendStop ? '' : '<div class="text-muted-small mt-8" style="font-size:11px;">ℹ️ STOP footer is OFF — no opt-out message will be sent.</div>'}
-        ${attachMenu && menuText ? `
-            <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
-                <div class="text-muted-small" style="margin-bottom:6px;">— followed by a 2nd message with the menu text —</div>
-                <div style="white-space:pre-wrap; background:#0b1220; color:#e5e7eb; padding:12px; border-radius:8px; font-family:monospace; font-size:13px;">${escapeHtml(menuText)}</div>
-            </div>
-        ` : ''}
         ${attachMenuImg && _menuImageDataUrl ? `
             <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
-                <div class="text-muted-small" style="margin-bottom:6px;">— followed by a message with the menu image —</div>
+                <div class="text-muted-small" style="margin-bottom:6px;">— menu image sent with your message —</div>
                 <div><img src="${escapeHtml(_menuImageDataUrl)}" alt="Menu image" style="max-width:100%; max-height:120px; border-radius:8px;"></div>
             </div>
         ` : ''}

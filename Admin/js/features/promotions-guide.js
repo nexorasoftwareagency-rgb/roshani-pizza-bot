@@ -19,7 +19,7 @@ const STEPS = [
     {
         icon: 'message-square',
         title: 'Message options',
-        body: 'Toggle the <strong>STOP footer</strong> to append "Reply STOP to unsubscribe" to your message. Add a <strong>closing message</strong> (e.g. thank-you note) that appears after the template body. Optionally attach a <strong>menu image</strong> as a 3rd message.',
+        body: 'Toggle the <strong>STOP footer</strong> to append "Reply STOP to unsubscribe" to your message. Add a <strong>closing message</strong> (e.g. thank-you note) that appears after the template body. The <strong>menu footer</strong> is appended inline and the <strong>menu image</strong> is sent with your message, so everything goes out together as one message (a second image only if you attach both a promo image and a menu image).',
     },
     {
         icon: 'eye',

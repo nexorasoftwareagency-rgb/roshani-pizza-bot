@@ -298,7 +298,23 @@ async function runPromotionCampaign(sock, cmd, ctx) {
                 }
             }
 
-            const result = await sendWithRetry(sock, jid, text, mediaUrl, 2, closingMessage, sendStopMsg);
+            // Combine menu footer + closing into the main text so everything
+            // text goes out in ONE message. Pick a single image: the promo image
+            // wins; else the menu image. Only when BOTH images exist does the
+            // menu image go as a separate message (WhatsApp = 1 image/message).
+            let finalText = text;
+            if (menuText && String(menuText).trim().length > 0) {
+                finalText += '\n\n' + String(menuText);
+            }
+            let mainImage = mediaUrl;
+            let extraImage = null;
+            if (!mainImage && menuImageUrl) {
+                mainImage = menuImageUrl;
+            } else if (mainImage && menuImageUrl && menuImageUrl !== mainImage) {
+                extraImage = menuImageUrl;
+            }
+
+            const result = await sendWithRetry(sock, jid, finalText, mainImage, 2, closingMessage, sendStopMsg);
             await logPromoResult(campaignId, phone, jid, result, couponCode, OUTLET, db);
             if (result.ok) {
                 sent++;
@@ -313,23 +329,15 @@ async function runPromotionCampaign(sock, cmd, ctx) {
                         });
                     } catch (_) {}
                 }
-                if (menuText && String(menuText).trim().length > 0) {
-                    try {
-                        await new Promise(r => setTimeout(r, randomBetween(PROMO_MENU_MIN_DELAY_MS, PROMO_MENU_MAX_DELAY_MS)));
-                        await sock.sendMessage(jid, { text: String(menuText) });
-                    } catch (e) {
-                        console.warn(`[Promo] Menu footer failed for ${jid}:`, e.message || e);
-                    }
-                }
-                if (menuImageUrl) {
+                if (extraImage) {
                     try {
                         await new Promise(r => setTimeout(r, randomBetween(PROMO_MENU_MIN_DELAY_MS, PROMO_MENU_MAX_DELAY_MS)));
                         let imgPayload;
-                        if (typeof menuImageUrl === 'string' && menuImageUrl.startsWith('data:image')) {
-                            const base64Data = menuImageUrl.split(',')[1];
+                        if (typeof extraImage === 'string' && extraImage.startsWith('data:image')) {
+                            const base64Data = extraImage.split(',')[1];
                             imgPayload = { image: Buffer.from(base64Data, 'base64') };
                         } else {
-                            imgPayload = { image: { url: menuImageUrl } };
+                            imgPayload = { image: { url: extraImage } };
                         }
                         await sock.sendMessage(jid, imgPayload);
                     } catch (e) {
