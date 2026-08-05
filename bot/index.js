@@ -30,16 +30,16 @@ const {
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
 const admin = require('firebase-admin');
-const { getData, setData, updateData, db, pushData, getUserProfile, saveUserProfile } = require('./firebase');
+const { getData, setData, updateData, db, getUserProfile, saveUserProfile } = require('./firebase');
 const discountEngine = require('./discount-engine');
 
 // ── Extracted modules ──────────────────────────────────────────────────────
 const {
-    escapeHtml, formatJid, maskJid, maskPhone,
-    getISTDateInfo, getISTDateString, parseTime, isShopOpen, randomBetween,
+    formatJid, maskJid,
+    getISTDateInfo, getISTDateString, isShopOpen,
     calculateDistance, getFeeFromSlabs,
     formatCartSummary, formatOrderInvoice, getFunnyFoodJoke, getFoodFunnyProgress,
-    generateCouponCode, isSocketDead
+    isSocketDead
 } = require('./utils');
 const promo = require('./promotions');
 const { sendDailyReport, sendMonthlyReport, sendWeeklyReport } = require('./reports');
@@ -217,10 +217,10 @@ async function saveProcessedStatus(id, data) {
 // =============================
 // 1. HELPERS & UTILS
 // =============================
-// All utility functions (formatJid, maskJid, maskPhone, getISTDateInfo,
+// All utility functions (formatJid, maskJid, getISTDateInfo,
 // getISTDateString, isSocketDead, calculateDistance, getFeeFromSlabs,
-// parseTime, isShopOpen, formatCartSummary, formatOrderInvoice,
-// getFunnyFoodJoke, getFoodFunnyProgress, randomBetween, generateCouponCode)
+// isShopOpen, formatCartSummary, formatOrderInvoice,
+// getFunnyFoodJoke, getFoodFunnyProgress)
 // are imported from ./utils above.
 
 async function getReportRecipients() {

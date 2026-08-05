@@ -939,13 +939,10 @@ function _wireActions() {
             });
         };
     });
-    document.querySelectorAll('[data-action="closePromoTemplatePicker"]').forEach(el => {
-        el.onclick = () => document.getElementById('promoTemplatePickerModal')?.classList.remove('active');
-    });
     const launch = document.getElementById('btnPromoLaunch');
     if (launch) launch.onclick = _launchCampaign;
-    document.querySelectorAll('[data-action="sendTestPromo"]').forEach(el => el.onclick = _sendTest);
-    document.querySelectorAll('[data-action="previewPromo"]').forEach(el => el.onclick = _preview);
+    // sendTestPromo / previewPromo / closePromoTemplatePicker are dispatched by
+    // main.js's delegated [data-action] handler — no direct binding (was double-firing).
     document.querySelectorAll('[data-action="pickPromoMedia"]').forEach(el => {
         el.onclick = () => document.getElementById('promoMediaInput')?.click();
     });

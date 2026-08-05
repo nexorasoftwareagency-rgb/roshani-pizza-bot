@@ -3,7 +3,7 @@
  * Wires together firebase.js, session.js, cart.js, order.js, ui.js.
  * This is the only file with top-level event listener registration.
  */
-import { outletRef, get, onValue, push, set, OUTLET, isConnected, onConnectionChange } from './firebase.js';
+import { outletRef, get, onValue, push, set, OUTLET, isConnected } from './firebase.js';
 import { initSession, ensureSession, Session, saveCheckoutContact, cleanupSession, touchSession, createOrderGroup, getCurrentGroupOrders } from './session.js';
 import { Cart, addLine, setQty, clearCart, lineCount, subtotal as cartSubtotal, isEmpty as cartIsEmpty, restoreCart } from './cart.js';
 import { placeOrder } from './order.js';

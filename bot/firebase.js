@@ -136,7 +136,6 @@ async function pushData(path, data, outlet = 'pizza') {
         console.error("PUSH ERROR:", err, "Path:", path);
     }
 }
-
 async function deleteData(path, outlet = 'pizza') {
     try {
         const resolved = resolvePath(path, outlet);

@@ -173,6 +173,22 @@ async function main() {
     await copyFile(file, out);
   }
 
+  // Emit shared/ into dist (Admin source imports ../../shared/*)
+  const sharedDir = join(root, 'shared');
+  if (existsSync(sharedDir)) {
+    for (const file of await walk(sharedDir)) {
+      const rel = relative(sharedDir, file);
+      const out = join(distDir, 'shared', rel);
+      await mkdir(dirname(out), { recursive: true });
+      if (JS_EXTS.has(extname(file)) && extname(file) !== '.cjs') {
+        await esbuild.build({ entryPoints: [file], outfile: out, minify: true, format: 'esm', allowOverwrite: true });
+      } else {
+        await copyFile(file, out);
+      }
+    }
+    console.log('  SHARED: copied to dist/shared');
+  }
+
   // Report savings
   let origSize = 0, newSize = 0;
   for (const f of allFiles) {

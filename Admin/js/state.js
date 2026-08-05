@@ -32,9 +32,6 @@ export const state = {
     deferredPrompt: null,
     ridersList: [],
     riderStatsData: {},
-    _ordersValueCb: null,
-    _ordersChildCb: null,
-    _ordersChangedCb: null,
     walkinDiscount: 0,
     walkinDiscountPct: 0,
     walkinAutoDiscount: null,  // { discount, amount, label, source } | null

@@ -41,20 +41,11 @@ export const db = getDatabase(app);
 // guessing off a fixed timer.
 // ---------------------------------------------------------------
 let _fbConnected = false;
-const _connWatchers = [];
 onValue(ref(db, '.info/connected'), (snap) => {
     _fbConnected = snap.val() === true;
-    _connWatchers.slice().forEach(fn => { try { fn(_fbConnected); } catch (e) { console.error('[FB] conn watcher error', e); } });
 });
 export function isConnected() {
     return _fbConnected;
-}
-export function onConnectionChange(fn) {
-    _connWatchers.push(fn);
-    return () => {
-        const i = _connWatchers.indexOf(fn);
-        if (i >= 0) _connWatchers.splice(i, 1);
-    };
 }
 
 // ---------------------------------------------------------------

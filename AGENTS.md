@@ -26,6 +26,7 @@ All 10 audit agents deployed. Key fixes:
 - `menu/js/ui.js` — Customer UI components
 - `database.rules.json` — Firebase security rules (all fixes applied)
 - `shared/` — Shared Firebase config, formatters, DOM helpers
+- `tools/build.mjs` — Builds `Admin/dist`; ALSO copies repo-root `shared/` → `dist/shared/` (Admin js imports `../../shared/*`; never delete `shared/` and don't add an `Admin/shared/` duplicate)
 
 ## Key Decisions
 - `_effectiveTotal(sess)` replaces `sess.grandTotal` everywhere (table card, drawer, CSV, KPI)

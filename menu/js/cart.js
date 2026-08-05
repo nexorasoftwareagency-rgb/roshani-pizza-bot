@@ -45,12 +45,6 @@ export function setQty(lineId, qty) {
     window.dispatchEvent(new CustomEvent('cart:changed'));
 }
 
-export function removeLine(lineId) {
-    delete Cart.lines[lineId];
-    persistCart();
-    window.dispatchEvent(new CustomEvent('cart:changed'));
-}
-
 export function clearCart() {
     Cart.lines = {};
     sessionStorage.removeItem(STORAGE_KEY);

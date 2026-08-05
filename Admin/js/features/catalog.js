@@ -567,7 +567,6 @@ export function cleanupCatalog() {
     if (_dishesUnsub) { _dishesUnsub(); _dishesUnsub = null; }
 }
 
-export const toggleStock = (id, current) => update(Outlet.ref(`dishes/${id}`), { stock: !current });
 export const toggleDishAvailable = (id, available) => update(Outlet.ref(`dishes/${id}`), { stock: available });
 export const editDish = (id) => showDishModal(id);
 let _editingCatId = null;

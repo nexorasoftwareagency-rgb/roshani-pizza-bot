@@ -416,7 +416,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'printSessionBill': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Print session bill'); window.__tables?.printSessionBill?.(id); break;
                 case 'printBillForGroup': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Print bill for group'); window.__tables?.printBillForGroup?.(id, el.getAttribute('data-group-id')); break;
                 case 'advanceTableOrder': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Advance order'); window.__tables?.advanceOrder?.(id, el.getAttribute('data-next')); break;
-                case 'resolveTableRequest': break;
                 case 'jumpToOrderInOrdersTab': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Jump to order'); window.__tables?.jumpToOrder?.(id); break;
                 case 'openTableQr': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Open table QR'); window.__tables?.openQr?.(id); break;
                 case 'closeSessionForTable': if (e.target.closest('#tab-tables')) break; logger.info('TABLES', 'Close session'); window.__tables?.closeSession?.(id); break;
@@ -586,11 +585,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         setupPassToggle('btnToggleWifiPass', 'settingWifiPass');
         setupPassToggle('btnToggleRiderPass', 'riderPass');
-
-        const bindFn = (id, fn) => {
-            const el = document.getElementById(id);
-            if (el && window[fn]) el.addEventListener('click', window[fn]);
-        };
 
         const reportOutletFilter = document.getElementById('reportOutletFilter');
         if (reportOutletFilter) {

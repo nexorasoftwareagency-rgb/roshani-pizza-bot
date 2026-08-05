@@ -245,15 +245,6 @@ export const previewImage = (input, previewId) => {
     }
 };
 
-export const validateUrl = (url) => {
-    try {
-        new URL(url);
-        return true;
-    } catch (_) {
-        return false;
-    }
-};
-
 /**
  * Generates skeleton table rows for loading states.
  * @param {number} count - Number of skeleton rows to generate (default 5)

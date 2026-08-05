@@ -1,20 +1,9 @@
 /**
  * BOT Pure utilities — string helpers, date, formatting, delivery geo.
- * Zero external dependencies (except shared/dom/escape.js for escapeHtml).
+ * Zero external dependencies.
  */
 
 // ── String helpers ─────────────────────────────────────────────────────────
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;')
-        .replace(/`/g, '&#096;');
-}
 
 function formatJid(phone) {
     if (!phone) return null;
@@ -29,13 +18,6 @@ function maskJid(jid) {
     const [phone, domain] = jid.split('@');
     if (phone.length <= 4) return `****@${domain}`;
     return `${phone.substring(0, 2)}****${phone.slice(-4)}@${domain}`;
-}
-
-function maskPhone(phone) {
-    if (!phone) return "N/A";
-    const s = String(phone).replace(/\D/g, '');
-    if (s.length <= 4) return "****";
-    return `${s.substring(0, 2)}****${s.slice(-4)}`;
 }
 
 // ── Date / IST helpers ─────────────────────────────────────────────────────
@@ -223,36 +205,10 @@ function isSocketDead(sock) {
     return false;
 }
 
-// ── LID → JID resolution ───────────────────────────────────────────────────
-// Global mapping @lid → resolved @s.whatsapp.net JID, populated on incoming message.
-const lidJidMap = new Map();
-
-function normalizeJid(jid) {
-    if (!jid || typeof jid !== 'string') return jid;
-    if (!jid.endsWith('@lid')) return jid;
-    // Check in-memory mapping first
-    const mapped = lidJidMap.get(jid);
-    if (mapped) return mapped;
-    // Fallback: try extracting last 10 digits as phone number
-    const digits = jid.replace(/[^0-9]/g, '').slice(-10);
-    if (digits.length === 10) {
-        const resolved = formatJid(digits);
-        if (resolved) {
-            lidJidMap.set(jid, resolved);
-            return resolved;
-        }
-    }
-    // Last resort: swap server suffix (may still not work, but matches Baileys' own behavior)
-    const withPhone = jid.replace('@lid', '@s.whatsapp.net');
-    lidJidMap.set(jid, withPhone);
-    return withPhone;
-}
-
 module.exports = {
-    escapeHtml, formatJid, maskJid, maskPhone,
+    formatJid, maskJid,
     getISTDateInfo, getISTDateString, parseTime, isShopOpen, randomBetween,
     calculateDistance, getFeeFromSlabs,
     formatCartSummary, formatOrderInvoice, getFunnyFoodJoke, getFoodFunnyProgress,
-    generateCouponCode, isSocketDead,
-    normalizeJid, lidJidMap
+    generateCouponCode, isSocketDead
 };

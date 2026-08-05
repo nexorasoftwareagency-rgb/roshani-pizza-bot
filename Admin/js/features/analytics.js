@@ -30,8 +30,6 @@ export function setOutletFilter(value) {
     if (salesData.length > 0) renderFromCache();
 }
 
-export function getOutletFilter() { return _currentOutletFilter; }
-
 export async function loadReports() {
     await loadChartJS();
 
