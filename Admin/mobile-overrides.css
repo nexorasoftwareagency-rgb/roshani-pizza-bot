@@ -2853,6 +2853,7 @@
 }
 .mob-export-excel { background: #16a34a; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3); }
 .mob-export-pdf { background: #e11d48; box-shadow: 0 2px 8px rgba(225, 29, 72, 0.3); }
+.mob-export-whatsapp { background: #25d366; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3); }
 
 @media (min-width: 769px) {
     .mob-hero h2 { font-size: 36px; }

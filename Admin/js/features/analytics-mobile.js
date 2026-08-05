@@ -37,12 +37,14 @@
  *                      already treats as canonical.
  * ============================================================================
  */
-import { Outlet, get } from '../firebase.js';
-import { escapeHtml } from '../utils.js';
+import { Outlet, get, ref, db, push, set, serverTimestamp } from '../firebase.js';
+import { escapeHtml, showToast } from '../utils.js';
 
 let sparkRevenue = null, sparkOrders = null, sparkAvg = null, sparkNewCust = null;
 let overviewChart = null, paymentDonut = null;
 let _customersCache = null, _customersFetchFailed = false;
+let _reportSummary = null;
+let _reportSending = false;
 
 const PALETTE = {
     revenue: '#E84908',
@@ -210,6 +212,20 @@ export async function renderMobileAnalytics(salesData, prevPeriodData) {
     _renderPaymentDonut(paymentTotals, curRev);
 
     _renderDataTable(salesData);
+
+    _reportSummary = {
+        curRev,
+        curOrd,
+        curAvg,
+        delivered: delivered.length,
+        cancelled: cancelled.length,
+        pending: pending.length,
+        newCust: _customersFetchFailed ? null : newCustCount,
+        repeatCust: _customersFetchFailed ? null : repeatCustCount,
+        paymentTotals,
+        rangeFrom,
+        rangeTo
+    };
 
     root.classList.remove('reports-mobile-loading');
 }
@@ -497,6 +513,10 @@ export function initMobileAnalyticsUI(regenerateFn) {
                 document.getElementById('btnDownloadPDF')?.click();
                 handled = true;
                 break;
+            case 'mobSendToAdmin':
+                _sendReportToAdmin();
+                handled = true;
+                break;
         }
         if (handled) e.stopPropagation();
     });
@@ -527,6 +547,67 @@ export function initMobileAnalyticsUI(regenerateFn) {
         const nameEl = document.getElementById('mobOutletName');
         if (nameEl) nameEl.textContent = (state.currentOutlet || 'pizza').toUpperCase();
     }).catch(() => {});
+}
+
+async function _sendReportToAdmin() {
+    if (_reportSending) { showToast('Already sending a report, please wait.', 'info'); return; }
+    if (!_reportSummary) { showToast('No report loaded. Generate the report first.', 'info'); return; }
+
+    const s = _reportSummary;
+    const span = (s.rangeFrom === s.rangeTo) ? s.rangeFrom : `${s.rangeFrom} → ${s.rangeTo}`;
+    const lines = [
+        `📊 *SALES REPORT* — ${(window.currentOutlet || 'pizza').toUpperCase()}`,
+        ``,
+        `📅 *Period:* ${span}`,
+        ``,
+        `💰 *Total Revenue:* ${fmtMoney(s.curRev)}`,
+        `📦 *Total Orders:* ${s.curOrd}`,
+        `🧾 *Avg. Order Value:* ${fmtMoney(Math.round(s.curAvg))}`,
+        `🆕 *New Customers:* ${s.newCust === null ? '—' : s.newCust}`,
+        `🔁 *Repeat Customers:* ${s.repeatCust === null ? '—' : s.repeatCust}`,
+        ``,
+        `┌─ *Order Status*`,
+        `│ ✅ Delivered: ${s.delivered}`,
+        `│ ❌ Cancelled: ${s.cancelled}`,
+        `│ ⏳ Pending: ${s.pending}`,
+        `└──────────────`,
+        ``,
+        `💳 *Payment Split:*`,
+        `   💵 Cash: ${fmtMoney(s.paymentTotals.cash)}`,
+        `   📱 UPI: ${fmtMoney(s.paymentTotals.upi)}`,
+        `   🚚 COD: ${fmtMoney(s.paymentTotals.cod)}`,
+        ``,
+        `_Sent automatically by ${(window.currentOutlet || 'pizza').toUpperCase()} Bot_`
+    ];
+
+    _reportSending = true;
+    try {
+        const phone = await _resolveAdminPhone();
+        if (!phone) { showToast('No admin phone in store settings.', 'error'); return; }
+
+        const outlet = window.currentOutlet || 'pizza';
+        const cmdRef = push(ref(db, `bot/${outlet}/commands`));
+        await set(cmdRef, { action: "SEND_GENERIC_MESSAGE", phone, message: lines.join('\n'), timestamp: serverTimestamp() });
+        showToast('Report sent to admin via bot.', 'success');
+    } catch (e) {
+        console.error('[AnalyticsMobile] Bot send failed:', e);
+        showToast('Failed to queue bot message.', 'error');
+    } finally {
+        _reportSending = false;
+    }
+}
+
+async function _resolveAdminPhone() {
+    try {
+        const store = await get(Outlet.ref('settings/Store'));
+        const delivery = await get(Outlet.ref('settings/Delivery'));
+        const raw = (store.exists() && (store.val().phone || store.val().whatsappNumber)) ||
+            (delivery.exists() && (delivery.val().notifyPhone || delivery.val().reportPhone));
+        return String(raw || '').replace(/[^0-9]/g, '').slice(-10);
+    } catch (e) {
+        console.error('[AnalyticsMobile] Admin phone resolve failed:', e);
+        return '';
+    }
 }
 
 export function updateMobileDateRangeText() {

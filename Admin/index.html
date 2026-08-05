@@ -55,7 +55,7 @@
 
         //   cause reload loops on flaky networks. The user clicks Refresh to recover.
 
-        const ADMIN_VERSION = '5.3.23';
+        const ADMIN_VERSION = '5.3.29';
 
         const _storedVersion = localStorage.getItem('admin_app_version');
 
@@ -177,9 +177,9 @@
     </script>
 
 
-    <link rel="stylesheet" href="style.css?v=5.3.23">
+    <link rel="stylesheet" href="style.css?v=5.3.29">
 
-    <link rel="stylesheet" href="mobile-overrides.css?v=5.3.23">
+    <link rel="stylesheet" href="mobile-overrides.css?v=5.3.29">
 
     <link rel="manifest" href="manifest.json?v=3">
 
@@ -199,7 +199,7 @@
 
     <link rel="dns-prefetch" href="https://prashant-pizza-e86e4-default-rtdb.firebaseio.com">
 
-    <link rel="modulepreload" href="js/main.js?v=5.3.23">
+    <link rel="modulepreload" href="js/main.js?v=5.3.29">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 
@@ -3146,6 +3146,10 @@
 
     <!-- ---------- Export banners ---------- -->
     <div class="mob-export-row">
+        <button type="button" class="mob-export-banner mob-export-whatsapp" data-action="mobSendToAdmin" title="Send report to admin via WhatsApp bot">
+            <i data-lucide="message-circle" class="icon-18"></i>
+            <span>Send to Admin</span>
+        </button>
         <button type="button" class="mob-export-banner mob-export-excel" data-action="mobExportExcel">
             <i data-lucide="file-spreadsheet" class="icon-18"></i>
             <span>Excel</span>
@@ -3289,6 +3293,8 @@
                                 <h4 class="panel-title m-0">Delivery Performance History</h4>
 
                                 <div class="flex-row flex-gap-10">
+
+                                    <button id="btnRiderReportWhatsApp" class="btn-secondary btn-small" title="Send report to admin via WhatsApp bot">🤖 Send to Admin</button>
 
                                     <button id="btnRiderExportExcel" class="btn-secondary btn-small">📥 Excel</button>
 
@@ -6100,19 +6106,19 @@
         </div>
     </div>
 
-    <script src="branding.js?v=5.3.23" defer></script>
+    <script src="branding.js?v=5.3.29" defer></script>
 
-    <script src="firebase-config.js?v=5.3.23" defer></script>
+    <script src="firebase-config.js?v=5.3.29" defer></script>
 
-    <script src="receipt-templates.js?v=5.3.23" defer></script>
+    <script src="receipt-templates.js?v=5.3.29" defer></script>
 
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" crossorigin="anonymous" defer></script>
 
     <!-- XLSX loaded lazily via utils.js loadXLSX() -->
 
-    <script type="module" src="js/bot-status.js?v=5.3.23"></script>
+    <script type="module" src="js/bot-status.js?v=5.3.29"></script>
 
-    <script type="module" src="js/main.js?v=5.3.23"></script>
+    <script type="module" src="js/main.js?v=5.3.29"></script>
 
 </body>
 

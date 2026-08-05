@@ -69,7 +69,7 @@ export const Outlet = {
     },
     ref(path) {
         if (!path) return ref(db);
-        const globalPaths = ['admins', 'riders', 'riderStats', 'logs', 'bot', 'migrationStatus', 'admins_list'];
+        const globalPaths = ['admins', 'riders', 'logs', 'bot', 'migrationStatus', 'admins_list'];
         const cleanPath = path.startsWith('/') ? path.slice(1) : path;
         const firstSegment = cleanPath.split('/')[0];
         let finalPath;
